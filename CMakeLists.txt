@@ -9,30 +9,12 @@ if (POLICY CMP0141)
   set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
 endif()
 
-project ("DeltaEngine")
+project ("DeltaEngine" VERSION 0.0.1)
 
-find_package(fmt CONFIG REQUIRED)
+set(BUILD_SHARED_LIBS OFF)
 
-set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
+#set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
 
-add_subdirectory(ThirdParty/glfw-3.4)
-add_subdirectory(ThirdParty/SDL-prerelease-3.1.1)
-#add_subdirectory(ThirdParty/imgui)
-
-# Add source to this project's executable.
-add_executable (DeltaEngine "DeltaEngine.cpp" "DeltaEngine.h")
-
-#add_library(sdl3 )
-include(ThirdParty/imgui.cmake)
-
-target_link_libraries(DeltaEngine PRIVATE glfw)
-target_link_libraries(DeltaEngine PRIVATE SDL3::SDL3)
-target_link_libraries(DeltaEngine PRIVATE imgui)
-target_link_libraries(DeltaEngine PRIVATE fmt::fmt)
-
-if (CMAKE_VERSION VERSION_GREATER 3.12)
-  set_property(TARGET DeltaEngine PROPERTY CXX_STANDARD 20)
-endif()
-
-# TODO: Add tests and install targets if needed.
+add_subdirectory(ThirdParty)
+add_subdirectory(Engine)
