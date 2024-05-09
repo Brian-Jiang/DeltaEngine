@@ -7,7 +7,8 @@
 
 enum class GameState {
 	PLAY,
-	EXIT
+	EXIT,
+	Error,
 };
 
 class DeltaEngine
@@ -18,12 +19,16 @@ public:
 	void Initialize();
 	void StartMainLoop();
 
+	int exitCode;
+
 private:
 	void InitSDL();
 	void HandleInput();
+	void Draw();
 
 	SDL_Renderer* renderer;
 	SDL_Window* window;
 
 	GameState gameState;
+	
 };

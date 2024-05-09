@@ -4,16 +4,20 @@
 #include "DeltaEngine.h"
 
 #include <cstdio>
+#include "../../ThirdParty/glew/include/GL/glew.h"
+#include <SDL_opengl.h>
 
 #include "SDL3/SDL.h"
+#include "Const.h"
+
 
 #define SCREEN_WIDTH   1280
 #define SCREEN_HEIGHT  720
 
 
-DeltaEngine::DeltaEngine() : renderer(nullptr), window(nullptr), gameState(GameState::PLAY)
+DeltaEngine::DeltaEngine() : exitCode(0), renderer(nullptr), window(nullptr), gameState(GameState::PLAY)
 {
-	
+    
 }
 
 void DeltaEngine::Initialize()
@@ -40,30 +44,57 @@ void DeltaEngine::InitSDL() {
 
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         printf("Couldn't initialize SDL: %s\n", SDL_GetError());
-        exit(1);
+        gameState = GameState::Error;
     }
 
     window = SDL_CreateWindow("Shooter 01", SCREEN_WIDTH, SCREEN_HEIGHT, windowFlags);
 
     if (!window) {
         printf("Failed to open %d x %d window: %s\n", SCREEN_WIDTH, SCREEN_HEIGHT, SDL_GetError());
-        exit(1);
+        gameState = GameState::Error;
     }
 
+    auto error = glewInit();
+    if (error != GLEW_OK)
+    {
+		printf("Error initializing GLEW: %p\n", glewGetErrorString(error));
+		gameState = GameState::Error;
+    }
+
+    auto context = SDL_GL_CreateContext(window);
+	if (!context) {
+		printf("Failed to create OpenGL context: %s\n", SDL_GetError());
+		gameState = GameState::Error;
+	}
+
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+
     //SDL_SetHint(SDLHint, "linear");
-    //SDL_RENDERER_SOFTWARE
-    renderer = SDL_CreateRenderer(window, "direct3d12", SDL_RENDERER_ACCELERATED);
+    renderer = SDL_CreateRenderer(window, RENDERER_D3D12, SDL_RENDERER_ACCELERATED);
     if (!renderer) {
         printf("Failed to create renderer: %s\n", SDL_GetError());
-        exit(1);
+        gameState = GameState::Error;
     }
 }
 
 void DeltaEngine::StartMainLoop()
 {
-	while (gameState == GameState::PLAY) {
-		HandleInput();
-	}
+    while (gameState == GameState::PLAY) {
+        SDL_SetRenderDrawColor(renderer, 96, 128, 255, 255);
+        SDL_RenderClear(renderer);
+        
+        HandleInput();
+        Draw();
+
+        int errorCode = SDL_RenderPresent(renderer);
+    }
+
+    if (gameState == GameState::Error)
+    {
+        printf("Error");
+        exitCode = 1;
+        SDL_Quit();
+    }
 }
 
 void DeltaEngine::HandleInput()
@@ -71,11 +102,17 @@ void DeltaEngine::HandleInput()
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
         switch (event.type) {
-	        case SDL_EVENT_QUIT:
-				gameState = GameState::EXIT;
-	            break;
-	        default:
-	            break;
+            case SDL_EVENT_QUIT:
+                gameState = GameState::EXIT;
+                break;
+            default:
+                break;
         }
     }
+}
+
+void DeltaEngine::Draw()
+{
+    glClearDepth(1.0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
