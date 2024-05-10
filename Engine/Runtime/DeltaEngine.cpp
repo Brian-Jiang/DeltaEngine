@@ -4,6 +4,8 @@
 #include "DeltaEngine.h"
 
 #include <cstdio>
+#include <iostream>
+
 #include "../../ThirdParty/glew/include/GL/glew.h"
 #include <SDL_opengl.h>
 
@@ -54,39 +56,41 @@ void DeltaEngine::InitSDL() {
         gameState = GameState::Error;
     }
 
-    auto error = glewInit();
-    if (error != GLEW_OK)
-    {
-		printf("Error initializing GLEW: %p\n", glewGetErrorString(error));
-		gameState = GameState::Error;
-    }
-
     auto context = SDL_GL_CreateContext(window);
 	if (!context) {
 		printf("Failed to create OpenGL context: %s\n", SDL_GetError());
 		gameState = GameState::Error;
 	}
 
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-
-    //SDL_SetHint(SDLHint, "linear");
-    renderer = SDL_CreateRenderer(window, RENDERER_D3D12, SDL_RENDERER_ACCELERATED);
-    if (!renderer) {
-        printf("Failed to create renderer: %s\n", SDL_GetError());
+    auto error = glewInit();
+    if (error != GLEW_OK) {
+        const auto glewError = reinterpret_cast<const char*>(glewGetErrorString(error));
+        printf("Error initializing GLEW: %s\n", glewError);
         gameState = GameState::Error;
     }
+
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    glClearColor(0.3f, 0.5f, 1.0f, 1.0f);
+
+    //SDL_SetHint(SDLHint, "linear");
+
+    // renderer = SDL_CreateRenderer(window, RENDERER_OPENGL, SDL_RENDERER_ACCELERATED);
+    // if (!renderer) {
+    //     printf("Failed to create renderer: %s\n", SDL_GetError());
+    //     gameState = GameState::Error;
+    // }
 }
 
 void DeltaEngine::StartMainLoop()
 {
     while (gameState == GameState::PLAY) {
-        SDL_SetRenderDrawColor(renderer, 96, 128, 255, 255);
-        SDL_RenderClear(renderer);
+        // SDL_SetRenderDrawColor(renderer, 96, 128, 255, 255);
+        // SDL_RenderClear(renderer);
         
         HandleInput();
         Draw();
 
-        int errorCode = SDL_RenderPresent(renderer);
+        // int errorCode = SDL_RenderPresent(renderer);
     }
 
     if (gameState == GameState::Error)
@@ -105,6 +109,9 @@ void DeltaEngine::HandleInput()
             case SDL_EVENT_QUIT:
                 gameState = GameState::EXIT;
                 break;
+	        case SDL_EVENT_MOUSE_MOTION:
+				std::cout << "Mouse moved to x: " << event.motion.x << " y: " << event.motion.y << '\n';
+				break;
             default:
                 break;
         }
@@ -115,4 +122,14 @@ void DeltaEngine::Draw()
 {
     glClearDepth(1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // glEnableClientState(GL_COLOR_ARRAY);
+    // glBegin(GL_TRIANGLES);
+    // glColor3f(1, 1, 1);
+    // glVertex2f(0, 0);
+    // glVertex2f(0.1f, -0.15f);
+    // glVertex2f(0.1f, 0.15f);
+    // glEnd();
+
+    SDL_GL_SwapWindow(window);
 }
