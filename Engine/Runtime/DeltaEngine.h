@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include "GLSLProgram.h"
+#include "SpriteRenderer.h"
 #include "SDL3/SDL.h"
 
 enum class GameState {
@@ -30,5 +32,9 @@ private:
 	SDL_Window* window;
 
 	GameState gameState;
-	
+
+	SpriteRenderer* sprite;
+	GLSLProgram* shader;
+
+	float time;
 };

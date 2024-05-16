@@ -17,6 +17,9 @@ target_link_libraries(${TARGET_NAME} PRIVATE glfw)
 target_link_libraries(${TARGET_NAME} PUBLIC SDL3::SDL3)
 target_link_libraries(${TARGET_NAME} PRIVATE imgui)
 
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Shaders")
+add_dependencies(${TARGET_NAME} shaders)
+
 target_include_directories(
   ${TARGET_NAME} 
   PUBLIC Engine/Runtime)

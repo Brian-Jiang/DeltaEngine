@@ -4,6 +4,7 @@
 #include "DeltaEngine.h"
 
 #include <cstdio>
+#include <fstream>
 #include <iostream>
 
 #include "../../ThirdParty/glew/include/GL/glew.h"
@@ -17,14 +18,34 @@
 #define SCREEN_HEIGHT  720
 
 
-DeltaEngine::DeltaEngine() : exitCode(0), renderer(nullptr), window(nullptr), gameState(GameState::PLAY)
+DeltaEngine::DeltaEngine() : exitCode(0), renderer(nullptr), window(nullptr), gameState(GameState::PLAY),
+                             shader(nullptr), time(0.0f)
 {
-    
+	sprite = new SpriteRenderer();
 }
 
 void DeltaEngine::Initialize()
 {
     InitSDL();
+
+    // std::ofstream file("relative_path_test.txt");
+    //
+    // if (file.is_open()) {
+    //     file << "Test file";
+    // }
+
+    // file.close();
+
+	
+	sprite->Start(-0.5f, -0.5f, 1.0f, 1.0f, "assets/texture.png");
+	shader = new GLSLProgram();
+	shader->compileShaders("../../../../Engine/Runtime/Shaders/Vertex.glsl", "../../../../Engine/Runtime/Shaders/Fragment.glsl");
+// shader->linkShaders();
+// shader->addAttribute("vertexPosition");
+// shader->addAttribute("vertexColor");
+// shader->addAttribute("vertexUV");
+
+// shader->unuse();
 }
 
 void DeltaEngine::InitSDL() {
@@ -36,7 +57,7 @@ void DeltaEngine::InitSDL() {
     //     printf("\n");
     // }
 
-    SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER, "direct3d12", SDL_HINT_DEFAULT);
+    // SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER, "direct3d12", SDL_HINT_DEFAULT);
 
     int rendererFlags, windowFlags;
 
@@ -86,6 +107,7 @@ void DeltaEngine::StartMainLoop()
     while (gameState == GameState::PLAY) {
         // SDL_SetRenderDrawColor(renderer, 96, 128, 255, 255);
         // SDL_RenderClear(renderer);
+		time += 0.01f;
         
         HandleInput();
         Draw();
@@ -110,7 +132,7 @@ void DeltaEngine::HandleInput()
                 gameState = GameState::EXIT;
                 break;
 	        case SDL_EVENT_MOUSE_MOTION:
-				std::cout << "Mouse moved to x: " << event.motion.x << " y: " << event.motion.y << '\n';
+				// std::cout << "Mouse moved to x: " << event.motion.x << " y: " << event.motion.y << '\n';
 				break;
             default:
                 break;
@@ -130,6 +152,15 @@ void DeltaEngine::Draw()
     // glVertex2f(0.1f, -0.15f);
     // glVertex2f(0.1f, 0.15f);
     // glEnd();
+
+
+    shader->use();
+
+    auto timeLocation = shader->getUniformLocation("time");
+    glUniform1f(timeLocation, time);
+    sprite->Render();
+
+    shader->unuse();
 
     SDL_GL_SwapWindow(window);
 }

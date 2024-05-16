@@ -1,0 +1,26 @@
+# BMP codec information
+#
+[codec]
+layout=8
+version=1.1.2
+priority=HIGH
+name=BMP
+description=Bitmap Picture
+magic-numbers=42 4d;02 00
+extensions=bmp;ddb;dib
+mime-types=image/bmp;image/x-bmp
+
+[load-features]
+features=STATIC;META-DATA;SOURCE-IMAGE
+tuning=
+
+[save-features]
+features=
+pixel-formats=
+compressions=
+default-compression=
+compression-level-min=0
+compression-level-max=0
+compression-level-default=0
+compression-level-step=0
+tuning=

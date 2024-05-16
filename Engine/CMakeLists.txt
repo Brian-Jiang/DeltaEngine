@@ -24,5 +24,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 #   message(FATAL_ERROR "Unknown Platform")
 # endif()
 
+# set_source_files_properties(my_text_file.txt PROPERTIES HEADER_FILE_ONLY TRUE)
+
 add_subdirectory(Runtime)
 add_subdirectory(Editor)

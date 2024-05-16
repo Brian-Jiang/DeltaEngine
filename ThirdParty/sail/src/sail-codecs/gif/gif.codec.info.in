@@ -1,0 +1,26 @@
+# GIF codec information
+#
+[codec]
+layout=8
+version=1.3.1
+priority=HIGHEST
+name=GIF
+description=Graphics Interchange Format
+magic-numbers=47 49 46 38 37 61;47 49 46 38 39 61
+extensions=gif
+mime-types=image/gif
+
+[load-features]
+features=STATIC;ANIMATED;META-DATA;SOURCE-IMAGE
+tuning=
+
+[save-features]
+features=
+pixel-formats=
+compressions=
+default-compression=
+compression-level-min=0
+compression-level-max=0
+compression-level-default=0
+compression-level-step=0
+tuning=
