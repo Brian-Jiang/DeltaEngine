@@ -1,0 +1,723 @@
+#!/bin/sh -e
+
+#
+# Script to build SAIL dependencies: libjpeg, libpng, etc. Run it in Git Bash.
+#
+
+cd "$(dirname "$0")"
+
+builddir="$PWD/builddir"
+download="$PWD/download"
+
+CMAKE_BUILD_TYPE="${1:-Release}"
+
+echo "Build type: $CMAKE_BUILD_TYPE"
+
+########################
+#  Common configuation #
+########################
+
+# Where all built libs and headers will be installed
+B="$PWD/B"
+ROOT="$PWD"
+
+platform="$(uname)"
+
+cmake_common_generate_options="-DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DCMAKE_PREFIX_PATH=$B -DCMAKE_INSTALL_PREFIX=$B"
+
+case "$platform" in
+    MINGW* | MSYS*)
+        cmake_windows_build_type="${CMAKE_BUILD_TYPE}"
+        cmake_platform_generate_options="-A x64 $cmake_common_generate_options -DCMAKE_C_FLAGS=-MP -DCMAKE_CXX_FLAGS=-MP"
+        cmake_platform_build_options="--config $cmake_windows_build_type"
+        shared_prefix=""
+        shared_ext="lib"
+    ;;
+    Linux* | Darwin*)
+        cmake_platform_generate_options="$cmake_common_generate_options"
+        cmake_platform_build_options=""
+        shared_prefix="lib"
+        shared_ext="so"
+    ;;
+    *)
+        echo "Error: Unsupported platform '$platform'" >&2
+        exit 1
+    ;;
+esac
+
+echo "Platform generate options: $cmake_platform_generate_options"
+echo "Platform build options: $cmake_platform_build_options"
+
+######################
+#  Extra libs paths  #
+######################
+
+SRC="$PWD/src"
+
+libz_path="$SRC/zlib-ng/zlib-ng-2.0.5.tar.gz"
+libz_rename_patch_path="$SRC/zlib-ng/zlib-rename.diff"
+libz_remove_postfix_patch_path="""$SRC/zlib-ng/zlib-remove-postfix.diff"
+
+libzstd_path="$SRC/zstd/zstd-1.4.9.tar.gz"
+libzstd_rename_patch_path="$SRC/zstd/zstd-rename.diff"
+
+libjpeg_path="$SRC/jpeg/libjpeg-turbo-2.1.5.1.tar.gz"
+libjpeg_rename_patch_path="$SRC/jpeg/libjpeg-turbo-rename.diff"
+
+libpng_path="$SRC/png/libpng-1.6.37.tar.gz"
+libapng_patch_path="$SRC/png/libpng-1.6.37-apng.patch"
+libpng_rename_patch_path="$SRC/png/libpng-rename.diff"
+libpng_remove_postfix_patch_path="$SRC/png/libpng-remove-postfix.diff"
+
+libjbig_path="$SRC/jbig/jbigkit-2.1.tar.gz"
+libjbig_cmake_lists="$SRC/jbig/jbig-CMakeLists.txt"
+libjbig_pc_in="$SRC/jbig/jbig-libjbig.pc.in"
+libjbig_jbig_def="$SRC/jbig/jbig-jbig.def"
+libjbig_rename_patch_path="$SRC/jbig/jbig-rename.diff"
+libjbig_fixes_patch_path="$SRC/jbig/jbig-fixes.diff"
+
+libtiff_path="$SRC/tiff/tiff-4.3.0.tar.gz"
+libtiff_rename_patch_path="$SRC/tiff/tiff-rename.diff"
+libtiff_remove_postfix_patch_path="$SRC/tiff/tiff-remove-postfix.diff"
+libtiff_fix_jbig_patch_path="$SRC/tiff/tiff-fix-jbig.diff"
+libtiff_fix_zstd_patch_path="$SRC/tiff/tiff-fix-zstd.diff"
+
+libgif_path="$SRC/gif/giflib-5.2.1.tar.gz"
+libgif_cmake_lists="$SRC/gif/gif-CMakeLists.txt"
+libgif_pc_in="$SRC/gif/gif-giflib.pc.in"
+libgif_gif_lib_def="$SRC/gif/gif-gif_lib.def"
+libgif_rename_patch_path="$SRC/gif/gif-rename.diff"
+libgif_fixes_patch_path="$SRC/gif/gif-fixes.diff"
+
+perl_url="https://strawberryperl.com/download/5.32.1.1/strawberry-perl-5.32.1.1-32bit-portable.zip"
+perl_size_check="154581246"
+libaom_path="$SRC/avif/aom-3.1.2.tar.gz"
+libaom_rename_patch_path="$SRC/avif/aom-rename.diff"
+libavif_path="$SRC/avif/libavif-0.9.2.tar.gz"
+libavif_rename_patch_path="$SRC/avif/libavif-rename.diff"
+libavif_find_aom_patch_path="$SRC/avif/libavif-find-aom.diff"
+
+libwebp_path="$SRC/webp/libwebp-1.1.0.tar.gz"
+libwebp_rename_patch_path="$SRC/webp/webp-rename.diff"
+libwebp_export_patch_path="$SRC/webp/webp-export.diff"
+
+jasper_path="$SRC/jpeg2000/jasper-2.0.33.tar.gz"
+jasper_rename_patch_path="$SRC/jpeg2000/jasper-rename.diff"
+
+rustup_path="$SRC/svg/rustup-init.exe"
+resvg_path="$SRC/svg/resvg-0.36.0.tar.gz"
+resvg_rename_patch_path="$SRC/svg/resvg-rename.diff"
+
+libraw_path="$SRC/raw/LibRaw-0.20.2.tar.gz"
+libraw_cmake_path="$SRC/raw/libraw-cmake-20211009.zip"
+libraw_rename_patch_path="$SRC/raw/libraw-rename.diff"
+
+libjxl_path="$SRC/jpegxl/libjxl.with.submodules.2023.10.09.git.tar.gz"
+brotli_rename_patch_path="$SRC/jpegxl/brotli-rename.diff"
+libjxl_rename_patch_path="$SRC/jpegxl/jxl-rename.diff"
+libjxl_threads_rename_patch_path="$SRC/jpegxl/jxl_threads-rename.diff"
+
+#################
+#  Build setup  #
+#################
+
+# Clean old builds
+echo "Cleaning build directory..."
+rm -rf "$B"
+rm -rf "$builddir"
+
+mkdir -p "$download"
+
+# Used both on Windows and UNIX so create it in advance
+mkdir -p "$B/lib"
+
+# Add current dir to PATH to enable pkg-config, nasm etc.
+export PATH=$PATH:$PWD/bin
+
+if ! which pkg-config >/dev/null 2>&1; then
+    echo "Error: pkg-config is not found in PATH" >&2
+    exit 1
+fi
+
+ends_with()
+{
+    local path="$1"
+    local str="$2"
+
+    [ "${path#*$str}" != "$path" ]
+}
+
+unpack()
+{
+    local path="$1"
+    local name="$(basename "$path")"
+    local build="$builddir/$name"
+
+    if [ -z "$path" ]; then
+        echo "Error: Path to archive is empty" >&2
+        exit 1
+    fi
+
+    echo
+    echo "Building '$path'"
+    echo
+
+    rm -rf "$build"
+    mkdir -p "$build"
+    cd "$build"
+
+    # Archive-specific options z/J/other
+    local archive_option=
+
+    if ends_with "$path" ".tar.gz"; then
+        archive_option="z"
+    elif ends_with "$path" ".tar.xz"; then
+        archive_option="J"
+    else
+        echo "Error: Unsupported file extension in '$path'" >&2
+        exit 1
+    fi
+
+    tar -${archive_option}xf "$path" --strip-components=1
+}
+
+##########
+#  ZLIB  #
+##########
+
+build_zlib()
+{
+    unpack "$libz_path"
+
+    # Rename the library to have "sail-extra-" prefix
+    patch CMakeLists.txt -i "$libz_rename_patch_path"
+
+    # Remove debug postfix
+    patch CMakeLists.txt -i "$libz_remove_postfix_patch_path"
+
+    mkdir build
+    cd build
+    cmake $cmake_platform_generate_options -DZLIB_COMPAT=ON -DZLIB_ENABLE_TESTS=OFF -DBUILD_SHARED_LIBS=ON ..
+    cmake --build . $cmake_platform_build_options --target install
+
+    # Ship license
+    install -D -m 644 ../LICENSE.md "$B/share/sail/licenses/zlib-ng.txt"
+
+    case "$platform" in
+        MINGW* | MSYS*)
+            mv "$B/lib/sail-extra-z.lib" "$B/lib/zlib.lib"
+        ;;
+    esac
+
+    cd "$ROOT"
+}
+
+##########
+#  ZSTD  #
+##########
+
+build_zstd()
+{
+    unpack "$libzstd_path"
+
+    # Enable pkg-config on Windows
+    sed -i "s|^if (UNIX)|if (UNIX OR WIN32)|" build/cmake/lib/CMakeLists.txt
+
+    # Rename the library to have "sail-extra-" prefix
+    patch build/cmake/lib/CMakeLists.txt -i "$libzstd_rename_patch_path"
+
+    cd build/cmake
+    mkdir build
+    cd build
+    cmake $cmake_platform_generate_options ..
+    cmake --build . $cmake_platform_build_options --target install
+
+    # Ship license
+    install -D -m 644 ../../../LICENSE "$B/share/sail/licenses/zstd.txt"
+
+    case "$platform" in
+        MINGW* | MSYS*)
+            mv "$B/lib/sail-extra-zstd.lib" "$B/lib/zstd.lib"
+        ;;
+    esac
+
+    cd "$ROOT"
+}
+
+##########
+#  JPEG  #
+##########
+
+build_jpeg()
+{
+    if ! which nasm >/dev/null 2>&1; then
+        echo "Error: NASM is not found in PATH" >&2
+        exit 1
+    fi
+
+    unpack "$libjpeg_path"
+
+    # Rename the library to have "sail-extra-" prefix
+    patch sharedlib/CMakeLists.txt -i "$libjpeg_rename_patch_path"
+
+    mkdir build
+    cd build
+    cmake $cmake_platform_generate_options -DENABLE_SHARED=ON -DENABLE_STATIC=OFF -DWITH_TURBOJPEG=OFF -DWITH_CRT_DLL=ON ..
+    cmake --build . $cmake_platform_build_options --target install
+
+    # Ship license
+    install -D -m 644 ../LICENSE.md "$B/share/sail/licenses/libjpeg-turbo.txt"
+
+    case "$platform" in
+        MINGW* | MSYS*)
+            mv "$B/lib/sail-extra-jpeg.lib" "$B/lib/jpeg.lib"
+        ;;
+    esac
+
+    cd "$ROOT"
+}
+
+#########
+#  PNG  #
+#########
+
+build_png()
+{
+    unpack "$libpng_path"
+
+    patch -p1 < "$libapng_patch_path"
+
+    # Enable the pkg-config file
+    sed -i "s|^if(NOT WIN32 OR CYGWIN OR MINGW)|if(WIN32 OR UNIX)|" CMakeLists.txt
+
+    # Rename the library to have "sail-extra-" prefix
+    patch CMakeLists.txt -i "$libpng_rename_patch_path"
+
+    # Remove debug postfix
+    patch CMakeLists.txt -i "$libpng_remove_postfix_patch_path"
+
+    # On Windows we have no libm
+    case "$platform" in
+        MINGW* | MSYS*)
+            sed -i "s|-lm||" CMakeLists.txt
+        ;;
+    esac
+
+    mkdir build
+    cd build
+    cmake $cmake_platform_generate_options -DPNG_SHARED=ON -DPNG_STATIC=OFF -DPNG_TESTS=OFF \
+            -DZLIB_LIBRARY="$B/lib/${shared_prefix}zlib.${shared_ext}" ..
+    cmake --build . $cmake_platform_build_options --target install
+
+    # Ship license
+    install -D -m 644 ../LICENSE "$B/share/sail/licenses/libpng.txt"
+
+    case "$platform" in
+        MINGW* | MSYS*)
+            mv "$B/lib/sail-extra-png.lib" "$B/lib/libpng16.lib"
+        ;;
+    esac
+
+    cd "$ROOT"
+}
+
+##########
+#  JBIG  #
+##########
+
+build_jbig()
+{
+    unpack "$libjbig_path"
+
+    install -D -m 644 "$libjbig_cmake_lists" "CMakeLists.txt"
+    install -D -m 644 "$libjbig_pc_in"       "libjbig.pc.in"
+    install -D -m 644 "$libjbig_jbig_def"    "libjbig/jbig.def"
+
+    # Patch JBIG to export functions
+    patch -p1 < "$libjbig_fixes_patch_path"
+
+    # Rename the library to have "sail-extra-" prefix
+    patch CMakeLists.txt -i "$libjbig_rename_patch_path"
+
+    mkdir build
+    cd build
+    cmake $cmake_platform_generate_options -DBUILD_SHARED_LIBS=ON ..
+    cmake --build . $cmake_platform_build_options --target install
+
+    # Ship license
+    install -D -m 644 ../COPYING "$B/share/sail/licenses/jbig.txt"
+
+    case "$platform" in
+        MINGW* | MSYS*)
+            mv "$B/lib/sail-extra-jbig.lib" "$B/lib/jbig.lib"
+        ;;
+    esac
+
+    cd "$ROOT"
+}
+
+##########
+#  TIFF  #
+##########
+
+build_tiff()
+{
+    unpack "$libtiff_path"
+
+    # Rename the library to have "sail-extra-" prefix
+    patch libtiff/CMakeLists.txt -i "$libtiff_rename_patch_path"
+
+    # Remove debug postfix
+    patch cmake/WindowsSupport.cmake -i "$libtiff_remove_postfix_patch_path"
+
+    # Fix linking targets (bug in tiff)
+    patch cmake/FindJBIG.cmake -i "$libtiff_fix_jbig_patch_path"
+    patch cmake/FindZSTD.cmake -i "$libtiff_fix_zstd_patch_path"
+
+    # "build" already exists in tiff
+    mkdir bld
+    cd bld
+    cmake $cmake_platform_generate_options -DBUILD_SHARED_LIBS=ON -Dcxx=OFF                             \
+            -DZLIB_LIBRARY="$B/lib/${shared_prefix}zlib.${shared_ext}"                                  \
+            -DJPEG_LIBRARY="$B/lib/${shared_prefix}jpeg.${shared_ext}"                                  \
+            -DJBIG_LIBRARY="$B/lib/${shared_prefix}jbig.${shared_ext}" -DJBIG_INCLUDE_DIR="$B/include"  \
+            -DZSTD_LIBRARY="$B/lib/${shared_prefix}zstd.${shared_ext}" -DZSTD_INCLUDE_DIR="$B/include" ..
+    cmake --build . $cmake_platform_build_options --target install
+
+    # Ship license
+    install -D -m 644 ../COPYRIGHT "$B/share/sail/licenses/tiff.txt"
+
+    case "$platform" in
+        MINGW* | MSYS*)
+            mv "$B/lib/sail-extra-tiff.lib" "$B/lib/tiff.lib"
+        ;;
+    esac
+
+    cd "$ROOT"
+}
+
+#########
+#  GIF  #
+#########
+
+build_gif()
+{
+    unpack "$libgif_path"
+
+    install -D -m 644 "$libgif_cmake_lists" "CMakeLists.txt"
+    install -D -m 644 "$libgif_gif_lib_def" "gif_lib.def"
+    install -D -m 644 "$libgif_pc_in"       "giflib.pc.in"
+
+    # Rename the library to have "sail-extra-" prefix
+    patch CMakeLists.txt -i "$libgif_rename_patch_path"
+
+    # Fix compilation issues
+    patch -p1 < "$libgif_fixes_patch_path"
+
+    mkdir build
+    cd build
+    cmake $cmake_platform_generate_options -DBUILD_SHARED_LIBS=ON ..
+    cmake --build . $cmake_platform_build_options --target install
+
+    # Ship license
+    install -D -m 644 ../COPYING "$B/share/sail/licenses/giflib.txt"
+
+    case "$platform" in
+        MINGW* | MSYS*)
+            mv "$B/lib/sail-extra-gif.lib" "$B/lib/gif.lib"
+        ;;
+    esac
+
+    cd "$ROOT"
+}
+
+##########
+#  AVIF  #
+##########
+
+download_perl()
+{
+    local name=$(basename "$perl_url")
+    local path="$download/$name"
+
+    if [ -f "$path" ]; then
+        local perl_size=$(stat -c %s "$path")
+
+        if [ $perl_size -eq $perl_size_check ]; then
+            return
+        fi
+    fi
+
+    curl -k "$perl_url" -o "$path"
+}
+
+unpack_perl()
+{
+    local name=$(basename "$perl_url")
+    local path="$download/$name"
+
+    echo "Unpacking perl '$path'"
+
+    mkdir -p "$builddir/$name"
+    unzip -q "$path" -d "$builddir/$name"
+
+    export PATH="$builddir/$name/perl/bin:$PATH"
+}
+
+build_aom()
+{
+    case "$platform" in
+        MINGW* | MSYS*)
+            download_perl
+            unpack_perl
+        ;;
+    esac
+
+    unpack "$libaom_path"
+
+    # Rename the library to have "sail-extra-" prefix
+    patch -p1 -i "$libaom_rename_patch_path"
+
+    mkdir bld
+    cd bld
+    cmake $cmake_platform_generate_options -DENABLE_DOCS=OFF -DENABLE_EXAMPLES=OFF -DENABLE_TESTDATA=OFF -DENABLE_TESTS=OFF \
+            -DENABLE_TOOLS=OFF -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX="$B" ..
+    cmake --build . $cmake_platform_build_options
+
+    # AOM still has no CMake installation rules
+    install -D -m 644 "../aom/aom.h"              "$B/include/aom/aom.h"
+    install -D -m 644 "../aom/aom_codec.h"        "$B/include/aom/aom_codec.h"
+    install -D -m 644 "../aom/aom_decoder.h"      "$B/include/aom/aom_decoder.h"
+    install -D -m 644 "../aom/aom_encoder.h"      "$B/include/aom/aom_encoder.h"
+    install -D -m 644 "../aom/aom_frame_buffer.h" "$B/include/aom/aom_frame_buffer.h"
+    install -D -m 644 "../aom/aom_image.h"        "$B/include/aom/aom_image.h"
+    install -D -m 644 "../aom/aom_integer.h"      "$B/include/aom/aom_integer.h"
+    install -D -m 644 "../aom/aomcx.h"            "$B/include/aom/aomcx.h"
+    install -D -m 644 "../aom/aomdx.h"            "$B/include/aom/aomdx.h"
+
+    # Ship license
+    install -D -m 644 ../LICENSE "$B/share/sail/licenses/aom.txt"
+
+    case "$platform" in
+        MINGW* | MSYS*)
+            install -D -m 644 "$cmake_windows_build_type/sail-extra-aom.lib" "$B/lib/aom.lib"
+            install -D -m 644 "$cmake_windows_build_type/sail-extra-aom.dll" "$B/bin/sail-extra-aom.dll"
+        ;;
+        Linux* | Darwin*)
+            find . -name 'libsail-extra-aom.so*' -exec cp -dp '{}' "$B/lib/{}" ';'
+        ;;
+    esac
+
+    cd "$ROOT"
+}
+
+build_avif()
+{
+    unpack "$libavif_path"
+
+    # Rename the library to have "sail-extra-" prefix
+    patch CMakeLists.txt -i "$libavif_rename_patch_path"
+
+    # Find AOM in our location
+    patch CMakeLists.txt -i "$libavif_find_aom_patch_path"
+
+    mkdir build
+    cd build
+    cmake $cmake_platform_generate_options -DAVIF_CODEC_AOM=ON -DAOM_INCLUDE_DIR="$B/include" ..
+    cmake --build . $cmake_platform_build_options --target install
+
+    # Ship license
+    install -D -m 644 ../LICENSE "$B/share/sail/licenses/libavif.txt"
+
+    cd "$ROOT"
+}
+
+##########
+#  WEBP  #
+##########
+
+build_webp()
+{
+    unpack "$libwebp_path"
+
+    # Rename the library to have "sail-extra-" prefix
+    patch CMakeLists.txt -i "$libwebp_rename_patch_path"
+
+    # Export symbols
+    patch CMakeLists.txt -i "$libwebp_export_patch_path"
+
+    mkdir build
+    cd build
+
+    cmake $cmake_platform_generate_options -DBUILD_SHARED_LIBS=ON -DWEBP_BUILD_ANIM_UTILS=OFF -DWEBP_BUILD_CWEBP=OFF                    \
+            -DWEBP_BUILD_DWEBP=OFF -DWEBP_BUILD_GIF2WEBP=OFF -DWEBP_BUILD_IMG2WEBP=OFF -DWEBP_BUILD_VWEBP=OFF -DWEBP_BUILD_WEBPINFO=OFF \
+            -DWEBP_BUILD_WEBPMUX=OFF -DWEBP_BUILD_EXTRAS=OFF -DWEBP_BUILD_WEBP_JS=OFF ..
+    cmake --build . $cmake_platform_build_options --target install
+
+    # Ship license
+    install -D -m 644 ../COPYING "$B/share/sail/licenses/libwebp.txt"
+
+    cd "$ROOT"
+}
+
+##############
+#  JPEG2000  #
+##############
+
+build_jpeg2000()
+{
+    unpack "$jasper_path"
+
+    # Rename the library to have "sail-extra-" prefix
+    patch src/libjasper/CMakeLists.txt -i "$jasper_rename_patch_path"
+
+    mkdir bld
+    cd bld
+
+    cmake $cmake_platform_generate_options -DJAS_ENABLE_DOC=OFF -DJAS_ENABLE_PROGRAMS=OFF       \
+            -DJAS_INCLUDE_PNM_CODEC=OFF -DJAS_INCLUDE_BMP_CODEC=OFF -DJAS_INCLUDE_RAS_CODEC=OFF \
+            -DJAS_INCLUDE_JPG_CODEC=OFF -DJAS_INCLUDE_PGX_CODEC=OFF -DJAS_INCLUDE_MIF_CODEC=OFF ..
+    cmake --build . $cmake_platform_build_options --target install
+
+    # Ship license
+    install -D -m 644 ../LICENSE "$B/share/sail/licenses/jasper.txt"
+
+    case "$platform" in
+        MINGW* | MSYS*)
+            mv "$B/lib/sail-extra-jasper.lib" "$B/lib/jasper.lib"
+        ;;
+    esac
+
+    cd "$ROOT"
+}
+
+#########
+#  SVG  #
+#########
+
+build_svg()
+{
+    ${rustup_path} -y --no-modify-path --default-host x86_64-pc-windows-msvc --default-toolchain stable --profile minimal
+
+    unpack "$resvg_path"
+
+    # Rename the library to have "sail-extra-" prefix
+    patch crates/c-api/Cargo.toml -i "$resvg_rename_patch_path"
+
+    cd crates/c-api
+    ${USERPROFILE}/.cargo/bin/cargo build --release
+
+    # Install
+    install -D -m 644 "resvg.h"  "$B/include/resvg.h"
+
+    # Ship license
+    install -D -m 644 ../../LICENSE.txt "$B/share/sail/licenses/resvg.txt"
+
+    case "$platform" in
+        MINGW* | MSYS*)
+            install -D -m 644 "../../target/release/sail_extra_resvg.dll.lib" "$B/lib/resvg.lib"
+            install -D -m 644 "../../target/release/sail_extra_resvg.dll"     "$B/bin/sail_extra_resvg.dll"
+        ;;
+        Linux* | Darwin*)
+            find . -name 'libsail-extra-resvg.so*' -exec cp -dp '{}' "$B/lib/{}" ';'
+        ;;
+    esac
+
+    cd "$ROOT"
+}
+
+############
+#  JPEGXL  #
+############
+
+build_jpegxl()
+{
+    unpack "$libjxl_path"
+
+    # Rename the library to have "sail-extra-" prefix
+    patch third_party/brotli/CMakeLists.txt -i "$brotli_rename_patch_path"
+    patch lib/jxl.cmake                     -i "$libjxl_rename_patch_path"
+    patch lib/jxl_threads.cmake             -i "$libjxl_threads_rename_patch_path"
+
+    mkdir build
+    cd build
+
+    cmake $cmake_platform_generate_options -DBUILD_TESTING=OFF -DJPEGXL_ENABLE_TOOLS=OFF          \
+            -DJPEGXL_ENABLE_JPEGLI=OFF -DJPEGXL_ENABLE_BENCHMARK=OFF -DJPEGXL_ENABLE_EXAMPLES=OFF \
+            -DJPEGXL_ENABLE_DOXYGEN=OFF ..
+    cmake --build . $cmake_platform_build_options --target install
+
+    # Ship license
+    install -D -m 644 ../LICENSE "$B/share/sail/licenses/libjxl.txt"
+
+    case "$platform" in
+        MINGW* | MSYS*)
+            mv "$B/lib/sail-extra-brotlicommon.lib" "$B/lib/brotlicommon.lib"
+            mv "$B/lib/sail-extra-brotlidec.lib"    "$B/lib/brotlidec.lib"
+            mv "$B/lib/sail-extra-brotlienc.lib"    "$B/lib/brotlienc.lib"
+            mv "$B/lib/sail-extra-jxl.lib"          "$B/lib/jxl.lib"
+            mv "$B/lib/sail-extra-jxl_threads.lib"  "$B/lib/jxl_threads.lib"
+        ;;
+    esac
+
+    cd "$ROOT"
+}
+
+#########
+#  RAW  #
+#########
+
+build_raw()
+{
+    unpack "$libraw_path"
+
+    unzip -o -q "$libraw_cmake_path"
+
+    # Rename the library to have "sail-extra-" prefix
+    patch CMakeLists.txt -i "$libraw_rename_patch_path"
+
+    mkdir build
+    cd build
+
+    cmake $cmake_platform_generate_options -DCMAKE_DEBUG_POSTFIX="" -DENABLE_EXAMPLES=OFF ..
+    cmake --build . $cmake_platform_build_options --target install
+
+    # Ship license
+    install -D -m 644 ../LICENSE.CDDL "$B/share/sail/licenses/libraw.txt"
+
+    case "$platform" in
+        MINGW* | MSYS*)
+            mv "$B/lib/sail-extra-raw_r.lib" "$B/lib/raw_r.lib"
+        ;;
+    esac
+
+    cd "$ROOT"
+}
+
+###########
+#  BUILD  #
+###########
+
+build_zlib
+build_zstd
+build_aom
+
+build_jpeg
+build_png
+build_jbig
+build_tiff
+build_gif
+build_avif
+build_webp
+build_jpeg2000
+build_svg
+build_jpegxl
+#build_raw
+
+# Remove executables possibly built by libraries
+#
+find "$B/bin" -name '*.exe' -print -delete
+
+echo
+echo Success
+echo

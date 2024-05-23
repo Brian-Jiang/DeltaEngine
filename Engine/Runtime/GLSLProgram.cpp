@@ -139,6 +139,7 @@ void GLSLProgram::use()
 	glUseProgram(programID);
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
+	glEnableVertexAttribArray(2);
 }
 
 void GLSLProgram::unuse()
@@ -146,5 +147,6 @@ void GLSLProgram::unuse()
 	glUseProgram(0);
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(1);
+	glDisableVertexAttribArray(2);
 
 }

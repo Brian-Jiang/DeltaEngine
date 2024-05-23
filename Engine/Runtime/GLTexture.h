@@ -1,3 +1,10 @@
 #pragma once
-class GLTexture {};
 
+#include "GL/glew.h"
+
+struct GLTexture
+{
+	GLuint textureID;
+	int width;
+	int height;
+};

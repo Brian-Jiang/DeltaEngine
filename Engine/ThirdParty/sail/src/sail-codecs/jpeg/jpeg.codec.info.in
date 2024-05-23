@@ -1,0 +1,26 @@
+# JPEG codec information
+#
+[codec]
+layout=8
+version=1.3.4.1
+priority=HIGHEST
+name=JPEG
+description=Joint Photographic Experts Group
+magic-numbers=FF D8
+extensions=jpg;jpeg;jpe;jif;jfif;jfi
+mime-types=image/jpeg
+
+[load-features]
+features=STATIC;META-DATA@JPEG_CODEC_INFO_FEATURE_ICCP@;SOURCE-IMAGE
+tuning=jpeg-dct-method;jpeg-optimize-coding;jpeg-smoothing-factor
+
+[save-features]
+features=STATIC;META-DATA@JPEG_CODEC_INFO_FEATURE_ICCP@
+pixel-formats=BPP8-GRAYSCALE;@JPEG_CODEC_INFO_WRITE_EXT@BPP24-YCBCR;BPP32-CMYK;BPP32-YCCK
+compressions=JPEG
+default-compression=JPEG
+compression-level-min=0
+compression-level-max=100
+compression-level-default=15
+compression-level-step=1
+tuning=

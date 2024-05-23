@@ -1,6 +1,6 @@
 #pragma once
-
-#include "../../ThirdParty/glew/include/GL/glew.h"
+#include "GLSLProgram.h"
+#include "GLTexture.h"
 
 class SpriteRenderer
 {
@@ -8,7 +8,7 @@ public:
 	SpriteRenderer();
 	~SpriteRenderer();
 
-	void Start(float x, float y, float width, float height, const char* texturePath);
+	void Start(float x, float y, float width, float height, const char* texturePath, GLSLProgram *program);
 	void Render();
 
 private:
@@ -16,10 +16,12 @@ private:
 	float y;
 	float width;
 	float height;
-	const char* texturePath;
-	unsigned int texture;
+	// const char* texturePath;
+	// unsigned int texture;
 	unsigned int vbo;
 	unsigned int VAO;
 	unsigned int EBO;
+	GLTexture texture;
+	GLSLProgram* program;
 };
 

@@ -7,8 +7,7 @@
 #include <fstream>
 #include <iostream>
 
-#include "../../ThirdParty/glew/include/GL/glew.h"
-#include <SDL_opengl.h>
+#include "GL/glew.h"
 
 #include "SDL3/SDL.h"
 #include "Const.h"
@@ -37,10 +36,13 @@ void DeltaEngine::Initialize()
     // file.close();
 
 	
-	sprite->Start(-0.5f, -0.5f, 1.0f, 1.0f, "assets/texture.png");
+	
 	shader = new GLSLProgram();
-	shader->compileShaders("../../../../Engine/Runtime/Shaders/Vertex.glsl", "../../../../Engine/Runtime/Shaders/Fragment.glsl");
-// shader->linkShaders();
+	shader->compileShaders("../../../Engine/Runtime/Shaders/Vertex.glsl", "../../../Engine/Runtime/Shaders/Fragment.glsl");
+
+    sprite->Start(-1.0f, -1.0f, 2.0f, 2.0f, "../../../Engine/Runtime/Assets/Frame1.png", shader);
+
+	// shader->linkShaders();
 // shader->addAttribute("vertexPosition");
 // shader->addAttribute("vertexColor");
 // shader->addAttribute("vertexUV");
@@ -156,8 +158,8 @@ void DeltaEngine::Draw()
 
     shader->use();
 
-    auto timeLocation = shader->getUniformLocation("time");
-    glUniform1f(timeLocation, time);
+    // auto timeLocation = shader->getUniformLocation("time");
+    // glUniform1f(timeLocation, time);
     sprite->Render();
 
     shader->unuse();
