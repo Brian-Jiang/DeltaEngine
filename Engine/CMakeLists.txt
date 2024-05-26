@@ -30,6 +30,7 @@ add_subdirectory(ThirdParty)
 include_directories(ThirdParty/glew/include)
 include_directories(ThirdParty/glfw/include)
 include_directories(ThirdParty/sdl3/include)
+include_directories(ThirdParty/dxc/inc)
 
 add_subdirectory(Runtime)
 add_subdirectory(Editor)

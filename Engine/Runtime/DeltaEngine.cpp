@@ -4,6 +4,8 @@
 #include "DeltaEngine.h"
 
 #include <cstdio>
+#include <d3d12sdklayers.h>
+#include <dxgi1_6.h>
 #include <fstream>
 #include <iostream>
 
@@ -18,7 +20,7 @@
 
 
 DeltaEngine::DeltaEngine() : exitCode(0), renderer(nullptr), window(nullptr), gameState(GameState::PLAY),
-                             shader(nullptr), time(0.0f)
+                             shader(nullptr), time(0.0f), dxRenderManager(nullptr)
 {
 	sprite = new SpriteRenderer();
 }
@@ -32,15 +34,12 @@ void DeltaEngine::Initialize()
     // if (file.is_open()) {
     //     file << "Test file";
     // }
-
     // file.close();
 
-	
-	
-	shader = new GLSLProgram();
-	shader->compileShaders("../../../Engine/Runtime/Shaders/Vertex.glsl", "../../../Engine/Runtime/Shaders/Fragment.glsl");
+	// shader = new GLSLProgram();
+	// shader->compileShaders("../../../Engine/Runtime/Shaders/Vertex.glsl", "../../../Engine/Runtime/Shaders/Fragment.glsl");
 
-    sprite->Start(-1.0f, -1.0f, 2.0f, 2.0f, "../../../Engine/Runtime/Assets/Frame1.png", shader);
+    // sprite->Start(-1.0f, -1.0f, 2.0f, 2.0f, "../../../Engine/Runtime/Assets/Frame1.png", shader);
 
 	// shader->linkShaders();
 // shader->addAttribute("vertexPosition");
@@ -48,6 +47,14 @@ void DeltaEngine::Initialize()
 // shader->addAttribute("vertexUV");
 
 // shader->unuse();
+}
+
+void ThrowIfFailed(HRESULT hresult)
+{
+	if (FAILED(hresult))
+	{
+		throw std::exception();
+	}
 }
 
 void DeltaEngine::InitSDL() {
@@ -79,21 +86,26 @@ void DeltaEngine::InitSDL() {
         gameState = GameState::Error;
     }
 
-    auto context = SDL_GL_CreateContext(window);
-	if (!context) {
-		printf("Failed to create OpenGL context: %s\n", SDL_GetError());
-		gameState = GameState::Error;
-	}
+    auto hwnd = static_cast<HWND>(SDL_GetProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr));
+    dxRenderManager = new DXRenderManager(hwnd, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-    auto error = glewInit();
-    if (error != GLEW_OK) {
-        const auto glewError = reinterpret_cast<const char*>(glewGetErrorString(error));
-        printf("Error initializing GLEW: %s\n", glewError);
-        gameState = GameState::Error;
-    }
+ //    auto context = SDL_GL_CreateContext(window);
+	// if (!context) {
+	// 	printf("Failed to create OpenGL context: %s\n", SDL_GetError());
+	// 	gameState = GameState::Error;
+	// }
+ //
+ //    auto error = glewInit();
+ //    if (error != GLEW_OK) {
+ //        const auto glewError = reinterpret_cast<const char*>(glewGetErrorString(error));
+ //        printf("Error initializing GLEW: %s\n", glewError);
+ //        gameState = GameState::Error;
+ //    }
 
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    glClearColor(0.3f, 0.5f, 1.0f, 1.0f);
+    // SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    // glClearColor(0.3f, 0.5f, 1.0f, 1.0f);
+
+
 
     //SDL_SetHint(SDLHint, "linear");
 
@@ -144,25 +156,18 @@ void DeltaEngine::HandleInput()
 
 void DeltaEngine::Draw()
 {
-    glClearDepth(1.0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // glClearDepth(1.0);
+    // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    //
+    // shader->use();
+    //
+    // // auto timeLocation = shader->getUniformLocation("time");
+    // // glUniform1f(timeLocation, time);
+    // sprite->Render();
+    //
+    // shader->unuse();
+    //
+    // SDL_GL_SwapWindow(window);
 
-    // glEnableClientState(GL_COLOR_ARRAY);
-    // glBegin(GL_TRIANGLES);
-    // glColor3f(1, 1, 1);
-    // glVertex2f(0, 0);
-    // glVertex2f(0.1f, -0.15f);
-    // glVertex2f(0.1f, 0.15f);
-    // glEnd();
-
-
-    shader->use();
-
-    // auto timeLocation = shader->getUniformLocation("time");
-    // glUniform1f(timeLocation, time);
-    sprite->Render();
-
-    shader->unuse();
-
-    SDL_GL_SwapWindow(window);
+    dxRenderManager->OnRender();
 }

@@ -5,6 +5,7 @@
 
 #include "GLSLProgram.h"
 #include "SpriteRenderer.h"
+#include "Graphics/DXRenderManager.h"
 #include "SDL3/SDL.h"
 
 enum class GameState {
@@ -35,6 +36,8 @@ private:
 
 	SpriteRenderer* sprite;
 	GLSLProgram* shader;
+
+	DXRenderManager* dxRenderManager;
 
 	float time;
 };
