@@ -4,7 +4,7 @@
 #pragma once
 
 #include "GLSLProgram.h"
-#include "SpriteRenderer.h"
+#include "Graphics/Renderer/SpriteRenderer.h"
 #include "Graphics/DXRenderManager.h"
 #include "SDL3/SDL.h"
 

@@ -21,7 +21,7 @@ public:
 
 private:
     void GetHardwareAdapter(IDXGIFactory4* pFactory, IDXGIAdapter1** ppAdapter);
-    std::wstring GetAssetFullPath(LPCWSTR assetName);
+    // std::wstring GetAssetFullPath(LPCWSTR assetName);
 
 	HWND hwnd;
 
@@ -37,6 +37,7 @@ private:
     ComPtr<ID3D12CommandQueue> m_commandQueue;
     ComPtr<ID3D12RootSignature> m_rootSignature;
     ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
+    ComPtr<ID3D12DescriptorHeap> m_srvHeap;
     ComPtr<ID3D12PipelineState> m_pipelineState;
     ComPtr<ID3D12GraphicsCommandList> m_commandList;
     UINT m_rtvDescriptorSize;

@@ -6,7 +6,7 @@
 // #include "sail-c++/image.h"
 
 
-GLTexture ImageLoader::loadPNG(std::string filePath)
+GLTexture ImageLoader::loadPNGForGL(std::string filePath)
 {
 	GLTexture glTexture = {};
 	// sail::image image(filePath);

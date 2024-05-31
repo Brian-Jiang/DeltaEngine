@@ -52,7 +52,7 @@ void SpriteRenderer::Start(float x, float y, float width, float height, const ch
 	vertexData[4].position.y = y + height;
 	vertexData[4].SetUV(1.0f, 1.0f);
 
-	vertexData[5].position.x = x + height;
+	vertexData[5].position.x = x + width;
 	vertexData[5].position.y = y;
 	vertexData[5].SetUV(1.0f, 0.0f);
 
@@ -74,7 +74,6 @@ void SpriteRenderer::Start(float x, float y, float width, float height, const ch
 
 	glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertexData), vertexData, GL_STATIC_DRAW);
-
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	// glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
@@ -89,7 +88,7 @@ void SpriteRenderer::Start(float x, float y, float width, float height, const ch
 	// glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->EBO);
 	// glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 	//
-	this->texture = ImageLoader::loadPNG(texturePath);
+	this->texture = ImageLoader::loadPNGForGL(texturePath);
 	this->program = program;
 }
 
