@@ -29,12 +29,12 @@ bool IOManager::readFileToBuffer(const std::string& filePath, std::vector<char>&
 
 std::wstring IOManager::GetAssetFullPath(LPCWSTR assetName)
 {
-	std::wstring prefix = L"../../../Engine/Runtime/";
+	std::wstring prefix = L"../../Engine/Runtime/";
     return prefix + assetName;
 }
 
 std::string IOManager::GetAssetFullPath(const std::string& assetName)
 {
-	std::string prefix = "../../../Engine/Runtime/";
+	std::string prefix = "../../Engine/Runtime/";
 	return prefix + std::string(assetName.begin(), assetName.end());
 }

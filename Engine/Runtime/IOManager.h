@@ -2,7 +2,9 @@
 
 #include <string>
 #include <vector>
-#include <winnt.h>
+#include <wtypes.h>
+
+// #include <winnt.h>
 
 class IOManager {
 public:

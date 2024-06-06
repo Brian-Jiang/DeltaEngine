@@ -1,6 +1,9 @@
 #include "DXSpriteRenderer.h"
 
+#include <d3dx12.h>
+
 #include "Graphics/Texture.h"
+#include "PlatformHelpers.h"
 
 DXSpriteRenderer::DXSpriteRenderer(): x(0), y(0), width(0), height(0), m_vertexBufferView()
 {
@@ -10,7 +13,7 @@ DXSpriteRenderer::~DXSpriteRenderer()
 {
 }
 
-void DXSpriteRenderer::Start(float x, float y, float width, float height, const char* texturePath, ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList> commandList)
+void DXSpriteRenderer::Start(float x, float y, float width, float height, const char* texturePath, const ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList> commandList, ComPtr<ID3D12DescriptorHeap> srvHeap)
 {
     this->x = x;
 	this->y = y;
@@ -22,12 +25,12 @@ void DXSpriteRenderer::Start(float x, float y, float width, float height, const 
         // Define the geometry for a triangle.
         Vertex triangleVertices[] =
         {
-            { { x, y + height, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
-            { { x, y, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } },
-            { { x + width, y, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
-			{ { x, y + height, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
-			{ { x + width, y + height, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } },
-			{ { x + width, y, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f } },
+            { { x, y + height, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
+			{ { x + width, y, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
+            { { x, y, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },
+			{ { x, y + height, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
+			{ { x + width, y + height, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
+			{ { x + width, y, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
         };
 
         const UINT vertexBufferSize = sizeof(triangleVertices);
@@ -63,11 +66,11 @@ void DXSpriteRenderer::Start(float x, float y, float width, float height, const 
     // the command list that references it has finished executing on the GPU.
     // We will flush the GPU at the end of this method to ensure the resource is not
     // prematurely destroyed.
-    ComPtr<ID3D12Resource> textureUploadHeap;
+    // ComPtr<ID3D12Resource> textureUploadHeap;
 
     // Create the texture.
     {
-        auto texture = Texture::LoadFromFile(texturePath);
+        texture = Texture::LoadFromFile(texturePath);
 
         // Describe and create a Texture2D.
         D3D12_RESOURCE_DESC textureDesc = {};
@@ -81,21 +84,38 @@ void DXSpriteRenderer::Start(float x, float y, float width, float height, const 
         textureDesc.SampleDesc.Quality = 0;
         textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 
+        auto hp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
         ThrowIfFailed(device->CreateCommittedResource(
-            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+            &hp,
             D3D12_HEAP_FLAG_NONE,
             &textureDesc,
             D3D12_RESOURCE_STATE_COPY_DEST,
             nullptr,
             IID_PPV_ARGS(&m_texture)));
 
-        const UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_texture.Get(), 0, 1);
+        // const UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_texture.Get(), 0, 1);
+
+        // Get the required size for the upload heap
+		D3D12_PLACED_SUBRESOURCE_FOOTPRINT bufferDesc;
+		UINT64 textureUploadBufferSize;
+		device->GetCopyableFootprints(
+		    &textureDesc,
+		    0, // First subresource
+		    1, // Number of subresources
+		    0, // Base offset
+		    &bufferDesc,
+		    nullptr,
+		    nullptr,
+		    &textureUploadBufferSize
+		);
 
         // Create the GPU upload buffer.
+        hp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+        auto uploadHeapDesc = CD3DX12_RESOURCE_DESC::Buffer(textureUploadBufferSize);
         ThrowIfFailed(device->CreateCommittedResource(
-            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+            &hp,
             D3D12_HEAP_FLAG_NONE,
-            &CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
+            &uploadHeapDesc,
             D3D12_RESOURCE_STATE_GENERIC_READ,
             nullptr,
             IID_PPV_ARGS(&textureUploadHeap)));
@@ -103,15 +123,35 @@ void DXSpriteRenderer::Start(float x, float y, float width, float height, const 
         // Copy data to the intermediate upload heap and then schedule a copy 
         // from the upload heap to the Texture2D.
         
-        // std::vector<UINT8> texture = GenerateTextureData();
-
+        auto rawData = texture->GetData().data();
         D3D12_SUBRESOURCE_DATA textureData = {};
-        textureData.pData = texture->GetData().data();
-        textureData.RowPitch = texture->GetWidth() * TexturePixelSize;
+        textureData.pData = rawData;
+        textureData.RowPitch = texture->GetWidth() * 4;
         textureData.SlicePitch = textureData.RowPitch * texture->GetHeight();
 
-        UpdateSubresources(commandList.Get(), m_texture.Get(), textureUploadHeap.Get(), 0, 0, 1, &textureData);
-        commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+        // UpdateSubresources(commandList.Get(), m_texture.Get(), textureUploadHeap.Get(), 0, 0, 1, &textureData);
+        UINT8* pData;
+        // auto textureDataSize = texture->GetWidth() * texture->GetHeight() * TexturePixelSize;
+        textureUploadHeap->Map(0, nullptr, reinterpret_cast<void**>(&pData));
+		memcpy(pData, rawData, textureData.SlicePitch);
+		textureUploadHeap->Unmap(0, nullptr);
+        
+  //       for (size_t i = 0; i < texture->GetWidth() * texture->GetHeight(); ++i) {
+		// 	printf("Pixel %zu: R = %u, G = %u, B = %u, A = %u\n", i, 
+		// 	texture->GetData()[i * 4 + 0], 
+		// 	texture->GetData()[i * 4 + 1], 
+		// 	texture->GetData()[i * 4 + 2], 
+		// 	texture->GetData()[i * 4 + 3]);
+		// }
+
+        // Record commands to copy data from upload heap to texture
+		D3D12_TEXTURE_COPY_LOCATION dst = CD3DX12_TEXTURE_COPY_LOCATION(m_texture.Get(), 0);
+		D3D12_TEXTURE_COPY_LOCATION src = CD3DX12_TEXTURE_COPY_LOCATION(textureUploadHeap.Get(), bufferDesc);
+		commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+
+        auto rb = CD3DX12_RESOURCE_BARRIER::Transition(
+            m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    	commandList->ResourceBarrier(1, &rb);
 
         // Describe and create a SRV for the texture.
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -119,13 +159,13 @@ void DXSpriteRenderer::Start(float x, float y, float width, float height, const 
         srvDesc.Format = textureDesc.Format;
         srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
         srvDesc.Texture2D.MipLevels = 1;
-        device->CreateShaderResourceView(m_texture.Get(), &srvDesc, m_srvHeap->GetCPUDescriptorHandleForHeapStart());
+        device->CreateShaderResourceView(m_texture.Get(), &srvDesc, srvHeap->GetCPUDescriptorHandleForHeapStart());
     }
 }
 
-void DXSpriteRenderer::Render(ComPtr<ID3D12GraphicsCommandList> commandList)
+void DXSpriteRenderer::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList)
 {
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
-    commandList->DrawInstanced(3, 2, 0, 0);
+    commandList->DrawInstanced(6, 1, 0, 0);
 }

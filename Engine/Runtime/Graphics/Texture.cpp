@@ -16,3 +16,4 @@ Texture::~Texture()
 Texture* Texture::LoadFromFile(const std::string& filePath) {
 	return new Texture(filePath);
 }
+// data = { size=319872 }

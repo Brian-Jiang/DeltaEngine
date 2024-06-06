@@ -15,9 +15,16 @@ public:
 	DXRenderManager(HWND hwnd, UINT width, UINT height);
 	void LoadPipeline();
     void LoadAssets();
-    void OnRender();
-    void PopulateCommandList();
+    void InitFinish();
+    void PrepareFrame();
+    void RenderFrame();
+    // void OnRender();
+    // void PopulateCommandList();
     void WaitForPreviousFrame();
+
+    ComPtr<ID3D12Device> GetDevice() { return m_device; }
+    ComPtr<ID3D12GraphicsCommandList> GetCommandList() { return m_commandList; }
+    ComPtr<ID3D12DescriptorHeap> GetSRVHeap() { return m_srvHeap; }
 
 private:
     void GetHardwareAdapter(IDXGIFactory4* pFactory, IDXGIAdapter1** ppAdapter);

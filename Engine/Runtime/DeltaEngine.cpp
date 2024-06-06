@@ -20,9 +20,10 @@
 
 
 DeltaEngine::DeltaEngine() : exitCode(0), renderer(nullptr), window(nullptr), gameState(GameState::PLAY),
-                             shader(nullptr), time(0.0f), dxRenderManager(nullptr)
+                             shader(nullptr), time(0.0f), dxRenderManager(nullptr), dxSprite(nullptr)
 {
 	sprite = new SpriteRenderer();
+    dxSprite = new DXSpriteRenderer();
 }
 
 void DeltaEngine::Initialize()
@@ -40,7 +41,9 @@ void DeltaEngine::Initialize()
 	// shader->compileShaders("../../../Engine/Runtime/Shaders/Vertex.glsl", "../../../Engine/Runtime/Shaders/Fragment.glsl");
 
     // sprite->Start(-1.0f, -1.0f, 2.0f, 2.0f, "../../../Engine/Runtime/Assets/Frame1.png", shader);
+    dxSprite->Start(-1.0f, -1.0f, 2.0f, 2.0f, "../../Engine/Runtime/Assets/logo.png", dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
 
+    dxRenderManager->InitFinish();
 	// shader->linkShaders();
 // shader->addAttribute("vertexPosition");
 // shader->addAttribute("vertexColor");
@@ -169,5 +172,7 @@ void DeltaEngine::Draw()
     //
     // SDL_GL_SwapWindow(window);
 
-    dxRenderManager->OnRender();
+    dxRenderManager->PrepareFrame();
+    dxSprite->Render(dxRenderManager->GetCommandList());
+    dxRenderManager->RenderFrame();
 }

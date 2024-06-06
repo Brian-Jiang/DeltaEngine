@@ -1,10 +1,12 @@
 #pragma once
-#include "Graphics/DXRenderManager.h"
+#include <d3d12.h>
+#include <DirectXMath.h>
+#include <wrl/client.h>
 
-#include <fstream>
-#include <iostream>
+#include "Graphics/Texture.h"
 
-#include "PlatformHelpers.h"
+using namespace DirectX;
+using namespace Microsoft::WRL;
 
 class DXSpriteRenderer
 {
@@ -12,8 +14,8 @@ class DXSpriteRenderer
 	DXSpriteRenderer();
 	~DXSpriteRenderer();
 
-	void Start(float x, float y, float width, float height, const char* texturePath, ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList> commandList);
-	void Render(ComPtr<ID3D12GraphicsCommandList> commandList);
+	void Start(float x, float y, float width, float height, const char* texturePath, ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList> commandList, ComPtr<ID3D12DescriptorHeap> srvHeap);
+	void Render(const ComPtr<ID3D12GraphicsCommandList>& commandList);
 
 private:
 	float x;
@@ -29,12 +31,14 @@ private:
 	ComPtr<ID3D12Resource> m_vertexBuffer;
     D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
 	ComPtr<ID3D12Resource> m_texture;
+	ComPtr<ID3D12Resource> textureUploadHeap;
+	Texture *texture;
 
 	struct Vertex
     {
-        XMFLOAT3 position;
-        XMFLOAT4 color;
-		XMFLOAT2 uv;
+	    XMFLOAT3 position;
+	    XMFLOAT4 color;
+	    XMFLOAT2 uv;
     };
 
 private:

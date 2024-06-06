@@ -10,7 +10,7 @@ public:
 
 	unsigned int GetWidth() const { return width; }
 	unsigned int GetHeight() const { return height; }
-	std::vector<unsigned char> GetData() const { return data; }
+	const std::vector<unsigned char> &GetData() const { return data; }
 
 	static Texture* LoadFromFile(const std::string& filePath);
 
