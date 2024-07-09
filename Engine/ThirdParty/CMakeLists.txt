@@ -6,6 +6,7 @@ include(sdl3.cmake)
 include(imgui.cmake)
 # include(sail.cmake)
 include(dxtk12.cmake)
+include(assimp.cmake)
 
 set_target_properties(glfw PROPERTIES FOLDER ${third_party_folder})
 # set_target_properties(SDL3-static PROPERTIES FOLDER ${third_party_folder})

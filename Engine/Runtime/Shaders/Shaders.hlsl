@@ -25,6 +25,8 @@ float4 PSMain(PSInput input) : SV_TARGET
     float2 uv;
     uv.x = input.uv.x;
     uv.y = 1 - input.uv.y;  // Flip UVs (DirectX vs OpenGL)
-    return g_texture.Sample(g_sampler, uv);
-    // return g_texture.Sample(g_sampler, uv) * input.color;
+    float4 textureColor = g_texture.Sample(g_sampler, uv);
+    // textureColor.a = 1.0f;
+    // return textureColor * float4(input.uv, 0.0f, 1.0f);
+    return g_texture.Sample(g_sampler, uv) * input.color;
 }

@@ -21,6 +21,7 @@ public:
     // void OnRender();
     // void PopulateCommandList();
     void WaitForPreviousFrame();
+    void OnDestroy();
 
     ComPtr<ID3D12Device> GetDevice() { return m_device; }
     ComPtr<ID3D12GraphicsCommandList> GetCommandList() { return m_commandList; }
@@ -62,10 +63,10 @@ private:
     ComPtr<ID3D12Fence> m_fence;
     UINT64 m_fenceValue;
 
-    struct Vertex
-    {
-        XMFLOAT3 position;
-        XMFLOAT4 color;
-    };
+    // struct Vertex
+    // {
+    //     XMFLOAT3 position;
+    //     XMFLOAT4 color;
+    // };
 };
 

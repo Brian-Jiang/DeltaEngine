@@ -41,7 +41,7 @@ void DeltaEngine::Initialize()
 	// shader->compileShaders("../../../Engine/Runtime/Shaders/Vertex.glsl", "../../../Engine/Runtime/Shaders/Fragment.glsl");
 
     // sprite->Start(-1.0f, -1.0f, 2.0f, 2.0f, "../../../Engine/Runtime/Assets/Frame1.png", shader);
-    dxSprite->Start(-1.0f, -1.0f, 2.0f, 2.0f, "../../Engine/Runtime/Assets/logo.png", dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
+    dxSprite->Start(-1.0f, -1.0f, 2.0f, 2.0f, "../../Engine/Runtime/Assets/Frame1.png", dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
 
     dxRenderManager->InitFinish();
 	// shader->linkShaders();
@@ -136,8 +136,10 @@ void DeltaEngine::StartMainLoop()
     {
         printf("Error");
         exitCode = 1;
-        SDL_Quit();
     }
+
+    SDL_Quit();
+    dxRenderManager->OnDestroy();
 }
 
 void DeltaEngine::HandleInput()

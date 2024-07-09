@@ -5,7 +5,7 @@
 #include "Graphics/Texture.h"
 #include "PlatformHelpers.h"
 
-DXSpriteRenderer::DXSpriteRenderer(): x(0), y(0), width(0), height(0), m_vertexBufferView()
+DXSpriteRenderer::DXSpriteRenderer(): x(0), y(0), width(0), height(0), m_vertexBufferView(), texture(nullptr)
 {
 }
 
@@ -71,13 +71,15 @@ void DXSpriteRenderer::Start(float x, float y, float width, float height, const 
     // Create the texture.
     {
         texture = Texture::LoadFromFile(texturePath);
+        auto textureHeight = texture->GetHeight();
+        auto textureWidth = texture->GetWidth();
 
         // Describe and create a Texture2D.
         D3D12_RESOURCE_DESC textureDesc = {};
         textureDesc.MipLevels = 1;
         textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        textureDesc.Width = texture->GetWidth();
-        textureDesc.Height = texture->GetHeight();
+        textureDesc.Width = textureWidth;
+        textureDesc.Height = textureHeight;
         textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
         textureDesc.DepthOrArraySize = 1;
         textureDesc.SampleDesc.Count = 1;
@@ -92,26 +94,15 @@ void DXSpriteRenderer::Start(float x, float y, float width, float height, const 
             D3D12_RESOURCE_STATE_COPY_DEST,
             nullptr,
             IID_PPV_ARGS(&m_texture)));
-
-        // const UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_texture.Get(), 0, 1);
-
-        // Get the required size for the upload heap
-		D3D12_PLACED_SUBRESOURCE_FOOTPRINT bufferDesc;
-		UINT64 textureUploadBufferSize;
-		device->GetCopyableFootprints(
-		    &textureDesc,
-		    0, // First subresource
-		    1, // Number of subresources
-		    0, // Base offset
-		    &bufferDesc,
-		    nullptr,
-		    nullptr,
-		    &textureUploadBufferSize
-		);
+        
+        UINT64 rowPitch = textureWidth * TexturePixelSize;
+        UINT64 alignedRowPitch = (rowPitch + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1);
+        // UINT64 alignedRowPitch = Align(texture->GetWidth() * sizeof(DWORD), D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
+        UINT64 textureSize = alignedRowPitch * textureHeight;
 
         // Create the GPU upload buffer.
         hp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-        auto uploadHeapDesc = CD3DX12_RESOURCE_DESC::Buffer(textureUploadBufferSize);
+        auto uploadHeapDesc = CD3DX12_RESOURCE_DESC::Buffer(textureSize);
         ThrowIfFailed(device->CreateCommittedResource(
             &hp,
             D3D12_HEAP_FLAG_NONE,
@@ -123,17 +114,28 @@ void DXSpriteRenderer::Start(float x, float y, float width, float height, const 
         // Copy data to the intermediate upload heap and then schedule a copy 
         // from the upload heap to the Texture2D.
         
+
         auto rawData = texture->GetData().data();
         D3D12_SUBRESOURCE_DATA textureData = {};
         textureData.pData = rawData;
-        textureData.RowPitch = texture->GetWidth() * 4;
-        textureData.SlicePitch = textureData.RowPitch * texture->GetHeight();
+        textureData.RowPitch = alignedRowPitch;
+        textureData.SlicePitch = alignedRowPitch * textureHeight;
 
-        // UpdateSubresources(commandList.Get(), m_texture.Get(), textureUploadHeap.Get(), 0, 0, 1, &textureData);
+        D3D12_SUBRESOURCE_FOOTPRINT pitchedDesc = { };
+		pitchedDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		pitchedDesc.Width = textureWidth;
+		pitchedDesc.Height = textureHeight;
+		pitchedDesc.Depth = 1;
+		pitchedDesc.RowPitch = alignedRowPitch;
+
+        
         UINT8* pData;
         // auto textureDataSize = texture->GetWidth() * texture->GetHeight() * TexturePixelSize;
         textureUploadHeap->Map(0, nullptr, reinterpret_cast<void**>(&pData));
-		memcpy(pData, rawData, textureData.SlicePitch);
+		// memcpy(pData, rawData, textureData.SlicePitch);
+        for (int y = 0; y < textureHeight; y++) {
+		    memcpy(pData + y * alignedRowPitch, rawData + y * rowPitch, rowPitch);
+		}
 		textureUploadHeap->Unmap(0, nullptr);
         
   //       for (size_t i = 0; i < texture->GetWidth() * texture->GetHeight(); ++i) {
@@ -144,10 +146,16 @@ void DXSpriteRenderer::Start(float x, float y, float width, float height, const 
 		// 	texture->GetData()[i * 4 + 3]);
 		// }
 
+        D3D12_PLACED_SUBRESOURCE_FOOTPRINT placedTexture2D = { 0 };
+		placedTexture2D.Offset = 0;
+		placedTexture2D.Footprint = pitchedDesc;
+
         // Record commands to copy data from upload heap to texture
 		D3D12_TEXTURE_COPY_LOCATION dst = CD3DX12_TEXTURE_COPY_LOCATION(m_texture.Get(), 0);
-		D3D12_TEXTURE_COPY_LOCATION src = CD3DX12_TEXTURE_COPY_LOCATION(textureUploadHeap.Get(), bufferDesc);
+		D3D12_TEXTURE_COPY_LOCATION src = CD3DX12_TEXTURE_COPY_LOCATION(textureUploadHeap.Get(), placedTexture2D);
 		commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+
+        // UpdateSubresources(commandList.Get(), m_texture.Get(), textureUploadHeap.Get(), 0, 0, 1, &textureData);
 
         auto rb = CD3DX12_RESOURCE_BARRIER::Transition(
             m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);

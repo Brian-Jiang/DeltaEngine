@@ -457,6 +457,14 @@ void DXRenderManager::WaitForPreviousFrame()
     m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 }
 
+void DXRenderManager::OnDestroy()
+{
+    // Wait for the GPU to be done with all resources.
+    WaitForPreviousFrame();
+
+    CloseHandle(m_fenceEvent);
+}
+
 
 void DXRenderManager::GetHardwareAdapter(IDXGIFactory4* pFactory, IDXGIAdapter1** ppAdapter)
 {
