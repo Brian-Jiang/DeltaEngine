@@ -1,6 +1,6 @@
 #include "ImageLoader.h"
 
-#include "lodepng.h"
+#include "IO/lodepng.h"
 
 
 // #include "sail-c++/image.h"

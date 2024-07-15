@@ -1,117 +1,174 @@
 #include "SpriteRenderer.h"
 
-#include <cstddef>
+#include <d3dx12.h>
 
-#include "ImageLoader.h"
-#include "GL/glew.h"
-#include "Vertex.h"
+#include "Graphics/Texture.h"
+#include "PlatformHelpers.h"
 
+using namespace DirectX;
+using namespace Microsoft::WRL;
+using namespace DeltaEngine;
 
-SpriteRenderer::SpriteRenderer()
+SpriteRenderer::SpriteRenderer(): x(0), y(0), width(0), height(0), m_vertexBufferView(), texture(nullptr)
 {
 }
 
 SpriteRenderer::~SpriteRenderer()
 {
-	if (this->vbo != 0)
-	{
-		glDeleteBuffers(1, &this->vbo);
-	}
 }
 
-void SpriteRenderer::Start(float x, float y, float width, float height, const char* texturePath, GLSLProgram *program)
+void SpriteRenderer::Start(float x, float y, float width, float height, const char* texturePath, const ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList> commandList, ComPtr<ID3D12DescriptorHeap> srvHeap)
 {
-	this->x = x;
+    this->x = x;
 	this->y = y;
 	this->width = width;
 	this->height = height;
 
-	if (this->vbo == 0)
-	{
-		glGenBuffers(1, &this->vbo);
-	}
+	// Create the vertex buffer.
+    {
+        // Define the geometry for a triangle.
+        Vertex triangleVertices[] =
+        {
+            { { x, y + height, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
+			{ { x + width, y, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
+            { { x, y, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },
+			{ { x, y + height, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
+			{ { x + width, y + height, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
+			{ { x + width, y, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
+        };
 
-	Vertex vertexData[6];
-	vertexData[0].position.x = x;
-	vertexData[0].position.y = y + height;
-	vertexData[0].SetUV(0.0f, 1.0f);
+        const UINT vertexBufferSize = sizeof(triangleVertices);
 
-	vertexData[1].position.x = x;
-	vertexData[1].position.y = y;
-	vertexData[1].SetUV(0.0f, 0.0f);
+        // Note: using upload heaps to transfer static data like vert buffers is not 
+        // recommended. Every time the GPU needs it, the upload heap will be marshalled 
+        // over. Please read up on Default Heap usage. An upload heap is used here for 
+        // code simplicity and because there are very few verts to actually transfer.
+        CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
+        auto desc = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
+        ThrowIfFailed(device->CreateCommittedResource(
+            &heapProps,
+            D3D12_HEAP_FLAG_NONE,
+            &desc,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            IID_PPV_ARGS(&m_vertexBuffer)));
 
-	vertexData[2].position.x = x + width;
-	vertexData[2].position.y = y;
-	vertexData[2].SetUV(1.0f, 0.0f);
+        // Copy the triangle data to the vertex buffer.
+        UINT8* pVertexDataBegin;
+        CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
+        ThrowIfFailed(m_vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
+        memcpy(pVertexDataBegin, triangleVertices, sizeof(triangleVertices));
+        m_vertexBuffer->Unmap(0, nullptr);
 
-	vertexData[3].position.x = x;
-	vertexData[3].position.y = y + height;
-	vertexData[3].SetUV(0.0f, 1.0f);
+        // Initialize the vertex buffer view.
+        m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
+        m_vertexBufferView.StrideInBytes = sizeof(Vertex);
+        m_vertexBufferView.SizeInBytes = vertexBufferSize;
+    }
 
-	vertexData[4].position.x = x + width;
-	vertexData[4].position.y = y + height;
-	vertexData[4].SetUV(1.0f, 1.0f);
+    // Note: ComPtr's are CPU objects but this resource needs to stay in scope until
+    // the command list that references it has finished executing on the GPU.
+    // We will flush the GPU at the end of this method to ensure the resource is not
+    // prematurely destroyed.
+    // ComPtr<ID3D12Resource> textureUploadHeap;
 
-	vertexData[5].position.x = x + width;
-	vertexData[5].position.y = y;
-	vertexData[5].SetUV(1.0f, 0.0f);
+    // Create the texture.
+    {
+        texture = Texture::LoadFromFile(texturePath);
+        auto textureHeight = texture->GetHeight();
+        auto textureWidth = texture->GetWidth();
 
-	// for (int i = 0; i < 6; i++) {
-	// 	vertexData[i].color.r = 255;
-	// 	vertexData[i].color.g = 255;
-	// 	vertexData[i].color.b = 255;
-	// 	vertexData[i].color.a = 255;
-	// }
-	//
-	// vertexData[0].color.r = 0;
-	// vertexData[1].color.g = 0;
-	// vertexData[2].color.b = 0;
-	// vertexData[3].color.b = 0;
-	// vertexData[3].color.r = 128;
+        // Describe and create a Texture2D.
+        D3D12_RESOURCE_DESC textureDesc = {};
+        textureDesc.MipLevels = 1;
+        textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        textureDesc.Width = textureWidth;
+        textureDesc.Height = textureHeight;
+        textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+        textureDesc.DepthOrArraySize = 1;
+        textureDesc.SampleDesc.Count = 1;
+        textureDesc.SampleDesc.Quality = 0;
+        textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 
-	// glGenVertexArrays(1, &this->VAO);
-	// glBindVertexArray(this->VAO);
+        auto hp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+        ThrowIfFailed(device->CreateCommittedResource(
+            &hp,
+            D3D12_HEAP_FLAG_NONE,
+            &textureDesc,
+            D3D12_RESOURCE_STATE_COPY_DEST,
+            nullptr,
+            IID_PPV_ARGS(&m_texture)));
+        
+        UINT64 rowPitch = textureWidth * TexturePixelSize;
+        UINT64 alignedRowPitch = (rowPitch + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1);
+        // UINT64 alignedRowPitch = Align(texture->GetWidth() * sizeof(DWORD), D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
+        UINT64 textureSize = alignedRowPitch * textureHeight;
 
-	glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertexData), vertexData, GL_STATIC_DRAW);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+        // Create the GPU upload buffer.
+        hp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+        auto uploadHeapDesc = CD3DX12_RESOURCE_DESC::Buffer(textureSize);
+        ThrowIfFailed(device->CreateCommittedResource(
+            &hp,
+            D3D12_HEAP_FLAG_NONE,
+            &uploadHeapDesc,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            IID_PPV_ARGS(&textureUploadHeap)));
 
-	// glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-	// glEnableVertexAttribArray(0);
-	//
-	// if (this->EBO == 0)
-	// {
-	// 	glGenBuffers(1, &this->EBO);
-	// }
-	//
-	// unsigned int indices[6] = { 0, 1, 3, 1, 2, 3 };
-	// glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->EBO);
-	// glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-	//
-	this->texture = ImageLoader::loadPNGForGL(texturePath);
-	this->program = program;
+        // Copy data to the intermediate upload heap and then schedule a copy 
+        // from the upload heap to the Texture2D.
+        
+
+        auto rawData = texture->GetData().data();
+        D3D12_SUBRESOURCE_DATA textureData = {};
+        textureData.pData = rawData;
+        textureData.RowPitch = alignedRowPitch;
+        textureData.SlicePitch = alignedRowPitch * textureHeight;
+
+        D3D12_SUBRESOURCE_FOOTPRINT pitchedDesc = { };
+		pitchedDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		pitchedDesc.Width = textureWidth;
+		pitchedDesc.Height = textureHeight;
+		pitchedDesc.Depth = 1;
+		pitchedDesc.RowPitch = alignedRowPitch;
+        
+        UINT8* pData;
+        // auto textureDataSize = texture->GetWidth() * texture->GetHeight() * TexturePixelSize;
+        textureUploadHeap->Map(0, nullptr, reinterpret_cast<void**>(&pData));
+		// memcpy(pData, rawData, textureData.SlicePitch);
+        for (int y = 0; y < textureHeight; y++) {
+		    memcpy(pData + y * alignedRowPitch, rawData + y * rowPitch, rowPitch);
+		}
+		textureUploadHeap->Unmap(0, nullptr);
+
+        D3D12_PLACED_SUBRESOURCE_FOOTPRINT placedTexture2D = { 0 };
+		placedTexture2D.Offset = 0;
+		placedTexture2D.Footprint = pitchedDesc;
+
+        // Record commands to copy data from upload heap to texture
+		D3D12_TEXTURE_COPY_LOCATION dst = CD3DX12_TEXTURE_COPY_LOCATION(m_texture.Get(), 0);
+		D3D12_TEXTURE_COPY_LOCATION src = CD3DX12_TEXTURE_COPY_LOCATION(textureUploadHeap.Get(), placedTexture2D);
+		commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+
+        // UpdateSubresources(commandList.Get(), m_texture.Get(), textureUploadHeap.Get(), 0, 0, 1, &textureData);
+
+        auto rb = CD3DX12_RESOURCE_BARRIER::Transition(
+            m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    	commandList->ResourceBarrier(1, &rb);
+
+        // Describe and create a SRV for the texture.
+        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+        srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        srvDesc.Format = textureDesc.Format;
+        srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+        srvDesc.Texture2D.MipLevels = 1;
+        device->CreateShaderResourceView(m_texture.Get(), &srvDesc, srvHeap->GetCPUDescriptorHandleForHeapStart());
+    }
 }
 
-void SpriteRenderer::Render()
+void SpriteRenderer::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList) const
 {
-	glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture.textureID);
-
-	auto textureLocation = program->getUniformLocation("sampler");
-    glUniform1i(textureLocation, 0);
-
-	glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
-	glEnableVertexAttribArray(0);
-
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) offsetof(Vertex, position));
-	glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), (void*) offsetof(Vertex, color));
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) offsetof(Vertex, uv));
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-
-	glDisableVertexAttribArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindTexture(GL_TEXTURE_2D, 0);
+    commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
+    commandList->DrawInstanced(6, 1, 0, 0);
 }

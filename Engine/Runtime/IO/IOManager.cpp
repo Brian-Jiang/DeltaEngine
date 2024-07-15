@@ -3,6 +3,8 @@
 #include <fstream>
 #include <vector>
 
+using namespace DeltaEngine;
+
 bool IOManager::readFileToBuffer(const std::string& filePath, std::vector<char>& buffer) {
 	std::ifstream file(filePath, std::ios::binary);
 	if (file.fail()) {

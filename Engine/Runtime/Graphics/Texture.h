@@ -1,6 +1,10 @@
 #pragma once
+
 #include <vector>
 #include <string>
+
+namespace DeltaEngine
+{
 
 class Texture
 {
@@ -19,3 +23,5 @@ private:
 	unsigned int height;
 	std::vector<unsigned char> data;
 };
+
+}

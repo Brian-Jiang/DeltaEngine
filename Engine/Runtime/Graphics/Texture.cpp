@@ -1,11 +1,13 @@
 #include "Texture.h"
 
-#include "IOManager.h"
-#include "lodepng.h"
+#include "IO/lodepng.h"
+#include "IO/IOManager.h"
+
+using namespace DeltaEngine;
 
 Texture::Texture(const std::string &filePath)
 {
-	auto fullPath = IOManager::GetAssetFullPath(filePath);
+	auto fullPath = DeltaEngine::IOManager::GetAssetFullPath(filePath);
 	lodepng::decode(data, width, height, fullPath, LCT_RGBA, 8);
 }
 

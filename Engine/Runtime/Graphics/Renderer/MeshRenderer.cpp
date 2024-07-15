@@ -1,0 +1,167 @@
+#include "MeshRenderer.h"
+
+#include <d3dx12.h>
+#include "Graphics/Texture.h"
+#include "PlatformHelpers.h"
+
+using namespace DirectX;
+using namespace Microsoft::WRL;
+using namespace DeltaEngine;
+
+MeshRenderer::MeshRenderer() : m_vertexBufferView(), m_indexBufferView()
+{
+}
+
+MeshRenderer::~MeshRenderer()
+{
+}
+
+void MeshRenderer::Start(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices, const char* diffuseTexturePath, const char* normalTexturePath, const ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList> commandList, ComPtr<ID3D12DescriptorHeap> srvHeap)
+{
+    // Create the vertex buffer.
+    {
+        const UINT vertexBufferSize = static_cast<UINT>(vertices.size() * sizeof(Vertex));
+
+        CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
+        auto desc = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
+        ThrowIfFailed(device->CreateCommittedResource(
+            &heapProps,
+            D3D12_HEAP_FLAG_NONE,
+            &desc,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            IID_PPV_ARGS(&m_vertexBuffer)));
+
+        UINT8* pVertexDataBegin;
+        CD3DX12_RANGE readRange(0, 0); // We do not intend to read from this resource on the CPU.
+        ThrowIfFailed(m_vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
+        memcpy(pVertexDataBegin, vertices.data(), vertexBufferSize);
+        m_vertexBuffer->Unmap(0, nullptr);
+
+        m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
+        m_vertexBufferView.StrideInBytes = sizeof(Vertex);
+        m_vertexBufferView.SizeInBytes = vertexBufferSize;
+    }
+
+    // Create the index buffer.
+    {
+        const UINT indexBufferSize = static_cast<UINT>(indices.size() * sizeof(uint32_t));
+
+        CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
+        auto desc = CD3DX12_RESOURCE_DESC::Buffer(indexBufferSize);
+        ThrowIfFailed(device->CreateCommittedResource(
+            &heapProps,
+            D3D12_HEAP_FLAG_NONE,
+            &desc,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            IID_PPV_ARGS(&m_indexBuffer)));
+
+        UINT8* pIndexDataBegin;
+        CD3DX12_RANGE readRange(0, 0); // We do not intend to read from this resource on the CPU.
+        ThrowIfFailed(m_indexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pIndexDataBegin)));
+        memcpy(pIndexDataBegin, indices.data(), indexBufferSize);
+        m_indexBuffer->Unmap(0, nullptr);
+
+        m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
+        m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+        m_indexBufferView.SizeInBytes = indexBufferSize;
+    }
+
+    // Create the textures (diffuse and normal).
+    LoadTexture(diffuseTexturePath, device, commandList, srvHeap, 0);
+    LoadTexture(normalTexturePath, device, commandList, srvHeap, 1);
+}
+
+void MeshRenderer::LoadTexture(const char* texturePath, const ComPtr<ID3D12Device>& device, ComPtr<ID3D12GraphicsCommandList>& commandList, ComPtr<ID3D12DescriptorHeap>& srvHeap, UINT descriptorIndex)
+{
+    auto texture = Texture::LoadFromFile(texturePath);
+    auto textureHeight = texture->GetHeight();
+    auto textureWidth = texture->GetWidth();
+
+    D3D12_RESOURCE_DESC textureDesc = {};
+    textureDesc.MipLevels = 1;
+    textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    textureDesc.Width = textureWidth;
+    textureDesc.Height = textureHeight;
+    textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+    textureDesc.DepthOrArraySize = 1;
+    textureDesc.SampleDesc.Count = 1;
+    textureDesc.SampleDesc.Quality = 0;
+    textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+
+    auto hp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+    ComPtr<ID3D12Resource> textureResource;
+    ThrowIfFailed(device->CreateCommittedResource(
+        &hp,
+        D3D12_HEAP_FLAG_NONE,
+        &textureDesc,
+        D3D12_RESOURCE_STATE_COPY_DEST,
+        nullptr,
+        IID_PPV_ARGS(&textureResource)));
+
+    UINT64 rowPitch = textureWidth * TexturePixelSize;
+    UINT64 alignedRowPitch = (rowPitch + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1);
+    UINT64 textureSize = alignedRowPitch * textureHeight;
+
+    hp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+    auto uploadHeapDesc = CD3DX12_RESOURCE_DESC::Buffer(textureSize);
+    ComPtr<ID3D12Resource> textureUploadHeap;
+    ThrowIfFailed(device->CreateCommittedResource(
+        &hp,
+        D3D12_HEAP_FLAG_NONE,
+        &uploadHeapDesc,
+        D3D12_RESOURCE_STATE_GENERIC_READ,
+        nullptr,
+        IID_PPV_ARGS(&textureUploadHeap)));
+
+    auto rawData = texture->GetData().data();
+    D3D12_SUBRESOURCE_DATA textureData = {};
+    textureData.pData = rawData;
+    textureData.RowPitch = alignedRowPitch;
+    textureData.SlicePitch = alignedRowPitch * textureHeight;
+
+    D3D12_SUBRESOURCE_FOOTPRINT pitchedDesc = {};
+    pitchedDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    pitchedDesc.Width = textureWidth;
+    pitchedDesc.Height = textureHeight;
+    pitchedDesc.Depth = 1;
+    pitchedDesc.RowPitch = alignedRowPitch;
+
+    UINT8* pData;
+    textureUploadHeap->Map(0, nullptr, reinterpret_cast<void**>(&pData));
+    for (int y = 0; y < textureHeight; y++) {
+        memcpy(pData + y * alignedRowPitch, rawData + y * rowPitch, rowPitch);
+    }
+    textureUploadHeap->Unmap(0, nullptr);
+
+    D3D12_PLACED_SUBRESOURCE_FOOTPRINT placedTexture2D = { 0 };
+    placedTexture2D.Offset = 0;
+    placedTexture2D.Footprint = pitchedDesc;
+
+    D3D12_TEXTURE_COPY_LOCATION dst = CD3DX12_TEXTURE_COPY_LOCATION(textureResource.Get(), 0);
+    D3D12_TEXTURE_COPY_LOCATION src = CD3DX12_TEXTURE_COPY_LOCATION(textureUploadHeap.Get(), placedTexture2D);
+    commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+
+    auto rb = CD3DX12_RESOURCE_BARRIER::Transition(
+        textureResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    commandList->ResourceBarrier(1, &rb);
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+    srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    srvDesc.Format = textureDesc.Format;
+    srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+    srvDesc.Texture2D.MipLevels = 1;
+    CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(srvHeap->GetCPUDescriptorHandleForHeapStart(), descriptorIndex, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+    device->CreateShaderResourceView(textureResource.Get(), &srvDesc, srvHandle);
+}
+
+void MeshRenderer::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList) const
+{
+    commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
+    commandList->IASetIndexBuffer(&m_indexBufferView);
+    commandList->SetGraphicsRootDescriptorTable(0, m_srvHeap->GetGPUDescriptorHandleForHeapStart()); // Diffuse map
+    commandList->SetGraphicsRootDescriptorTable(1, CD3DX12_GPU_DESCRIPTOR_HANDLE(m_srvHeap->GetGPUDescriptorHandleForHeapStart(), 1, m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV))); // Normal map
+    commandList->DrawIndexedInstanced(static_cast<UINT>(m_indexBufferView.SizeInBytes / sizeof(uint32_t)), 1, 0, 0, 0);
+}

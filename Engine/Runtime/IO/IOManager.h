@@ -4,7 +4,8 @@
 #include <vector>
 #include <wtypes.h>
 
-// #include <winnt.h>
+namespace DeltaEngine
+{
 
 class IOManager {
 public:
@@ -12,3 +13,5 @@ public:
 	static std::wstring GetAssetFullPath(LPCWSTR assetName);
 	static std::string GetAssetFullPath(const std::string & assetName);
 };
+
+}

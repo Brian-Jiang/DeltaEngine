@@ -1,13 +1,11 @@
-﻿// DeltaEngine.h : Include file for standard system include files,
-// or project specific include files.
+﻿#pragma once
 
-#pragma once
-
-#include "GLSLProgram.h"
-#include "Graphics/Renderer/SpriteRenderer.h"
 #include "Graphics/DXRenderManager.h"
-#include "Graphics/Renderer/DXSpriteRenderer.h"
+#include "Graphics/Renderer/SpriteRenderer.h"
 #include "SDL3/SDL.h"
+
+namespace DeltaEngine
+{
 
 enum class GameState {
 	PLAY,
@@ -15,10 +13,10 @@ enum class GameState {
 	Error,
 };
 
-class DeltaEngine
+class EngineLaunch
 {
 public:
-	DeltaEngine();
+	EngineLaunch();
 
 	void Initialize();
 	void StartMainLoop();
@@ -35,11 +33,13 @@ private:
 
 	GameState gameState;
 
-	SpriteRenderer* sprite;
-	DXSpriteRenderer *dxSprite;
-	GLSLProgram* shader;
+	// SpriteRenderer* sprite;
+	SpriteRenderer *dxSprite;
+	// GLSLProgram* shader;
 
 	DXRenderManager* dxRenderManager;
 
 	float time;
 };
+
+}

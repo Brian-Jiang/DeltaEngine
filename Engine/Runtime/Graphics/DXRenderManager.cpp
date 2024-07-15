@@ -2,10 +2,16 @@
 
 #include <fstream>
 #include <iostream>
+#include <d3dcompiler.h>
+#include <dxcapi.h>
 
-#include "IOManager.h"
-#include "PlatformHelpers.h"
+#include "Graphics/DXUtils.h"
+#include "IO/IOManager.h"
+// #include "PlatformHelpers.h"
 
+// using namespace DirectX;
+using namespace Microsoft::WRL;
+using namespace DeltaEngine;
 
 DXRenderManager::DXRenderManager(HWND hwnd, UINT width, UINT height): hwnd(hwnd), m_width(width), m_height(height),
 	m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
@@ -22,68 +28,27 @@ void DXRenderManager::LoadPipeline()
 {
 #if defined(_DEBUG)
     // Enable the D3D12 debug layer.
+    // Always enable the debug layer before doing anything DX12 related
+    // so all possible errors generated while creating DX12 objects
+    // are caught by the debug layer.
     {
 	    ComPtr<ID3D12Debug> debugController;
-        if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
-        {
-            debugController->EnableDebugLayer();
-        }
+        ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)));
+        debugController->EnableDebugLayer();
     }
 #endif
 
     ComPtr<IDXGIFactory4> factory;
     ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&factory)));
 
-    if (m_useWarpDevice)
-    {
-        ComPtr<IDXGIAdapter> warpAdapter;
-        ThrowIfFailed(factory->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter)));
-
-        ThrowIfFailed(D3D12CreateDevice(
-            warpAdapter.Get(),
-            D3D_FEATURE_LEVEL_11_0,
-            IID_PPV_ARGS(&m_device)
-            ));
-    }
-    else
-    {
-        ComPtr<IDXGIAdapter1> hardwareAdapter;
-        GetHardwareAdapter(factory.Get(), &hardwareAdapter);
-
-        ThrowIfFailed(D3D12CreateDevice(
-            hardwareAdapter.Get(),
-            D3D_FEATURE_LEVEL_11_0,
-            IID_PPV_ARGS(&m_device)
-            ));
-    }
+    auto adapter = DXUtils::GetAdapter(m_useWarpDevice);
+    m_device = DXUtils::CreateDevice(adapter);
 
     // Describe and create the command queue.
-    D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-    queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-    queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-
-    ThrowIfFailed(m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue)));
+    m_commandQueue = DXUtils::CreateCommandQueue(m_device, D3D12_COMMAND_LIST_TYPE_DIRECT);
 
     // Describe and create the swap chain.
-    DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
-    swapChainDesc.BufferCount = FrameCount;
-    swapChainDesc.BufferDesc.Width = m_width;
-    swapChainDesc.BufferDesc.Height = m_height;
-    swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-    swapChainDesc.OutputWindow = hwnd;
-    swapChainDesc.SampleDesc.Count = 1;
-    swapChainDesc.Windowed = TRUE;
-
-    ComPtr<IDXGISwapChain> swapChain;
-    ThrowIfFailed(factory->CreateSwapChain(
-        m_commandQueue.Get(),        // Swap chain needs the queue so that it can force a flush on it.
-        &swapChainDesc,
-        &swapChain
-        ));
-
-    ThrowIfFailed(swapChain.As(&m_swapChain));
+    m_swapChain = DXUtils::CreateSwapChain(hwnd, m_commandQueue, m_width, m_height, FrameCount);
 
     // This sample does not support fullscreen transitions.
     ThrowIfFailed(factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER));
@@ -93,11 +58,9 @@ void DXRenderManager::LoadPipeline()
     // Create descriptor heaps.
     {
         // Describe and create a render target view (RTV) descriptor heap.
-        D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-        rtvHeapDesc.NumDescriptors = FrameCount;
-        rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-        rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-        ThrowIfFailed(m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap)));
+        // RTV describes the location of the texture resource in GPU memory, as well as size and format.
+        // Each frame has its own RTV.
+        m_rtvHeap = DXUtils::CreateDescriptorHeap(m_device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, FrameCount);
 
         // Describe and create a shader resource view (SRV) heap for the texture.
         D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
@@ -105,12 +68,14 @@ void DXRenderManager::LoadPipeline()
         srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
         srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
         ThrowIfFailed(m_device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvHeap)));
-
-        m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
     }
+
+    // Get the size of the RTV descriptor on the device. Different devices may have different sizes.
+        m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
     // Create frame resources.
     {
+        // Get a handle to the first descriptor in the descriptor heap.
         CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
 
         // Create a RTV for each frame.
@@ -122,7 +87,11 @@ void DXRenderManager::LoadPipeline()
         }
     }
 
-    ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator)));
+    // Create a command allocator, this is required for dx12.
+    m_commandAllocator = DXUtils::CreateCommandAllocator(m_device, D3D12_COMMAND_LIST_TYPE_DIRECT);
+    // ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator)));
+
+    g_TearingSupported = DXUtils::CheckTearingSupport();
 }
 
 void DXRenderManager::LoadAssets()
@@ -280,6 +249,7 @@ void DXRenderManager::LoadAssets()
     }
 
     // Create the command list.
+    // m_commandList = DXUtils::CreateCommandList(m_device, m_commandAllocator, D3D12_COMMAND_LIST_TYPE_DIRECT);
     ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), m_pipelineState.Get(), IID_PPV_ARGS(&m_commandList)));
 
     // Create synchronization objects and wait until assets have been uploaded to the GPU.
@@ -288,7 +258,7 @@ void DXRenderManager::LoadAssets()
         m_fenceValue = 1;
 
         // Create an event handle to use for frame synchronization.
-        m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+        m_fenceEvent = ::CreateEvent(nullptr, FALSE, FALSE, nullptr);
         if (m_fenceEvent == nullptr)
         {
             ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
@@ -297,7 +267,7 @@ void DXRenderManager::LoadAssets()
         // Wait for the command list to execute; we are reusing the same command 
         // list in our main loop but for now, we just want to wait for setup to 
         // complete before continuing.
-        WaitForPreviousFrame();
+        // WaitForPreviousFrame();
     }
 }
 
@@ -309,22 +279,22 @@ void DXRenderManager::InitFinish()
     m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
     // Create synchronization objects and wait until assets have been uploaded to the GPU.
-    {
-        ThrowIfFailed(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
-        m_fenceValue = 1;
-
-        // Create an event handle to use for frame synchronization.
-        m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-        if (m_fenceEvent == nullptr)
-        {
-            ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
-        }
-
-        // Wait for the command list to execute; we are reusing the same command 
-        // list in our main loop but for now, we just want to wait for setup to 
-        // complete before continuing.
-        WaitForPreviousFrame();
-    }
+    // {
+    //     ThrowIfFailed(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
+    //     m_fenceValue = 1;
+    //
+    //     // Create an event handle to use for frame synchronization.
+    //     m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    //     if (m_fenceEvent == nullptr)
+    //     {
+    //         ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
+    //     }
+    //
+    //     // Wait for the command list to execute; we are reusing the same command 
+    //     // list in our main loop but for now, we just want to wait for setup to 
+    //     // complete before continuing.
+    WaitForPreviousFrame();
+    // }
 }
 
 void DXRenderManager::PrepareFrame()
@@ -363,9 +333,11 @@ void DXRenderManager::PrepareFrame()
 
 void DXRenderManager::RenderFrame()
 {
+    // Let the frame transition to the render target state.
     auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
     m_commandList->ResourceBarrier(1, &barrier);
 
+    // Command list needs to be closed before it can be executed. This is when the validation of the command list happens.
     ThrowIfFailed(m_commandList->Close());
 
     // Execute the command list.
@@ -373,68 +345,13 @@ void DXRenderManager::RenderFrame()
     m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
     // Present the frame.
-    ThrowIfFailed(m_swapChain->Present(1, 0));
+    UINT syncInterval = g_VSync ? 1 : 0;
+	UINT presentFlags = g_TearingSupported && !g_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
+    ThrowIfFailed(m_swapChain->Present(syncInterval, presentFlags));
 
+    // Wait until frame is done rendering.
     WaitForPreviousFrame();
 }
-
-// void DXRenderManager::OnRender()
-// {
-//     // Record all the commands we need to render the scene into the command list.
-//     PopulateCommandList();
-//
-//     // Execute the command list.
-//     ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
-//     m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-//
-//     // Present the frame.
-//     ThrowIfFailed(m_swapChain->Present(1, 0));
-//
-//     WaitForPreviousFrame();
-// }
-//
-// void DXRenderManager::PopulateCommandList()
-// {
-//     // Command list allocators can only be reset when the associated 
-//     // command lists have finished execution on the GPU; apps should use 
-//     // fences to determine GPU execution progress.
-//     ThrowIfFailed(m_commandAllocator->Reset());
-//
-//     // However, when ExecuteCommandList() is called on a particular command 
-//     // list, that command list can then be reset at any time and must be before 
-//     // re-recording.
-//     ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), m_pipelineState.Get()));
-//
-//     // Set necessary state.
-//     m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
-//     ID3D12DescriptorHeap* ppHeaps[] = { m_srvHeap.Get() };
-//     m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-//
-//     m_commandList->SetGraphicsRootDescriptorTable(0, m_srvHeap->GetGPUDescriptorHandleForHeapStart());
-//
-//     m_commandList->RSSetViewports(1, &m_viewport);
-//     m_commandList->RSSetScissorRects(1, &m_scissorRect);
-//
-//     // Indicate that the back buffer will be used as a render target.
-//     auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-//     m_commandList->ResourceBarrier(1, &barrier);
-//
-//     CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
-//     m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
-//
-//     // Record commands.
-//     const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
-//     m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-//     // m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-//     // m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
-//     // m_commandList->DrawInstanced(3, 1, 0, 0);
-//
-//     // Indicate that the back buffer will now be used to present.
-//     barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-//     m_commandList->ResourceBarrier(1, &barrier);
-//
-//     ThrowIfFailed(m_commandList->Close());
-// }
 
 void DXRenderManager::WaitForPreviousFrame()
 {
@@ -442,15 +359,21 @@ void DXRenderManager::WaitForPreviousFrame()
     // This is code implemented as such for simplicity. More advanced samples 
     // illustrate how to use fences for efficient resource usage.
 
-    // Signal and increment the fence value.
+    // 
     const UINT64 fence = m_fenceValue;
+
+    // Add a signal command to the queue so that when the command queue finishes executing, it will signal the fence.
+    // Then the m_fence will be signaled with the value of the fence.
     ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), fence));
     m_fenceValue++;
 
     // Wait until the previous frame is finished.
     if (m_fence->GetCompletedValue() < fence)
     {
+        // Set the event to be notified when the fence is completed.
         ThrowIfFailed(m_fence->SetEventOnCompletion(fence, m_fenceEvent));
+
+        // Wait for the fence event to become signaled. CPU will be stalled here until the fence is signaled.
         WaitForSingleObject(m_fenceEvent, INFINITE);
     }
 
@@ -466,28 +389,28 @@ void DXRenderManager::OnDestroy()
 }
 
 
-void DXRenderManager::GetHardwareAdapter(IDXGIFactory4* pFactory, IDXGIAdapter1** ppAdapter)
-{
-    *ppAdapter = nullptr;
-    for (UINT adapterIndex = 0; ; ++adapterIndex)
-    {
-        IDXGIAdapter1* pAdapter = nullptr;
-        if (DXGI_ERROR_NOT_FOUND == pFactory->EnumAdapters1(adapterIndex, &pAdapter))
-        {
-            // No more adapters to enumerate.
-            break;
-        } 
-
-        // Check to see if the adapter supports Direct3D 12, but don't create the
-        // actual device yet.
-        if (SUCCEEDED(D3D12CreateDevice(pAdapter, D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr)))
-        {
-            *ppAdapter = pAdapter;
-            return;
-        }
-        pAdapter->Release();
-    }
-}
+// void DXRenderManager::GetHardwareAdapter(IDXGIFactory4* pFactory, IDXGIAdapter1** ppAdapter)
+// {
+//     *ppAdapter = nullptr;
+//     for (UINT adapterIndex = 0; ; ++adapterIndex)
+//     {
+//         IDXGIAdapter1* pAdapter = nullptr;
+//         if (DXGI_ERROR_NOT_FOUND == pFactory->EnumAdapters1(adapterIndex, &pAdapter))
+//         {
+//             // No more adapters to enumerate.
+//             break;
+//         } 
+//
+//         // Check to see if the adapter supports Direct3D 12, but don't create the
+//         // actual device yet.
+//         if (SUCCEEDED(D3D12CreateDevice(pAdapter, D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr)))
+//         {
+//             *ppAdapter = pAdapter;
+//             return;
+//         }
+//         pAdapter->Release();
+//     }
+// }
 
 // std::wstring DXRenderManager::GetAssetFullPath(LPCWSTR assetName)
 // {

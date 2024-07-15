@@ -1,32 +1,30 @@
-﻿// DeltaEngine.cpp : Defines the entry point for the application.
-//
+﻿#include "EngineLaunch.h"
 
-#include "DeltaEngine.h"
+#include <chrono>
 
-#include <cstdio>
-#include <d3d12sdklayers.h>
-#include <dxgi1_6.h>
-#include <fstream>
-#include <iostream>
+// #include <cstdio>
+// #include <d3d12sdklayers.h>
+// #include <dxgi1_6.h>
+// #include <fstream>
+// #include <iostream>
 
-#include "GL/glew.h"
+// #include "GL/glew.h"
 
-#include "SDL3/SDL.h"
-#include "Const.h"
-
+// #include "SDL3/SDL.h"
+// #include "Const.h"
 
 #define SCREEN_WIDTH   1280
 #define SCREEN_HEIGHT  720
 
+using namespace DeltaEngine;
 
-DeltaEngine::DeltaEngine() : exitCode(0), renderer(nullptr), window(nullptr), gameState(GameState::PLAY),
-                             shader(nullptr), time(0.0f), dxRenderManager(nullptr), dxSprite(nullptr)
+EngineLaunch::EngineLaunch() : exitCode(0), renderer(nullptr), window(nullptr), gameState(GameState::PLAY),
+                             time(0.0f), dxRenderManager(nullptr), dxSprite(nullptr)
 {
-	sprite = new SpriteRenderer();
-    dxSprite = new DXSpriteRenderer();
+    dxSprite = new SpriteRenderer();
 }
 
-void DeltaEngine::Initialize()
+void EngineLaunch::Initialize()
 {
     InitSDL();
 
@@ -37,19 +35,9 @@ void DeltaEngine::Initialize()
     // }
     // file.close();
 
-	// shader = new GLSLProgram();
-	// shader->compileShaders("../../../Engine/Runtime/Shaders/Vertex.glsl", "../../../Engine/Runtime/Shaders/Fragment.glsl");
-
-    // sprite->Start(-1.0f, -1.0f, 2.0f, 2.0f, "../../../Engine/Runtime/Assets/Frame1.png", shader);
     dxSprite->Start(-1.0f, -1.0f, 2.0f, 2.0f, "../../Engine/Runtime/Assets/Frame1.png", dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
 
     dxRenderManager->InitFinish();
-	// shader->linkShaders();
-// shader->addAttribute("vertexPosition");
-// shader->addAttribute("vertexColor");
-// shader->addAttribute("vertexUV");
-
-// shader->unuse();
 }
 
 void ThrowIfFailed(HRESULT hresult)
@@ -60,7 +48,7 @@ void ThrowIfFailed(HRESULT hresult)
 	}
 }
 
-void DeltaEngine::InitSDL() {
+void EngineLaunch::InitSDL() {
     // int n = SDL_GetNumRenderDrivers();
     // for (size_t i = 0; i < n; i++) {
     //     //SDL_RendererInfo info;
@@ -119,11 +107,13 @@ void DeltaEngine::InitSDL() {
     // }
 }
 
-void DeltaEngine::StartMainLoop()
+void EngineLaunch::StartMainLoop()
 {
     while (gameState == GameState::PLAY) {
         // SDL_SetRenderDrawColor(renderer, 96, 128, 255, 255);
         // SDL_RenderClear(renderer);
+        static std::chrono::high_resolution_clock clock;
+
 		time += 0.01f;
         
         HandleInput();
@@ -137,12 +127,12 @@ void DeltaEngine::StartMainLoop()
         printf("Error");
         exitCode = 1;
     }
-
+    
     SDL_Quit();
     dxRenderManager->OnDestroy();
 }
 
-void DeltaEngine::HandleInput()
+void EngineLaunch::HandleInput()
 {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
@@ -150,30 +140,17 @@ void DeltaEngine::HandleInput()
             case SDL_EVENT_QUIT:
                 gameState = GameState::EXIT;
                 break;
-	        case SDL_EVENT_MOUSE_MOTION:
-				// std::cout << "Mouse moved to x: " << event.motion.x << " y: " << event.motion.y << '\n';
-				break;
+	   //      case SDL_EVENT_MOUSE_MOTION:
+				// // std::cout << "Mouse moved to x: " << event.motion.x << " y: " << event.motion.y << '\n';
+				// break;
             default:
                 break;
         }
     }
 }
 
-void DeltaEngine::Draw()
+void EngineLaunch::Draw()
 {
-    // glClearDepth(1.0);
-    // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    //
-    // shader->use();
-    //
-    // // auto timeLocation = shader->getUniformLocation("time");
-    // // glUniform1f(timeLocation, time);
-    // sprite->Render();
-    //
-    // shader->unuse();
-    //
-    // SDL_GL_SwapWindow(window);
-
     dxRenderManager->PrepareFrame();
     dxSprite->Render(dxRenderManager->GetCommandList());
     dxRenderManager->RenderFrame();
