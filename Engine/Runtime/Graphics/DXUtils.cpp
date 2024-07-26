@@ -1,5 +1,7 @@
 #include "DXUtils.h"
 
+#include <dxgidebug.h>
+
 // using namespace DirectX;
 using namespace Microsoft::WRL;
 using namespace DeltaEngine;
@@ -46,7 +48,7 @@ ComPtr<IDXGIAdapter4> DXUtils::GetAdapter(bool useWarp)
     return dxgiAdapter4;
 }
 
-ComPtr<ID3D12Device4> DXUtils::CreateDevice(ComPtr<IDXGIAdapter4> adapter)
+ComPtr<ID3D12Device4> DXUtils::CreateDevice(const ComPtr<IDXGIAdapter4>& adapter)
 {
     ComPtr<ID3D12Device4> d3d12Device4;
     ThrowIfFailed(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&d3d12Device4)));
@@ -92,7 +94,7 @@ ComPtr<ID3D12Device4> DXUtils::CreateDevice(ComPtr<IDXGIAdapter4> adapter)
     return d3d12Device4;
 }
 
-ComPtr<ID3D12CommandQueue> DXUtils::CreateCommandQueue(ComPtr<ID3D12Device4> device, D3D12_COMMAND_LIST_TYPE type)
+ComPtr<ID3D12CommandQueue> DXUtils::CreateCommandQueue(const ComPtr<ID3D12Device4>& device, D3D12_COMMAND_LIST_TYPE type)
 {
     ComPtr<ID3D12CommandQueue> d3d12CommandQueue;
 
@@ -119,7 +121,7 @@ bool DXUtils::CheckTearingSupport()
 	return allowTearing == TRUE;
 }
 
-ComPtr<IDXGISwapChain4> DXUtils::CreateSwapChain(HWND hWnd, ComPtr<ID3D12CommandQueue> commandQueue, uint32_t width, uint32_t height, uint32_t bufferCount)
+ComPtr<IDXGISwapChain4> DXUtils::CreateSwapChain(HWND hWnd, const ComPtr<ID3D12CommandQueue>& commandQueue, uint32_t width, uint32_t height, uint32_t bufferCount)
 {
     ComPtr<IDXGISwapChain4> dxgiSwapChain4;
     ComPtr<IDXGIFactory7> dxgiFactory7;
@@ -162,7 +164,7 @@ ComPtr<IDXGISwapChain4> DXUtils::CreateSwapChain(HWND hWnd, ComPtr<ID3D12Command
     return dxgiSwapChain4;
 }
 
-ComPtr<ID3D12DescriptorHeap> DXUtils::CreateDescriptorHeap(ComPtr<ID3D12Device4> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors)
+ComPtr<ID3D12DescriptorHeap> DXUtils::CreateDescriptorHeap(const ComPtr<ID3D12Device4>& device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors)
 {
     ComPtr<ID3D12DescriptorHeap> descriptorHeap;
  
@@ -175,7 +177,7 @@ ComPtr<ID3D12DescriptorHeap> DXUtils::CreateDescriptorHeap(ComPtr<ID3D12Device4>
     return descriptorHeap;
 }
 
-ComPtr<ID3D12CommandAllocator> DXUtils::CreateCommandAllocator(ComPtr<ID3D12Device4> device, D3D12_COMMAND_LIST_TYPE type)
+ComPtr<ID3D12CommandAllocator> DXUtils::CreateCommandAllocator(const ComPtr<ID3D12Device4>& device, D3D12_COMMAND_LIST_TYPE type)
 {
     ComPtr<ID3D12CommandAllocator> commandAllocator;
     ThrowIfFailed(device->CreateCommandAllocator(type, IID_PPV_ARGS(&commandAllocator)));
@@ -183,8 +185,8 @@ ComPtr<ID3D12CommandAllocator> DXUtils::CreateCommandAllocator(ComPtr<ID3D12Devi
     return commandAllocator;
 }
 
-ComPtr<ID3D12GraphicsCommandList> DXUtils::CreateCommandList(ComPtr<ID3D12Device4> device, ComPtr<ID3D12CommandAllocator> commandAllocator,
-    D3D12_COMMAND_LIST_TYPE type)
+ComPtr<ID3D12GraphicsCommandList> DXUtils::CreateCommandList(const ComPtr<ID3D12Device4>& device, const ComPtr<ID3D12CommandAllocator>& commandAllocator,
+                                                             D3D12_COMMAND_LIST_TYPE type)
 {
     ComPtr<ID3D12GraphicsCommandList> commandList;
     ThrowIfFailed(device->CreateCommandList(0, type, commandAllocator.Get(), nullptr, IID_PPV_ARGS(&commandList)));
@@ -192,4 +194,21 @@ ComPtr<ID3D12GraphicsCommandList> DXUtils::CreateCommandList(ComPtr<ID3D12Device
     ThrowIfFailed(commandList->Close());
  
     return commandList;
+}
+
+ComPtr<ID3D12Fence> DXUtils::CreateFence(const ComPtr<ID3D12Device4>& device, UINT64 fenceValue)
+{
+    ComPtr<ID3D12Fence> fence;
+    ThrowIfFailed(device->CreateFence(fenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
+ 
+    return fence;
+}
+
+void DXUtils::ReportLiveDXGIObjects()
+{
+    IDXGIDebug* pDebug;
+    if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&pDebug)))) {
+        pDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
+        pDebug->Release();
+    }
 }

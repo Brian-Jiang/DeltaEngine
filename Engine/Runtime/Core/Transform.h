@@ -13,6 +13,8 @@ public:
 	DirectX::SimpleMath::Vector3 position;
 	DirectX::SimpleMath::Quaternion rotation;
 	DirectX::SimpleMath::Vector3 scale;
+	Transform *parent;
+	std::vector<Transform*> children;
 
 	Transform();
 	~Transform();

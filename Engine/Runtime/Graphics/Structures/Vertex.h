@@ -1,5 +1,7 @@
 #pragma once
 
+#include <DirectXMath.h>
+
 struct Position {
 	float x;
 	float y;
@@ -18,13 +20,8 @@ struct UV {
 };
 
 struct Vertex {
-	Position position;
+	DirectX::XMFLOAT3 position;
+	DirectX::XMFLOAT3 normal;
 	Color color;
-	UV uv;
-
-	void SetUV(float u, float v)
-	{
-		uv.u = u;
-		uv.v = v;
-	}
+	DirectX::XMFLOAT2 uv;
 };

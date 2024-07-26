@@ -1,11 +1,12 @@
 ﻿#pragma once
 
+#include "EngineIncludes.h"
+
 #include "Graphics/DXRenderManager.h"
 #include "Graphics/Renderer/SpriteRenderer.h"
 #include "SDL3/SDL.h"
 
-namespace DeltaEngine
-{
+DELTA_ENGINE_NS_BEGIN
 
 enum class GameState {
 	PLAY,
@@ -42,4 +43,4 @@ private:
 	float time;
 };
 
-}
+DELTA_ENGINE_NS_END

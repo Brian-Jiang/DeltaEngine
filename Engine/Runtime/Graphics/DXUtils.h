@@ -27,25 +27,28 @@ public:
 
 	static Microsoft::WRL::ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp);
 
-    static Microsoft::WRL::ComPtr<ID3D12Device4> CreateDevice(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter);
+    static Microsoft::WRL::ComPtr<ID3D12Device4> CreateDevice(const Microsoft::WRL::ComPtr<IDXGIAdapter4>& adapter);
 
 	static Microsoft::WRL::ComPtr<ID3D12CommandQueue> CreateCommandQueue(
-		Microsoft::WRL::ComPtr<ID3D12Device4> device, D3D12_COMMAND_LIST_TYPE type);
+        const Microsoft::WRL::ComPtr<ID3D12Device4>& device, D3D12_COMMAND_LIST_TYPE type);
 
 	static bool CheckTearingSupport();
 
 	static Microsoft::WRL::ComPtr<IDXGISwapChain4> CreateSwapChain(
-		HWND hWnd, Microsoft::WRL::ComPtr<ID3D12CommandQueue> commandQueue, uint32_t width, uint32_t height, uint32_t bufferCount);
+		HWND hWnd, const Microsoft::WRL::ComPtr<ID3D12CommandQueue>& commandQueue, uint32_t width, uint32_t height, uint32_t bufferCount);
 
 	static Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(
-		Microsoft::WRL::ComPtr<ID3D12Device4> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors);
+        const Microsoft::WRL::ComPtr<ID3D12Device4>& device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors);
 
 	static Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CreateCommandAllocator(
-		Microsoft::WRL::ComPtr<ID3D12Device4> device, D3D12_COMMAND_LIST_TYPE type);
+        const Microsoft::WRL::ComPtr<ID3D12Device4>& device, D3D12_COMMAND_LIST_TYPE type);
 
 	static Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> CreateCommandList(
-		Microsoft::WRL::ComPtr<ID3D12Device4> device, Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocator, D3D12_COMMAND_LIST_TYPE type);
+        const Microsoft::WRL::ComPtr<ID3D12Device4>& device, const Microsoft::WRL::ComPtr<ID3D12CommandAllocator>& commandAllocator, D3D12_COMMAND_LIST_TYPE type);
 
+	static Microsoft::WRL::ComPtr<ID3D12Fence> CreateFence(const Microsoft::WRL::ComPtr<ID3D12Device4>& device, UINT64 fenceValue);
+
+	static void ReportLiveDXGIObjects();
 };
 
 }

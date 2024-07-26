@@ -2,16 +2,8 @@
 
 #include <chrono>
 
-// #include <cstdio>
-// #include <d3d12sdklayers.h>
-// #include <dxgi1_6.h>
-// #include <fstream>
-// #include <iostream>
-
-// #include "GL/glew.h"
-
-// #include "SDL3/SDL.h"
-// #include "Const.h"
+#include "Graphics/DXUtils.h"
+#include "Importers/ModelImporter.h"
 
 #define SCREEN_WIDTH   1280
 #define SCREEN_HEIGHT  720
@@ -26,6 +18,8 @@ EngineLaunch::EngineLaunch() : exitCode(0), renderer(nullptr), window(nullptr), 
 
 void EngineLaunch::Initialize()
 {
+    SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+
     InitSDL();
 
     // std::ofstream file("relative_path_test.txt");
@@ -34,6 +28,9 @@ void EngineLaunch::Initialize()
     //     file << "Test file";
     // }
     // file.close();
+
+    auto importer = new ModelImporter();
+    importer->Import("");
 
     dxSprite->Start(-1.0f, -1.0f, 2.0f, 2.0f, "../../Engine/Runtime/Assets/Frame1.png", dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
 
@@ -63,14 +60,14 @@ void EngineLaunch::InitSDL() {
 
     rendererFlags = SDL_RENDERER_ACCELERATED;
 
-    windowFlags = SDL_WINDOW_OPENGL;
+    windowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
 
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         printf("Couldn't initialize SDL: %s\n", SDL_GetError());
         gameState = GameState::Error;
     }
 
-    window = SDL_CreateWindow("Shooter 01", SCREEN_WIDTH, SCREEN_HEIGHT, windowFlags);
+    window = SDL_CreateWindow("Delta Editor", SCREEN_WIDTH, SCREEN_HEIGHT, windowFlags);
 
     if (!window) {
         printf("Failed to open %d x %d window: %s\n", SCREEN_WIDTH, SCREEN_HEIGHT, SDL_GetError());
@@ -127,9 +124,12 @@ void EngineLaunch::StartMainLoop()
         printf("Error");
         exitCode = 1;
     }
+
+    dxRenderManager->OnDestroy();
+
+    // DXUtils::ReportLiveDXGIObjects();
     
     SDL_Quit();
-    dxRenderManager->OnDestroy();
 }
 
 void EngineLaunch::HandleInput()
@@ -137,6 +137,17 @@ void EngineLaunch::HandleInput()
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
         switch (event.type) {
+			case SDL_EVENT_WINDOW_RESIZED:
+				dxRenderManager->Resize(event.window.data1, event.window.data2);
+				break;
+	        case SDL_EVENT_KEY_DOWN:
+				if (event.key.keysym.sym == SDLK_F11) {
+					dxRenderManager->SetFullscreen(!dxRenderManager->IsFullscreen());
+				} else if (event.key.keysym.sym == SDLK_v)
+				{
+					dxRenderManager->ToggleVSync(!dxRenderManager->IsVSync());
+				}
+            break;
             case SDL_EVENT_QUIT:
                 gameState = GameState::EXIT;
                 break;
