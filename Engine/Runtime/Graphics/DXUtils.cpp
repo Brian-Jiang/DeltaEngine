@@ -204,6 +204,50 @@ ComPtr<ID3D12Fence> DXUtils::CreateFence(const ComPtr<ID3D12Device4>& device, UI
     return fence;
 }
 
+void DXUtils::UpdateBufferResource(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12GraphicsCommandList2>& commandList,
+                                   ID3D12Resource** pDestinationResource, ID3D12Resource** pIntermediateResource, size_t numElements,
+                                   size_t elementSize, const void* bufferData, D3D12_RESOURCE_FLAGS flags)
+{
+    size_t bufferSize = numElements * elementSize;
+
+    // Create a committed resource for the GPU resource in a default heap.
+    // This is the actual buffer resource that used by the GPU.
+    auto heapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+    auto resDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize, flags);
+    ThrowIfFailed(device->CreateCommittedResource(
+        &heapProp,
+        D3D12_HEAP_FLAG_NONE,
+        &resDesc,
+        D3D12_RESOURCE_STATE_COMMON,
+        nullptr,
+        IID_PPV_ARGS(pDestinationResource)));
+
+    // Create an committed resource for the upload.
+    if (bufferData)
+    {
+        // This is only for uploading data to the GPU resource.
+        heapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+        resDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
+        ThrowIfFailed(device->CreateCommittedResource(
+            &heapProp,
+            D3D12_HEAP_FLAG_NONE,
+            &resDesc,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            IID_PPV_ARGS(pIntermediateResource)));
+
+        D3D12_SUBRESOURCE_DATA subresourceData = {};
+        subresourceData.pData = bufferData;
+        subresourceData.RowPitch = bufferSize;
+        subresourceData.SlicePitch = subresourceData.RowPitch;
+
+        // Perform memory copy and add upload commands to the command list.
+        UpdateSubresources(commandList.Get(), 
+            *pDestinationResource, *pIntermediateResource,
+            0, 0, 1, &subresourceData);
+    }
+}
+
 void DXUtils::ReportLiveDXGIObjects()
 {
     IDXGIDebug* pDebug;

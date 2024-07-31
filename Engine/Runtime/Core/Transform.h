@@ -1,11 +1,12 @@
 #pragma once
 
+#include "EngineIncludes.h"
+
 #include "SimpleMath.h"
 #include "Core/Component.h"
 // #include "Math/Vector3.h"
 
-namespace DeltaEngine
-{
+DELTA_ENGINE_NS_BEGIN
 
 class Transform: public Component
 {
@@ -16,9 +17,10 @@ public:
 	Transform *parent;
 	std::vector<Transform*> children;
 
+	DirectX::XMMATRIX modelMatrix;
+
 	Transform();
 	~Transform();
-
 };
 
-}
+DELTA_ENGINE_NS_END

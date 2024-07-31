@@ -48,6 +48,14 @@ public:
 
 	static Microsoft::WRL::ComPtr<ID3D12Fence> CreateFence(const Microsoft::WRL::ComPtr<ID3D12Device4>& device, UINT64 fenceValue);
 
+	static void UpdateBufferResource(
+        const Microsoft::WRL::ComPtr<ID3D12Device>& device,
+        const Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2>& commandList,
+        ID3D12Resource** pDestinationResource, 
+        ID3D12Resource** pIntermediateResource,
+        size_t numElements, size_t elementSize, const void* bufferData, 
+        D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE);
+
 	static void ReportLiveDXGIObjects();
 };
 

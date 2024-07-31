@@ -1,13 +1,8 @@
 #pragma once
 
-#ifndef NOMINMAX   /* don't define min() and max(). */
-#define NOMINMAX
-#endif
-
-#include <chrono>
-
 #include "EngineIncludes.h"
 
+#include <chrono>
 #include <queue>
 #include <d3d12.h>
 #include <wrl.h>

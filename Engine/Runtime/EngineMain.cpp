@@ -1,22 +1,29 @@
-﻿#include "EngineLaunch.h"
+﻿#include "EngineMain.h"
 
 #include <chrono>
 
 #include "Graphics/DXUtils.h"
 #include "Importers/ModelImporter.h"
+#include "Graphics/DirectX/VertexAttributes.h"
 
 #define SCREEN_WIDTH   1280
 #define SCREEN_HEIGHT  720
 
 using namespace DeltaEngine;
+using namespace DirectX;
 
-EngineLaunch::EngineLaunch() : exitCode(0), renderer(nullptr), window(nullptr), gameState(GameState::PLAY),
-                             time(0.0f), dxRenderManager(nullptr), dxSprite(nullptr)
+EngineMain* EngineMain::instance = nullptr;
+
+EngineMain::EngineMain() : exitCode(0), renderer(nullptr), window(nullptr), gameState(GameState::PLAY),
+                             time(0.0f), dxRenderManager(nullptr)
 {
+    EngineMain::instance = this;
+
     dxSprite = new SpriteRenderer();
+    meshRenderer = new MeshRenderer();
 }
 
-void EngineLaunch::Initialize()
+void EngineMain::Initialize()
 {
     SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
@@ -28,6 +35,28 @@ void EngineLaunch::Initialize()
     //     file << "Test file";
     // }
     // file.close();
+
+    static VertexPosColor g_Vertices[8] = {
+        { XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT3(0.0f, 0.0f, 0.0f) }, // 0
+        { XMFLOAT3(-1.0f,  1.0f, -1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f) }, // 1
+        { XMFLOAT3( 1.0f,  1.0f, -1.0f), XMFLOAT3(1.0f, 1.0f, 0.0f) }, // 2
+        { XMFLOAT3( 1.0f, -1.0f, -1.0f), XMFLOAT3(1.0f, 0.0f, 0.0f) }, // 3
+        { XMFLOAT3(-1.0f, -1.0f,  1.0f), XMFLOAT3(0.0f, 0.0f, 1.0f) }, // 4
+        { XMFLOAT3(-1.0f,  1.0f,  1.0f), XMFLOAT3(0.0f, 1.0f, 1.0f) }, // 5
+        { XMFLOAT3( 1.0f,  1.0f,  1.0f), XMFLOAT3(1.0f, 1.0f, 1.0f) }, // 6
+        { XMFLOAT3( 1.0f, -1.0f,  1.0f), XMFLOAT3(1.0f, 0.0f, 1.0f) }  // 7
+    };
+
+    static WORD g_Indicies[36] =
+    {
+        0, 1, 2, 0, 2, 3,
+        4, 6, 5, 4, 7, 6,
+        4, 5, 1, 4, 1, 0,
+        3, 2, 6, 3, 6, 7,
+        1, 5, 6, 1, 6, 2,
+        4, 0, 3, 4, 3, 7
+    };
+
 
     auto importer = new ModelImporter();
     importer->Import("");
@@ -45,7 +74,7 @@ void ThrowIfFailed(HRESULT hresult)
 	}
 }
 
-void EngineLaunch::InitSDL() {
+void EngineMain::InitSDL() {
     // int n = SDL_GetNumRenderDrivers();
     // for (size_t i = 0; i < n; i++) {
     //     //SDL_RendererInfo info;
@@ -104,7 +133,7 @@ void EngineLaunch::InitSDL() {
     // }
 }
 
-void EngineLaunch::StartMainLoop()
+void EngineMain::StartMainLoop()
 {
     while (gameState == GameState::PLAY) {
         // SDL_SetRenderDrawColor(renderer, 96, 128, 255, 255);
@@ -132,7 +161,7 @@ void EngineLaunch::StartMainLoop()
     SDL_Quit();
 }
 
-void EngineLaunch::HandleInput()
+void EngineMain::HandleInput()
 {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
@@ -160,7 +189,7 @@ void EngineLaunch::HandleInput()
     }
 }
 
-void EngineLaunch::Draw()
+void EngineMain::Draw()
 {
     dxRenderManager->PrepareFrame();
     dxSprite->Render(dxRenderManager->GetCommandList());

@@ -4,6 +4,7 @@
 
 #include "Graphics/DXRenderManager.h"
 #include "Graphics/Renderer/SpriteRenderer.h"
+#include "Graphics/Renderer/MeshRenderer.h"
 #include "SDL3/SDL.h"
 
 DELTA_ENGINE_NS_BEGIN
@@ -14,15 +15,19 @@ enum class GameState {
 	Error,
 };
 
-class EngineLaunch
+class EngineMain
 {
 public:
-	EngineLaunch();
+	EngineMain();
 
 	void Initialize();
 	void StartMainLoop();
 
 	int exitCode;
+
+	DXRenderManager* dxRenderManager;
+
+	static EngineMain* instance;
 
 private:
 	void InitSDL();
@@ -38,7 +43,8 @@ private:
 	SpriteRenderer *dxSprite;
 	// GLSLProgram* shader;
 
-	DXRenderManager* dxRenderManager;
+	MeshRenderer *meshRenderer;
+	
 
 	float time;
 };

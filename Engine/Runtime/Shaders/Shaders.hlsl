@@ -1,9 +1,18 @@
 struct PSInput
 {
-    float4 position : SV_POSITION;
     float4 color : COLOR;
     float2 uv : TEXCOORD;
+    
+    // This can be ommited in pixel shader, but the memory structure must match, so we place it last.
+    float4 position : SV_POSITION;
 };
+
+struct ModelViewProjection
+{
+    matrix MVP;
+};
+
+// ConstantBuffer<ModelViewProjection> ModelViewProjectionCB : register(b0);
 
 Texture2D g_texture : register(t0);
 SamplerState g_sampler : register(s0);

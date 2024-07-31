@@ -1,12 +1,12 @@
 #include <iostream>
 
-#include "Runtime/EngineLaunch.h"
+#include "Runtime/EngineMain.h"
 
 using namespace std;
 using namespace DeltaEngine;
 
 int main() {
-	auto engine = new EngineLaunch();
+	auto engine = new EngineMain();
     engine->Initialize();
     printf("Delta Engine Init");
 

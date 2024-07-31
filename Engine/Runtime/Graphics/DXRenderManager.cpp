@@ -17,7 +17,7 @@ using namespace DeltaEngine;
 
 DXRenderManager::DXRenderManager(HWND hwnd, UINT width, UINT height): hwnd(hwnd), m_width(width), m_height(height),
     m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
-    m_scissorRect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
+    m_scissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX)),
     m_rtvDescriptorSize(0)
 {
 
@@ -54,14 +54,14 @@ void DXRenderManager::LoadPipeline()
     auto adapter = DXUtils::GetAdapter(m_useWarpDevice);
     m_device = DXUtils::CreateDevice(adapter);
 
-    dxCommandQueue = new DXCommandQueue(m_device, D3D12_COMMAND_LIST_TYPE_DIRECT);
+    // Create command queues.
+    directCommandQueue = new DXCommandQueue(m_device, D3D12_COMMAND_LIST_TYPE_DIRECT);
+    copyCommandQueue = new DXCommandQueue(m_device, D3D12_COMMAND_LIST_TYPE_COPY);
 
-    // Describe and create the command queue.
-    // m_commandQueue = DXUtils::CreateCommandQueue(m_device, D3D12_COMMAND_LIST_TYPE_DIRECT);
-    m_commandQueue = dxCommandQueue->GetCommandQueue();
+    
 
     // Describe and create the swap chain.
-    m_swapChain = DXUtils::CreateSwapChain(hwnd, m_commandQueue, m_width, m_height, FrameCount);
+    m_swapChain = DXUtils::CreateSwapChain(hwnd, directCommandQueue->GetCommandQueue(), m_width, m_height, FrameCount);
 
     // This sample does not support fullscreen transitions.
     ThrowIfFailed(factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER));
@@ -258,7 +258,7 @@ void DXRenderManager::LoadAssets()
     }
 
     // Get the command list.
-    m_commandList = dxCommandQueue->GetCommandList(m_pipelineState);
+    m_commandList = directCommandQueue->GetCommandList(m_pipelineState);
 
     // Create synchronization objects and wait until assets have been uploaded to the GPU.
     {
@@ -277,15 +277,15 @@ void DXRenderManager::LoadAssets()
 void DXRenderManager::InitFinish()
 {
     // Close the command list and execute it to begin the initial GPU setup.
-    frameFenceValues[m_frameIndex] = dxCommandQueue->ExecuteCommandList(m_commandList);
+    frameFenceValues[m_frameIndex] = directCommandQueue->ExecuteCommandList(m_commandList);
 
     WaitForPreviousFrame();
 }
 
 void DXRenderManager::PrepareFrame()
 {
-    m_commandList = dxCommandQueue->GetCommandList(m_pipelineState);
-
+    m_commandList = directCommandQueue->GetCommandList(m_pipelineState);
+    
     // Set necessary state.
     m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
     ID3D12DescriptorHeap* ppHeaps[] = { m_srvHeap.Get() };
@@ -314,7 +314,7 @@ void DXRenderManager::RenderFrame()
     auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
     m_commandList->ResourceBarrier(1, &barrier);
 
-    frameFenceValues[m_frameIndex] = dxCommandQueue->ExecuteCommandList(m_commandList);
+    frameFenceValues[m_frameIndex] = directCommandQueue->ExecuteCommandList(m_commandList);
 
     // Present the frame.
     UINT syncInterval = g_VSync ? 1 : 0;
@@ -328,7 +328,7 @@ void DXRenderManager::RenderFrame()
 void DXRenderManager::WaitForPreviousFrame()
 {
     // Wait until the previous frame is finished.
-    dxCommandQueue->WaitForFenceValue(frameFenceValues[m_frameIndex]);
+    directCommandQueue->WaitForFenceValue(frameFenceValues[m_frameIndex]);
 
     m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 }
@@ -339,7 +339,7 @@ void DXRenderManager::Resize(UINT width, UINT height)
     {
         // Wait for the GPU to be done with all resources.
         // WaitForPreviousFrame();
-        dxCommandQueue->Flush();
+        directCommandQueue->Flush();
 
         // Release the resources holding references to the swap chain (requirement of IDXGISwapChain::ResizeBuffers).
         for (UINT n = 0; n < FrameCount; n++)
@@ -354,6 +354,8 @@ void DXRenderManager::Resize(UINT width, UINT height)
         DXGI_SWAP_CHAIN_DESC desc = {};
         ThrowIfFailed(m_swapChain->GetDesc(&desc));
         ThrowIfFailed(m_swapChain->ResizeBuffers(FrameCount, m_width, m_height, desc.BufferDesc.Format, desc.Flags));
+
+        m_viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, static_cast<float>(m_width), static_cast<float>(m_height));
         
         m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
 
@@ -431,4 +433,17 @@ void DXRenderManager::OnDestroy()
 {
     // Wait for the GPU to be done with all resources.
     WaitForPreviousFrame();
+}
+
+DXCommandQueue* DXRenderManager::GetCommandQueue(const D3D12_COMMAND_LIST_TYPE type) const
+{
+    switch (type)
+    {
+        case D3D12_COMMAND_LIST_TYPE_DIRECT:
+            return directCommandQueue;
+        case D3D12_COMMAND_LIST_TYPE_COPY:
+            return copyCommandQueue;
+        default:
+            return nullptr;
+    }
 }

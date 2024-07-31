@@ -1,5 +1,7 @@
 #pragma once
 
+#include "EngineIncludes.h"
+
 #include <d3d12.h>
 #include <DirectXMath.h>
 #include <wrl/client.h>
@@ -7,8 +9,7 @@
 #include "Graphics/Texture.h"
 #include "Core/Component.h"
 
-namespace DeltaEngine
-{
+DELTA_ENGINE_NS_BEGIN
 
 class SpriteRenderer: public Component
 {
@@ -28,7 +29,7 @@ private:
     // ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
     // ComPtr<ID3D12DescriptorHeap> m_srvHeap;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBuffer;
-    D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
+    D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
 	Microsoft::WRL::ComPtr<ID3D12Resource> textureUploadHeap;
 	Texture *texture;
@@ -47,4 +48,4 @@ private:
     static const UINT TexturePixelSize = 4;    // The number of bytes used to represent a pixel in the texture.
 };
 
-}
+DELTA_ENGINE_NS_END

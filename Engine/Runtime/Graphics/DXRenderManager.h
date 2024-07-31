@@ -1,9 +1,5 @@
 #pragma once
 
-#ifndef NOMINMAX   /* don't define min() and max(). */
-#define NOMINMAX
-#endif
-
 #include "EngineIncludes.h"
 
 #include <chrono>
@@ -28,6 +24,8 @@ public:
 	void Resize(UINT width, UINT height);
 	void SetFullscreen(bool fullscreen);
     void OnDestroy();
+
+	DXCommandQueue *GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) const;
 
 	void ToggleVSync(bool enableVSync) { g_VSync = enableVSync; }
 
@@ -55,15 +53,18 @@ private:
 
     static const UINT FrameCount = 2;
 
-	DXCommandQueue *dxCommandQueue;
+	DXCommandQueue *directCommandQueue;
+	DXCommandQueue *copyCommandQueue;
 
     bool m_useWarpDevice;
+
 	D3D12_VIEWPORT m_viewport;
     D3D12_RECT m_scissorRect;
+
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapChain;
 	Microsoft::WRL::ComPtr<ID3D12Device4> m_device;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
-	Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_commandQueue;
+	// Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_commandQueue;
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvHeap;
@@ -74,9 +75,10 @@ private:
     UINT m_height;
     float m_aspectRatio;
 
-    // App resources.
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBuffer;
-    D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
+	// Depth buffer.
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_DepthBuffer;
+    // Descriptor heap for depth buffer.
+    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DSVHeap;
 
     // Synchronization objects.
     UINT m_frameIndex;
