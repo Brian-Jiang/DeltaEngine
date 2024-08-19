@@ -1,6 +1,6 @@
 set(third_party_folder "ThirdParty")
 
-include(glew.cmake)
+# include(glew.cmake)
 add_subdirectory(glfw)
 include(sdl3.cmake)
 include(imgui.cmake)

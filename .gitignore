@@ -12,4 +12,4 @@ _deps
 CMakeUserPresets.json
 out/
 .vs/
-Build/
+/Build/

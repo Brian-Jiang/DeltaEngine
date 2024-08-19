@@ -25,7 +25,7 @@ add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
                    $<TARGET_FILE_DIR:${TARGET_NAME}>)
 
 
-target_link_libraries(${TARGET_NAME} PRIVATE glew)
+# target_link_libraries(${TARGET_NAME} PRIVATE glew)
 target_link_libraries(${TARGET_NAME} PRIVATE glfw)
 target_link_libraries(${TARGET_NAME} PRIVATE SDL3::SDL3)
 target_link_libraries(${TARGET_NAME} PRIVATE imgui)
