@@ -35,9 +35,9 @@ ComPtr<ID3D12CommandAllocator> DXCommandQueue::CreateCommandAllocator()
     return commandAllocator;
 }
 
-ComPtr<ID3D12GraphicsCommandList7> DXCommandQueue::CreateCommandList(const ComPtr<ID3D12CommandAllocator>& allocator, const ComPtr<ID3D12PipelineState>& pipelineState)
+ComPtr<ID3D12GraphicsCommandList5> DXCommandQueue::CreateCommandList(const ComPtr<ID3D12CommandAllocator>& allocator, const ComPtr<ID3D12PipelineState>& pipelineState)
 {
-    ComPtr<ID3D12GraphicsCommandList7> commandList;
+    ComPtr<ID3D12GraphicsCommandList5> commandList;
     ThrowIfFailed(device->CreateCommandList(0, type, allocator.Get(), pipelineState.Get(), IID_PPV_ARGS(&commandList)));
 
     return commandList;
@@ -53,10 +53,10 @@ bool DXCommandQueue::IsFenceComplete(UINT64 fenceValue)
     return fence->GetCompletedValue() >= fenceValue;
 }
 
-ComPtr<ID3D12GraphicsCommandList7> DXCommandQueue::GetCommandList(const ComPtr<ID3D12PipelineState>& pipelineState)
+ComPtr<ID3D12GraphicsCommandList5> DXCommandQueue::GetCommandList(const ComPtr<ID3D12PipelineState>& pipelineState)
 {
     ComPtr<ID3D12CommandAllocator> commandAllocator;
-    ComPtr<ID3D12GraphicsCommandList7> commandList;
+    ComPtr<ID3D12GraphicsCommandList5> commandList;
 
     // Command list allocators can only be reset when the associated 
     // command lists have finished execution on the GPU; apps should use 
@@ -95,7 +95,7 @@ ComPtr<ID3D12GraphicsCommandList7> DXCommandQueue::GetCommandList(const ComPtr<I
     return commandList;
 }
 
-UINT64 DXCommandQueue::ExecuteCommandList(const ComPtr<ID3D12GraphicsCommandList7>& commandList)
+UINT64 DXCommandQueue::ExecuteCommandList(const ComPtr<ID3D12GraphicsCommandList5>& commandList)
 {
     // Command list needs to be closed before it can be executed. This is when the validation of the command list happens.
     ThrowIfFailed(commandList->Close());

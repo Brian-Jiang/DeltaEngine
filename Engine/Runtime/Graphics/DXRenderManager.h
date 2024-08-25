@@ -69,7 +69,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvHeap;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
-	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList7> m_commandList;
+	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList5> m_commandList;
     UINT m_rtvDescriptorSize;
     UINT m_width;
     UINT m_height;

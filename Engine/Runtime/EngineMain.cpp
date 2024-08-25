@@ -61,7 +61,7 @@ void EngineMain::Initialize()
     auto importer = new ModelImporter();
     importer->Import("");
 
-    dxSprite->Start(-1.0f, -1.0f, 2.0f, 2.0f, "../../Engine/Runtime/Assets/Frame1.png", dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
+    dxSprite->Start(-1.0f, -1.0f, 2.0f, 2.0f, "Assets/logo.png", dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
 
     dxRenderManager->InitFinish();
 }

@@ -30,6 +30,10 @@ private:
     // ComPtr<ID3D12DescriptorHeap> m_srvHeap;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBuffer;
     D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
+	// Index buffer for the cube.
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_IndexBuffer;
+	D3D12_INDEX_BUFFER_VIEW m_IndexBufferView;
+
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
 	Microsoft::WRL::ComPtr<ID3D12Resource> textureUploadHeap;
 	Texture *texture;

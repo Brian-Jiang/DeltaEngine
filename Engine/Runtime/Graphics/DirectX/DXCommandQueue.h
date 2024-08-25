@@ -17,13 +17,13 @@ public:
 
     Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CreateCommandAllocator();
 
-    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList7> CreateCommandList(
+    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList5> CreateCommandList(
         const Microsoft::WRL::ComPtr<ID3D12CommandAllocator>& allocator, 
         const Microsoft::WRL::ComPtr<ID3D12PipelineState>& pipelineState = nullptr);
 
     bool IsFenceComplete(UINT64 fenceValue);
-    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList7> GetCommandList(const Microsoft::WRL::ComPtr<ID3D12PipelineState>& pipelineState = nullptr);
-    UINT64 ExecuteCommandList(const Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList7>& commandList);
+    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList5> GetCommandList(const Microsoft::WRL::ComPtr<ID3D12PipelineState>& pipelineState = nullptr);
+    UINT64 ExecuteCommandList(const Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList5>& commandList);
     void WaitForFenceValue(UINT64 fenceValue, std::chrono::milliseconds duration = std::chrono::milliseconds::max());
     void WaitForLastAllocator();
 
@@ -39,7 +39,7 @@ private:
     };
 
     std::queue<AllocatorStruct> allocatorQueue;
-    std::queue<Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList7>> commandListQueue;
+    std::queue<Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList5>> commandListQueue;
     Microsoft::WRL::ComPtr<ID3D12Fence> fence;
     UINT64 fenceValue;
     HANDLE fenceEvent;

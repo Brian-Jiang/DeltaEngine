@@ -41,39 +41,39 @@ void SpriteRenderer::Start(float x, float y, float width, float height, const ch
 			{ { x + width, y, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } },
         };
 
-        // const UINT vertexBufferSize = sizeof(triangleVertices);
+         const UINT vertexBufferSize = sizeof(triangleVertices);
 
         // Note: using upload heaps to transfer static data like vert buffers is not 
         // recommended. Every time the GPU needs it, the upload heap will be marshalled 
         // over. Please read up on Default Heap usage. An upload heap is used here for 
         // code simplicity and because there are very few verts to actually transfer.
-        // CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
-        // auto desc = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
-        // ThrowIfFailed(device->CreateCommittedResource(
-        //     &heapProps,
-        //     D3D12_HEAP_FLAG_NONE,
-        //     &desc,
-        //     D3D12_RESOURCE_STATE_GENERIC_READ,
-        //     nullptr,
-        //     IID_PPV_ARGS(&m_vertexBuffer)));
+         CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
+         auto desc = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
+         ThrowIfFailed(device->CreateCommittedResource(
+             &heapProps,
+             D3D12_HEAP_FLAG_NONE,
+             &desc,
+             D3D12_RESOURCE_STATE_GENERIC_READ,
+             nullptr,
+             IID_PPV_ARGS(&m_vertexBuffer)));
 
-        auto dxRenderManager = EngineMain::instance->dxRenderManager;
-        ComPtr<ID3D12Resource> intermediateVertexBuffer;
-        DXUtils::UpdateBufferResource(
-            dxRenderManager->GetDevice(),
-            dxRenderManager->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT)->GetCommandList(),
-            &m_vertexBuffer,
-            &intermediateVertexBuffer,
-            _countof(triangleVertices),
-            sizeof(Vertex),
-            triangleVertices);
+        //auto dxRenderManager = EngineMain::instance->dxRenderManager;
+        //ComPtr<ID3D12Resource> intermediateVertexBuffer;
+        //DXUtils::UpdateBufferResource(
+        //    dxRenderManager->GetDevice(),
+        //    dxRenderManager->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT)->GetCommandList(),
+        //    &m_vertexBuffer,
+        //    &intermediateVertexBuffer,
+        //    _countof(triangleVertices),
+        //    sizeof(Vertex),
+        //    triangleVertices);
 
         // Copy the triangle data to the vertex buffer.
-        // UINT8* pVertexDataBegin;
-        // CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
-        // ThrowIfFailed(m_vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
-        // memcpy(pVertexDataBegin, triangleVertices, sizeof(triangleVertices));
-        // m_vertexBuffer->Unmap(0, nullptr);
+         UINT8* pVertexDataBegin;
+         CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
+         ThrowIfFailed(m_vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
+         memcpy(pVertexDataBegin, triangleVertices, sizeof(triangleVertices));
+         m_vertexBuffer->Unmap(0, nullptr);
 
         // Initialize the vertex buffer view.
         vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
