@@ -15,7 +15,7 @@ public:
 	std::vector<unsigned char> data;
 	int width;
 	int height;
-
+	int comp;
 };
 
 DELTA_ENGINE_NS_END

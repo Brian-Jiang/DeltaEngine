@@ -4,5 +4,7 @@ DeltaEngine::Mesh::Mesh(std::vector<Vertex>& vertices, std::vector<unsigned int>
     std::vector<Texture*>& textures)
 {
     this->vertices = vertices;
+	this->indices = indices;
+	this->textures = textures;
 }
 

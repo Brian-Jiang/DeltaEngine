@@ -3,6 +3,7 @@
 #include <DirectXMath.h>
 #include "Graphics/Structures/Vertex.h"
 #include "Graphics/Mesh.h"
+#include "IO/IOManager.h"
 #include "assimp/Importer.hpp"
 #include "assimp/postprocess.h"
 #include "assimp/scene.h"
@@ -16,8 +17,9 @@ ModelImporter::~ModelImporter() {}
 
 void ModelImporter::Import(const std::string& filePath)
 {
+	auto fullPath = IOManager::GetAssetFullPath(filePath);
 	Assimp::Importer import;
-    const aiScene *scene = import.ReadFile(filePath, aiProcess_Triangulate | aiProcess_FlipUVs);	
+    const aiScene *scene = import.ReadFile(fullPath, aiProcess_Triangulate | aiProcess_FlipUVs);
 	
     if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) 
     {
