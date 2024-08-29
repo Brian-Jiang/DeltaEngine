@@ -2,6 +2,8 @@
 
 #include "EngineIncludes.h"
 
+#include <DirectXMath.h>
+
 #include "Graphics/DXRenderManager.h"
 #include "Graphics/Renderer/SpriteRenderer.h"
 #include "Graphics/Renderer/MeshRenderer.h"
@@ -41,10 +43,17 @@ private:
 
 	// SpriteRenderer* sprite;
 	SpriteRenderer *dxSprite;
+	//MeshRenderer* dxMeshRenderer;
 	// GLSLProgram* shader;
 
 	MeshRenderer *meshRenderer;
+	MeshRenderer *meshRenderer2;
+
+	float m_FoV;
 	
+	DirectX::XMMATRIX m_ModelMatrix;
+	DirectX::XMMATRIX m_ViewMatrix;
+	DirectX::XMMATRIX m_ProjectionMatrix;
 
 	float time;
 };

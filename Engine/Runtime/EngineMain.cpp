@@ -1,10 +1,12 @@
 ﻿#include "EngineMain.h"
 
 #include <chrono>
+#include <vector>
 
 #include "Graphics/DXUtils.h"
 #include "Importers/ModelImporter.h"
 #include "Graphics/DirectX/VertexAttributes.h"
+#include "Graphics/Structures/Vertex.h"
 
 #define SCREEN_WIDTH   1280
 #define SCREEN_HEIGHT  720
@@ -15,12 +17,13 @@ using namespace DirectX;
 EngineMain* EngineMain::instance = nullptr;
 
 EngineMain::EngineMain() : exitCode(0), renderer(nullptr), window(nullptr), gameState(GameState::PLAY),
-                             time(0.0f), dxRenderManager(nullptr)
+time(0.0f), dxRenderManager(nullptr)
 {
     EngineMain::instance = this;
 
     dxSprite = new SpriteRenderer();
-    meshRenderer = new MeshRenderer();
+    //meshRenderer = new MeshRenderer();
+	meshRenderer2 = new MeshRenderer();
 }
 
 void EngineMain::Initialize()
@@ -36,18 +39,18 @@ void EngineMain::Initialize()
     // }
     // file.close();
 
-    static VertexPosColor g_Vertices[8] = {
-        { XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT3(0.0f, 0.0f, 0.0f) }, // 0
-        { XMFLOAT3(-1.0f,  1.0f, -1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f) }, // 1
-        { XMFLOAT3( 1.0f,  1.0f, -1.0f), XMFLOAT3(1.0f, 1.0f, 0.0f) }, // 2
-        { XMFLOAT3( 1.0f, -1.0f, -1.0f), XMFLOAT3(1.0f, 0.0f, 0.0f) }, // 3
-        { XMFLOAT3(-1.0f, -1.0f,  1.0f), XMFLOAT3(0.0f, 0.0f, 1.0f) }, // 4
-        { XMFLOAT3(-1.0f,  1.0f,  1.0f), XMFLOAT3(0.0f, 1.0f, 1.0f) }, // 5
-        { XMFLOAT3( 1.0f,  1.0f,  1.0f), XMFLOAT3(1.0f, 1.0f, 1.0f) }, // 6
-        { XMFLOAT3( 1.0f, -1.0f,  1.0f), XMFLOAT3(1.0f, 0.0f, 1.0f) }  // 7
+    std::vector<Vertex> g_Vertices = {
+        { XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) }, // 0
+        { XMFLOAT3(-1.0f,  1.0f, -1.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) }, // 1
+        { XMFLOAT3( 1.0f,  1.0f, -1.0f), XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) }, // 2
+        { XMFLOAT3( 1.0f, -1.0f, -1.0f), XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) }, // 3
+        { XMFLOAT3(-1.0f, -1.0f,  1.0f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) }, // 4
+        { XMFLOAT3(-1.0f,  1.0f,  1.0f), XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f) }, // 5
+        { XMFLOAT3( 1.0f,  1.0f,  1.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) }, // 6
+        { XMFLOAT3( 1.0f, -1.0f,  1.0f), XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) }  // 7
     };
 
-    static WORD g_Indicies[36] =
+    std::vector<unsigned int> g_Indicies =
     {
         0, 1, 2, 0, 2, 3,
         4, 6, 5, 4, 7, 6,
@@ -57,9 +60,14 @@ void EngineMain::Initialize()
         4, 0, 3, 4, 3, 7
     };
 
+	std::vector<Texture*> textures;
+
+    auto mesh = new Mesh(g_Vertices, g_Indicies, textures);
+	meshRenderer2->Start(*mesh, dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
 
     auto importer = new ModelImporter();
-    importer->Import("Assets/car/source/datsun240k.fbx");
+    //importer->Import("Assets/car/source/datsun240k.fbx");
+    //meshRenderer->Start(*importer->meshes[0], dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
 
     dxSprite->Start(-1.0f, -1.0f, 2.0f, 2.0f, "Assets/logo.png", dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
 
@@ -191,7 +199,31 @@ void EngineMain::HandleInput()
 
 void EngineMain::Draw()
 {
+    m_FoV = 45.0f;
+
+    // Update the model matrix.
+    float angle = static_cast<float>(time * 50.f);
+    const XMVECTOR rotationAxis = XMVectorSet(0, 1, 1, 0);
+    m_ModelMatrix = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(angle));
+
+    // Update the view matrix.
+    const XMVECTOR eyePosition = XMVectorSet(0, 0, -10, 1);
+    const XMVECTOR focusPoint = XMVectorSet(0, 0, 0, 1);
+    const XMVECTOR upDirection = XMVectorSet(0, 1, 0, 0);
+    m_ViewMatrix = XMMatrixLookAtLH(eyePosition, focusPoint, upDirection);
+
+    // Update the projection matrix.
+    float aspectRatio = dxRenderManager->GetWidth() / static_cast<float>(dxRenderManager->GetHeight());
+    m_ProjectionMatrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(m_FoV), aspectRatio, 0.1f, 100.0f);
+
+    XMMATRIX mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_ViewMatrix);
+    mvpMatrix = XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
+	dxRenderManager->SetMVPMatrix(mvpMatrix);
+    //commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
+
     dxRenderManager->PrepareFrame();
-    dxSprite->Render(dxRenderManager->GetCommandList());
+    //dxSprite->Render(dxRenderManager->GetCommandList());
+	//meshRenderer->Render(dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap(), dxRenderManager->GetDevice());
+	meshRenderer2->Render(dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap(), dxRenderManager->GetDevice());
     dxRenderManager->RenderFrame();
 }

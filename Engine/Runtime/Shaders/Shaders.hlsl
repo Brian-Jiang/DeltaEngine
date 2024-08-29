@@ -12,7 +12,7 @@ struct ModelViewProjection
     matrix MVP;
 };
 
-// ConstantBuffer<ModelViewProjection> ModelViewProjectionCB : register(b0);
+ConstantBuffer<ModelViewProjection> ModelViewProjectionCB : register(b0);
 
 Texture2D g_texture : register(t0);
 SamplerState g_sampler : register(s0);
@@ -21,7 +21,8 @@ PSInput VSMain(float4 position : POSITION, float4 color : COLOR, float2 uv: TEXC
 {
     PSInput result;
 
-    result.position = position;
+    //result.position = position;
+    result.position = mul(ModelViewProjectionCB.MVP, position);
     result.color = color;
     result.uv = uv;
 
@@ -30,6 +31,7 @@ PSInput VSMain(float4 position : POSITION, float4 color : COLOR, float2 uv: TEXC
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
+    return input.color;
     //return float4(input.uv, 0, 1); // Debugging (show UVs as colors)
     float2 uv;
     uv.x = input.uv.x;

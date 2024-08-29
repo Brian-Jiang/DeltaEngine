@@ -1,4 +1,5 @@
 set(third_party_folder "ThirdParty")
+set(DELTA_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 
 # include(glew.cmake)
 add_subdirectory(glfw)

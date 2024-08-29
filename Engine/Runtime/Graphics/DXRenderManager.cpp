@@ -6,6 +6,7 @@
 #include <DirectXMath.h>
 #include <dxcapi.h>
 #include <dxgidebug.h>
+//#include <d3dx12.h>
 
 #include "Graphics/DXUtils.h"
 #include "IO/IOManager.h"
@@ -14,6 +15,7 @@
 // using namespace DirectX;
 using namespace Microsoft::WRL;
 using namespace DeltaEngine;
+using namespace DirectX;
 
 DXRenderManager::DXRenderManager(HWND hwnd, UINT width, UINT height): hwnd(hwnd), m_width(width), m_height(height),
     m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
@@ -86,6 +88,13 @@ void DXRenderManager::LoadPipeline()
     // Get the size of the RTV descriptor on the device. Different devices may have different sizes.
     m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
+    // Create the descriptor heap for the depth-stencil view.
+    D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
+    dsvHeapDesc.NumDescriptors = 1;
+    dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+    dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+    ThrowIfFailed(m_device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_DSVHeap)));
+
     // Create frame resources.
     {
         // Get a handle to the first descriptor in the descriptor heap.
@@ -131,8 +140,9 @@ void DXRenderManager::LoadAssets()
         CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
         ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
 
-        CD3DX12_ROOT_PARAMETER1 rootParameters[1];
-        rootParameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
+        CD3DX12_ROOT_PARAMETER1 rootParameters[2];
+        rootParameters[0].InitAsConstants(sizeof(XMMATRIX) / 4, 0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
+        rootParameters[1].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
 
         D3D12_STATIC_SAMPLER_DESC sampler = {};
         sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
@@ -222,15 +232,15 @@ void DXRenderManager::LoadAssets()
         // Define the vertex input layout.
         D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
         {
-            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-            { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 28, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+            { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
         };
 
         D3D12_BLEND_DESC blendDesc = {};
         blendDesc.AlphaToCoverageEnable = FALSE;
         blendDesc.IndependentBlendEnable = FALSE;
-        blendDesc.RenderTarget[0].BlendEnable = TRUE;
+        blendDesc.RenderTarget[0].BlendEnable = FALSE;
         blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
         blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
         blendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
@@ -238,7 +248,7 @@ void DXRenderManager::LoadAssets()
         blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
         blendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
         blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-
+        
         // Describe and create the graphics pipeline state object (PSO).
         D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
         psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
@@ -259,6 +269,9 @@ void DXRenderManager::LoadAssets()
 
     // Get the command list.
     m_commandList = directCommandQueue->GetCommandList(m_pipelineState);
+
+    // Resize/Create the depth buffer.
+    ResizeDepthBuffer(m_width, m_height);
 
     // Create synchronization objects and wait until assets have been uploaded to the GPU.
     {
@@ -290,7 +303,8 @@ void DXRenderManager::PrepareFrame()
     m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
     ID3D12DescriptorHeap* ppHeaps[] = { m_srvHeap.Get() };
     m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-    m_commandList->SetGraphicsRootDescriptorTable(0, m_srvHeap->GetGPUDescriptorHandleForHeapStart());
+    m_commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
+    m_commandList->SetGraphicsRootDescriptorTable(1, m_srvHeap->GetGPUDescriptorHandleForHeapStart());
 
     m_commandList->RSSetViewports(1, &m_viewport);
     m_commandList->RSSetScissorRects(1, &m_scissorRect);
@@ -306,6 +320,8 @@ void DXRenderManager::PrepareFrame()
     const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
     m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
     m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    
 }
 
 void DXRenderManager::RenderFrame()
@@ -356,6 +372,8 @@ void DXRenderManager::Resize(UINT width, UINT height)
         ThrowIfFailed(m_swapChain->ResizeBuffers(FrameCount, m_width, m_height, desc.BufferDesc.Format, desc.Flags));
 
         m_viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, static_cast<float>(m_width), static_cast<float>(m_height));
+
+		ResizeDepthBuffer(m_width, m_height);
         
         m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
 
@@ -427,6 +445,69 @@ void DXRenderManager::SetFullscreen(bool fullscreen)
             ::ShowWindow(hwnd, SW_NORMAL);
         }
     }
+}
+
+void DXRenderManager::ResizeDepthBuffer(int width, int height) {
+	// Wait for the GPU to be done with all resources.
+	WaitForPreviousFrame();
+	directCommandQueue->Flush();
+
+	// Release the resources holding references to the swap chain (requirement of IDXGISwapChain::ResizeBuffers).
+	//for (UINT n = 0; n < FrameCount; n++) {
+	//	m_renderTargets[n].Reset();
+	//}
+
+	width = std::max(1, width);
+	height = std::max(1, height);
+
+    // Resize screen dependent resources.
+        // Create a depth buffer.
+    D3D12_CLEAR_VALUE optimizedClearValue = {};
+    optimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
+    optimizedClearValue.DepthStencil = { 1.0f, 0 };
+
+    auto hp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+    auto rd = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, width, height,
+        1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
+    ThrowIfFailed(m_device->CreateCommittedResource(
+        &hp,
+        D3D12_HEAP_FLAG_NONE,
+        &rd,
+        D3D12_RESOURCE_STATE_DEPTH_WRITE,
+        &optimizedClearValue,
+        IID_PPV_ARGS(&m_DepthBuffer)
+    ));
+
+    // Update the depth-stencil view.
+    D3D12_DEPTH_STENCIL_VIEW_DESC dsv = {};
+    dsv.Format = DXGI_FORMAT_D32_FLOAT;
+    dsv.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+    dsv.Texture2D.MipSlice = 0;
+    dsv.Flags = D3D12_DSV_FLAG_NONE;
+
+    m_device->CreateDepthStencilView(m_DepthBuffer.Get(), &dsv,
+        m_DSVHeap->GetCPUDescriptorHandleForHeapStart());
+
+	// Resize the swap chain to the desired dimensions.
+	//DXGI_SWAP_CHAIN_DESC desc = {};
+	//ThrowIfFailed(m_swapChain->GetDesc(&desc));
+	//ThrowIfFailed(m_swapChain->ResizeBuffers(FrameCount, m_width, m_height, desc.BufferDesc.Format, desc.Flags));
+
+	//m_viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, static_cast<float>(m_width), static_cast<float>(m_height));
+
+	//m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+
+	//m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+
+	//// Create frame resources.
+	//{
+	//	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
+	//	for (UINT n = 0; n < FrameCount; n++) {
+	//		ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
+	//		m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
+	//		rtvHandle.Offset(1, m_rtvDescriptorSize);
+	//	}
+	//}
 }
 
 void DXRenderManager::OnDestroy()

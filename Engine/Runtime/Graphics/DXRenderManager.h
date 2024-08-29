@@ -6,6 +6,7 @@
 #include <dxgi1_6.h>
 #include <d3d12.h>
 #include <d3dx12.h>
+#include <DirectXMath.h>
 
 #include "DirectX/DXCommandQueue.h"
 
@@ -23,6 +24,7 @@ public:
     void WaitForPreviousFrame();
 	void Resize(UINT width, UINT height);
 	void SetFullscreen(bool fullscreen);
+	void ResizeDepthBuffer(int width, int height);
     void OnDestroy();
 
 	DXCommandQueue *GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) const;
@@ -34,6 +36,11 @@ public:
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> GetSRVHeap() { return m_srvHeap; }
 	bool IsFullscreen() { return g_Fullscreen; }
 	bool IsVSync() { return g_VSync; }
+
+	UINT GetWidth() { return m_width; }
+	UINT GetHeight() { return m_height; }
+
+	void SetMVPMatrix(DirectX::XMMATRIX mvp) { mvpMatrix = mvp; }
 
 private:
 	HWND hwnd;
@@ -58,7 +65,7 @@ private:
 
     bool m_useWarpDevice;
 
-	D3D12_VIEWPORT m_viewport;
+	CD3DX12_VIEWPORT m_viewport;
     D3D12_RECT m_scissorRect;
 
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapChain;
@@ -83,6 +90,8 @@ private:
     // Synchronization objects.
     UINT m_frameIndex;
 	UINT64 frameFenceValues[FrameCount] = {};
+
+	DirectX::XMMATRIX mvpMatrix;
 };
 
 DELTA_ENGINE_NS_END
