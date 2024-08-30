@@ -55,6 +55,7 @@ Mesh *ModelImporter::ProcessMesh(aiMesh *mesh, const aiScene *scene)
     for(unsigned int i = 0; i < mesh->mNumVertices; i++)
     {
         Vertex vertex;
+		vertex.color = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
         // process vertex positions, normals and texture coordinates
         DirectX::XMFLOAT3 vector; 
 		vector.x = mesh->mVertices[i].x;

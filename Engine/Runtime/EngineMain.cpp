@@ -22,7 +22,7 @@ time(0.0f), dxRenderManager(nullptr)
     EngineMain::instance = this;
 
     dxSprite = new SpriteRenderer();
-    //meshRenderer = new MeshRenderer();
+    meshRenderer = new MeshRenderer();
 	meshRenderer2 = new MeshRenderer();
 }
 
@@ -63,11 +63,11 @@ void EngineMain::Initialize()
 	std::vector<Texture*> textures;
 
     auto mesh = new Mesh(g_Vertices, g_Indicies, textures);
-	meshRenderer2->Start(*mesh, dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
+	//meshRenderer2->Start(*mesh, dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
 
     auto importer = new ModelImporter();
-    //importer->Import("Assets/car/source/datsun240k.fbx");
-    //meshRenderer->Start(*importer->meshes[0], dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
+    importer->Import("Assets/car/source/datsun240k.fbx");
+    meshRenderer->Start(*importer->meshes[0], dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
 
     dxSprite->Start(-1.0f, -1.0f, 2.0f, 2.0f, "Assets/logo.png", dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
 
@@ -143,6 +143,8 @@ void EngineMain::InitSDL() {
 
 void EngineMain::StartMainLoop()
 {
+    eyePosition = XMVectorSet(0, 0, -10, 1);
+
     while (gameState == GameState::PLAY) {
         // SDL_SetRenderDrawColor(renderer, 96, 128, 255, 255);
         // SDL_RenderClear(renderer);
@@ -184,6 +186,12 @@ void EngineMain::HandleInput()
 				{
 					dxRenderManager->ToggleVSync(!dxRenderManager->IsVSync());
 				}
+                else if (event.key.keysym.sym == SDLK_DOWN) {
+					eyePosition -= XMVectorSet(0, 0, 0.1f, 0);
+                }
+				else if (event.key.keysym.sym == SDLK_UP) {
+					eyePosition += XMVectorSet(0, 0, 0.1f, 0);
+				}
             break;
             case SDL_EVENT_QUIT:
                 gameState = GameState::EXIT;
@@ -203,11 +211,14 @@ void EngineMain::Draw()
 
     // Update the model matrix.
     float angle = static_cast<float>(time * 50.f);
+    angle = 0.f;
     const XMVECTOR rotationAxis = XMVectorSet(0, 1, 1, 0);
-    m_ModelMatrix = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(angle));
+	auto translation = XMMatrixTranslation(0, 0, 40);
+    auto rotation = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(angle));
+	m_ModelMatrix = XMMatrixMultiply(rotation, translation);
 
     // Update the view matrix.
-    const XMVECTOR eyePosition = XMVectorSet(0, 0, -10, 1);
+    
     const XMVECTOR focusPoint = XMVectorSet(0, 0, 0, 1);
     const XMVECTOR upDirection = XMVectorSet(0, 1, 0, 0);
     m_ViewMatrix = XMMatrixLookAtLH(eyePosition, focusPoint, upDirection);
@@ -223,7 +234,7 @@ void EngineMain::Draw()
 
     dxRenderManager->PrepareFrame();
     //dxSprite->Render(dxRenderManager->GetCommandList());
-	//meshRenderer->Render(dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap(), dxRenderManager->GetDevice());
-	meshRenderer2->Render(dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap(), dxRenderManager->GetDevice());
+	meshRenderer->Render(dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap(), dxRenderManager->GetDevice());
+	//meshRenderer2->Render(dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap(), dxRenderManager->GetDevice());
     dxRenderManager->RenderFrame();
 }
