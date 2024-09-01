@@ -17,11 +17,14 @@ MeshRenderer::~MeshRenderer()
 {
 }
 
-void MeshRenderer::Start(const std::vector<Mesh*> meshes, const ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList> commandList, ComPtr<ID3D12DescriptorHeap> srvHeap)
+void MeshRenderer::Start(const std::vector<Mesh*> meshes, const std::vector<DirectX::XMMATRIX> meshTransforms, const ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList> commandList, ComPtr<ID3D12DescriptorHeap> srvHeap)
 {
 	this->meshes = meshes;
-	for (auto mesh : meshes) {
-		AddMesh(mesh, device, commandList, srvHeap);
+	this->meshTransforms = meshTransforms;
+    for (size_t i = 0; i < meshes.size(); ++i) {
+		auto mesh = meshes[i];
+		auto meshTransform = meshTransforms[i];
+		AddMesh(mesh, meshTransform, device, commandList, srvHeap);
 	}
 
     // 
@@ -170,7 +173,7 @@ void MeshRenderer::LoadTexture(const Texture* texture, const ComPtr<ID3D12Device
     device->CreateShaderResourceView(textureResource.Get(), &srvDesc, srvHandle);
 }
 
-void MeshRenderer::AddMesh(const Mesh* mesh, const Microsoft::WRL::ComPtr<ID3D12Device>& device, Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>& commandList, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& srvHeap) {
+void MeshRenderer::AddMesh(const Mesh* mesh, const XMMATRIX meshTransform, const Microsoft::WRL::ComPtr<ID3D12Device>& device, Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>& commandList, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& srvHeap) {
     // Create the vertex buffer.
     {
         const UINT vertexBufferSize = static_cast<UINT>(mesh->vertices.size() * sizeof(Vertex));
@@ -232,6 +235,31 @@ void MeshRenderer::AddMesh(const Mesh* mesh, const Microsoft::WRL::ComPtr<ID3D12
 		indexBufferViews.push_back(indexBufferView);
     }
 
+    // Create model matrix
+    {
+		const UINT constantBufferSize = sizeof(DirectX::XMFLOAT4X4);
+
+        CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
+		CD3DX12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize * 2);
+		ComPtr<ID3D12Resource> constantBuffer;
+        ThrowIfFailed(device->CreateCommittedResource(
+            &heapProps,
+            D3D12_HEAP_FLAG_NONE,
+            &bufferDesc,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            IID_PPV_ARGS(&constantBuffer)));
+
+        // Map and initialize the constant buffer
+        UINT8* pVertexDataBegin;
+        DirectX::XMFLOAT4X4* pData;
+        constantBuffer->Map(0, nullptr, reinterpret_cast<void**>(&pData));
+        DirectX::XMStoreFloat4x4(pData, meshTransform);
+        constantBuffer->Unmap(0, nullptr);
+
+		this->transformCBs.push_back(constantBuffer);
+    }
+
 	++meshCount;
 }
 
@@ -240,7 +268,7 @@ void MeshRenderer::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList, 
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
     for (int i = 0; i < this->meshCount; ++i) {
-        //commandList->SetGraphicsRootConstantBufferView
+        commandList->SetGraphicsRootConstantBufferView(2, this->transformCBs[i]->GetGPUVirtualAddress());
         commandList->IASetVertexBuffers(0, 1, &vertexBufferViews[i]);
         commandList->IASetIndexBuffer(&indexBufferViews[i]);
         //commandList->SetGraphicsRootDescriptorTable(1, srtHeap->GetGPUDescriptorHandleForHeapStart()); // Diffuse map

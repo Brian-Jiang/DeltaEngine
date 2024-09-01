@@ -17,11 +17,17 @@ ConstantBuffer<ModelViewProjection> ModelViewProjectionCB : register(b0);
 Texture2D g_texture : register(t0);
 SamplerState g_sampler : register(s0);
 
+cbuffer TransformCB : register(b1)
+{
+    matrix modelMatrix;
+};
+
 PSInput VSMain(float4 position : POSITION, float4 color : COLOR, float2 uv: TEXCOORD)
 {
     PSInput result;
 
     //result.position = position;
+    position = mul(modelMatrix, position);
     result.position = mul(ModelViewProjectionCB.MVP, position);
     result.color = color;
     result.uv = uv;
