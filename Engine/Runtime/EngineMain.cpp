@@ -40,14 +40,14 @@ void EngineMain::Initialize()
     // file.close();
 
     std::vector<Vertex> g_Vertices = {
-        { XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) }, // 0
-        { XMFLOAT3(-1.0f,  1.0f, -1.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) }, // 1
-        { XMFLOAT3( 1.0f,  1.0f, -1.0f), XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) }, // 2
-        { XMFLOAT3( 1.0f, -1.0f, -1.0f), XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) }, // 3
-        { XMFLOAT3(-1.0f, -1.0f,  1.0f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) }, // 4
-        { XMFLOAT3(-1.0f,  1.0f,  1.0f), XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f) }, // 5
-        { XMFLOAT3( 1.0f,  1.0f,  1.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) }, // 6
-        { XMFLOAT3( 1.0f, -1.0f,  1.0f), XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) }  // 7
+        { XMFLOAT4(-1.0f, -1.0f, -1.0f, 1.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) }, // 0
+        { XMFLOAT4(-1.0f,  1.0f, -1.0f, 1.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) }, // 1
+        { XMFLOAT4( 1.0f,  1.0f, -1.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) }, // 2
+        { XMFLOAT4( 1.0f, -1.0f, -1.0f, 1.0f), XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) }, // 3
+        { XMFLOAT4(-1.0f, -1.0f,  1.0f, 1.0f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) }, // 4
+        { XMFLOAT4(-1.0f,  1.0f,  1.0f, 1.0f), XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f) }, // 5
+        { XMFLOAT4( 1.0f,  1.0f,  1.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) }, // 6
+        { XMFLOAT4( 1.0f, -1.0f,  1.0f, 1.0f), XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) }  // 7
     };
 
     std::vector<unsigned int> g_Indicies =
@@ -66,8 +66,8 @@ void EngineMain::Initialize()
 	//meshRenderer2->Start(*mesh, dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
 
     auto importer = new ModelImporter();
-    importer->Import("Assets/car/source/datsun240k.fbx");
-    meshRenderer->Start(*importer->meshes[0], dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
+    importer->Import("Assets/home/source/home.fbx");
+    meshRenderer->Start(importer->meshes, dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
 
     dxSprite->Start(-1.0f, -1.0f, 2.0f, 2.0f, "Assets/logo.png", dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
 
@@ -211,9 +211,9 @@ void EngineMain::Draw()
 
     // Update the model matrix.
     float angle = static_cast<float>(time * 50.f);
-    angle = 0.f;
-    const XMVECTOR rotationAxis = XMVectorSet(0, 1, 1, 0);
-	auto translation = XMMatrixTranslation(0, 0, 40);
+    //angle = 0.f;
+    const XMVECTOR rotationAxis = XMVectorSet(0, 1, 0, 0);
+	auto translation = XMMatrixTranslation(0, 0, 700);
     auto rotation = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(angle));
 	m_ModelMatrix = XMMatrixMultiply(rotation, translation);
 
@@ -225,7 +225,7 @@ void EngineMain::Draw()
 
     // Update the projection matrix.
     float aspectRatio = dxRenderManager->GetWidth() / static_cast<float>(dxRenderManager->GetHeight());
-    m_ProjectionMatrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(m_FoV), aspectRatio, 0.1f, 100.0f);
+    m_ProjectionMatrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(m_FoV), aspectRatio, 0.1f, 10000.0f);
 
     XMMATRIX mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_ViewMatrix);
     mvpMatrix = XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);

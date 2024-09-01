@@ -16,13 +16,14 @@ class ModelImporter : public BaseImporter
 {
 public:
 	std::vector<Mesh*> meshes;
+	std::vector<DirectX::XMMATRIX> meshTransforms;
 	std::vector<Texture*> textures;
 
 	ModelImporter();
 	~ModelImporter();
 
 	void Import(const std::string& filePath) override;
-	void ProcessNode(aiNode* node, const aiScene* scene);
+	void ProcessNode(aiNode* node, const aiScene* scene, aiMatrix4x4 accTransform);
 	Mesh *ProcessMesh(aiMesh* mesh, const aiScene* scene);
 	std::vector<Texture*> LoadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName);
 };

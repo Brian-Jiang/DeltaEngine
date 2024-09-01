@@ -26,24 +26,29 @@ public:
     MeshRenderer();
     ~MeshRenderer();
 
-    void Start(const Mesh& mesh, const Microsoft::WRL::ComPtr<ID3D12Device> device, Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> srvHeap);
+    void Start(const std::vector<Mesh*> meshes, const Microsoft::WRL::ComPtr<ID3D12Device> device, Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> srvHeap);
     void Render(const Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>& commandList, const Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& srtHeap, const Microsoft::WRL::ComPtr<ID3D12Device>& device) const;
 
 private:
     void LoadTexture(const Texture* texture, const Microsoft::WRL::ComPtr<ID3D12Device>& device, Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>& commandList, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& srvHeap, UINT descriptorIndex);
+	void AddMesh(const Mesh* mesh, const Microsoft::WRL::ComPtr<ID3D12Device>& device, Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>& commandList, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& srvHeap);
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBuffer;
-    D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
+    std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> vertexBuffers;
+    std::vector<D3D12_VERTEX_BUFFER_VIEW> vertexBufferViews;
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> m_indexBuffer;
-    D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
+    std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> indexBuffers;
+    std::vector<D3D12_INDEX_BUFFER_VIEW> indexBufferViews;
 
     Microsoft::WRL::ComPtr<ID3D12Resource> m_diffuseTexture;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_normalTexture;
 
     //Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvHeap;
     //Microsoft::WRL::ComPtr<ID3D12Device> m_device;
-    Mesh mesh;
+    //Mesh mesh;
+
+	std::vector<Mesh*> meshes;
+
+	int meshCount;
 
     static const UINT TexturePixelSize = 4;
 };

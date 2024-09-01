@@ -28,21 +28,24 @@ void ModelImporter::Import(const std::string& filePath)
     }
     // directory = filePath.substr(0, filePath.find_last_of('/'));
 
-    ProcessNode(scene->mRootNode, scene);
+    ProcessNode(scene->mRootNode, scene, aiMatrix4x4());
 }
 
-void ModelImporter::ProcessNode(aiNode *node, const aiScene *scene)
+void ModelImporter::ProcessNode(aiNode *node, const aiScene *scene, aiMatrix4x4 accTransform)
 {
+    //node->mTransformation
     // process all the node's meshes (if any)
+    accTransform = node->mTransformation * accTransform;
     for(unsigned int i = 0; i < node->mNumMeshes; i++)
     {
         aiMesh *mesh = scene->mMeshes[node->mMeshes[i]]; 
-        meshes.push_back(ProcessMesh(mesh, scene));			
+        meshes.push_back(ProcessMesh(mesh, scene));	
+		meshTransforms.push_back(DirectX::XMMATRIX(&accTransform.a1));
     }
     // then do the same for each of its children
     for(unsigned int i = 0; i < node->mNumChildren; i++)
     {
-        ProcessNode(node->mChildren[i], scene);
+        ProcessNode(node->mChildren[i], scene, accTransform);
     }
 }
 
@@ -51,19 +54,20 @@ Mesh *ModelImporter::ProcessMesh(aiMesh *mesh, const aiScene *scene)
 	std::vector<Vertex> vertices;
     vector<unsigned int> indices;
     vector<Texture*> textures;
-
     for(unsigned int i = 0; i < mesh->mNumVertices; i++)
     {
         Vertex vertex;
 		vertex.color = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
         // process vertex positions, normals and texture coordinates
-        DirectX::XMFLOAT3 vector; 
-		vector.x = mesh->mVertices[i].x;
-		vector.y = mesh->mVertices[i].y;
-		vector.z = mesh->mVertices[i].z; 
-		vertex.position = vector;
+        DirectX::XMFLOAT4 position; 
+        position.x = mesh->mVertices[i].x;
+		position.y = mesh->mVertices[i].y;
+		position.z = mesh->mVertices[i].z;
+		position.w = 1.0f;
+		vertex.position = position;
         vertices.push_back(vertex);
 
+		DirectX::XMFLOAT3 vector;
         vector.x = mesh->mNormals[i].x;
 		vector.y = mesh->mNormals[i].y;
 		vector.z = mesh->mNormals[i].z;
