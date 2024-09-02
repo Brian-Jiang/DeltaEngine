@@ -211,11 +211,12 @@ void EngineMain::Draw()
 
     // Update the model matrix.
     float angle = static_cast<float>(time * 50.f);
-    //angle = 0.f;
+    angle = 0.f;
     const XMVECTOR rotationAxis = XMVectorSet(0, 1, 0, 0);
-	auto translation = XMMatrixTranslation(0, 0, 700);
+	auto translation = XMMatrixTranslation(0, 0, 300);
     auto rotation = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(angle));
 	m_ModelMatrix = XMMatrixMultiply(rotation, translation);
+    //m_ModelMatrix = XMMatrixIdentity();
 
     // Update the view matrix.
     
@@ -225,9 +226,9 @@ void EngineMain::Draw()
 
     // Update the projection matrix.
     float aspectRatio = dxRenderManager->GetWidth() / static_cast<float>(dxRenderManager->GetHeight());
-    m_ProjectionMatrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(m_FoV), aspectRatio, 0.1f, 10000.0f);
+    m_ProjectionMatrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(m_FoV), aspectRatio, 0.1f, 100000.0f);
 
-    XMMATRIX mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_ViewMatrix);
+    mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_ViewMatrix);
     mvpMatrix = XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
 	dxRenderManager->SetMVPMatrix(mvpMatrix);
     //commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);

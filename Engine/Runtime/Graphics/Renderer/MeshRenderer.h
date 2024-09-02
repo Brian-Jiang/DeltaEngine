@@ -12,6 +12,8 @@
 
 DELTA_ENGINE_NS_BEGIN
 
+class EngineMain;
+
 class MeshRenderer: public Component
 {
 private:

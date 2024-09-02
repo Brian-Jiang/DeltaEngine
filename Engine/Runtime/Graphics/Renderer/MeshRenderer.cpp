@@ -4,6 +4,7 @@
 #include "Graphics/Texture.h"
 #include "PlatformHelpers.h"
 #include "Runtime/Graphics/Mesh.h"
+#include "Runtime/EngineMain.h"
 
 using namespace DirectX;
 using namespace Microsoft::WRL;
@@ -240,7 +241,7 @@ void MeshRenderer::AddMesh(const Mesh* mesh, const XMMATRIX meshTransform, const
 		const UINT constantBufferSize = sizeof(DirectX::XMFLOAT4X4);
 
         CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
-		CD3DX12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize * 2);
+		CD3DX12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize);
 		ComPtr<ID3D12Resource> constantBuffer;
         ThrowIfFailed(device->CreateCommittedResource(
             &heapProps,
@@ -267,8 +268,18 @@ void MeshRenderer::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList, 
 {
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    for (int i = 0; i < this->meshCount; ++i) {
-        commandList->SetGraphicsRootConstantBufferView(2, this->transformCBs[i]->GetGPUVirtualAddress());
+    for (int i = 0; i < meshCount; ++i) {
+        
+        //commandList->SetGraphicsRootConstantBufferView(2, this->transformCBs[i]->GetGPUVirtualAddress());
+
+        auto e_model = EngineMain::instance->m_ModelMatrix;
+		auto e_view = EngineMain::instance->m_ViewMatrix;
+		auto e_projection = EngineMain::instance->m_ProjectionMatrix;
+		auto result = XMMatrixMultiply(( e_model ), (this->meshTransforms[i]));
+		auto mvpMatrix = XMMatrixMultiply(result, e_view);
+		mvpMatrix = XMMatrixMultiply(mvpMatrix, e_projection);
+
+		EngineMain::instance->dxRenderManager->SetModelMatrix(commandList, mvpMatrix);
         commandList->IASetVertexBuffers(0, 1, &vertexBufferViews[i]);
         commandList->IASetIndexBuffer(&indexBufferViews[i]);
         //commandList->SetGraphicsRootDescriptorTable(1, srtHeap->GetGPUDescriptorHandleForHeapStart()); // Diffuse map
@@ -276,9 +287,5 @@ void MeshRenderer::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList, 
         commandList->DrawIndexedInstanced(this->meshes[i]->indices.size(), 1, 0, 0, 0);
     }
 
-    //commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
-    //commandList->IASetIndexBuffer(&m_indexBufferView);
-    ////commandList->SetGraphicsRootDescriptorTable(1, srtHeap->GetGPUDescriptorHandleForHeapStart()); // Diffuse map
-    ////commandList->SetGraphicsRootDescriptorTable(1, CD3DX12_GPU_DESCRIPTOR_HANDLE(srtHeap->GetGPUDescriptorHandleForHeapStart(), 1, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV))); // Normal map
-    //commandList->DrawIndexedInstanced(this->mesh.indices.size(), 1, 0, 0, 0);
+    EngineMain::instance->dxRenderManager->ResetModelMatrix(commandList);
 }

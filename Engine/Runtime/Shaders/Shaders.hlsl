@@ -27,7 +27,7 @@ PSInput VSMain(float4 position : POSITION, float4 color : COLOR, float2 uv: TEXC
     PSInput result;
 
     //result.position = position;
-    position = mul(modelMatrix, position);
+    //position = mul(modelMatrix, position);
     result.position = mul(ModelViewProjectionCB.MVP, position);
     result.color = color;
     result.uv = uv;

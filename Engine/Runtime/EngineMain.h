@@ -51,10 +51,12 @@ private:
 
 	float m_FoV;
 	
+public:
 	DirectX::XMMATRIX m_ModelMatrix;
 	DirectX::XMMATRIX m_ViewMatrix;
 	DirectX::XMMATRIX m_ProjectionMatrix;
 	DirectX::XMVECTOR eyePosition;
+	DirectX::XMMATRIX mvpMatrix;
 
 	float time;
 };

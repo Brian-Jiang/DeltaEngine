@@ -41,6 +41,8 @@ public:
 	UINT GetHeight() { return m_height; }
 
 	void SetMVPMatrix(DirectX::XMMATRIX mvp) { mvpMatrix = mvp; }
+	void SetModelMatrix(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList, DirectX::XMMATRIX model);
+	void ResetModelMatrix(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList);
 
 private:
 	HWND hwnd;
@@ -92,6 +94,7 @@ private:
 	UINT64 frameFenceValues[FrameCount] = {};
 
 	DirectX::XMMATRIX mvpMatrix;
+	//DirectX::XMMATRIX m_ModelMatrix;
 };
 
 DELTA_ENGINE_NS_END

@@ -17,9 +17,24 @@ ModelImporter::~ModelImporter() {}
 
 void ModelImporter::Import(const std::string& filePath)
 {
+    //Assimp::Importer::SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, true)
 	auto fullPath = IOManager::GetAssetFullPath(filePath);
 	Assimp::Importer import;
-    const aiScene *scene = import.ReadFile(fullPath, aiProcess_Triangulate | aiProcess_FlipUVs);
+    import.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, true);
+	unsigned int flags = 
+        aiProcess_Triangulate | 
+        aiProcess_FlipUVs | 
+        aiProcess_MakeLeftHanded | 
+        aiProcess_FlipWindingOrder | 
+        aiProcess_RemoveRedundantMaterials | // remove redundant materials
+        aiProcess_FindDegenerates | // remove degenerated polygons from the import
+        aiProcess_FindInvalidData | // detect invalid model data, such as invalid normal vectors
+        aiProcess_GenUVCoords | // convert spherical, cylindrical, box and planar mapping to proper UVs
+        aiProcess_TransformUVCoords | // preprocess UV transformations (scaling, translation ...)
+        aiProcess_OptimizeMeshes | // join small meshes, if possible;
+        aiProcess_PreTransformVertices //-- fixes the transformation issue.
+        ;
+    const aiScene *scene = import.ReadFile(fullPath, flags);
 	
     if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) 
     {
@@ -28,19 +43,52 @@ void ModelImporter::Import(const std::string& filePath)
     }
     // directory = filePath.substr(0, filePath.find_last_of('/'));
 
-    ProcessNode(scene->mRootNode, scene, aiMatrix4x4());
+	ProcessNode(scene->mRootNode, scene, DirectX::XMMatrixIdentity());
 }
 
-void ModelImporter::ProcessNode(aiNode *node, const aiScene *scene, aiMatrix4x4 accTransform)
+void ModelImporter::ProcessNode(aiNode *node, const aiScene *scene, DirectX::XMMATRIX accTransform)
 {
+    aiVector3D scaling, position;
+    aiQuaternion rotation;
+    node->mTransformation.Decompose(scaling, rotation, position);
+    DxTransform dxTransform {
+        DirectX::XMVectorSet(position.x, position.y, position.z, 1.0f), 
+        DirectX::XMVectorSet(rotation.x, rotation.y, rotation.z, rotation.w), 
+        DirectX::XMVectorSet(scaling.x, scaling.y, scaling.z, 1.0f) 
+    };
+
+	auto dxmTrans = DirectX::XMMatrixTransformation(
+		DirectX::XMVectorZero(), 
+        DirectX::XMQuaternionIdentity(),
+		dxTransform.scale,
+
+		DirectX::XMVectorZero(), 
+        dxTransform.rotation,
+
+		dxTransform.position
+	);
+
+    accTransform = XMMatrixMultiply(accTransform, dxmTrans);
+
     //node->mTransformation
     // process all the node's meshes (if any)
-    accTransform = node->mTransformation * accTransform;
+ //   auto nodeTransform = node->mTransformation;
+	//auto nodeLookup = node;
+ //   while (nodeLookup->mParent != nullptr) {
+	//	nodeLookup = nodeLookup->mParent;
+	//	nodeTransform = nodeLookup->mTransformation * nodeTransform;
+ //   }
+
+	//auto nodeTransform2 = DirectX::XMMATRIX(&nodeTransform.a1);
+
+    //auto transform = DirectX::XMMATRIX(&node->mTransformation.a1);
+    //accTransform = XMMatrixMultiply(transform, accTransform);
     for(unsigned int i = 0; i < node->mNumMeshes; i++)
     {
         aiMesh *mesh = scene->mMeshes[node->mMeshes[i]]; 
         meshes.push_back(ProcessMesh(mesh, scene));	
-		meshTransforms.push_back(DirectX::XMMATRIX(&accTransform.a1));
+		meshTransforms.push_back(accTransform);
+		//meshDxTransforms.push_back(dxTransform);
     }
     // then do the same for each of its children
     for(unsigned int i = 0; i < node->mNumChildren; i++)
