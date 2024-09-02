@@ -272,14 +272,14 @@ void MeshRenderer::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList, 
         
         //commandList->SetGraphicsRootConstantBufferView(2, this->transformCBs[i]->GetGPUVirtualAddress());
 
-        auto e_model = EngineMain::instance->m_ModelMatrix;
-		auto e_view = EngineMain::instance->m_ViewMatrix;
-		auto e_projection = EngineMain::instance->m_ProjectionMatrix;
-		auto result = XMMatrixMultiply(( e_model ), (this->meshTransforms[i]));
-		auto mvpMatrix = XMMatrixMultiply(result, e_view);
-		mvpMatrix = XMMatrixMultiply(mvpMatrix, e_projection);
+  //      auto e_model = EngineMain::instance->m_ModelMatrix;
+		//auto e_view = EngineMain::instance->m_ViewMatrix;
+		//auto e_projection = EngineMain::instance->m_ProjectionMatrix;
+		//auto result = XMMatrixMultiply(( e_model ), (this->meshTransforms[i]));
+		//auto mvpMatrix = XMMatrixMultiply(result, e_view);
+		//mvpMatrix = XMMatrixMultiply(mvpMatrix, e_projection);
 
-		EngineMain::instance->dxRenderManager->SetModelMatrix(commandList, mvpMatrix);
+		//EngineMain::instance->dxRenderManager->SetModelMatrix(commandList, mvpMatrix);
         commandList->IASetVertexBuffers(0, 1, &vertexBufferViews[i]);
         commandList->IASetIndexBuffer(&indexBufferViews[i]);
         //commandList->SetGraphicsRootDescriptorTable(1, srtHeap->GetGPUDescriptorHandleForHeapStart()); // Diffuse map

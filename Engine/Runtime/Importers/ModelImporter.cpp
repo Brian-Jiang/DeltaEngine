@@ -22,7 +22,13 @@ void ModelImporter::Import(const std::string& filePath)
 	Assimp::Importer import;
     import.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, true);
 	unsigned int flags = 
-        aiProcess_Triangulate | 
+        //aiProcess_CalcTangentSpace |
+        //aiProcess_JoinIdenticalVertices |
+        aiProcess_Triangulate |
+        //aiProcess_RemoveComponent |
+        //aiProcess_GenSmoothNormals |
+        //aiProcess_SplitLargeMeshes |
+        //aiProcess_ValidateDataStructure |
         aiProcess_FlipUVs | 
         aiProcess_MakeLeftHanded | 
         aiProcess_FlipWindingOrder | 
@@ -107,11 +113,10 @@ Mesh *ModelImporter::ProcessMesh(aiMesh *mesh, const aiScene *scene)
         Vertex vertex;
 		vertex.color = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
         // process vertex positions, normals and texture coordinates
-        DirectX::XMFLOAT4 position; 
+        DirectX::XMFLOAT3 position; 
         position.x = mesh->mVertices[i].x;
 		position.y = mesh->mVertices[i].y;
 		position.z = mesh->mVertices[i].z;
-		position.w = 1.0f;
 		vertex.position = position;
         vertices.push_back(vertex);
 
@@ -165,9 +170,9 @@ vector<Texture*> ModelImporter::LoadMaterialTextures(aiMaterial *mat, aiTextureT
         aiString str;
         mat->GetTexture(type, i, &str);
         auto texture = Texture::LoadFromFile(str.C_Str());
-        // texture.id = TextureFromFile(str.C_Str(), directory);
-        // texture.type = typeName;
-        // texture.path = str;
+         //texture.id = TextureFromFile(str.C_Str(), directory);
+         //texture.type = typeName;
+         //texture.path = str;
         textures.push_back(texture);
     }
     return textures;

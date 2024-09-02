@@ -22,14 +22,15 @@ cbuffer TransformCB : register(b1)
     matrix modelMatrix;
 };
 
-PSInput VSMain(float4 position : POSITION, float4 color : COLOR, float2 uv: TEXCOORD)
+PSInput VSMain(float3 position : POSITION, float4 color : COLOR, float2 uv: TEXCOORD)
 {
     PSInput result;
 
     //result.position = position;
     //position = mul(modelMatrix, position);
-    result.position = mul(ModelViewProjectionCB.MVP, position);
+    result.position = mul(ModelViewProjectionCB.MVP, float4(position, 1.0f));
     result.color = color;
+    //result.color = float4(position.z / 10.0f, 0.0f, 0.0f, 1.0f);
     result.uv = uv;
 
     return result;
@@ -37,7 +38,9 @@ PSInput VSMain(float4 position : POSITION, float4 color : COLOR, float2 uv: TEXC
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
+    //return float4(input.position.z / 2.0f, 0.0f, 0.0f, 1.0f);
     return input.color * float4(input.uv, 1.0, 1.0);
+    //return input.color;
     
     
     //return float4(input.uv, 0, 1); // Debugging (show UVs as colors)

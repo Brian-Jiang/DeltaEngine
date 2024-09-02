@@ -39,30 +39,30 @@ void EngineMain::Initialize()
     // }
     // file.close();
 
-    std::vector<Vertex> g_Vertices = {
-        { XMFLOAT4(-1.0f, -1.0f, -1.0f, 1.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) }, // 0
-        { XMFLOAT4(-1.0f,  1.0f, -1.0f, 1.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) }, // 1
-        { XMFLOAT4( 1.0f,  1.0f, -1.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) }, // 2
-        { XMFLOAT4( 1.0f, -1.0f, -1.0f, 1.0f), XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) }, // 3
-        { XMFLOAT4(-1.0f, -1.0f,  1.0f, 1.0f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) }, // 4
-        { XMFLOAT4(-1.0f,  1.0f,  1.0f, 1.0f), XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f) }, // 5
-        { XMFLOAT4( 1.0f,  1.0f,  1.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) }, // 6
-        { XMFLOAT4( 1.0f, -1.0f,  1.0f, 1.0f), XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) }  // 7
-    };
+    //std::vector<Vertex> g_Vertices = {
+    //    { XMFLOAT4(-1.0f, -1.0f, -1.0f, 1.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) }, // 0
+    //    { XMFLOAT4(-1.0f,  1.0f, -1.0f, 1.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) }, // 1
+    //    { XMFLOAT4( 1.0f,  1.0f, -1.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) }, // 2
+    //    { XMFLOAT4( 1.0f, -1.0f, -1.0f, 1.0f), XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) }, // 3
+    //    { XMFLOAT4(-1.0f, -1.0f,  1.0f, 1.0f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) }, // 4
+    //    { XMFLOAT4(-1.0f,  1.0f,  1.0f, 1.0f), XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f) }, // 5
+    //    { XMFLOAT4( 1.0f,  1.0f,  1.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) }, // 6
+    //    { XMFLOAT4( 1.0f, -1.0f,  1.0f, 1.0f), XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) }  // 7
+    //};
 
-    std::vector<unsigned int> g_Indicies =
-    {
-        0, 1, 2, 0, 2, 3,
-        4, 6, 5, 4, 7, 6,
-        4, 5, 1, 4, 1, 0,
-        3, 2, 6, 3, 6, 7,
-        1, 5, 6, 1, 6, 2,
-        4, 0, 3, 4, 3, 7
-    };
+    //std::vector<unsigned int> g_Indicies =
+    //{
+    //    0, 1, 2, 0, 2, 3,
+    //    4, 6, 5, 4, 7, 6,
+    //    4, 5, 1, 4, 1, 0,
+    //    3, 2, 6, 3, 6, 7,
+    //    1, 5, 6, 1, 6, 2,
+    //    4, 0, 3, 4, 3, 7
+    //};
 
 	std::vector<Texture*> textures;
 
-    auto mesh = new Mesh(g_Vertices, g_Indicies, textures);
+    //auto mesh = new Mesh(g_Vertices, g_Indicies, textures);
 	//meshRenderer2->Start(*mesh, dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
 
     auto importer = new ModelImporter();
@@ -211,9 +211,9 @@ void EngineMain::Draw()
 
     // Update the model matrix.
     float angle = static_cast<float>(time * 50.f);
-    angle = 0.f;
+    //angle = 0.f;
     const XMVECTOR rotationAxis = XMVectorSet(0, 1, 0, 0);
-	auto translation = XMMatrixTranslation(0, 0, 300);
+	auto translation = XMMatrixTranslation(0, 0, 400);
     auto rotation = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(angle));
 	m_ModelMatrix = XMMatrixMultiply(rotation, translation);
     //m_ModelMatrix = XMMatrixIdentity();
