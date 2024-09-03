@@ -46,6 +46,8 @@ private:
 
     Microsoft::WRL::ComPtr<ID3D12Resource> m_diffuseTexture;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_normalTexture;
+    std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> textureResources;
+    std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> textureUploadResources;
 
     //Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvHeap;
     //Microsoft::WRL::ComPtr<ID3D12Device> m_device;

@@ -1,6 +1,9 @@
 #include "ModelImporter.h"
 
 #include <DirectXMath.h>
+#include <filesystem>
+#include <iostream>
+
 #include "Graphics/Structures/Vertex.h"
 #include "Graphics/Mesh.h"
 #include "IO/IOManager.h"
@@ -17,6 +20,7 @@ ModelImporter::~ModelImporter() {}
 
 void ModelImporter::Import(const std::string& filePath)
 {
+	this->sourcePath = filePath;
     //Assimp::Importer::SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, true)
 	auto fullPath = IOManager::GetAssetFullPath(filePath);
 	Assimp::Importer import;
@@ -150,11 +154,12 @@ Mesh *ModelImporter::ProcessMesh(aiMesh *mesh, const aiScene *scene)
         if(mesh->mMaterialIndex >= 0)
 		{
 		    aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
-		    vector<Texture*> diffuseMaps = LoadMaterialTextures(material, 
-		                                        aiTextureType_DIFFUSE, "texture_diffuse");
+		    vector<Texture*> diffuseMaps = LoadMaterialTextures(scene, material, 
+		                                        aiTextureType_DIFFUSE, "texture_diffuse", this->sourcePath);
 		    textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
-		    vector<Texture*> specularMaps = LoadMaterialTextures(material, 
-		                                        aiTextureType_SPECULAR, "texture_specular");
+
+		    vector<Texture*> specularMaps = LoadMaterialTextures(scene, material, 
+		                                        aiTextureType_SPECULAR, "texture_specular", this->sourcePath);
 		    textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
 		}  
     }
@@ -162,14 +167,40 @@ Mesh *ModelImporter::ProcessMesh(aiMesh *mesh, const aiScene *scene)
     return new Mesh(vertices, indices, textures);
 }
 
-vector<Texture*> ModelImporter::LoadMaterialTextures(aiMaterial *mat, aiTextureType type, string typeName)
+std::string GetParentDirectory(const std::string& filePath, int levelsUp) {
+    namespace fs = std::filesystem;
+    fs::path path(filePath);
+    for (int i = 0; i < levelsUp; ++i) {
+        path = path.parent_path();
+    }
+    return path.string();
+}
+
+std::string FindTextureFile(const std::string& directory, const std::string& fileName) {
+    namespace fs = std::filesystem;
+    auto fullDirectory = IOManager::GetAssetFullPath(directory);
+    for (const auto& entry : fs::recursive_directory_iterator(fullDirectory)) {
+        if (entry.is_regular_file() && entry.path().filename() == fileName) {
+            return entry.path().string();
+        }
+    }
+    return "";
+}
+
+vector<Texture*> ModelImporter::LoadMaterialTextures(const aiScene* scene, aiMaterial *mat, aiTextureType type, string typeName, const std::string& filePath)
 {
+	auto folderPath = GetParentDirectory(filePath, 2);
     vector<Texture*> textures;
     for(unsigned int i = 0; i < mat->GetTextureCount(type); i++)
     {
         aiString str;
         mat->GetTexture(type, i, &str);
-        auto texture = Texture::LoadFromFile(str.C_Str());
+		//auto t = scene->GetEmbeddedTexture(str.C_Str());
+        std::string filePath = str.C_Str();
+        auto fileName = filePath.substr(filePath.find_last_of("\\/") + 1);
+		//auto fullFolderPath = IOManager::GetAssetFullPath(folderPath);
+		auto texturePath = FindTextureFile(folderPath, fileName);
+        auto texture = Texture::LoadFromFile(texturePath, true);
          //texture.id = TextureFromFile(str.C_Str(), directory);
          //texture.type = typeName;
          //texture.path = str;

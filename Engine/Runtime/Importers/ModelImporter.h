@@ -32,7 +32,9 @@ public:
 	void Import(const std::string& filePath) override;
 	void ProcessNode(aiNode* node, const aiScene* scene, DirectX::XMMATRIX accTransform);
 	Mesh *ProcessMesh(aiMesh* mesh, const aiScene* scene);
-	std::vector<Texture*> LoadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName);
+	std::vector<Texture*> LoadMaterialTextures(const aiScene* scene, aiMaterial* mat, aiTextureType type, std::string typeName, const std::string& filePath);
+
+	std::string sourcePath;
 };
 
 DELTA_ENGINE_NS_END

@@ -28,60 +28,6 @@ void MeshRenderer::Start(const std::vector<Mesh*> meshes, const std::vector<Dire
 		AddMesh(mesh, meshTransform, device, commandList, srvHeap);
 	}
 
-    // 
-    // Create the vertex buffer.
-    //{
-    //    const UINT vertexBufferSize = static_cast<UINT>(mesh.vertices.size() * sizeof(Vertex));
-    //    //const UINT vertexBufferSize = sizeof(mesh.vertices);
-
-    //    CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
-    //    auto desc = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
-    //    ThrowIfFailed(device->CreateCommittedResource(
-    //        &heapProps,
-    //        D3D12_HEAP_FLAG_NONE,
-    //        &desc,
-    //        D3D12_RESOURCE_STATE_GENERIC_READ,
-    //        nullptr,
-    //        IID_PPV_ARGS(&m_vertexBuffer)));
-
-    //    UINT8* pVertexDataBegin;
-    //    CD3DX12_RANGE readRange(0, 0); // We do not intend to read from this resource on the CPU.
-    //    ThrowIfFailed(m_vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
-    //    memcpy(pVertexDataBegin, mesh.vertices.data(), vertexBufferSize);
-    //    m_vertexBuffer->Unmap(0, nullptr);
-
-    //    m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
-    //    m_vertexBufferView.StrideInBytes = sizeof(Vertex);
-    //    m_vertexBufferView.SizeInBytes = vertexBufferSize;
-    //}
-
-    //// Create the index buffer.
-    //{
-    //    const UINT indexBufferSize = static_cast<UINT>(mesh.indices.size() * sizeof(unsigned int));
-    //    //const UINT indexBufferSize = sizeof(mesh.indices);
-
-    //    CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
-    //    auto desc = CD3DX12_RESOURCE_DESC::Buffer(indexBufferSize);
-    //    ThrowIfFailed(device->CreateCommittedResource(
-    //        &heapProps,
-    //        D3D12_HEAP_FLAG_NONE,
-    //        &desc,
-    //        D3D12_RESOURCE_STATE_GENERIC_READ,
-    //        nullptr,
-    //        IID_PPV_ARGS(&m_indexBuffer)));
-
-    //    UINT8* pIndexDataBegin;
-    //    CD3DX12_RANGE readRange(0, 0); // We do not intend to read from this resource on the CPU.
-    //    ThrowIfFailed(m_indexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pIndexDataBegin)));
-    //    memcpy(pIndexDataBegin, mesh.indices.data(), indexBufferSize);
-    //    m_indexBuffer->Unmap(0, nullptr);
-
-    //    m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
-    //    m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-    //    //m_indexBufferView.StrideInBytes = sizeof(uint32_t);
-    //    m_indexBufferView.SizeInBytes = indexBufferSize;
-    //}
-
     // Create the textures (diffuse and normal).
 	//for (auto texture : mesh.textures) {
 	//	LoadTexture(texture, device, commandList, srvHeap, 0);
@@ -118,7 +64,7 @@ void MeshRenderer::LoadTexture(const Texture* texture, const ComPtr<ID3D12Device
         nullptr,
         IID_PPV_ARGS(&textureResource)));
 
-    UINT64 rowPitch = textureWidth * TexturePixelSize;
+    UINT64 rowPitch = textureWidth * 4;
     UINT64 alignedRowPitch = (rowPitch + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1);
     UINT64 textureSize = alignedRowPitch * textureHeight;
 
@@ -144,12 +90,15 @@ void MeshRenderer::LoadTexture(const Texture* texture, const ComPtr<ID3D12Device
     pitchedDesc.Width = textureWidth;
     pitchedDesc.Height = textureHeight;
     pitchedDesc.Depth = 1;
+	auto rowPitchT = textureWidth * 4;
+    UINT64 alignedRowPitchT = (rowPitchT + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1);
     pitchedDesc.RowPitch = alignedRowPitch;
 
     UINT8* pData;
     textureUploadHeap->Map(0, nullptr, reinterpret_cast<void**>(&pData));
     for (int y = 0; y < textureHeight; y++) {
         memcpy(pData + y * alignedRowPitch, rawData + y * rowPitch, rowPitch);
+		//memcpy(pData + y * alignedRowPitch + rowPitch - 1, rawData + y * rowPitch, textureWidth);
     }
     textureUploadHeap->Unmap(0, nullptr);
 
@@ -172,6 +121,9 @@ void MeshRenderer::LoadTexture(const Texture* texture, const ComPtr<ID3D12Device
     srvDesc.Texture2D.MipLevels = 1;
     CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(srvHeap->GetCPUDescriptorHandleForHeapStart(), descriptorIndex, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
     device->CreateShaderResourceView(textureResource.Get(), &srvDesc, srvHandle);
+
+    this->textureResources.push_back(textureResource);
+	this->textureUploadResources.push_back(textureUploadHeap);
 }
 
 void MeshRenderer::AddMesh(const Mesh* mesh, const XMMATRIX meshTransform, const Microsoft::WRL::ComPtr<ID3D12Device>& device, Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>& commandList, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& srvHeap) {
@@ -261,6 +213,14 @@ void MeshRenderer::AddMesh(const Mesh* mesh, const XMMATRIX meshTransform, const
 		this->transformCBs.push_back(constantBuffer);
     }
 
+    for (size_t i = 0; i < mesh->textures.size(); ++i) {
+		auto texture = mesh->textures[i];
+    	LoadTexture(texture, device, commandList, srvHeap, i);
+    }
+
+    //LoadTexture(diffuseTexturePath, device, commandList, srvHeap, 0);
+    //LoadTexture(normalTexturePath, device, commandList, srvHeap, 1);
+
 	++meshCount;
 }
 
@@ -282,7 +242,7 @@ void MeshRenderer::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList, 
 		//EngineMain::instance->dxRenderManager->SetModelMatrix(commandList, mvpMatrix);
         commandList->IASetVertexBuffers(0, 1, &vertexBufferViews[i]);
         commandList->IASetIndexBuffer(&indexBufferViews[i]);
-        //commandList->SetGraphicsRootDescriptorTable(1, srtHeap->GetGPUDescriptorHandleForHeapStart()); // Diffuse map
+        commandList->SetGraphicsRootDescriptorTable(1, srtHeap->GetGPUDescriptorHandleForHeapStart()); // Diffuse map
         //commandList->SetGraphicsRootDescriptorTable(1, CD3DX12_GPU_DESCRIPTOR_HANDLE(srtHeap->GetGPUDescriptorHandleForHeapStart(), 1, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV))); // Normal map
         commandList->DrawIndexedInstanced(this->meshes[i]->indices.size(), 1, 0, 0, 0);
     }

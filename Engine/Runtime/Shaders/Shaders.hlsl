@@ -39,7 +39,7 @@ PSInput VSMain(float3 position : POSITION, float4 color : COLOR, float2 uv: TEXC
 float4 PSMain(PSInput input) : SV_TARGET
 {
     //return float4(input.position.z / 2.0f, 0.0f, 0.0f, 1.0f);
-    return input.color * float4(input.uv, 1.0, 1.0);
+    //return input.color * float4(input.uv, 1.0, 1.0);
     //return input.color;
     
     

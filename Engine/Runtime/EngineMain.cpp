@@ -67,6 +67,7 @@ void EngineMain::Initialize()
 
     auto importer = new ModelImporter();
     importer->Import("Assets/home/source/home.fbx");
+    //importer->Import("Assets/car/source/datsun240k.fbx");
     meshRenderer->Start(importer->meshes, importer->meshTransforms, dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
 
     dxSprite->Start(-1.0f, -1.0f, 2.0f, 2.0f, "Assets/logo.png", dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
@@ -175,24 +176,37 @@ void EngineMain::HandleInput()
 {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
+        auto key = event.key.keysym.sym;
         switch (event.type) {
 			case SDL_EVENT_WINDOW_RESIZED:
 				dxRenderManager->Resize(event.window.data1, event.window.data2);
 				break;
 	        case SDL_EVENT_KEY_DOWN:
-				if (event.key.keysym.sym == SDLK_F11) {
+				if (key == SDLK_F11) {
 					dxRenderManager->SetFullscreen(!dxRenderManager->IsFullscreen());
-				} else if (event.key.keysym.sym == SDLK_v)
+				} else if (key == SDLK_v)
 				{
 					dxRenderManager->ToggleVSync(!dxRenderManager->IsVSync());
 				}
-                else if (event.key.keysym.sym == SDLK_DOWN) {
-					eyePosition -= XMVectorSet(0, 0, 0.1f, 0);
+                else if (key == SDLK_DOWN || key == SDLK_s) {
+					eyePosition -= XMVectorSet(0, 0, 1.f, 0);
                 }
-				else if (event.key.keysym.sym == SDLK_UP) {
-					eyePosition += XMVectorSet(0, 0, 0.1f, 0);
+				else if (key == SDLK_UP || key == SDLK_w) {
+					eyePosition += XMVectorSet(0, 0, 1.f, 0);
 				}
-            break;
+				else if (key == SDLK_LEFT || key == SDLK_a) {
+					eyePosition -= XMVectorSet(1.f, 0, 0, 0);
+				}
+				else if (key == SDLK_RIGHT || key == SDLK_d) {
+					eyePosition += XMVectorSet(1.f, 0, 0, 0);
+                }
+                else if (key == SDLK_q) {
+					eyePosition += XMVectorSet(0, 1.f, 0, 0);
+				}
+				else if (key == SDLK_e) {
+					eyePosition -= XMVectorSet(0, 1.f, 0, 0);
+				}
+				break;
             case SDL_EVENT_QUIT:
                 gameState = GameState::EXIT;
                 break;
@@ -213,14 +227,14 @@ void EngineMain::Draw()
     float angle = static_cast<float>(time * 50.f);
     //angle = 0.f;
     const XMVECTOR rotationAxis = XMVectorSet(0, 1, 0, 0);
-	auto translation = XMMatrixTranslation(0, 0, 400);
+	auto translation = XMMatrixTranslation(0, 0, 900);
     auto rotation = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(angle));
 	m_ModelMatrix = XMMatrixMultiply(rotation, translation);
     //m_ModelMatrix = XMMatrixIdentity();
 
     // Update the view matrix.
     
-    const XMVECTOR focusPoint = XMVectorSet(0, 0, 0, 1);
+	const XMVECTOR focusPoint = eyePosition + XMVectorSet(0, 0, 1, 0);
     const XMVECTOR upDirection = XMVectorSet(0, 1, 0, 0);
     m_ViewMatrix = XMMatrixLookAtLH(eyePosition, focusPoint, upDirection);
 
