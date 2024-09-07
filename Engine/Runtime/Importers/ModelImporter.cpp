@@ -28,21 +28,40 @@ void ModelImporter::Import(const std::string& filePath)
     unsigned int flags =
         //aiProcess_CalcTangentSpace |
         //aiProcess_JoinIdenticalVertices |
-        aiProcess_Triangulate |
+        //aiProcess_Triangulate |
         //aiProcess_RemoveComponent |
         //aiProcess_GenSmoothNormals |
         //aiProcess_SplitLargeMeshes |
         //aiProcess_ValidateDataStructure |
-        //aiProcess_FlipUVs | 
+        ////aiProcess_ImproveCacheLocality | // handled by optimizePostTransform()
+        //aiProcess_RemoveRedundantMaterials |
+        aiProcess_SortByPType |
+        //aiProcess_FindInvalidData |
+        //aiProcess_GenUVCoords |
+        //aiProcess_TransformUVCoords |
+        //aiProcess_OptimizeMeshes |
+        //aiProcess_OptimizeGraph;
+
+        //aiProcess_CalcTangentSpace |
+        //aiProcess_JoinIdenticalVertices |
+        aiProcess_Triangulate |
+        //aiProcess_RemoveComponent |
+        //aiProcess_GenSmoothNormals |
+        aiProcess_GenBoundingBoxes |
+        ////aiProcess_SplitLargeMeshes |
+        ////aiProcess_ValidateDataStructure |
+        aiProcess_FlipUVs | 
         aiProcess_MakeLeftHanded |
-        //aiProcess_FlipWindingOrder |
+        //aiProcess_ConvertToLeftHanded |
+        aiProcess_ImproveCacheLocality |
+        aiProcess_FlipWindingOrder |
         //aiProcess_RemoveRedundantMaterials | // remove redundant materials
         //aiProcess_FindDegenerates | // remove degenerated polygons from the import
         //aiProcess_FindInvalidData | // detect invalid model data, such as invalid normal vectors
         //aiProcess_GenUVCoords | // convert spherical, cylindrical, box and planar mapping to proper UVs
-        //aiProcess_TransformUVCoords | // preprocess UV transformations (scaling, translation ...)
-        ////aiProcess_OptimizeMeshes | // join small meshes, if possible;
-        //aiProcess_PreTransformVertices //-- fixes the transformation issue.
+        aiProcess_TransformUVCoords | // preprocess UV transformations (scaling, translation ...)
+        //aiProcess_OptimizeMeshes | // join small meshes, if possible;
+        aiProcess_PreTransformVertices |//-- fixes the transformation issue.
         0
         ;
     const aiScene *scene = import.ReadFile(fullPath, flags);
@@ -97,6 +116,8 @@ void ModelImporter::ProcessNode(aiNode *node, const aiScene *scene, DirectX::XMM
     for(unsigned int i = 0; i < node->mNumMeshes; i++)
     {
         aiMesh *mesh = scene->mMeshes[node->mMeshes[i]]; 
+        //if (mesh->mNumFaces > 5) continue;
+
         meshes.push_back(ProcessMesh(mesh, scene));	
 		meshTransforms.push_back(accTransform);
 		//meshDxTransforms.push_back(dxTransform);
@@ -123,7 +144,6 @@ Mesh *ModelImporter::ProcessMesh(aiMesh *mesh, const aiScene *scene)
 		position.y = mesh->mVertices[i].y;
 		position.z = mesh->mVertices[i].z;
 		vertex.position = position;
-        vertices.push_back(vertex);
 
 		DirectX::XMFLOAT3 vector;
         vector.x = mesh->mNormals[i].x;
@@ -136,10 +156,20 @@ Mesh *ModelImporter::ProcessMesh(aiMesh *mesh, const aiScene *scene)
 		    DirectX::XMFLOAT2 vec;
 		    vec.x = mesh->mTextureCoords[0][i].x; 
 		    vec.y = mesh->mTextureCoords[0][i].y;
+            //const aiVector3D* aiTextureCoordinates{ mesh->mTextureCoords[0U] };
+            //vertex.uv = DirectX::XMFLOAT2(reinterpret_cast<const float*>(&aiTextureCoordinates[i]));
 		    vertex.uv = vec;
 		}
-		else
-		    vertex.uv = DirectX::XMFLOAT2(0.0f, 0.0f);
+   //     else if (mesh->mTextureCoords[1]) {
+			//std::cout << "UV: " << mesh->mTextureCoords[1][i].x << ", " << mesh->mTextureCoords[1][i].y << "\n";
+   //     }
+        else
+        {
+            vertex.uv = DirectX::XMFLOAT2(0.0f, 0.0f);
+        }
+
+        vertices.push_back(vertex);
+        //std::cout << "UV: " << vertex.uv.x << ", " << vertex.uv.y << "\n";
     }
     // process indices
     for(unsigned int i = 0; i < mesh->mNumFaces; i++)

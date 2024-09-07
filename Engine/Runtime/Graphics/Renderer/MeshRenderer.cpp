@@ -243,7 +243,10 @@ void MeshRenderer::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList, 
         commandList->IASetVertexBuffers(0, 1, &vertexBufferViews[i]);
         commandList->IASetIndexBuffer(&indexBufferViews[i]);
         //commandList->SetGraphicsRootDescriptorTable(1, srtHeap->GetGPUDescriptorHandleForHeapStart()); // Diffuse map
-        commandList->SetGraphicsRootDescriptorTable(1, CD3DX12_GPU_DESCRIPTOR_HANDLE(srtHeap->GetGPUDescriptorHandleForHeapStart(), i, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV))); // Diffuse map
+		if (i < loadedTextureCount) {
+			commandList->SetGraphicsRootDescriptorTable(1, CD3DX12_GPU_DESCRIPTOR_HANDLE(srtHeap->GetGPUDescriptorHandleForHeapStart(), i, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV))); // Diffuse map
+		}
+        //commandList->SetGraphicsRootDescriptorTable(1, CD3DX12_GPU_DESCRIPTOR_HANDLE(srtHeap->GetGPUDescriptorHandleForHeapStart(), i, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV))); // Diffuse map
         //commandList->SetGraphicsRootDescriptorTable(1, CD3DX12_GPU_DESCRIPTOR_HANDLE(srtHeap->GetGPUDescriptorHandleForHeapStart(), 1, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV))); // Normal map
         commandList->DrawIndexedInstanced(this->meshes[i]->indices.size(), 1, 0, 0, 0);
     }
