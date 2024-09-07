@@ -25,7 +25,7 @@ void ModelImporter::Import(const std::string& filePath)
 	auto fullPath = IOManager::GetAssetFullPath(filePath);
 	Assimp::Importer import;
     import.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, true);
-	unsigned int flags = 
+    unsigned int flags =
         //aiProcess_CalcTangentSpace |
         //aiProcess_JoinIdenticalVertices |
         aiProcess_Triangulate |
@@ -33,16 +33,17 @@ void ModelImporter::Import(const std::string& filePath)
         //aiProcess_GenSmoothNormals |
         //aiProcess_SplitLargeMeshes |
         //aiProcess_ValidateDataStructure |
-        aiProcess_FlipUVs | 
-        aiProcess_MakeLeftHanded | 
-        aiProcess_FlipWindingOrder | 
-        aiProcess_RemoveRedundantMaterials | // remove redundant materials
-        aiProcess_FindDegenerates | // remove degenerated polygons from the import
-        aiProcess_FindInvalidData | // detect invalid model data, such as invalid normal vectors
-        aiProcess_GenUVCoords | // convert spherical, cylindrical, box and planar mapping to proper UVs
-        aiProcess_TransformUVCoords | // preprocess UV transformations (scaling, translation ...)
-        aiProcess_OptimizeMeshes | // join small meshes, if possible;
-        aiProcess_PreTransformVertices //-- fixes the transformation issue.
+        //aiProcess_FlipUVs | 
+        aiProcess_MakeLeftHanded |
+        //aiProcess_FlipWindingOrder |
+        //aiProcess_RemoveRedundantMaterials | // remove redundant materials
+        //aiProcess_FindDegenerates | // remove degenerated polygons from the import
+        //aiProcess_FindInvalidData | // detect invalid model data, such as invalid normal vectors
+        //aiProcess_GenUVCoords | // convert spherical, cylindrical, box and planar mapping to proper UVs
+        //aiProcess_TransformUVCoords | // preprocess UV transformations (scaling, translation ...)
+        ////aiProcess_OptimizeMeshes | // join small meshes, if possible;
+        //aiProcess_PreTransformVertices //-- fixes the transformation issue.
+        0
         ;
     const aiScene *scene = import.ReadFile(fullPath, flags);
 	

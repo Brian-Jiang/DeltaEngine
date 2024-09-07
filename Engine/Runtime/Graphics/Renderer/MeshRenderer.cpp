@@ -10,7 +10,7 @@ using namespace DirectX;
 using namespace Microsoft::WRL;
 using namespace DeltaEngine;
 
-MeshRenderer::MeshRenderer() : meshCount(0)
+MeshRenderer::MeshRenderer() : meshCount(0), loadedTextureCount(0)
 {
 }
 
@@ -215,7 +215,7 @@ void MeshRenderer::AddMesh(const Mesh* mesh, const XMMATRIX meshTransform, const
 
     for (size_t i = 0; i < mesh->textures.size(); ++i) {
 		auto texture = mesh->textures[i];
-    	LoadTexture(texture, device, commandList, srvHeap, i);
+    	LoadTexture(texture, device, commandList, srvHeap, loadedTextureCount++);
     }
 
     //LoadTexture(diffuseTexturePath, device, commandList, srvHeap, 0);
@@ -242,7 +242,8 @@ void MeshRenderer::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList, 
 		//EngineMain::instance->dxRenderManager->SetModelMatrix(commandList, mvpMatrix);
         commandList->IASetVertexBuffers(0, 1, &vertexBufferViews[i]);
         commandList->IASetIndexBuffer(&indexBufferViews[i]);
-        commandList->SetGraphicsRootDescriptorTable(1, srtHeap->GetGPUDescriptorHandleForHeapStart()); // Diffuse map
+        //commandList->SetGraphicsRootDescriptorTable(1, srtHeap->GetGPUDescriptorHandleForHeapStart()); // Diffuse map
+        commandList->SetGraphicsRootDescriptorTable(1, CD3DX12_GPU_DESCRIPTOR_HANDLE(srtHeap->GetGPUDescriptorHandleForHeapStart(), i, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV))); // Diffuse map
         //commandList->SetGraphicsRootDescriptorTable(1, CD3DX12_GPU_DESCRIPTOR_HANDLE(srtHeap->GetGPUDescriptorHandleForHeapStart(), 1, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV))); // Normal map
         commandList->DrawIndexedInstanced(this->meshes[i]->indices.size(), 1, 0, 0, 0);
     }

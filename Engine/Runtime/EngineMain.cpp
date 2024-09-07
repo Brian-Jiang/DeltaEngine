@@ -66,11 +66,11 @@ void EngineMain::Initialize()
 	//meshRenderer2->Start(*mesh, dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
 
     auto importer = new ModelImporter();
-    importer->Import("Assets/home/source/home.fbx");
+    importer->Import("Assets/cottage/source/dio.fbx");
     //importer->Import("Assets/car/source/datsun240k.fbx");
     meshRenderer->Start(importer->meshes, importer->meshTransforms, dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
 
-    dxSprite->Start(-1.0f, -1.0f, 2.0f, 2.0f, "Assets/logo.png", dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
+    //dxSprite->Start(-1.0f, -1.0f, 2.0f, 2.0f, "Assets/logo.png", dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
 
     dxRenderManager->InitFinish();
 }
@@ -227,7 +227,7 @@ void EngineMain::Draw()
     float angle = static_cast<float>(time * 50.f);
     //angle = 0.f;
     const XMVECTOR rotationAxis = XMVectorSet(0, 1, 0, 0);
-	auto translation = XMMatrixTranslation(0, 0, 900);
+	auto translation = XMMatrixTranslation(0, 0, 10);
     auto rotation = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(angle));
 	m_ModelMatrix = XMMatrixMultiply(rotation, translation);
     //m_ModelMatrix = XMMatrixIdentity();

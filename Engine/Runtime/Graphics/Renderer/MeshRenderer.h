@@ -56,6 +56,8 @@ private:
 	std::vector<Mesh*> meshes;
     std::vector<DirectX::XMMATRIX> meshTransforms;
 
+	int loadedTextureCount;
+
 	int meshCount;
 
     static const UINT TexturePixelSize = 4;

@@ -15,6 +15,7 @@ struct ModelViewProjection
 ConstantBuffer<ModelViewProjection> ModelViewProjectionCB : register(b0);
 
 Texture2D g_texture : register(t0);
+//Texture2D g_texture1 : register(t1);
 SamplerState g_sampler : register(s0);
 
 cbuffer TransformCB : register(b1)
@@ -46,9 +47,12 @@ float4 PSMain(PSInput input) : SV_TARGET
     //return float4(input.uv, 0, 1); // Debugging (show UVs as colors)
     float2 uv;
     uv.x = input.uv.x;
-    uv.y = 1 - input.uv.y;  // Flip UVs (DirectX vs OpenGL)
+    //uv.x = (input.uv.x + 1.0) / 2.0;
+    //uv.y = 1 - input.uv.y;  // Flip UVs (DirectX vs OpenGL)
+    uv.y = input.uv.y;
+    //uv.y = (input.uv.y + 1.0) / 2.0;
     float4 textureColor = g_texture.Sample(g_sampler, uv);
     // textureColor.a = 1.0f;
     // return textureColor * float4(input.uv, 0.0f, 1.0f);
-    return g_texture.Sample(g_sampler, uv) * input.color;
+    return textureColor;
 }
