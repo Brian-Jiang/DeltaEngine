@@ -228,6 +228,10 @@ vector<Texture*> ModelImporter::LoadMaterialTextures(const aiScene* scene, aiMat
         mat->GetTexture(type, i, &str);
 		//auto t = scene->GetEmbeddedTexture(str.C_Str());
         std::string filePath = str.C_Str();
+		if (filePath.empty()) {
+			continue;
+		}
+
         auto fileName = filePath.substr(filePath.find_last_of("\\/") + 1);
 		//auto fullFolderPath = IOManager::GetAssetFullPath(folderPath);
 		auto texturePath = FindTextureFile(folderPath, fileName);

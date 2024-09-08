@@ -60,7 +60,14 @@ float4 PSMain(PSInput input) : SV_TARGET
     uv.y = input.uv.y;
     //uv.y = (input.uv.y + 1.0) / 2.0;
     float4 textureColor = g_texture.Sample(g_sampler, uv);
+    
+    if (textureColor.a < 0.1f)
+    {
+        discard;
+    }
+    
     // textureColor.a = 1.0f;
     // return textureColor * float4(input.uv, 0.0f, 1.0f);
     return textureColor;
+    //return float4(textureColor.rgb, textureColor.a);
 }
