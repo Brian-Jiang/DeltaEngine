@@ -7,3 +7,5 @@ set(DSDL_DISABLE_INSTALL_DOCS ON)
 set(DSDL_INSTALL_TESTS ON)
 
 add_subdirectory(sdl3)
+
+set_target_properties(SDL3-static PROPERTIES FOLDER ${third_party_folder})

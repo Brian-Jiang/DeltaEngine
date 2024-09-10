@@ -15,6 +15,26 @@
           "name": "ASSIMP_BUILD_TESTS",
           "value": "False",
           "type": "BOOL"
+        },
+        {
+          "name": "SDL_TEST_LIBRARY",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "BUILD_TESTING",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "SDL_DISABLE_UNINSTALL",
+          "value": "True",
+          "type": "BOOL"
+        },
+        {
+          "name": "ASSIMP_INSTALL",
+          "value": "False",
+          "type": "BOOL"
         }
       ]
     }
