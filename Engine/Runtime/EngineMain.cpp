@@ -1,6 +1,5 @@
 ﻿#include "EngineMain.h"
 
-#include <chrono>
 #include <vector>
 
 #include "Graphics/DXUtils.h"
@@ -17,13 +16,14 @@ using namespace DirectX;
 EngineMain* EngineMain::instance = nullptr;
 
 EngineMain::EngineMain() : exitCode(0), renderer(nullptr), window(nullptr), gameState(GameState::PLAY),
-time(0.0f), dxRenderManager(nullptr)
+dxRenderManager(nullptr), time(nullptr)
 {
     EngineMain::instance = this;
 
     dxSprite = new SpriteRenderer();
     meshRenderer = new MeshRenderer();
-	meshRenderer2 = new MeshRenderer();
+    meshRenderer2 = new MeshRenderer();
+    time = new Time();
 }
 
 void EngineMain::Initialize()
@@ -32,17 +32,10 @@ void EngineMain::Initialize()
 
     InitSDL();
 
-    // std::ofstream file("relative_path_test.txt");
-    //
-    // if (file.is_open()) {
-    //     file << "Test file";
-    // }
-    // file.close();
-
-	std::vector<Texture*> textures;
+    std::vector<Texture*> textures;
 
     //auto mesh = new Mesh(g_Vertices, g_Indicies, textures);
-	//meshRenderer2->Start(*mesh, dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
+    //meshRenderer2->Start(*mesh, dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
 
     auto importer = new ModelImporter();
     importer->Import("Assets/cottage/source/dio.fbx");
@@ -58,23 +51,13 @@ void EngineMain::Initialize()
 
 void ThrowIfFailed(HRESULT hresult)
 {
-	if (FAILED(hresult))
-	{
-		throw std::exception();
-	}
+    if (FAILED(hresult))
+    {
+        throw std::exception();
+    }
 }
 
 void EngineMain::InitSDL() {
-    // int n = SDL_GetNumRenderDrivers();
-    // for (size_t i = 0; i < n; i++) {
-    //     //SDL_RendererInfo info;
-    //     auto info = SDL_GetRenderDriver(i);
-    //     printf(info);
-    //     printf("\n");
-    // }
-
-    // SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER, "direct3d12", SDL_HINT_DEFAULT);
-
     int rendererFlags, windowFlags;
 
     rendererFlags = SDL_RENDERER_ACCELERATED;
@@ -95,32 +78,6 @@ void EngineMain::InitSDL() {
 
     auto hwnd = static_cast<HWND>(SDL_GetProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr));
     dxRenderManager = new DXRenderManager(hwnd, SCREEN_WIDTH, SCREEN_HEIGHT);
-
- //    auto context = SDL_GL_CreateContext(window);
-	// if (!context) {
-	// 	printf("Failed to create OpenGL context: %s\n", SDL_GetError());
-	// 	gameState = GameState::Error;
-	// }
- //
- //    auto error = glewInit();
- //    if (error != GLEW_OK) {
- //        const auto glewError = reinterpret_cast<const char*>(glewGetErrorString(error));
- //        printf("Error initializing GLEW: %s\n", glewError);
- //        gameState = GameState::Error;
- //    }
-
-    // SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    // glClearColor(0.3f, 0.5f, 1.0f, 1.0f);
-
-
-
-    //SDL_SetHint(SDLHint, "linear");
-
-    // renderer = SDL_CreateRenderer(window, RENDERER_OPENGL, SDL_RENDERER_ACCELERATED);
-    // if (!renderer) {
-    //     printf("Failed to create renderer: %s\n", SDL_GetError());
-    //     gameState = GameState::Error;
-    // }
 }
 
 void EngineMain::StartMainLoop()
@@ -128,16 +85,10 @@ void EngineMain::StartMainLoop()
     eyePosition = XMVectorSet(0, 0, -10, 1);
 
     while (gameState == GameState::PLAY) {
-        // SDL_SetRenderDrawColor(renderer, 96, 128, 255, 255);
-        // SDL_RenderClear(renderer);
-        static std::chrono::high_resolution_clock clock;
-
-		time += 0.01f;
+        time->TickTime();
         
         HandleInput();
         Draw();
-
-        // int errorCode = SDL_RenderPresent(renderer);
     }
 
     if (gameState == GameState::Error)
@@ -159,41 +110,41 @@ void EngineMain::HandleInput()
     while (SDL_PollEvent(&event)) {
         auto key = event.key.keysym.sym;
         switch (event.type) {
-			case SDL_EVENT_WINDOW_RESIZED:
-				dxRenderManager->Resize(event.window.data1, event.window.data2);
-				break;
-	        case SDL_EVENT_KEY_DOWN:
-				if (key == SDLK_F11) {
-					dxRenderManager->SetFullscreen(!dxRenderManager->IsFullscreen());
-				} else if (key == SDLK_v)
-				{
-					dxRenderManager->ToggleVSync(!dxRenderManager->IsVSync());
-				}
-                else if (key == SDLK_DOWN || key == SDLK_s) {
-					eyePosition -= XMVectorSet(0, 0, 1.f, 0);
+            case SDL_EVENT_WINDOW_RESIZED:
+                dxRenderManager->Resize(event.window.data1, event.window.data2);
+                break;
+            case SDL_EVENT_KEY_DOWN:
+                if (key == SDLK_F11) {
+                    dxRenderManager->SetFullscreen(!dxRenderManager->IsFullscreen());
+                } else if (key == SDLK_v)
+                {
+                    dxRenderManager->ToggleVSync(!dxRenderManager->IsVSync());
                 }
-				else if (key == SDLK_UP || key == SDLK_w) {
-					eyePosition += XMVectorSet(0, 0, 1.f, 0);
-				}
-				else if (key == SDLK_LEFT || key == SDLK_a) {
-					eyePosition -= XMVectorSet(1.f, 0, 0, 0);
-				}
-				else if (key == SDLK_RIGHT || key == SDLK_d) {
-					eyePosition += XMVectorSet(1.f, 0, 0, 0);
+                else if (key == SDLK_DOWN || key == SDLK_s) {
+                    eyePosition -= XMVectorSet(0, 0, 1.f, 0);
+                }
+                else if (key == SDLK_UP || key == SDLK_w) {
+                    eyePosition += XMVectorSet(0, 0, 1.f, 0);
+                }
+                else if (key == SDLK_LEFT || key == SDLK_a) {
+                    eyePosition -= XMVectorSet(1.f, 0, 0, 0);
+                }
+                else if (key == SDLK_RIGHT || key == SDLK_d) {
+                    eyePosition += XMVectorSet(1.f, 0, 0, 0);
                 }
                 else if (key == SDLK_q) {
-					eyePosition += XMVectorSet(0, 1.f, 0, 0);
-				}
-				else if (key == SDLK_e) {
-					eyePosition -= XMVectorSet(0, 1.f, 0, 0);
-				}
-				break;
+                    eyePosition += XMVectorSet(0, 1.f, 0, 0);
+                }
+                else if (key == SDLK_e) {
+                    eyePosition -= XMVectorSet(0, 1.f, 0, 0);
+                }
+                break;
             case SDL_EVENT_QUIT:
                 gameState = GameState::EXIT;
                 break;
-	   //      case SDL_EVENT_MOUSE_MOTION:
-				// // std::cout << "Mouse moved to x: " << event.motion.x << " y: " << event.motion.y << '\n';
-				// break;
+       //      case SDL_EVENT_MOUSE_MOTION:
+                // // std::cout << "Mouse moved to x: " << event.motion.x << " y: " << event.motion.y << '\n';
+                // break;
             default:
                 break;
         }
@@ -205,17 +156,16 @@ void EngineMain::Draw()
     m_FoV = 45.0f;
 
     // Update the model matrix.
-    float angle = static_cast<float>(time * 50.f);
+    float angle = static_cast<float>(Time::timeSinceStart * 50.f);
     //angle = 0.f;
     const XMVECTOR rotationAxis = XMVectorSet(0, 1, 0, 0);
-	auto translation = XMMatrixTranslation(0, -3, 10);
+    auto translation = XMMatrixTranslation(0, -3, 10);
     auto rotation = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(angle));
-	m_ModelMatrix = XMMatrixMultiply(rotation, translation);
+    m_ModelMatrix = XMMatrixMultiply(rotation, translation);
     //m_ModelMatrix = XMMatrixIdentity();
 
     // Update the view matrix.
-    
-	const XMVECTOR focusPoint = eyePosition + XMVectorSet(0, 0, 1, 0);
+    const XMVECTOR focusPoint = eyePosition + XMVectorSet(0, 0, 1, 0);
     const XMVECTOR upDirection = XMVectorSet(0, 1, 0, 0);
     m_ViewMatrix = XMMatrixLookAtLH(eyePosition, focusPoint, upDirection);
 
@@ -225,12 +175,12 @@ void EngineMain::Draw()
 
     mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_ViewMatrix);
     mvpMatrix = XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
-	dxRenderManager->SetMVPMatrix(mvpMatrix);
+    dxRenderManager->SetMVPMatrix(mvpMatrix);
     //commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
 
     dxRenderManager->PrepareFrame();
     //dxSprite->Render(dxRenderManager->GetCommandList());
-	meshRenderer->Render(dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap(), dxRenderManager->GetDevice());
-	//meshRenderer2->Render(dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap(), dxRenderManager->GetDevice());
+    meshRenderer->Render(dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap(), dxRenderManager->GetDevice());
+    //meshRenderer2->Render(dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap(), dxRenderManager->GetDevice());
     dxRenderManager->RenderFrame();
 }

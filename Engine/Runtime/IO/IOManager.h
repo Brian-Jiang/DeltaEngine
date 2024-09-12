@@ -1,11 +1,12 @@
 #pragma once
 
+#include "EngineIncludes.h"
+
 #include <string>
 #include <vector>
 #include <wtypes.h>
 
-namespace DeltaEngine
-{
+DELTA_ENGINE_NS_BEGIN
 
 class IOManager
 {
@@ -15,4 +16,4 @@ public:
 	static std::string GetAssetFullPath(const std::string & assetName);
 };
 
-}
+DELTA_ENGINE_NS_END

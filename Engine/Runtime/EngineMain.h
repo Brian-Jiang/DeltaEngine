@@ -8,6 +8,7 @@
 #include "Graphics/Renderer/SpriteRenderer.h"
 #include "Graphics/Renderer/MeshRenderer.h"
 #include "SDL3/SDL.h"
+#include "Core/Time.h"
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -44,12 +45,13 @@ private:
 	// SpriteRenderer* sprite;
 	SpriteRenderer *dxSprite;
 	//MeshRenderer* dxMeshRenderer;
-	// GLSLProgram* shader;
 
 	MeshRenderer *meshRenderer;
 	MeshRenderer *meshRenderer2;
 
 	float m_FoV;
+
+    Time* time;
 	
 public:
 	DirectX::XMMATRIX m_ModelMatrix;
@@ -58,7 +60,6 @@ public:
 	DirectX::XMVECTOR eyePosition;
 	DirectX::XMMATRIX mvpMatrix;
 
-	float time;
 };
 
 DELTA_ENGINE_NS_END
