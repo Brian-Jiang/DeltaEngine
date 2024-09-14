@@ -7,8 +7,6 @@ float Time::timeSinceStart = 0.0f;
 
 Time::Time() {
     lastTime = clock.now();
-    deltaTime = 0.0f;
-    timeSinceStart = 0.0f;
 }
 
 Time::~Time() {
