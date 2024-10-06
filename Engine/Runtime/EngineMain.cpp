@@ -159,7 +159,7 @@ void EngineMain::Draw()
     float angle = static_cast<float>(Time::timeSinceStart * 50.f);
     //angle = 0.f;
     const XMVECTOR rotationAxis = XMVectorSet(0, 1, 0, 0);
-    auto translation = XMMatrixTranslation(0, -3, 10);
+    auto translation = XMMatrixTranslation(0, -3, 30);
     auto rotation = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(angle));
     m_ModelMatrix = XMMatrixMultiply(rotation, translation);
     //m_ModelMatrix = XMMatrixIdentity();

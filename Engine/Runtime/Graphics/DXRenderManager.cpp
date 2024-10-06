@@ -6,13 +6,10 @@
 #include <DirectXMath.h>
 #include <dxcapi.h>
 #include <dxgidebug.h>
-//#include <d3dx12.h>
 
 #include "Graphics/DXUtils.h"
 #include "IO/IOManager.h"
 
-
-// using namespace DirectX;
 using namespace Microsoft::WRL;
 using namespace DeltaEngine;
 using namespace DirectX;
@@ -20,7 +17,7 @@ using namespace DirectX;
 DXRenderManager::DXRenderManager(HWND hwnd, UINT width, UINT height): hwnd(hwnd), m_width(width), m_height(height),
     m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
     m_scissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX)),
-    m_rtvDescriptorSize(0)
+    m_rtvDescriptorSize(0), m_dxUploadBuffer(4 * 1024 * 1024)
 {
 
     // Check for DirectX Math library support.
@@ -56,11 +53,10 @@ void DXRenderManager::LoadPipeline()
     auto adapter = DXUtils::GetAdapter(m_useWarpDevice);
     m_device = DXUtils::CreateDevice(adapter);
 
+    m_dxUploadBuffer.SetDevice(m_device);
     // Create command queues.
     directCommandQueue = new DXCommandQueue(m_device, D3D12_COMMAND_LIST_TYPE_DIRECT);
     copyCommandQueue = new DXCommandQueue(m_device, D3D12_COMMAND_LIST_TYPE_COPY);
-
-    
 
     // Describe and create the swap chain.
     m_swapChain = DXUtils::CreateSwapChain(hwnd, directCommandQueue->GetCommandQueue(), m_width, m_height, FrameCount);
@@ -538,12 +534,12 @@ DXCommandQueue* DXRenderManager::GetCommandQueue(const D3D12_COMMAND_LIST_TYPE t
     }
 }
 
-void DXRenderManager::SetModelMatrix(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList, DirectX::XMMATRIX model) {
-	//auto mvp = XMMatrixMultiply(model, mvpMatrix);
-    //auto mvp = mvpMatrix;
-	commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &model, 0);
-}
+//void DXRenderManager::SetModelMatrix(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList, DirectX::XMMATRIX model) {
+//	//auto mvp = XMMatrixMultiply(model, mvpMatrix);
+//    //auto mvp = mvpMatrix;
+//	commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &model, 0);
+//}
 
-void DXRenderManager::ResetModelMatrix(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList) {
-	commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
-}
+//void DXRenderManager::ResetModelMatrix(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList) {
+//	commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
+//}

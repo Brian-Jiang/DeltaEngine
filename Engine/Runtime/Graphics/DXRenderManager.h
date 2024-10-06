@@ -9,6 +9,7 @@
 #include <DirectXMath.h>
 
 #include "DirectX/DXCommandQueue.h"
+#include "Graphics/DirectX/DXUploadBuffer.h"
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -41,8 +42,8 @@ public:
 	UINT GetHeight() { return m_height; }
 
 	void SetMVPMatrix(DirectX::XMMATRIX mvp) { mvpMatrix = mvp; }
-	void SetModelMatrix(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList, DirectX::XMMATRIX model);
-	void ResetModelMatrix(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList);
+	//void SetModelMatrix(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList, DirectX::XMMATRIX model);
+	//void ResetModelMatrix(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList);
 
 private:
 	HWND hwnd;
@@ -95,6 +96,8 @@ private:
 
 	DirectX::XMMATRIX mvpMatrix;
 	//DirectX::XMMATRIX m_ModelMatrix;
+
+	DXUploadBuffer m_dxUploadBuffer;
 };
 
 DELTA_ENGINE_NS_END

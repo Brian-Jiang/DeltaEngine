@@ -251,5 +251,5 @@ void MeshRenderer::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList, 
         commandList->DrawIndexedInstanced(this->meshes[i]->indices.size(), 1, 0, 0, 0);
     }
 
-    EngineMain::instance->dxRenderManager->ResetModelMatrix(commandList);
+    //EngineMain::instance->dxRenderManager->ResetModelMatrix(commandList);
 }
