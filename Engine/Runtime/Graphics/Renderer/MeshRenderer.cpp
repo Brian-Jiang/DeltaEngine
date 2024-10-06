@@ -127,30 +127,34 @@ void MeshRenderer::LoadTexture(const Texture* texture, const ComPtr<ID3D12Device
 }
 
 void MeshRenderer::AddMesh(const Mesh* mesh, const XMMATRIX meshTransform, const Microsoft::WRL::ComPtr<ID3D12Device>& device, Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>& commandList, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& srvHeap) {
+    auto& uploadBuffer = EngineMain::instance->dxRenderManager->GetUploadBuffer();
+
     // Create the vertex buffer.
     {
         const UINT vertexBufferSize = static_cast<UINT>(mesh->vertices.size() * sizeof(Vertex));
 
-        ComPtr<ID3D12Resource> vertexBuffer;
-        CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
-        auto desc = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
-        ThrowIfFailed(device->CreateCommittedResource(
-            &heapProps,
-            D3D12_HEAP_FLAG_NONE,
-            &desc,
-            D3D12_RESOURCE_STATE_GENERIC_READ,
-            nullptr,
-            IID_PPV_ARGS(&vertexBuffer)));
+        
+        auto addrPair = uploadBuffer.Allocate(vertexBufferSize, sizeof(Vertex));
+        //ComPtr<ID3D12Resource> vertexBuffer;
+        //CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
+        //auto desc = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
+        //ThrowIfFailed(device->CreateCommittedResource(
+        //    &heapProps,
+        //    D3D12_HEAP_FLAG_NONE,
+        //    &desc,
+        //    D3D12_RESOURCE_STATE_GENERIC_READ,
+        //    nullptr,
+        //    IID_PPV_ARGS(&vertexBuffer)));
 
-        UINT8* pVertexDataBegin;
-        CD3DX12_RANGE readRange(0, 0); // We do not intend to read from this resource on the CPU.
-        ThrowIfFailed(vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
-        memcpy(pVertexDataBegin, mesh->vertices.data(), vertexBufferSize);
-        vertexBuffer->Unmap(0, nullptr);
-		vertexBuffers.push_back(vertexBuffer);
+        //UINT8* pVertexDataBegin;
+        //CD3DX12_RANGE readRange(0, 0); // We do not intend to read from this resource on the CPU.
+        //ThrowIfFailed(vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
+        memcpy(addrPair.m_cpuAddr, mesh->vertices.data(), vertexBufferSize);
+        //vertexBuffer->Unmap(0, nullptr);
+		//vertexBuffers.push_back(vertexBuffer);
 
         D3D12_VERTEX_BUFFER_VIEW vertexBufferView {
-			vertexBuffer->GetGPUVirtualAddress(),
+			addrPair.m_gpuAddr,
 			vertexBufferSize,
 			sizeof(Vertex)
         };
@@ -161,27 +165,27 @@ void MeshRenderer::AddMesh(const Mesh* mesh, const XMMATRIX meshTransform, const
     {
         const UINT indexBufferSize = static_cast<UINT>(mesh->indices.size() * sizeof(unsigned int));
         //const UINT indexBufferSize = sizeof(mesh.indices);
+        auto addrPair = uploadBuffer.Allocate(indexBufferSize, sizeof(unsigned int));
+		//ComPtr<ID3D12Resource> indexBuffer;
+  //      CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
+  //      auto desc = CD3DX12_RESOURCE_DESC::Buffer(indexBufferSize);
+  //      ThrowIfFailed(device->CreateCommittedResource(
+  //          &heapProps,
+  //          D3D12_HEAP_FLAG_NONE,
+  //          &desc,
+  //          D3D12_RESOURCE_STATE_GENERIC_READ,
+  //          nullptr,
+  //          IID_PPV_ARGS(&indexBuffer)));
 
-		ComPtr<ID3D12Resource> indexBuffer;
-        CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
-        auto desc = CD3DX12_RESOURCE_DESC::Buffer(indexBufferSize);
-        ThrowIfFailed(device->CreateCommittedResource(
-            &heapProps,
-            D3D12_HEAP_FLAG_NONE,
-            &desc,
-            D3D12_RESOURCE_STATE_GENERIC_READ,
-            nullptr,
-            IID_PPV_ARGS(&indexBuffer)));
-
-        UINT8* pIndexDataBegin;
-        CD3DX12_RANGE readRange(0, 0); // We do not intend to read from this resource on the CPU.
-        ThrowIfFailed(indexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pIndexDataBegin)));
-        memcpy(pIndexDataBegin, mesh->indices.data(), indexBufferSize);
-        indexBuffer->Unmap(0, nullptr);
-		indexBuffers.push_back(indexBuffer);
+        //UINT8* pIndexDataBegin;
+        //CD3DX12_RANGE readRange(0, 0); // We do not intend to read from this resource on the CPU.
+        //ThrowIfFailed(indexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pIndexDataBegin)));
+        memcpy(addrPair.m_cpuAddr, mesh->indices.data(), indexBufferSize);
+        //indexBuffer->Unmap(0, nullptr);
+		//indexBuffers.push_back(indexBuffer);
 
 		D3D12_INDEX_BUFFER_VIEW indexBufferView{
-			indexBuffer->GetGPUVirtualAddress(),
+			addrPair.m_gpuAddr,
 			indexBufferSize,
 			DXGI_FORMAT_R32_UINT
 		};
@@ -192,25 +196,26 @@ void MeshRenderer::AddMesh(const Mesh* mesh, const XMMATRIX meshTransform, const
     {
 		const UINT constantBufferSize = sizeof(DirectX::XMFLOAT4X4);
 
-        CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
-		CD3DX12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize);
-		ComPtr<ID3D12Resource> constantBuffer;
-        ThrowIfFailed(device->CreateCommittedResource(
-            &heapProps,
-            D3D12_HEAP_FLAG_NONE,
-            &bufferDesc,
-            D3D12_RESOURCE_STATE_GENERIC_READ,
-            nullptr,
-            IID_PPV_ARGS(&constantBuffer)));
+        auto addrPair = uploadBuffer.Allocate(constantBufferSize, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+  //      CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
+		//CD3DX12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize);
+		//ComPtr<ID3D12Resource> constantBuffer;
+  //      ThrowIfFailed(device->CreateCommittedResource(
+  //          &heapProps,
+  //          D3D12_HEAP_FLAG_NONE,
+  //          &bufferDesc,
+  //          D3D12_RESOURCE_STATE_GENERIC_READ,
+  //          nullptr,
+  //          IID_PPV_ARGS(&constantBuffer)));
 
         // Map and initialize the constant buffer
-        UINT8* pVertexDataBegin;
-        DirectX::XMFLOAT4X4* pData;
-        constantBuffer->Map(0, nullptr, reinterpret_cast<void**>(&pData));
-        DirectX::XMStoreFloat4x4(pData, meshTransform);
-        constantBuffer->Unmap(0, nullptr);
+        //UINT8* pVertexDataBegin;
+        //DirectX::XMFLOAT4X4* pData;
+        //constantBuffer->Map(0, nullptr, reinterpret_cast<void**>(&pData));
+        DirectX::XMStoreFloat4x4(static_cast<DirectX::XMFLOAT4X4*>(addrPair.m_cpuAddr), meshTransform);
+        //constantBuffer->Unmap(0, nullptr);
 
-		this->transformCBs.push_back(constantBuffer);
+		//this->transformCBs.push_back(constantBuffer);
     }
 
     for (size_t i = 0; i < mesh->textures.size(); ++i) {

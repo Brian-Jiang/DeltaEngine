@@ -29,6 +29,7 @@ public:
     void OnDestroy();
 
 	DXCommandQueue *GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) const;
+	DXUploadBuffer& GetUploadBuffer() { return m_dxUploadBuffer; }
 
 	void ToggleVSync(bool enableVSync) { g_VSync = enableVSync; }
 
