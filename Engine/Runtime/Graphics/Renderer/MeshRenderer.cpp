@@ -68,6 +68,9 @@ void MeshRenderer::LoadTexture(const Texture* texture, const ComPtr<ID3D12Device
     UINT64 alignedRowPitch = (rowPitch + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1);
     UINT64 textureSize = alignedRowPitch * textureHeight;
 
+    //auto& uploadBuffer = EngineMain::instance->dxRenderManager->GetUploadBuffer();
+    //auto addrPair = uploadBuffer.Allocate(textureSize, sizeof(Vertex));
+
     hp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
     auto uploadHeapDesc = CD3DX12_RESOURCE_DESC::Buffer(textureSize);
     ComPtr<ID3D12Resource> textureUploadHeap;
