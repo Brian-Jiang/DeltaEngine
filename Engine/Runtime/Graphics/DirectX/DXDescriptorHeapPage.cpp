@@ -23,5 +23,8 @@ DXDescriptorHeapAllocation DXDescriptorHeapPage::Allocate(UINT32 descriptorCount
 }
 
 void DXDescriptorHeapPage::AddFreeBlock(UINT32 offset, UINT32 descriptorCount) {
-
+    auto previousIt = m_offsetToFreeBlock.lower_bound(offset);
+    if (previousIt != m_offsetToFreeBlock.end()) {
+        //previousIt->second;
+    }
 }
