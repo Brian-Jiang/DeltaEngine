@@ -16,6 +16,7 @@ class DXDescriptorHeapAllocator {
     DXDescriptorHeapAllocator(Microsoft::WRL::ComPtr<ID3D12Device> device, D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT32 descriptorCountPerPage=128);
 
     DXDescriptorHeapAllocation Allocate(UINT32 descriptorCount);
+    void ReleaseAllStale(UINT64 frame);
 
 private:
     D3D12_DESCRIPTOR_HEAP_TYPE m_heapType;

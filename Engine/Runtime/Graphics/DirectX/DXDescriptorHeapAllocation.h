@@ -12,11 +12,15 @@ class DXDescriptorHeapPage;
 class DXDescriptorHeapAllocation {
 public:
     DXDescriptorHeapAllocation();
+    DXDescriptorHeapAllocation(D3D12_CPU_DESCRIPTOR_HANDLE handle, UINT32 size, UINT increaseSize, std::shared_ptr<DXDescriptorHeapPage> page);
     DXDescriptorHeapAllocation(DXDescriptorHeapAllocation&& other);
+    ~DXDescriptorHeapAllocation();
 
     DXDescriptorHeapAllocation& operator=(DXDescriptorHeapAllocation&& other);
 
     D3D12_CPU_DESCRIPTOR_HANDLE GetDescriptorHandle(UINT32 offset);
+    UINT32 GetDescriptorCount();
+    bool IsNull() const;
 
 private:
     void Free();

@@ -9,3 +9,9 @@ DXDescriptorHeapAllocation DXDescriptorHeapAllocator::Allocate(UINT32 descriptor
 	}
     return DXDescriptorHeapAllocation();
 }
+
+void DXDescriptorHeapAllocator::ReleaseAllStale(UINT64 frame) {
+	for (auto& page : m_pages) {
+		page->ReleaseAllStale(frame);
+	}
+}

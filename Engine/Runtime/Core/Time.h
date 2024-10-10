@@ -3,6 +3,7 @@
 #include "EngineIncludes.h"
 
 #include <chrono>
+#include <wrl.h>
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -16,6 +17,7 @@ public:
 
     static float deltaTime;
     static float timeSinceStart;
+    static UINT64 frameSinceStart;
 
 private:
     std::chrono::high_resolution_clock clock;
