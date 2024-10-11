@@ -31,8 +31,8 @@ DXDescriptorHeapAllocation DXDescriptorHeapPage::Allocate(UINT32 descriptorCount
     m_freeDescriptorCount -= descriptorCount;
     auto offset = sizeIt->second->first;
     auto size = sizeIt->first;
-    m_sizeToFreeBlocks.erase(sizeIt);
     m_offsetToFreeBlock.erase(sizeIt->second);
+    m_sizeToFreeBlocks.erase(sizeIt);
     if (size != descriptorCount) {
         AddFreeBlock(offset + descriptorCount, size - descriptorCount);
     }

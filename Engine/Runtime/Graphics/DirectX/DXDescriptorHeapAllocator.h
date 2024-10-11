@@ -13,8 +13,10 @@
 DELTA_ENGINE_NS_BEGIN
 
 class DXDescriptorHeapAllocator {
-    DXDescriptorHeapAllocator(Microsoft::WRL::ComPtr<ID3D12Device> device, D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT32 descriptorCountPerPage=128);
+public:
+    DXDescriptorHeapAllocator(D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT32 descriptorCountPerPage=128);
 
+    void SetDevice(Microsoft::WRL::ComPtr<ID3D12Device> device);
     DXDescriptorHeapAllocation Allocate(UINT32 descriptorCount);
     void ReleaseAllStale(UINT64 frame);
 

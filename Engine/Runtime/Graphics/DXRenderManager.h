@@ -10,6 +10,7 @@
 
 #include "DirectX/DXCommandQueue.h"
 #include "Graphics/DirectX/DXUploadBuffer.h"
+#include "Graphics/DirectX/DXDescriptorHeapAllocator.h"
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -89,7 +90,9 @@ private:
 	// Depth buffer.
     Microsoft::WRL::ComPtr<ID3D12Resource> m_DepthBuffer;
     // Descriptor heap for depth buffer.
-    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DSVHeap;
+    //Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DSVHeap;
+	DXDescriptorHeapAllocator m_DSVHeap;
+	DXDescriptorHeapAllocation m_DSVHeapAllocation;
 
     // Synchronization objects.
     UINT m_frameIndex;

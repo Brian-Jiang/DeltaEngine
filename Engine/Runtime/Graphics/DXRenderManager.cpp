@@ -9,6 +9,7 @@
 
 #include "Graphics/DXUtils.h"
 #include "IO/IOManager.h"
+#include "Core/Time.h"
 
 using namespace Microsoft::WRL;
 using namespace DeltaEngine;
@@ -17,7 +18,7 @@ using namespace DirectX;
 DXRenderManager::DXRenderManager(HWND hwnd, UINT width, UINT height): hwnd(hwnd), m_width(width), m_height(height),
     m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
     m_scissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX)),
-    m_rtvDescriptorSize(0), m_dxUploadBuffer(4 * 1024 * 1024)
+    m_rtvDescriptorSize(0), m_dxUploadBuffer(4 * 1024 * 1024), m_DSVHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV)
 {
 
     // Check for DirectX Math library support.
@@ -85,11 +86,14 @@ void DXRenderManager::LoadPipeline()
     m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
     // Create the descriptor heap for the depth-stencil view.
-    D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
-    dsvHeapDesc.NumDescriptors = 1;
-    dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-    dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-    ThrowIfFailed(m_device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_DSVHeap)));
+    //D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
+    //dsvHeapDesc.NumDescriptors = 1;
+    //dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+    //dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+    //ThrowIfFailed(m_device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_DSVHeap)));
+
+    m_DSVHeap.SetDevice(m_device);
+    m_DSVHeapAllocation = m_DSVHeap.Allocate(1);
 
     // Create frame resources.
     {
@@ -299,6 +303,8 @@ void DXRenderManager::InitFinish()
 
 void DXRenderManager::PrepareFrame()
 {
+    m_DSVHeap.ReleaseAllStale(Time::frameSinceStart);
+
     m_commandList = directCommandQueue->GetCommandList(m_pipelineState);
     
     // Indicate that the back buffer will be used as a render target.
@@ -316,7 +322,8 @@ void DXRenderManager::PrepareFrame()
     m_commandList->RSSetScissorRects(1, &m_scissorRect);
 
     CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
-    D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_DSVHeap->GetCPUDescriptorHandleForHeapStart();
+    //D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_DSVHeap->GetCPUDescriptorHandleForHeapStart();
+    auto dsvHandle = m_DSVHeapAllocation.GetDescriptorHandle(0);
     m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
     // Record commands.
@@ -481,7 +488,7 @@ void DXRenderManager::ResizeDepthBuffer(int width, int height) {
         &optimizedClearValue,
         IID_PPV_ARGS(&m_DepthBuffer)
     ));
-    m_DSVHeap->SetName(L"Depth/Stencil Resource Heap");
+    //m_DSVHeap->SetName(L"Depth/Stencil Resource Heap");
 
     // Update the depth-stencil view.
     D3D12_DEPTH_STENCIL_VIEW_DESC dsv = {};
@@ -490,8 +497,8 @@ void DXRenderManager::ResizeDepthBuffer(int width, int height) {
     dsv.Texture2D.MipSlice = 0;
     dsv.Flags = D3D12_DSV_FLAG_NONE;
 
-    m_device->CreateDepthStencilView(m_DepthBuffer.Get(), &dsv,
-        m_DSVHeap->GetCPUDescriptorHandleForHeapStart());
+    auto dsvHandle = m_DSVHeapAllocation.GetDescriptorHandle(0);
+    m_device->CreateDepthStencilView(m_DepthBuffer.Get(), &dsv, dsvHandle);
 
 	// Resize the swap chain to the desired dimensions.
 	//DXGI_SWAP_CHAIN_DESC desc = {};

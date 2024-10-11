@@ -21,6 +21,8 @@ public:
     void Release(DXDescriptorHeapAllocation&& allocation, UINT64 frameNum);
     void ReleaseAllStale(UINT64 frameNum);
 
+    UINT32 GetFreeDescriptorCount() const { return m_freeDescriptorCount; }
+
 private:
     void AddFreeBlock(UINT32 offset, UINT32 descriptorCount);
     void FreeSingleStale(UINT32 offset, UINT32 descriptorCount);
