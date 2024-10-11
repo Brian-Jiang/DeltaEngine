@@ -9,8 +9,8 @@
 #include <DirectXMath.h>
 
 #include "DirectX/DXCommandQueue.h"
-#include "Graphics/DirectX/DXUploadBuffer.h"
-#include "Graphics/DirectX/DXDescriptorHeapAllocator.h"
+#include "DirectX/DXUploadBuffer.h"
+#include "DirectX/DXDescriptorHeapAllocator.h"
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -78,7 +78,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
 	// Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_commandQueue;
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
+	//Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvHeap;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList5> m_commandList;
@@ -91,6 +91,9 @@ private:
     Microsoft::WRL::ComPtr<ID3D12Resource> m_DepthBuffer;
     // Descriptor heap for depth buffer.
     //Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DSVHeap;
+	DXDescriptorHeapAllocator m_rtvHeap;
+	DXDescriptorHeapAllocation m_rtvHeapAllocation;
+
 	DXDescriptorHeapAllocator m_DSVHeap;
 	DXDescriptorHeapAllocation m_DSVHeapAllocation;
 

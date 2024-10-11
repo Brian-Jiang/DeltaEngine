@@ -18,7 +18,8 @@ using namespace DirectX;
 DXRenderManager::DXRenderManager(HWND hwnd, UINT width, UINT height): hwnd(hwnd), m_width(width), m_height(height),
     m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
     m_scissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX)),
-    m_rtvDescriptorSize(0), m_dxUploadBuffer(4 * 1024 * 1024), m_DSVHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV)
+    m_rtvDescriptorSize(0), m_dxUploadBuffer(4 * 1024 * 1024), m_DSVHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV),
+    m_rtvHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
 {
 
     // Check for DirectX Math library support.
@@ -72,7 +73,8 @@ void DXRenderManager::LoadPipeline()
         // Describe and create a render target view (RTV) descriptor heap.
         // RTV describes the location of the texture resource in GPU memory, as well as size and format.
         // Each frame has its own RTV.
-        m_rtvHeap = DXUtils::CreateDescriptorHeap(m_device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, FrameCount);
+        //m_rtvHeap = DXUtils::CreateDescriptorHeap(m_device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, FrameCount);
+        m_rtvHeap.SetDevice(m_device);
 
         // Describe and create a shader resource view (SRV) heap for the texture.
         D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
@@ -97,15 +99,17 @@ void DXRenderManager::LoadPipeline()
 
     // Create frame resources.
     {
+        m_rtvHeapAllocation = m_rtvHeap.Allocate(FrameCount);
         // Get a handle to the first descriptor in the descriptor heap.
-        CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
+        //CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
+        //auto rtvHandle = m_rtvHeapAllocation.GetDescriptorHandle(0);
 
         // Create a RTV for each frame.
         for (UINT n = 0; n < FrameCount; n++)
         {
             ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
-            m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
-            rtvHandle.Offset(1, m_rtvDescriptorSize);
+            m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, m_rtvHeapAllocation.GetDescriptorHandle(n));
+            //rtvHandle.Offset(1, m_rtvDescriptorSize);
         }
     }
 
@@ -303,6 +307,7 @@ void DXRenderManager::InitFinish()
 
 void DXRenderManager::PrepareFrame()
 {
+    m_rtvHeap.ReleaseAllStale(Time::frameSinceStart);
     m_DSVHeap.ReleaseAllStale(Time::frameSinceStart);
 
     m_commandList = directCommandQueue->GetCommandList(m_pipelineState);
@@ -321,7 +326,8 @@ void DXRenderManager::PrepareFrame()
     m_commandList->RSSetViewports(1, &m_viewport);
     m_commandList->RSSetScissorRects(1, &m_scissorRect);
 
-    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
+    //CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
+    auto rtvHandle = m_rtvHeapAllocation.GetDescriptorHandle(m_frameIndex);
     //D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_DSVHeap->GetCPUDescriptorHandleForHeapStart();
     auto dsvHandle = m_DSVHeapAllocation.GetDescriptorHandle(0);
     m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
@@ -392,12 +398,12 @@ void DXRenderManager::Resize(UINT width, UINT height)
 
         // Create frame resources.
         {
-            CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
+            //CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
             for (UINT n = 0; n < FrameCount; n++)
             {
                 ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
-                m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
-                rtvHandle.Offset(1, m_rtvDescriptorSize);
+                m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, m_rtvHeapAllocation.GetDescriptorHandle(n));
+                //rtvHandle.Offset(1, m_rtvDescriptorSize);
             }
         }
     }
