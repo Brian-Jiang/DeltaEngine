@@ -250,9 +250,8 @@ void DXUtils::UpdateBufferResource(const ComPtr<ID3D12Device>& device, const Com
 
 void DXUtils::ReportLiveDXGIObjects()
 {
-    IDXGIDebug* pDebug;
+    ComPtr<IDXGIDebug> pDebug;
     if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&pDebug)))) {
-        pDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
-        pDebug->Release();
+        pDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_DETAIL | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
     }
 }

@@ -20,7 +20,7 @@ DXUploadBuffer::DXUploadBuffer(Microsoft::WRL::ComPtr<ID3D12Device> device, size
 
 }
 
-void DXUploadBuffer::SetDevice(Microsoft::WRL::ComPtr<ID3D12Device> device) {
+void DXUploadBuffer::SetDevice(const Microsoft::WRL::ComPtr<ID3D12Device>& device) {
     m_device = device;
 }
 

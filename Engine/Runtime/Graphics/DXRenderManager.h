@@ -35,7 +35,7 @@ public:
 
 	void ToggleVSync(bool enableVSync) { g_VSync = enableVSync; }
 
-	Microsoft::WRL::ComPtr<ID3D12Device4> GetDevice() { return m_device; }
+	const Microsoft::WRL::ComPtr<ID3D12Device4>& GetDevice() { return m_device; }
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> GetCommandList() { return m_commandList; }
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> GetSRVHeap() { return m_srvHeap; }
 	bool IsFullscreen() { return g_Fullscreen; }

@@ -188,12 +188,6 @@ void DXRenderManager::LoadAssets()
         Light* mappedLightBuffer = nullptr;
         m_lightCbData->Map(0, nullptr, reinterpret_cast<void**>(&mappedLightBuffer));
 
-        // Fill the buffer with the light data (e.g., position, color, intensity).
-        //Light lightData;
-        //lightData.position = { 0.0f, 1.0f, 0.0f };
-        //lightData.color = { 1.0f, 1.0f, 1.0f };
-        //lightData.intensity = 5.0f;
-
         // Copy the data into the mapped constant buffer.
         memcpy(mappedLightBuffer, &m_light, sizeof(Light));
 
@@ -627,13 +621,3 @@ DXCommandQueue* DXRenderManager::GetCommandQueue(const D3D12_COMMAND_LIST_TYPE t
             return nullptr;
     }
 }
-
-//void DXRenderManager::SetModelMatrix(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList, DirectX::XMMATRIX model) {
-//	//auto mvp = XMMatrixMultiply(model, mvpMatrix);
-//    //auto mvp = mvpMatrix;
-//	commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &model, 0);
-//}
-
-//void DXRenderManager::ResetModelMatrix(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList) {
-//	commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
-//}

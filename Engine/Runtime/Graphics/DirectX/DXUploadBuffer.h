@@ -21,7 +21,7 @@ public:
 	DXUploadBuffer(size_t pageSize);
 	DXUploadBuffer(Microsoft::WRL::ComPtr<ID3D12Device> device, size_t pageSize);
 
-	void SetDevice(Microsoft::WRL::ComPtr<ID3D12Device> device);
+	void SetDevice(const Microsoft::WRL::ComPtr<ID3D12Device>& device);
 	AddrPair Allocate(size_t sizeInBytes, size_t alignment);
 	void Reset();
 private:

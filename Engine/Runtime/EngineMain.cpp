@@ -98,8 +98,6 @@ void EngineMain::StartMainLoop()
     }
 
     dxRenderManager->OnDestroy();
-
-    // DXUtils::ReportLiveDXGIObjects();
     
     SDL_Quit();
 }
