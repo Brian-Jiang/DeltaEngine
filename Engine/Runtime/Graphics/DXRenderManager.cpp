@@ -129,6 +129,77 @@ void DXRenderManager::LoadAssets()
     //     ThrowIfFailed(m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
     // }
 
+    m_light.position = XMFLOAT3(0.0f, 5.0f, 3.0f);
+    m_light.intensity = 1.0f;
+    m_light.color = XMFLOAT3(1.0f, 1.0f, 1.0f);
+
+    {
+        UINT alignedBufferSize = (sizeof(Light) + 255) & ~255;
+        //auto addrPair = m_dxUploadBuffer.Allocate(sizeof(Light), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+        //memcpy(addrPair.m_cpuAddr, &m_light, sizeof(Light));
+        ////D3D12_CONSTANT_BUFFER_VIEW_DESC
+
+        //// TODO transition
+        //D3D12_RESOURCE_DESC resourceDesc = {};
+        //resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+        //resourceDesc.Width = alignedBufferSize;
+        //resourceDesc.Height = 1;
+        //resourceDesc.DepthOrArraySize = 1;
+        //resourceDesc.MipLevels = 1;
+        //resourceDesc.SampleDesc.Count = 1;
+        //resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        //resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+        //auto hp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+        ////ComPtr<ID3D12Resource> textureResource;
+        //ThrowIfFailed(m_device->CreateCommittedResource(
+        //    &hp,
+        //    D3D12_HEAP_FLAG_NONE,
+        //    &resourceDesc,
+        //    D3D12_RESOURCE_STATE_GENERIC_READ,
+        //    nullptr,
+            //IID_PPV_ARGS(&m_lightCbData)));
+
+
+        //ComPtr<ID3D12Resource> constantBufferResource;
+        D3D12_HEAP_PROPERTIES heapProps = {};
+        heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
+        heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+        heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+
+        D3D12_RESOURCE_DESC resourceDesc = {};
+        resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+        resourceDesc.Width = alignedBufferSize;
+        resourceDesc.Height = 1;
+        resourceDesc.DepthOrArraySize = 1;
+        resourceDesc.MipLevels = 1;
+        resourceDesc.SampleDesc.Count = 1;
+        resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+        HRESULT hr = m_device->CreateCommittedResource(
+            &heapProps,
+            D3D12_HEAP_FLAG_NONE,
+            &resourceDesc,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            IID_PPV_ARGS(&m_lightCbData)
+        );
+
+        Light* mappedLightBuffer = nullptr;
+        m_lightCbData->Map(0, nullptr, reinterpret_cast<void**>(&mappedLightBuffer));
+
+        // Fill the buffer with the light data (e.g., position, color, intensity).
+        //Light lightData;
+        //lightData.position = { 0.0f, 1.0f, 0.0f };
+        //lightData.color = { 1.0f, 1.0f, 1.0f };
+        //lightData.intensity = 5.0f;
+
+        // Copy the data into the mapped constant buffer.
+        memcpy(mappedLightBuffer, &m_light, sizeof(Light));
+
+        m_lightCbData->Unmap(0, nullptr);
+    }
+
     // Create the root signature.
     {
         D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
@@ -145,10 +216,11 @@ void DXRenderManager::LoadAssets()
         ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
         //ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
 
-        CD3DX12_ROOT_PARAMETER1 rootParameters[3];
+        CD3DX12_ROOT_PARAMETER1 rootParameters[4];
         rootParameters[0].InitAsConstants(sizeof(XMMATRIX) / 4, 0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
         rootParameters[1].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
         rootParameters[2].InitAsConstantBufferView(1);
+        rootParameters[3].InitAsConstants(sizeof(XMFLOAT4) / 4, 2, 0, D3D12_SHADER_VISIBILITY_PIXEL);
 
         D3D12_STATIC_SAMPLER_DESC sampler = {};
         sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -321,7 +393,9 @@ void DXRenderManager::PrepareFrame()
     ID3D12DescriptorHeap* ppHeaps[] = { m_srvHeap.Get() };
     m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
     m_commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
+    m_commandList->SetGraphicsRoot32BitConstants(3, sizeof(XMFLOAT4) / 4, &cameraPosition, 0);
     //m_commandList->SetGraphicsRootDescriptorTable(1, m_srvHeap->GetGPUDescriptorHandleForHeapStart());
+    m_commandList->SetGraphicsRootConstantBufferView(2, m_lightCbData->GetGPUVirtualAddress());
 
     m_commandList->RSSetViewports(1, &m_viewport);
     m_commandList->RSSetScissorRects(1, &m_scissorRect);

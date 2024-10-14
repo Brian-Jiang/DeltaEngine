@@ -11,6 +11,7 @@
 #include "DirectX/DXCommandQueue.h"
 #include "DirectX/DXUploadBuffer.h"
 #include "DirectX/DXDescriptorHeapAllocator.h"
+#include "Structures/Light.h"
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -44,6 +45,8 @@ public:
 	UINT GetHeight() { return m_height; }
 
 	void SetMVPMatrix(DirectX::XMMATRIX mvp) { mvpMatrix = mvp; }
+	void SetCameraPosition(DirectX::XMVECTOR cam) { DirectX::XMStoreFloat4(&cameraPosition, cam); }
+
 	//void SetModelMatrix(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList, DirectX::XMMATRIX model);
 	//void ResetModelMatrix(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList);
 
@@ -102,7 +105,10 @@ private:
 	UINT64 frameFenceValues[FrameCount] = {};
 
 	DirectX::XMMATRIX mvpMatrix;
+	DirectX::XMFLOAT4 cameraPosition;
 	//DirectX::XMMATRIX m_ModelMatrix;
+	Light m_light;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_lightCbData;
 
 	DXUploadBuffer m_dxUploadBuffer;
 };

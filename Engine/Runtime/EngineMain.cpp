@@ -159,7 +159,7 @@ void EngineMain::Draw()
     float angle = static_cast<float>(Time::timeSinceStart * 50.f);
     //angle = 0.f;
     const XMVECTOR rotationAxis = XMVectorSet(0, 1, 0, 0);
-    auto translation = XMMatrixTranslation(0, -3, 30);
+    auto translation = XMMatrixTranslation(0, 0, 0);
     auto rotation = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(angle));
     m_ModelMatrix = XMMatrixMultiply(rotation, translation);
     //m_ModelMatrix = XMMatrixIdentity();
@@ -176,6 +176,7 @@ void EngineMain::Draw()
     mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_ViewMatrix);
     mvpMatrix = XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
     dxRenderManager->SetMVPMatrix(mvpMatrix);
+    dxRenderManager->SetCameraPosition(eyePosition);
     //commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
 
     dxRenderManager->PrepareFrame();
