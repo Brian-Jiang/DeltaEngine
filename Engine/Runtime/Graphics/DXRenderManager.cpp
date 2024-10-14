@@ -260,21 +260,29 @@ void DXRenderManager::LoadAssets()
 
 
         // Create the dxc compiler and helper interfaces.
-        ComPtr<IDxcCompiler> compiler;
-        ComPtr<IDxcLibrary> library;
+        ComPtr<IDxcUtils> dxcUtils;
+        ComPtr<IDxcCompiler3> compiler;
         ComPtr<IDxcIncludeHandler> includeHandler;
         ThrowIfFailed(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)));
-        ThrowIfFailed(DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library)));
-        ThrowIfFailed(library->CreateIncludeHandler(&includeHandler));
+        ThrowIfFailed(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils)));
+        ThrowIfFailed(dxcUtils->CreateDefaultIncludeHandler(&includeHandler));
 
         // Read the shader source file.
         std::wstring shaderPath = IOManager::GetAssetFullPath(L"Shaders/Shaders.hlsl");
         ComPtr<IDxcBlobEncoding> sourceBlob;
-        ThrowIfFailed(library->CreateBlobFromFile(shaderPath.c_str(), nullptr, &sourceBlob));
+        ThrowIfFailed(dxcUtils->LoadFile(shaderPath.c_str(), nullptr, &sourceBlob));
+        
+        ComPtr<IDxcCompilerArgs> arguments;
+        ThrowIfFailed(dxcUtils->BuildArguments(shaderPath.c_str(), L"VSMain", L"vs_6_0", nullptr, 0, nullptr, 0, &arguments));
+        
+        BOOL known;
+        UINT32 encoding;
+        ThrowIfFailed(sourceBlob->GetEncoding(&known, &encoding));
+        DxcBuffer sourceBuffer{ .Ptr = sourceBlob->GetBufferPointer(), .Size = sourceBlob->GetBufferSize(), .Encoding = encoding };
 
         // Compile the vertex shader.
-        ComPtr<IDxcOperationResult> vertexShaderResult;
-        ThrowIfFailed(compiler->Compile(sourceBlob.Get(), shaderPath.c_str(), L"VSMain", L"vs_6_0", nullptr, 0, nullptr, 0, includeHandler.Get(), &vertexShaderResult));
+        ComPtr<IDxcResult> vertexShaderResult;
+        ThrowIfFailed(compiler->Compile(&sourceBuffer, arguments->GetArguments(), arguments->GetCount(), includeHandler.Get(), IID_PPV_ARGS(&vertexShaderResult)));
 
         // Check for errors.
         HRESULT hr;
@@ -292,8 +300,9 @@ void DXRenderManager::LoadAssets()
 
         // Compile the pixel shader.
         // This is similar to the vertex shader compilation.
-        ComPtr<IDxcOperationResult> pixelShaderResult;
-        compiler->Compile(sourceBlob.Get(), shaderPath.c_str(), L"PSMain", L"ps_6_0", nullptr, 0, nullptr, 0, includeHandler.Get(), &pixelShaderResult);
+        ThrowIfFailed(dxcUtils->BuildArguments(shaderPath.c_str(), L"PSMain", L"ps_6_0", nullptr, 0, nullptr, 0, &arguments));
+        ComPtr<IDxcResult> pixelShaderResult;
+        compiler->Compile(&sourceBuffer, arguments->GetArguments(), arguments->GetCount(), includeHandler.Get(), IID_PPV_ARGS(&pixelShaderResult));
         pixelShaderResult->GetStatus(&hr);
         if (FAILED(hr))
         {
@@ -301,11 +310,9 @@ void DXRenderManager::LoadAssets()
             pixelShaderResult->GetErrorBuffer(&error);
             // TODO: Handle the error.
         }
+
         ComPtr<IDxcBlob> pixelShader;
         pixelShaderResult->GetResult(&pixelShader);
-
-        // ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"Shaders.hlsl").c_str(), nullptr, nullptr, "VSMain", "vs_6_0", compileFlags, 0, &vertexShader, nullptr));
-        // ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"Shaders.hlsl").c_str(), nullptr, nullptr, "PSMain", "ps_6_0", compileFlags, 0, &pixelShader, nullptr));
 
         // Define the vertex input layout.
         D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
