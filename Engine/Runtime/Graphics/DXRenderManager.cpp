@@ -242,15 +242,12 @@ void DXRenderManager::LoadAssets()
 
     // Create the pipeline state, which includes compiling and loading shaders.
     {
-        // ComPtr<ID3DBlob> vertexShader;
-        // ComPtr<ID3DBlob> pixelShader;
-
-#if defined(_DEBUG)
-        // Enable better shader debugging with the graphics debugging tools.
-        UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-#else
-        UINT compileFlags = 0;
-#endif
+//#if defined(_DEBUG)
+//        // Enable better shader debugging with the graphics debugging tools.
+//        UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+//#else
+//        UINT compileFlags = 0;
+//#endif
 
 
         // Create the dxc compiler and helper interfaces.
@@ -315,6 +312,12 @@ void DXRenderManager::LoadAssets()
             { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
             { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
             { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+
+            // Instance data (per-instance, unique to each instance)
+            { "INSTANCE_WORLD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+            { "INSTANCE_WORLD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 16, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+            { "INSTANCE_WORLD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 32, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+            { "INSTANCE_WORLD", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 48, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 }
         };
 
         D3D12_BLEND_DESC blendDesc = {};

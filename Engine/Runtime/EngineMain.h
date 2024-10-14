@@ -7,6 +7,7 @@
 #include "Graphics/DXRenderManager.h"
 #include "Graphics/Renderer/SpriteRenderer.h"
 #include "Graphics/Renderer/MeshRenderer.h"
+#include "Graphics/DirectX/InstancedDrawer.h"
 #include "SDL3/SDL.h"
 #include "Core/Time.h"
 
@@ -48,6 +49,7 @@ private:
 
 	MeshRenderer *meshRenderer;
 	MeshRenderer *meshRenderer2;
+	InstancedDrawer* m_instancedDrawer;
 
 	float m_FoV;
 

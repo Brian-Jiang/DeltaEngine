@@ -4,6 +4,7 @@ struct VSInput
     float4 color : COLOR;
     float3 normal : NORMAL;
     float2 uv : TEXCOORD;
+    float4x4 worldMatrix : INSTANCE_WORLD;
 };
 
 struct PSInput
@@ -50,7 +51,8 @@ PSInput VSMain(VSInput input)
 
     //result.position = position;
     //position = mul(modelMatrix, position);
-    result.position = mul(ModelViewProjectionCB.MVP, float4(input.position, 1.0f));
+    float4 position = mul(ModelViewProjectionCB.MVP, float4(input.position, 1.0f));
+    result.position = mul(input.worldMatrix, position);
     result.color = input.color;
     //result.color = float4(position.z / 10.0f, 0.0f, 0.0f, 1.0f);
     result.normal = input.normal;

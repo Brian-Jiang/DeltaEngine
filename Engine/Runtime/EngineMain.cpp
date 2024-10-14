@@ -1,6 +1,7 @@
 ﻿#include "EngineMain.h"
 
 #include <vector>
+#include <memory>
 
 #include "Graphics/DXUtils.h"
 #include "Importers/ModelImporter.h"
@@ -15,8 +16,9 @@ using namespace DirectX;
 
 EngineMain* EngineMain::instance = nullptr;
 
-EngineMain::EngineMain() : exitCode(0), renderer(nullptr), window(nullptr), gameState(GameState::PLAY),
-dxRenderManager(nullptr), time(nullptr)
+EngineMain::EngineMain() 
+    : exitCode(0), renderer(nullptr), window(nullptr), 
+    gameState(GameState::PLAY), dxRenderManager(nullptr), time(nullptr)
 {
     EngineMain::instance = this;
 
@@ -43,6 +45,17 @@ void EngineMain::Initialize()
     //importer->Import("Assets/home/source/home.fbx");
     //importer->Import("Assets/car/source/datsun240k.fbx");
     meshRenderer->Start(importer->meshes, importer->meshTransforms, dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
+
+    std::shared_ptr<Mesh> meshPtr(importer->meshes[0]);
+    m_instancedDrawer = new InstancedDrawer(meshPtr, 100);
+    for (size_t i = 0; i < 100; i++) {
+        auto tranlate = XMMatrixTranslation(i / 10.0f, i / 10.0f, 0.0f);
+        
+        m_instancedDrawer->SetTransform(i, tranlate);
+    }
+
+    m_instancedDrawer->CreateBuffer(dxRenderManager->GetDevice());
+    //auto instanceBuffer = m_instancedDrawer->GetInstanceBuffer();
 
     //dxSprite->Start(-1.0f, -1.0f, 2.0f, 2.0f, "Assets/logo.png", dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
 
@@ -181,5 +194,6 @@ void EngineMain::Draw()
     //dxSprite->Render(dxRenderManager->GetCommandList());
     meshRenderer->Render(dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap(), dxRenderManager->GetDevice());
     //meshRenderer2->Render(dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap(), dxRenderManager->GetDevice());
+    m_instancedDrawer->Draw(dxRenderManager->GetCommandList());
     dxRenderManager->RenderFrame();
 }

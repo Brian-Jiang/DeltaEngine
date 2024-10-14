@@ -20,6 +20,7 @@ public:
     InstancedDrawer(std::shared_ptr<Mesh> mesh, UINT32 count);
     void SetTransform(UINT32 index, DirectX::XMMATRIX transform);
     void CreateBuffer(const Microsoft::WRL::ComPtr<ID3D12Device>& device);
+    void Draw(const Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>& commandList);
 
     Microsoft::WRL::ComPtr<ID3D12Resource> GetInstanceBuffer() { return m_instanceBuffer; }
 
@@ -28,6 +29,9 @@ private:
     std::vector<InstanceData> m_instanceData;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_instanceBuffer;
     UINT32 m_count;
+    D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
+    D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
+    D3D12_VERTEX_BUFFER_VIEW m_instanceBufferView;
 };
 
 DELTA_ENGINE_NS_END
