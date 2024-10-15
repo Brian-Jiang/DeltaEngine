@@ -23,7 +23,8 @@ public:
     DirectX::XMMATRIX viewMatrix;
     DirectX::XMMATRIX projectionMatrix;
 
-    void Start(float fov, float aspectRatio, float nearPlane, float farPlane);
+    void Start(DirectX::XMFLOAT3 forward, DirectX::XMFLOAT3 up, float fov, float aspectRatio, float nearPlane, float farPlane);
+    void Tick();
 };
 
 DELTA_ENGINE_NS_END

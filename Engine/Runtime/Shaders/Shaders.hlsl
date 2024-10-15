@@ -19,19 +19,29 @@ struct PSInput
     float4 position : SV_POSITION;
 };
 
-struct ModelViewProjection
-{
-    matrix MVP;
-};
+//struct ModelViewProjection
+//{
+//    matrix MVP;
+//};
 
-ConstantBuffer<ModelViewProjection> ModelViewProjectionCB : register(b0);
+//ConstantBuffer<ModelViewProjection> ModelViewProjectionCB : register(b0);
 
 struct Camera
 {
+    float4x4 viewMatrix;
+    float4x4 projectionMatrix;
     float4 position;
 };
 
-ConstantBuffer<Camera> CameraCB : register(b2);
+ConstantBuffer<Camera> CameraCB : register(b0);
+
+struct Object
+{
+    float4x4 worldMatrix;
+    float4 color;
+};
+
+ConstantBuffer<Object> ObjectCB : register(b1);
 
 struct Light
 {
@@ -41,11 +51,11 @@ struct Light
 
 };
 
+ConstantBuffer<Light> LightCB : register(b2);
+
 Texture2D g_texture : register(t0);
 //Texture2D g_texture1 : register(t1);
 SamplerState g_sampler : register(s0);
-
-ConstantBuffer<Light> LightCB : register(b1);
 
 PSInput VSMain(VSInput input)
 {
@@ -54,10 +64,11 @@ PSInput VSMain(VSInput input)
     //result.position = position;
     //position = mul(modelMatrix, position);
     float4 position = float4(input.position, 1.0f);
-    position = mul(ModelViewProjectionCB.MVP, position);
-    position = mul(input.worldMatrix, position);
+    float worldPosition = mul(input.worldMatrix, position);
+    float4 cameraPosition = mul(CameraCB.viewMatrix, worldPosition);
+    cameraPosition = mul(CameraCB.projectionMatrix, cameraPosition);
     
-    result.position = position;
+    result.position = cameraPosition;
     result.color = input.color * float4(input.instanceColor, 1.0);
     //result.color = float4(position.z / 10.0f, 0.0f, 0.0f, 1.0f);
     result.normal = input.normal;

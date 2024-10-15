@@ -206,15 +206,19 @@ void DXRenderManager::LoadAssets()
             featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
         }
 
-        CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
+        CD3DX12_DESCRIPTOR_RANGE1 ranges[1]{};
         ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
         //ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
 
-        CD3DX12_ROOT_PARAMETER1 rootParameters[4];
-        rootParameters[0].InitAsConstants(sizeof(XMMATRIX) / 4, 0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
+        CD3DX12_ROOT_PARAMETER1 rootParameters[4]{};
+        // Camera
+        rootParameters[0].InitAsConstantBufferView(0);
+        // Texture
         rootParameters[1].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
+        // Object
         rootParameters[2].InitAsConstantBufferView(1);
-        rootParameters[3].InitAsConstants(sizeof(XMFLOAT4) / 4, 2, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+        // Light
+        rootParameters[3].InitAsConstantBufferView(2);
 
         D3D12_STATIC_SAMPLER_DESC sampler = {};
         sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -397,10 +401,10 @@ void DXRenderManager::PrepareFrame()
     m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
     ID3D12DescriptorHeap* ppHeaps[] = { m_srvHeap.Get() };
     m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-    m_commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
-    m_commandList->SetGraphicsRoot32BitConstants(3, sizeof(XMFLOAT4) / 4, &cameraPosition, 0);
+    //m_commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
+    //m_commandList->SetGraphicsRoot32BitConstants(3, sizeof(XMFLOAT4) / 4, &cameraPosition, 0);
     //m_commandList->SetGraphicsRootDescriptorTable(1, m_srvHeap->GetGPUDescriptorHandleForHeapStart());
-    m_commandList->SetGraphicsRootConstantBufferView(2, m_lightCbData->GetGPUVirtualAddress());
+    m_commandList->SetGraphicsRootConstantBufferView(3, m_lightCbData->GetGPUVirtualAddress());
 
     m_commandList->RSSetViewports(1, &m_viewport);
     m_commandList->RSSetScissorRects(1, &m_scissorRect);
