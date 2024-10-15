@@ -4,7 +4,9 @@ struct VSInput
     float4 color : COLOR;
     float3 normal : NORMAL;
     float2 uv : TEXCOORD;
+    
     float4x4 worldMatrix : INSTANCE_WORLD;
+    float3 instanceColor : INSTANCE_COLOR;
 };
 
 struct PSInput
@@ -51,9 +53,12 @@ PSInput VSMain(VSInput input)
 
     //result.position = position;
     //position = mul(modelMatrix, position);
-    float4 position = mul(ModelViewProjectionCB.MVP, float4(input.position, 1.0f));
-    result.position = mul(input.worldMatrix, position);
-    result.color = input.color;
+    float4 position = float4(input.position, 1.0f);
+    position = mul(ModelViewProjectionCB.MVP, position);
+    position = mul(input.worldMatrix, position);
+    
+    result.position = position;
+    result.color = input.color * float4(input.instanceColor, 1.0);
     //result.color = float4(position.z / 10.0f, 0.0f, 0.0f, 1.0f);
     result.normal = input.normal;
     result.uv = input.uv;
@@ -67,6 +72,7 @@ float4 PSMain(PSInput input) : SV_TARGET
     
     
     float4 textureColor = g_texture.Sample(g_sampler, input.uv);
+    textureColor = float4(1.0, 1.0, 1.0, 1.0);
     
     float3 left = normalize(LightCB.position - input.position.xyz);
     float3 right = reflect(-left, input.normal);

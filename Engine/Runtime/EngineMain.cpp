@@ -40,18 +40,24 @@ void EngineMain::Initialize()
     //meshRenderer2->Start(*mesh, dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
 
     auto importer = new ModelImporter();
-    importer->Import("Assets/cottage/source/dio.fbx");
+    //importer->Import("Assets/cottage/source/dio.fbx");
     //importer->Import("Assets/weapon/weapon.fbx");
     //importer->Import("Assets/home/source/home.fbx");
     //importer->Import("Assets/car/source/datsun240k.fbx");
-    meshRenderer->Start(importer->meshes, importer->meshTransforms, dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
+    importer->Import("Assets/Star.obj");
+    //meshRenderer->Start(importer->meshes, importer->meshTransforms, dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
 
     std::shared_ptr<Mesh> meshPtr(importer->meshes[0]);
-    m_instancedDrawer = new InstancedDrawer(meshPtr, 100);
+    m_instancedDrawer = new InstancedDrawer(meshPtr, 10000);
+    UINT32 idx = 0;
     for (size_t i = 0; i < 100; i++) {
-        auto tranlate = XMMatrixTranslation(i / 10.0f, i / 10.0f, 0.0f);
-        
-        m_instancedDrawer->SetTransform(i, tranlate);
+        for (size_t j = 0; j < 100; j++) {
+            auto tranlate = XMMatrixTranslation(i / 10.0f, j / 10.0f, 0.0f);
+            m_instancedDrawer->SetTransform(idx, tranlate);
+            XMFLOAT3 color(1.0f, 0.843f, 0.0f);
+            m_instancedDrawer->SetColor(idx, color);
+            ++idx;
+        }
     }
 
     m_instancedDrawer->CreateBuffer(dxRenderManager->GetDevice());
@@ -192,7 +198,7 @@ void EngineMain::Draw()
 
     dxRenderManager->PrepareFrame();
     //dxSprite->Render(dxRenderManager->GetCommandList());
-    meshRenderer->Render(dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap(), dxRenderManager->GetDevice());
+    //meshRenderer->Render(dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap(), dxRenderManager->GetDevice());
     //meshRenderer2->Render(dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap(), dxRenderManager->GetDevice());
     m_instancedDrawer->Draw(dxRenderManager->GetCommandList());
     dxRenderManager->RenderFrame();

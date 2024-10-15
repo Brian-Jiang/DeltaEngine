@@ -18,6 +18,10 @@ void InstancedDrawer::SetTransform(UINT32 index, DirectX::XMMATRIX transform) {
     XMStoreFloat4x4(&m_instanceData[index].transform, transform);
 }
 
+void InstancedDrawer::SetColor(UINT32 index, DirectX::XMFLOAT3 color) {
+    memcpy(&m_instanceData[index].color, &color, sizeof(XMFLOAT3));
+}
+
 void InstancedDrawer::CreateBuffer(const Microsoft::WRL::ComPtr<ID3D12Device>& device) {
     auto& uploadBuffer = EngineMain::instance->dxRenderManager->GetUploadBuffer();
 

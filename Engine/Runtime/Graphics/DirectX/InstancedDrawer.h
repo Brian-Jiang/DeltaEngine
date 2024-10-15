@@ -13,12 +13,14 @@ DELTA_ENGINE_NS_BEGIN
 
 struct InstanceData {
     DirectX::XMFLOAT4X4 transform;
+    DirectX::XMFLOAT3 color;
 };
 
 class InstancedDrawer {
 public:
     InstancedDrawer(std::shared_ptr<Mesh> mesh, UINT32 count);
     void SetTransform(UINT32 index, DirectX::XMMATRIX transform);
+    void SetColor(UINT32 index, DirectX::XMFLOAT3 color);
     void CreateBuffer(const Microsoft::WRL::ComPtr<ID3D12Device>& device);
     void Draw(const Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>& commandList);
 
