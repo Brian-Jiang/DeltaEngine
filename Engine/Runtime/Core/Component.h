@@ -1,15 +1,17 @@
 #pragma once
 
+#include "EngineIncludes.h"
+
 #include <type_traits>
 
-#include "Core/Object.h"
+#include "Core/DObject.h"
 
-namespace DeltaEngine
+DELTA_ENGINE_NS_BEGIN
+
+class Component: public DObject
 {
 
-class Component: public Object
-{
-	public:
+public:
 	Component();
 	~Component();
 
@@ -18,4 +20,4 @@ class Component: public Object
 template<typename T>
 concept IsComponent = std::is_base_of_v<Component, T>;
 
-}
+DELTA_ENGINE_NS_END

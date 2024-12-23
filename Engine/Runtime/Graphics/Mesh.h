@@ -4,13 +4,13 @@
 
 #include <vector>
 
-#include "Core/Object.h"
+#include "Runtime/Core/DObject.h"
 #include "Graphics/Structures/Vertex.h"
 #include "Graphics/Texture.h"
 
 DELTA_ENGINE_NS_BEGIN
 
-class Mesh : public Object
+class Mesh : public DObject
 {
 public:
     std::vector<Vertex> vertices;

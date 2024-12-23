@@ -35,11 +35,6 @@
           "name": "ASSIMP_INSTALL",
           "value": "False",
           "type": "BOOL"
-        },
-        {
-          "name": "CMAKE_INSTALL_PREFIX",
-          "value": "D:/Projects/DeltaEngine/Install/x64-Debug",
-          "type": "PATH"
         }
       ]
     }
