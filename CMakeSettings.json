@@ -6,7 +6,7 @@
       "configurationType": "Debug",
       "inheritEnvironments": [ "msvc_x64_x64" ],
       "buildRoot": "${projectDir}\\Build\\${name}",
-      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "installRoot": "${projectDir}\\Install\\${name}",
       "cmakeCommandArgs": "",
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
@@ -35,6 +35,11 @@
           "name": "ASSIMP_INSTALL",
           "value": "False",
           "type": "BOOL"
+        },
+        {
+          "name": "CMAKE_INSTALL_PREFIX",
+          "value": "D:/Projects/DeltaEngine/Install/x64-Debug",
+          "type": "PATH"
         }
       ]
     }

@@ -1,5 +1,6 @@
 set(BUILD_XAUDIO_WIN10 OFF)
 
+set(DIRECTX_DXC_PATH "${CMAKE_CURRENT_SOURCE_DIR}/dxc/bin/x64")
 add_subdirectory(DirectXTK12)
 
 set_target_properties(DirectXTK12 PROPERTIES FOLDER ${third_party_folder})

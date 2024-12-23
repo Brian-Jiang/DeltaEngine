@@ -287,6 +287,8 @@ void DXRenderManager::LoadAssets()
             ComPtr<IDxcBlobEncoding> error;
             vertexShaderResult->GetErrorBuffer(&error);
             // TODO: Handle the error. The error message can be retrieved from the error blob.
+            std::string errorMessage(static_cast<const char*>(error->GetBufferPointer()), error->GetBufferSize());
+            std::cerr << errorMessage << std::endl;
         }
 
         // Retrieve the compiled shader.
@@ -304,6 +306,8 @@ void DXRenderManager::LoadAssets()
             ComPtr<IDxcBlobEncoding> error;
             pixelShaderResult->GetErrorBuffer(&error);
             // TODO: Handle the error.
+            std::string errorMessage(static_cast<const char*>(error->GetBufferPointer()), error->GetBufferSize());
+            std::cerr << errorMessage << std::endl;
         }
 
         ComPtr<IDxcBlob> pixelShader;

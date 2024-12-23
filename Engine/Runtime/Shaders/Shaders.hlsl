@@ -64,7 +64,7 @@ PSInput VSMain(VSInput input)
     //result.position = position;
     //position = mul(modelMatrix, position);
     float4 position = float4(input.position, 1.0f);
-    float worldPosition = mul(input.worldMatrix, position);
+    float4 worldPosition = mul(input.worldMatrix, position);
     float4 cameraPosition = mul(CameraCB.viewMatrix, worldPosition);
     cameraPosition = mul(CameraCB.projectionMatrix, cameraPosition);
     
