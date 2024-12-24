@@ -11,7 +11,11 @@
 
 DELTA_ENGINE_NS_BEGIN
 
-class SceneComponent : public DObject, public std::enable_shared_from_this<SceneComponent> {
+class DWorld;
+
+class SceneComponent : public DObject, public std::enable_shared_from_this<SceneComponent>
+{
+    friend class DWorld;
 
 public:
     SceneComponent();

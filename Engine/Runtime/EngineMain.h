@@ -3,11 +3,13 @@
 #include "EngineIncludes.h"
 
 #include <DirectXMath.h>
+#include <memory>
 
 #include "Graphics/DXRenderManager.h"
 #include "Graphics/Renderer/SpriteRenderer.h"
 #include "Graphics/Renderer/MeshRenderer.h"
 #include "Graphics/DirectX/InstancedDrawer.h"
+#include "Runtime/Core/DWorld.h"
 #include "SDL3/SDL.h"
 #include "Core/Time.h"
 
@@ -44,7 +46,7 @@ private:
 	GameState gameState;
 
 	// SpriteRenderer* sprite;
-	SpriteRenderer *dxSprite;
+	//SpriteRenderer *dxSprite;
 	//MeshRenderer* dxMeshRenderer;
 
 	MeshRenderer *meshRenderer;
@@ -61,6 +63,9 @@ public:
 	DirectX::XMMATRIX m_ProjectionMatrix;
 	DirectX::XMVECTOR eyePosition;
 	DirectX::XMMATRIX mvpMatrix;
+
+private:
+    std::shared_ptr<DWorld> m_world;
 
 };
 

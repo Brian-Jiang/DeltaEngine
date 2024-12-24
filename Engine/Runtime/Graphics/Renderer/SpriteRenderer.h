@@ -1,30 +1,30 @@
 #pragma once
 
-#include "EngineIncludes.h"
+#include "Runtime/EngineIncludes.h"
 
 #include <d3d12.h>
 #include <DirectXMath.h>
 #include <wrl/client.h>
 
-#include "Graphics/Texture.h"
-#include "Core/Component.h"
+#include "Runtime/Graphics/Texture.h"
+//#include "Core/Component.h"
+#include "Runtime/Graphics/Renderer/Renderer.h"
 
 DELTA_ENGINE_NS_BEGIN
 
-class SpriteRenderer: public Component
+class SpriteRenderer: public Renderer
 {
-	public:
+public:
 	SpriteRenderer();
 	~SpriteRenderer();
 
-	void Start(float x, float y, float width, float height, const char* texturePath, Microsoft::WRL::ComPtr<ID3D12Device> device, Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> srvHeap);
+	void Start(float width, float height, const char* texturePath, Microsoft::WRL::ComPtr<ID3D12Device> device, Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> srvHeap);
 	void Render(const Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>& commandList) const;
 
 private:
-	float x;
-	float y;
 	float width;
 	float height;
+    const char* m_texturePath;
 	
     // ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
     // ComPtr<ID3D12DescriptorHeap> m_srvHeap;
@@ -44,6 +44,10 @@ private:
 	    DirectX::XMFLOAT4 color;
 	    DirectX::XMFLOAT2 uv;
     };
+
+protected:
+    virtual void InitGraphicState(DXGraphicsContext context) override;
+    virtual void GatherDrawCalls(DXGraphicsContext context) override;
 
 private:
     // static const UINT FrameCount = 2;

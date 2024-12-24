@@ -17,28 +17,33 @@ GameObject::~GameObject()
 	//}
 }
 
-template <typename T> requires IsComponent<T>
-std::shared_ptr<Component> GameObject::AddComponent()
-{
-	std::shared_ptr<Component> component = std::make_shared<T>();
-	m_components.push_back(component);
-	return component;
+void DeltaEngine::GameObject::Destroy() {
+
 }
 
-template<typename T> requires IsSceneComponent<T>
-std::shared_ptr<SceneComponent> DeltaEngine::GameObject::AddSceneComponent() {
-	std::shared_ptr<SceneComponent> sceneComponent = std::make_shared<T>();
-    m_sceneComponents.push_back(sceneComponent);
-    if (m_rootSceneComponent.expired()) {
-        m_rootSceneComponent = sceneComponent;
-		auto worldSceneRoot = m_currentWorld->GetRootSceneComponent();
-        if (worldSceneRoot) {
-            sceneComponent->SetParent(worldSceneRoot);
-        }
-	}
-	else {
-        sceneComponent->SetParent(m_rootSceneComponent.lock());
-	}
+//template <typename T> requires IsComponent<T>
+//std::shared_ptr<T> GameObject::AddComponent()
+//{
+//	std::shared_ptr<T> component = std::make_shared<T>();
+//	m_components.push_back(component);
+//	return component;
+//}
 
-    return sceneComponent;
-}
+//template<typename T> requires IsSceneComponent<T>
+//std::shared_ptr<T> DeltaEngine::GameObject::AddSceneComponent()
+//{
+//	std::shared_ptr<T> sceneComponent = std::make_shared<T>();
+//    m_sceneComponents.push_back(sceneComponent);
+//    if (m_rootSceneComponent.expired()) {
+//        m_rootSceneComponent = sceneComponent;
+//		auto worldSceneRoot = m_currentWorld->GetRootSceneComponent();
+//        if (worldSceneRoot) {
+//            sceneComponent->SetParent(worldSceneRoot);
+//        }
+//	}
+//	else {
+//        sceneComponent->SetParent(m_rootSceneComponent.lock());
+//	}
+//
+//    return sceneComponent;
+//}

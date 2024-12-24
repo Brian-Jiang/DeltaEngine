@@ -7,6 +7,7 @@
 #include "Importers/ModelImporter.h"
 #include "Graphics/DirectX/VertexAttributes.h"
 #include "Graphics/Structures/Vertex.h"
+#include "Runtime/Core/GameObject.h"
 
 #define SCREEN_WIDTH   1280
 #define SCREEN_HEIGHT  720
@@ -22,7 +23,7 @@ EngineMain::EngineMain()
 {
     EngineMain::instance = this;
 
-    dxSprite = new SpriteRenderer();
+    //dxSprite = new SpriteRenderer();
     meshRenderer = new MeshRenderer();
     meshRenderer2 = new MeshRenderer();
     time = new Time();
@@ -66,15 +67,21 @@ void EngineMain::Initialize()
     //dxSprite->Start(-1.0f, -1.0f, 2.0f, 2.0f, "Assets/logo.png", dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
 
     dxRenderManager->InitFinish();
+
+
+    m_world = std::make_shared<DWorld>();
+    auto go = m_world->CreateGameObject();
+    auto spriteRenderer = go->AddSceneComponent<SpriteRenderer>();
+
 }
 
-void ThrowIfFailed(HRESULT hresult)
-{
-    if (FAILED(hresult))
-    {
-        throw std::exception();
-    }
-}
+//void ThrowIfFailed(HRESULT hresult)
+//{
+//    if (FAILED(hresult))
+//    {
+//        throw std::exception();
+//    }
+//}
 
 void EngineMain::InitSDL() {
     int rendererFlags, windowFlags;
@@ -201,5 +208,8 @@ void EngineMain::Draw()
     //meshRenderer->Render(dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap(), dxRenderManager->GetDevice());
     //meshRenderer2->Render(dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap(), dxRenderManager->GetDevice());
     m_instancedDrawer->Draw(dxRenderManager->GetCommandList());
+
+    // TODO gather draw call
+
     dxRenderManager->RenderFrame();
 }

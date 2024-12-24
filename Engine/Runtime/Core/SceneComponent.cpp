@@ -4,7 +4,7 @@ using namespace DirectX;
 using namespace DeltaEngine;
 
 DeltaEngine::SceneComponent::SceneComponent()
-    : DObject()
+    : DObject(), m_localTransform(XMMatrixIdentity()), m_worldTransform(XMMatrixIdentity())
 {
 
 }
