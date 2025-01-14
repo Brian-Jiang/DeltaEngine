@@ -15,6 +15,8 @@
 using namespace DeltaEngine;
 using namespace DirectX;
 
+struct DXGraphicsContext;
+
 EngineMain* EngineMain::instance = nullptr;
 
 EngineMain::EngineMain() 
@@ -204,12 +206,15 @@ void EngineMain::Draw()
     //commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
 
     dxRenderManager->PrepareFrame();
+
     //dxSprite->Render(dxRenderManager->GetCommandList());
     //meshRenderer->Render(dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap(), dxRenderManager->GetDevice());
     //meshRenderer2->Render(dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap(), dxRenderManager->GetDevice());
     m_instancedDrawer->Draw(dxRenderManager->GetCommandList());
 
+    DXGraphicsContext context = dxRenderManager->GetGraphicsContext();
     // TODO gather draw call
+    m_world->GatherDrawCalls(context);
 
     dxRenderManager->RenderFrame();
 }

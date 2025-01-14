@@ -12,6 +12,7 @@
 #include "DirectX/DXUploadBuffer.h"
 #include "DirectX/DXDescriptorHeapAllocator.h"
 #include "Structures/Light.h"
+#include "Runtime/Graphics/DXGraphicsContext.h"
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -30,7 +31,11 @@ public:
 	void ResizeDepthBuffer(int width, int height);
     void OnDestroy();
 
+	DXGraphicsContext GetGraphicsContext() const;
+
 	DXCommandQueue *GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) const;
+    UINT GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const;
+
 	DXUploadBuffer& GetUploadBuffer() { return m_dxUploadBuffer; }
 
 	void ToggleVSync(bool enableVSync) { g_VSync = enableVSync; }

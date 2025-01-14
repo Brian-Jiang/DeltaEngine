@@ -19,7 +19,7 @@ public:
 	~SpriteRenderer();
 
 	void Start(float width, float height, const char* texturePath, Microsoft::WRL::ComPtr<ID3D12Device> device, Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> srvHeap);
-	void Render(const Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>& commandList) const;
+	//void Render(const Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>& commandList) const;
 
 private:
 	float width;

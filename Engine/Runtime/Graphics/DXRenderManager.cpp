@@ -425,7 +425,10 @@ void DXRenderManager::PrepareFrame()
     m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
     m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    
+    CD3DX12_DESCRIPTOR_RANGE1 cbvRanges[3] = {};
+    cbvRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0); // b0
+    cbvRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1); // b1
+    cbvRanges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2); // b2
 }
 
 void DXRenderManager::RenderFrame()
@@ -621,6 +624,14 @@ void DXRenderManager::OnDestroy()
     WaitForPreviousFrame();
 }
 
+DXGraphicsContext DeltaEngine::DXRenderManager::GetGraphicsContext() const {
+    auto context = DXGraphicsContext();
+    context.m_device = m_device.Get();
+    context.m_commandList = m_commandList.Get();
+    context.m_srvHeap = m_srvHeap.Get();
+    return context;
+}
+
 DXCommandQueue* DXRenderManager::GetCommandQueue(const D3D12_COMMAND_LIST_TYPE type) const
 {
     switch (type)
@@ -632,4 +643,8 @@ DXCommandQueue* DXRenderManager::GetCommandQueue(const D3D12_COMMAND_LIST_TYPE t
         default:
             return nullptr;
     }
+}
+
+UINT DeltaEngine::DXRenderManager::GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const {
+    return m_device->GetDescriptorHandleIncrementSize(type);
 }

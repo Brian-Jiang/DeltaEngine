@@ -27,12 +27,12 @@ void SpriteRenderer::Start(float width, float height, const char* texturePath, c
 	
 }
 
-void SpriteRenderer::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList) const
-{
-    commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
-    commandList->DrawInstanced(6, 1, 0, 0);
-}
+//void SpriteRenderer::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList) const
+//{
+//    commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+//    commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
+//    commandList->DrawInstanced(6, 1, 0, 0);
+//}
 
 void DeltaEngine::SpriteRenderer::InitGraphicState(DXGraphicsContext context) {
     auto& device = context.m_device;
