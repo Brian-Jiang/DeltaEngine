@@ -154,7 +154,7 @@ void MeshRenderer::LoadTexture(const Texture* texture, const ComPtr<ID3D12Device
     D3D12_PLACED_SUBRESOURCE_FOOTPRINT placedTexture2D = { 0 };
     placedTexture2D.Offset = 0;
     placedTexture2D.Footprint = pitchedDesc;
-
+    
     D3D12_TEXTURE_COPY_LOCATION dst = CD3DX12_TEXTURE_COPY_LOCATION(textureResource.Get(), 0);
     D3D12_TEXTURE_COPY_LOCATION src = CD3DX12_TEXTURE_COPY_LOCATION(textureUploadHeap.Get(), placedTexture2D);
     commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
