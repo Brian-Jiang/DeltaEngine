@@ -41,29 +41,25 @@
 
 DELTA_ENGINE_NS_BEGIN
 
-//class Device;
+class Device;
 
-class Resource
-{
+class Resource {
 public:
     /**
      * Get the Device that was used to create this resource.
      */
-    Microsoft::WRL::ComPtr<ID3D12Device>& GetDevice() const {
+    Device& GetDevice() const {
         return m_Device;
     }
 
     // Get access to the underlying D3D12 resource
-    Microsoft::WRL::ComPtr<ID3D12Resource> GetD3D12Resource() const
-    {
+    Microsoft::WRL::ComPtr<ID3D12Resource> GetD3D12Resource() const {
         return m_d3d12Resource;
     }
 
-    D3D12_RESOURCE_DESC GetD3D12ResourceDesc() const
-    {
+    D3D12_RESOURCE_DESC GetD3D12ResourceDesc() const {
         D3D12_RESOURCE_DESC resDesc = {};
-        if ( m_d3d12Resource )
-        {
+        if (m_d3d12Resource) {
             resDesc = m_d3d12Resource->GetDesc();
         }
 
@@ -73,31 +69,30 @@ public:
     /**
      * Set the name of the resource. Useful for debugging purposes.
      */
-    void                SetName( const std::wstring& name );
-    const std::wstring& GetName() const
-    {
+    void                SetName(const std::wstring& name);
+    const std::wstring& GetName() const {
         return m_ResourceName;
     }
 
     /**
      * Check if the resource format supports a specific feature.
      */
-    bool CheckFormatSupport( D3D12_FORMAT_SUPPORT1 formatSupport ) const;
-    bool CheckFormatSupport( D3D12_FORMAT_SUPPORT2 formatSupport ) const;
+    bool CheckFormatSupport(D3D12_FORMAT_SUPPORT1 formatSupport) const;
+    bool CheckFormatSupport(D3D12_FORMAT_SUPPORT2 formatSupport) const;
 
 protected:
-//    friend class CommandList;
+    //    friend class CommandList;
 
-    // Resource creation should go through the device.
-    Resource(Microsoft::WRL::ComPtr<ID3D12Device>& device, const D3D12_RESOURCE_DESC& resourceDesc,
-                       const D3D12_CLEAR_VALUE* clearValue = nullptr );
-    Resource(Microsoft::WRL::ComPtr<ID3D12Device>& device, Microsoft::WRL::ComPtr<ID3D12Resource> resource,
-              const D3D12_CLEAR_VALUE* clearValue = nullptr );
+        // Resource creation should go through the device.
+    Resource(Device& device, const D3D12_RESOURCE_DESC& resourceDesc,
+        const D3D12_CLEAR_VALUE* clearValue = nullptr);
+    Resource(Device& device, Microsoft::WRL::ComPtr<ID3D12Resource> resource,
+        const D3D12_CLEAR_VALUE* clearValue = nullptr);
 
     virtual ~Resource() = default;
 
     // The device that is used to create this resource.
-    Microsoft::WRL::ComPtr<ID3D12Device>& m_Device;
+    Device& m_Device;
 
     // The underlying D3D12 resource.
     Microsoft::WRL::ComPtr<ID3D12Resource> m_d3d12Resource;

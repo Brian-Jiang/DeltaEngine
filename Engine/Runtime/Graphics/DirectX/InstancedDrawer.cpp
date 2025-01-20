@@ -29,9 +29,9 @@ void InstancedDrawer::CreateBuffer(const Microsoft::WRL::ComPtr<ID3D12Device>& d
     {
         const UINT vertexBufferSize = static_cast<UINT>(m_mesh->vertices.size() * sizeof(Vertex));
         auto addrPair = uploadBuffer.Allocate(vertexBufferSize, sizeof(Vertex));
-        memcpy(addrPair.m_cpuAddr, m_mesh->vertices.data(), vertexBufferSize);
+        memcpy(addrPair.CPU, m_mesh->vertices.data(), vertexBufferSize);
         D3D12_VERTEX_BUFFER_VIEW vertexBufferView{
-            addrPair.m_gpuAddr,
+            addrPair.GPU,
             vertexBufferSize,
             sizeof(Vertex)
         };
@@ -44,9 +44,9 @@ void InstancedDrawer::CreateBuffer(const Microsoft::WRL::ComPtr<ID3D12Device>& d
     {
         const UINT indexBufferSize = static_cast<UINT>(m_mesh->indices.size() * sizeof(unsigned int));
         auto addrPair = uploadBuffer.Allocate(indexBufferSize, sizeof(unsigned int));
-        memcpy(addrPair.m_cpuAddr, m_mesh->indices.data(), indexBufferSize);
+        memcpy(addrPair.CPU, m_mesh->indices.data(), indexBufferSize);
         D3D12_INDEX_BUFFER_VIEW indexBufferView{
-            addrPair.m_gpuAddr,
+            addrPair.GPU,
             indexBufferSize,
             DXGI_FORMAT_R32_UINT
         };

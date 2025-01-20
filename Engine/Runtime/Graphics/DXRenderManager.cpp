@@ -10,16 +10,19 @@
 #include "Graphics/DXUtils.h"
 #include "IO/IOManager.h"
 #include "Core/Time.h"
+#include "Runtime/Graphics/DirectX/Device.h"
 
 using namespace Microsoft::WRL;
 using namespace DeltaEngine;
 using namespace DirectX;
 
-DXRenderManager::DXRenderManager(HWND hwnd, UINT width, UINT height): hwnd(hwnd), m_width(width), m_height(height),
+DXRenderManager::DXRenderManager(HWND hwnd, UINT width, UINT height)
+    : hwnd(hwnd), m_width(width), m_height(height),
     m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
     m_scissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX)),
-    m_rtvDescriptorSize(0), m_dxUploadBuffer(4 * 1024 * 1024), m_DSVHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV),
-    m_rtvHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
+    m_rtvDescriptorSize(0), m_dxUploadBuffer(4 * 1024 * 1024),
+    //m_DSVHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV),
+    //m_rtvHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
 {
 
     // Check for DirectX Math library support.
@@ -43,9 +46,10 @@ void DXRenderManager::LoadPipeline()
     // so all possible errors generated while creating DX12 objects
     // are caught by the debug layer.
     {
-        ComPtr<ID3D12Debug> debugController;
-        ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)));
-        debugController->EnableDebugLayer();
+        //ComPtr<ID3D12Debug> debugController;
+        //ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)));
+        //debugController->EnableDebugLayer();
+        Device::EnableDebugLayer();
     }
 #endif
 
@@ -53,12 +57,13 @@ void DXRenderManager::LoadPipeline()
     ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&factory)));
 
     auto adapter = DXUtils::GetAdapter(m_useWarpDevice);
-    m_device = DXUtils::CreateDevice(adapter);
+    //m_device = DXUtils::CreateDevice(adapter);
+    m_device = std::make_shared<Device>(adapter);
 
-    m_dxUploadBuffer.SetDevice(m_device);
+    //m_dxUploadBuffer.SetDevice(m_device);
     // Create command queues.
-    directCommandQueue = new DXCommandQueue(m_device, D3D12_COMMAND_LIST_TYPE_DIRECT);
-    copyCommandQueue = new DXCommandQueue(m_device, D3D12_COMMAND_LIST_TYPE_COPY);
+    //directCommandQueue = new DXCommandQueue(m_device, D3D12_COMMAND_LIST_TYPE_DIRECT);
+    //copyCommandQueue = new DXCommandQueue(m_device, D3D12_COMMAND_LIST_TYPE_COPY);
 
     // Describe and create the swap chain.
     m_swapChain = DXUtils::CreateSwapChain(hwnd, directCommandQueue->GetCommandQueue(), m_width, m_height, FrameCount);
@@ -74,7 +79,7 @@ void DXRenderManager::LoadPipeline()
         // RTV describes the location of the texture resource in GPU memory, as well as size and format.
         // Each frame has its own RTV.
         //m_rtvHeap = DXUtils::CreateDescriptorHeap(m_device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, FrameCount);
-        m_rtvHeap.SetDevice(m_device);
+        //m_rtvHeap.SetDevice(m_device);
 
         // Describe and create a shader resource view (SRV) heap for the texture.
         D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
@@ -94,7 +99,7 @@ void DXRenderManager::LoadPipeline()
     //dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
     //ThrowIfFailed(m_device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_DSVHeap)));
 
-    m_DSVHeap.SetDevice(m_device);
+    //m_DSVHeap.SetDevice(m_device);
     m_DSVHeapAllocation = m_DSVHeap.Allocate(1);
 
     // Create frame resources.

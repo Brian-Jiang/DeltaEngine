@@ -1,6 +1,6 @@
 #pragma once
 
-#include "EngineIncludes.h"
+#include "Runtime/EngineIncludes.h"
 
 #include <chrono>
 #include <dxgi1_6.h>
@@ -8,13 +8,17 @@
 #include <d3dx12.h>
 #include <DirectXMath.h>
 
-#include "DirectX/DXCommandQueue.h"
-#include "DirectX/DXUploadBuffer.h"
-#include "DirectX/DXDescriptorHeapAllocator.h"
+#include "DirectX/CommandQueue.h"
+#include "DirectX/UploadBuffer.h"
+#include "DirectX/DescriptorAllocator.h"
 #include "Structures/Light.h"
 #include "Runtime/Graphics/DXGraphicsContext.h"
 
 DELTA_ENGINE_NS_BEGIN
+
+class Device;
+class RootSignature;
+class SwapChain;
 
 class DXRenderManager
 {
@@ -33,10 +37,10 @@ public:
 
 	DXGraphicsContext GetGraphicsContext() const;
 
-	DXCommandQueue *GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) const;
+	CommandQueue *GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) const;
     UINT GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const;
 
-	DXUploadBuffer& GetUploadBuffer() { return m_dxUploadBuffer; }
+	UploadBuffer& GetUploadBuffer() { return m_dxUploadBuffer; }
 
 	void ToggleVSync(bool enableVSync) { g_VSync = enableVSync; }
 
@@ -73,8 +77,8 @@ private:
 
     static const UINT FrameCount = 2;
 
-	DXCommandQueue *directCommandQueue;
-	DXCommandQueue *copyCommandQueue;
+	//DXCommandQueue *directCommandQueue;
+	//DXCommandQueue *copyCommandQueue;
 
     bool m_useWarpDevice;
 
@@ -82,7 +86,8 @@ private:
     D3D12_RECT m_scissorRect;
 
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapChain;
-	Microsoft::WRL::ComPtr<ID3D12Device4> m_device;
+	//Microsoft::WRL::ComPtr<ID3D12Device4> m_device;
+	std::shared_ptr<Device> m_device;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
 	// Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_commandQueue;
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
@@ -90,6 +95,10 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvHeap;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList5> m_commandList;
+
+	std::shared_ptr<SwapChain> m_swapChain;
+	std::shared_ptr<RootSignature> m_rootSignature;
+
     UINT m_rtvDescriptorSize;
     UINT m_width;
     UINT m_height;
@@ -99,11 +108,11 @@ private:
     Microsoft::WRL::ComPtr<ID3D12Resource> m_DepthBuffer;
     // Descriptor heap for depth buffer.
     //Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DSVHeap;
-	DXDescriptorHeapAllocator m_rtvHeap;
-	DXDescriptorHeapAllocation m_rtvHeapAllocation;
+	DescriptorAllocator m_rtvHeap;
+	DescriptorAllocation m_rtvHeapAllocation;
 
-	DXDescriptorHeapAllocator m_DSVHeap;
-	DXDescriptorHeapAllocation m_DSVHeapAllocation;
+	DescriptorAllocator m_DSVHeap;
+	DescriptorAllocation m_DSVHeapAllocation;
 
     // Synchronization objects.
     UINT m_frameIndex;
@@ -115,7 +124,7 @@ private:
 	Light m_light;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_lightCbData;
 
-	DXUploadBuffer m_dxUploadBuffer;
+	//DXUploadBuffer m_dxUploadBuffer;
 };
 
 DELTA_ENGINE_NS_END

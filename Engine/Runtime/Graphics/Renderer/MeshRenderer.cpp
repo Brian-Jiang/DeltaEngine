@@ -44,9 +44,9 @@ void MeshRenderer::AddMesh(const Mesh* mesh, const XMMATRIX meshTransform, const
     {
         const UINT vertexBufferSize = static_cast<UINT>(mesh->vertices.size() * sizeof(Vertex));
         auto addrPair = uploadBuffer.Allocate(vertexBufferSize, sizeof(Vertex));
-        memcpy(addrPair.m_cpuAddr, mesh->vertices.data(), vertexBufferSize);
+        memcpy(addrPair.CPU, mesh->vertices.data(), vertexBufferSize);
         D3D12_VERTEX_BUFFER_VIEW vertexBufferView{
-            addrPair.m_gpuAddr,
+            addrPair.GPU,
             vertexBufferSize,
             sizeof(Vertex)
         };
@@ -58,9 +58,9 @@ void MeshRenderer::AddMesh(const Mesh* mesh, const XMMATRIX meshTransform, const
     {
         const UINT indexBufferSize = static_cast<UINT>(mesh->indices.size() * sizeof(unsigned int));
         auto addrPair = uploadBuffer.Allocate(indexBufferSize, sizeof(unsigned int));
-        memcpy(addrPair.m_cpuAddr, mesh->indices.data(), indexBufferSize);
+        memcpy(addrPair.CPU, mesh->indices.data(), indexBufferSize);
         D3D12_INDEX_BUFFER_VIEW indexBufferView{
-            addrPair.m_gpuAddr,
+            addrPair.GPU,
             indexBufferSize,
             DXGI_FORMAT_R32_UINT
         };
@@ -72,7 +72,7 @@ void MeshRenderer::AddMesh(const Mesh* mesh, const XMMATRIX meshTransform, const
     {
         const UINT constantBufferSize = sizeof(DirectX::XMFLOAT4X4);
         auto addrPair = uploadBuffer.Allocate(constantBufferSize, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
-        DirectX::XMStoreFloat4x4(static_cast<DirectX::XMFLOAT4X4*>(addrPair.m_cpuAddr), meshTransform);
+        DirectX::XMStoreFloat4x4(static_cast<DirectX::XMFLOAT4X4*>(addrPair.CPU), meshTransform);
     }
 
     for (size_t i = 0; i < mesh->textures.size(); ++i) {
