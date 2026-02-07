@@ -16,7 +16,8 @@ DELTA_ENGINE_NS_BEGIN
 class CommandList;
 class Device;
 
-class CommandQueue {
+class CommandQueue
+{
 public:
     // Get an available command list from the command queue.
     std::shared_ptr<CommandList> GetCommandList();
@@ -38,6 +39,7 @@ public:
 
 protected:
     friend class std::default_delete<CommandQueue>;
+    friend class Device;
 
     // Only the device can create command queues.
     CommandQueue(Device& device, D3D12_COMMAND_LIST_TYPE type);

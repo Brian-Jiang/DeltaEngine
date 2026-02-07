@@ -11,6 +11,7 @@
 #include "IO/IOManager.h"
 #include "Core/Time.h"
 #include "Runtime/Graphics/DirectX/Device.h"
+#include "Runtime/Graphics/DirectX/CommandList.h"
 
 using namespace Microsoft::WRL;
 using namespace DeltaEngine;
@@ -20,9 +21,7 @@ DXRenderManager::DXRenderManager(HWND hwnd, UINT width, UINT height)
     : hwnd(hwnd), m_width(width), m_height(height),
     m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
     m_scissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX)),
-    m_rtvDescriptorSize(0), m_dxUploadBuffer(4 * 1024 * 1024),
-    //m_DSVHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV),
-    //m_rtvHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
+    m_rtvDescriptorSize(0)
 {
 
     // Check for DirectX Math library support.
@@ -60,13 +59,21 @@ void DXRenderManager::LoadPipeline()
     //m_device = DXUtils::CreateDevice(adapter);
     m_device = std::make_shared<Device>(adapter);
 
+    // Initialize descriptor allocators after device is created
+    m_rtvHeap = std::unique_ptr<DescriptorAllocator>(new DescriptorAllocator(*m_device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
+    m_DSVHeap = std::unique_ptr<DescriptorAllocator>(new DescriptorAllocator(*m_device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
+
+    // Initialize the upload buffer
+    m_uploadBuffer = std::make_unique<UploadBuffer>(*m_device);
+
     //m_dxUploadBuffer.SetDevice(m_device);
     // Create command queues.
     //directCommandQueue = new DXCommandQueue(m_device, D3D12_COMMAND_LIST_TYPE_DIRECT);
     //copyCommandQueue = new DXCommandQueue(m_device, D3D12_COMMAND_LIST_TYPE_COPY);
+    CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
 
     // Describe and create the swap chain.
-    m_swapChain = DXUtils::CreateSwapChain(hwnd, directCommandQueue->GetCommandQueue(), m_width, m_height, FrameCount);
+    m_swapChain = DXUtils::CreateSwapChain(hwnd, directCommandQueue.GetD3D12CommandQueue(), m_width, m_height, FrameCount);
 
     // This sample does not support fullscreen transitions.
     ThrowIfFailed(factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER));
@@ -86,7 +93,7 @@ void DXRenderManager::LoadPipeline()
         srvHeapDesc.NumDescriptors = 30;
         srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
         srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-        ThrowIfFailed(m_device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvHeap)));
+        ThrowIfFailed(m_device->GetD3D12Device()->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvHeap)));
     }
 
     // Get the size of the RTV descriptor on the device. Different devices may have different sizes.
@@ -100,11 +107,11 @@ void DXRenderManager::LoadPipeline()
     //ThrowIfFailed(m_device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_DSVHeap)));
 
     //m_DSVHeap.SetDevice(m_device);
-    m_DSVHeapAllocation = m_DSVHeap.Allocate(1);
+    m_DSVHeapAllocation = m_DSVHeap->Allocate(1);
 
     // Create frame resources.
     {
-        m_rtvHeapAllocation = m_rtvHeap.Allocate(FrameCount);
+        m_rtvHeapAllocation = m_rtvHeap->Allocate(FrameCount);
         // Get a handle to the first descriptor in the descriptor heap.
         //CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
         //auto rtvHandle = m_rtvHeapAllocation.GetDescriptorHandle(0);
@@ -113,7 +120,7 @@ void DXRenderManager::LoadPipeline()
         for (UINT n = 0; n < FrameCount; n++)
         {
             ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
-            m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, m_rtvHeapAllocation.GetDescriptorHandle(n));
+            m_device->GetD3D12Device()->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, m_rtvHeapAllocation.GetDescriptorHandle(n));
             //rtvHandle.Offset(1, m_rtvDescriptorSize);
         }
     }
@@ -181,7 +188,7 @@ void DXRenderManager::LoadAssets()
         resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
         resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
-        HRESULT hr = m_device->CreateCommittedResource(
+        HRESULT hr = m_device->GetD3D12Device()->CreateCommittedResource(
             &heapProps,
             D3D12_HEAP_FLAG_NONE,
             &resourceDesc,
@@ -206,7 +213,7 @@ void DXRenderManager::LoadAssets()
         // This is the highest version the sample supports. If CheckFeatureSupport succeeds, the HighestVersion returned will not be greater than this.
         featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
 
-        if (FAILED(m_device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
+        if (FAILED(m_device->GetD3D12Device()->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
         {
             featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
         }
@@ -246,7 +253,7 @@ void DXRenderManager::LoadAssets()
         ComPtr<ID3DBlob> signature;
         ComPtr<ID3DBlob> error;
         ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error));
-        ThrowIfFailed(m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
+        ThrowIfFailed(m_device->GetD3D12Device()->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
     }
 
     // Create the pipeline state, which includes compiling and loading shaders.
@@ -364,11 +371,13 @@ void DXRenderManager::LoadAssets()
         psoDesc.NumRenderTargets = 1;
         psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
         psoDesc.SampleDesc.Count = 1;
-        ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+        ThrowIfFailed(m_device->GetD3D12Device()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
     }
 
     // Get the command list.
-    m_commandList = directCommandQueue->GetCommandList(m_pipelineState);
+    CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+    auto cmdList = directCommandQueue.GetCommandList();
+    m_commandList = cmdList->GetD3D12CommandList();
 
     // Resize/Create the depth buffer.
     ResizeDepthBuffer(m_width, m_height);
@@ -390,17 +399,20 @@ void DXRenderManager::LoadAssets()
 void DXRenderManager::InitFinish()
 {
     // Close the command list and execute it to begin the initial GPU setup.
-    frameFenceValues[m_frameIndex] = directCommandQueue->ExecuteCommandList(m_commandList);
+    CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+    auto cmdList = directCommandQueue.GetCommandList();
+    frameFenceValues[m_frameIndex] = directCommandQueue.ExecuteCommandList(cmdList);
 
     WaitForPreviousFrame();
 }
 
 void DXRenderManager::PrepareFrame()
 {
-    m_rtvHeap.ReleaseAllStale(Time::frameSinceStart);
-    m_DSVHeap.ReleaseAllStale(Time::frameSinceStart);
+    m_device->ReleaseStaleDescriptors();
 
-    m_commandList = directCommandQueue->GetCommandList(m_pipelineState);
+    CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+    auto cmdList = directCommandQueue.GetCommandList();
+    m_commandList = cmdList->GetD3D12CommandList();
     
     // Indicate that the back buffer will be used as a render target.
     auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -442,7 +454,9 @@ void DXRenderManager::RenderFrame()
     auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
     m_commandList->ResourceBarrier(1, &barrier);
 
-    frameFenceValues[m_frameIndex] = directCommandQueue->ExecuteCommandList(m_commandList);
+    CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+    auto cmdList = directCommandQueue.GetCommandList();
+    frameFenceValues[m_frameIndex] = directCommandQueue.ExecuteCommandList(cmdList);
 
     // Present the frame.
     UINT syncInterval = g_VSync ? 1 : 0;
@@ -456,7 +470,8 @@ void DXRenderManager::RenderFrame()
 void DXRenderManager::WaitForPreviousFrame()
 {
     // Wait until the previous frame is finished.
-    directCommandQueue->WaitForFenceValue(frameFenceValues[m_frameIndex]);
+    CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+    directCommandQueue.WaitForFenceValue(frameFenceValues[m_frameIndex]);
 
     m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 }
@@ -467,7 +482,8 @@ void DXRenderManager::Resize(UINT width, UINT height)
     {
         // Wait for the GPU to be done with all resources.
         // WaitForPreviousFrame();
-        directCommandQueue->Flush();
+        CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+        directCommandQueue.Flush();
 
         // Release the resources holding references to the swap chain (requirement of IDXGISwapChain::ResizeBuffers).
         for (UINT n = 0; n < FrameCount; n++)
@@ -497,7 +513,7 @@ void DXRenderManager::Resize(UINT width, UINT height)
             for (UINT n = 0; n < FrameCount; n++)
             {
                 ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
-                m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, m_rtvHeapAllocation.GetDescriptorHandle(n));
+                m_device->GetD3D12Device()->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, m_rtvHeapAllocation.GetDescriptorHandle(n));
                 //rtvHandle.Offset(1, m_rtvDescriptorSize);
             }
         }
@@ -560,9 +576,10 @@ void DXRenderManager::SetFullscreen(bool fullscreen)
 }
 
 void DXRenderManager::ResizeDepthBuffer(int width, int height) {
-	// Wait for the GPU to be done with all resources.
-	WaitForPreviousFrame();
-	directCommandQueue->Flush();
+// Wait for the GPU to be done with all resources.
+WaitForPreviousFrame();
+CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+directCommandQueue.Flush();
 
 	// Release the resources holding references to the swap chain (requirement of IDXGISwapChain::ResizeBuffers).
 	//for (UINT n = 0; n < FrameCount; n++) {
@@ -581,7 +598,7 @@ void DXRenderManager::ResizeDepthBuffer(int width, int height) {
     auto hp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
     auto rd = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, width, height,
         1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
-    ThrowIfFailed(m_device->CreateCommittedResource(
+    ThrowIfFailed(m_device->GetD3D12Device()->CreateCommittedResource(
         &hp,
         D3D12_HEAP_FLAG_NONE,
         &rd,
@@ -599,7 +616,7 @@ void DXRenderManager::ResizeDepthBuffer(int width, int height) {
     dsv.Flags = D3D12_DSV_FLAG_NONE;
 
     auto dsvHandle = m_DSVHeapAllocation.GetDescriptorHandle(0);
-    m_device->CreateDepthStencilView(m_DepthBuffer.Get(), &dsv, dsvHandle);
+    m_device->GetD3D12Device()->CreateDepthStencilView(m_DepthBuffer.Get(), &dsv, dsvHandle);
 
 	// Resize the swap chain to the desired dimensions.
 	//DXGI_SWAP_CHAIN_DESC desc = {};
@@ -630,24 +647,16 @@ void DXRenderManager::OnDestroy()
 }
 
 DXGraphicsContext DeltaEngine::DXRenderManager::GetGraphicsContext() const {
-    auto context = DXGraphicsContext();
-    context.m_device = m_device.Get();
-    context.m_commandList = m_commandList.Get();
-    context.m_srvHeap = m_srvHeap.Get();
+    DXGraphicsContext context;
+    context.m_device = m_device->GetD3D12Device();
+    context.m_commandList = m_commandList;
+    context.m_srvHeap = m_srvHeap;
     return context;
 }
 
-DXCommandQueue* DXRenderManager::GetCommandQueue(const D3D12_COMMAND_LIST_TYPE type) const
+CommandQueue& DXRenderManager::GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) const
 {
-    switch (type)
-    {
-        case D3D12_COMMAND_LIST_TYPE_DIRECT:
-            return directCommandQueue;
-        case D3D12_COMMAND_LIST_TYPE_COPY:
-            return copyCommandQueue;
-        default:
-            return nullptr;
-    }
+    return m_device->GetCommandQueue(type);
 }
 
 UINT DeltaEngine::DXRenderManager::GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const {

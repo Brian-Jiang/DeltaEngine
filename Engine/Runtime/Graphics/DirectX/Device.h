@@ -14,7 +14,8 @@ class DescriptorAllocation;
 class CommandQueue;
 class Texture;
 
-class Device {
+class Device : std::enable_shared_from_this<Device>
+{
 
 public:
     /**
@@ -27,6 +28,7 @@ public:
 
     //Device();
     //virtual ~Device() = default;
+
 
     /**
      * Flush all command queues.
@@ -89,7 +91,9 @@ public:
     }
 
 
-protected:
+public:
+    friend class DXRenderManager;
+
     explicit Device(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter);
     virtual ~Device();
     

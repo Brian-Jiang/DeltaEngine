@@ -26,7 +26,7 @@ void Device::ReportLiveObjects() {
     dxgiDebug->Release();
 }
 
-DeltaEngine::Device::Device(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter)
+Device::Device(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter)
     : m_Adapter(adapter) {
     auto& dxgiAdapter = m_Adapter;
 
@@ -69,14 +69,14 @@ D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,  // This warning occurs when using cap
     }
 
 
-    m_DirectCommandQueue = std::make_unique<CommandQueue>(this->GetD3D12Device(), D3D12_COMMAND_LIST_TYPE_DIRECT);
-    m_ComputeCommandQueue = std::make_unique<CommandQueue>(this->GetD3D12Device(), D3D12_COMMAND_LIST_TYPE_COMPUTE);
-    m_CopyCommandQueue = std::make_unique<CommandQueue>(this->GetD3D12Device(), D3D12_COMMAND_LIST_TYPE_COPY);
+    m_DirectCommandQueue = std::unique_ptr<CommandQueue>(new CommandQueue(*this, D3D12_COMMAND_LIST_TYPE_DIRECT));
+    m_ComputeCommandQueue = std::unique_ptr<CommandQueue>(new CommandQueue(*this, D3D12_COMMAND_LIST_TYPE_COMPUTE));
+    m_CopyCommandQueue = std::unique_ptr<CommandQueue>(new CommandQueue(*this, D3D12_COMMAND_LIST_TYPE_COPY));
 
     // Create descriptor allocators
     for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i) {
         m_DescriptorAllocators[i] =
-            std::make_unique<DescriptorAllocator>(this->GetD3D12Device(), static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(i));
+            std::unique_ptr<DescriptorAllocator>(new DescriptorAllocator(*this, static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(i)));
     }
 
     // Check features.

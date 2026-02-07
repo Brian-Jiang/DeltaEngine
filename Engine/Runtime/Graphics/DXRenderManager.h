@@ -13,6 +13,7 @@
 #include "DirectX/DescriptorAllocator.h"
 #include "Structures/Light.h"
 #include "Runtime/Graphics/DXGraphicsContext.h"
+#include "Runtime/Graphics/DirectX/Device.h"
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -37,14 +38,14 @@ public:
 
 	DXGraphicsContext GetGraphicsContext() const;
 
-	CommandQueue *GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) const;
+	CommandQueue& GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) const;
     UINT GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const;
 
-	UploadBuffer& GetUploadBuffer() { return m_dxUploadBuffer; }
+	UploadBuffer& GetUploadBuffer() { return *m_uploadBuffer; }
 
 	void ToggleVSync(bool enableVSync) { g_VSync = enableVSync; }
 
-	const Microsoft::WRL::ComPtr<ID3D12Device4>& GetDevice() { return m_device; }
+	Microsoft::WRL::ComPtr<ID3D12Device2> GetDevice() { return m_device->GetD3D12Device(); }
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> GetCommandList() { return m_commandList; }
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> GetSRVHeap() { return m_srvHeap; }
 	bool IsFullscreen() { return g_Fullscreen; }
@@ -96,9 +97,6 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList5> m_commandList;
 
-	std::shared_ptr<SwapChain> m_swapChain;
-	std::shared_ptr<RootSignature> m_rootSignature;
-
     UINT m_rtvDescriptorSize;
     UINT m_width;
     UINT m_height;
@@ -108,10 +106,10 @@ private:
     Microsoft::WRL::ComPtr<ID3D12Resource> m_DepthBuffer;
     // Descriptor heap for depth buffer.
     //Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DSVHeap;
-	DescriptorAllocator m_rtvHeap;
+	std::unique_ptr<DescriptorAllocator> m_rtvHeap;
 	DescriptorAllocation m_rtvHeapAllocation;
 
-	DescriptorAllocator m_DSVHeap;
+	std::unique_ptr<DescriptorAllocator> m_DSVHeap;
 	DescriptorAllocation m_DSVHeapAllocation;
 
     // Synchronization objects.
@@ -124,7 +122,7 @@ private:
 	Light m_light;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_lightCbData;
 
-	//DXUploadBuffer m_dxUploadBuffer;
+	std::unique_ptr<UploadBuffer> m_uploadBuffer;
 };
 
 DELTA_ENGINE_NS_END

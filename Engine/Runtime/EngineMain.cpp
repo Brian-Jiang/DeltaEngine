@@ -1,4 +1,4 @@
-﻿#include "EngineMain.h"
+#include "EngineMain.h"
 
 #include <vector>
 #include <memory>
@@ -14,8 +14,6 @@
 
 using namespace DeltaEngine;
 using namespace DirectX;
-
-struct DXGraphicsContext;
 
 EngineMain* EngineMain::instance = nullptr;
 

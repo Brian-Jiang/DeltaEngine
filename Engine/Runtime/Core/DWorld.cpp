@@ -33,7 +33,7 @@ void DeltaEngine::DWorld::GatherDrawCalls(DXGraphicsContext context) const {
         }
 
         size_t childCount = current->m_children.size();
-        for (size_t i = childCount - 1; i >= 0; --i) {
+        for (int i = childCount - 1; i >= 0; --i) {
             std::shared_ptr<SceneComponent> child = current->m_children[i];
             stack.push(child);
         }

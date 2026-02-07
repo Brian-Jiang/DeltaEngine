@@ -2,6 +2,8 @@
 
 #include "Graphics/DirectX/Device.h"
 #include "Graphics/DirectX/CommandList.h"
+#include "Runtime/Graphics/DirectX/DynamicDescriptorHeap.h"
+#include "Runtime/Graphics/DirectX/UploadBuffer.h"
 #include "Graphics/DirectX/ResourceStateTracker.h"
 #include "Graphics/DXUtils.h"
 

@@ -33,6 +33,8 @@ public:
 
 protected:
     friend struct std::default_delete<DescriptorAllocator>;
+    friend class Device;
+    friend class DXRenderManager;
 
     // Can only be created by the Device.
     DescriptorAllocator(Device& device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptorsPerHeap = 256);
