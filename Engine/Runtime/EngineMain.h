@@ -58,7 +58,6 @@ public:
 	DirectX::XMMATRIX m_ViewMatrix;
 	DirectX::XMMATRIX m_ProjectionMatrix;
 	DirectX::XMVECTOR eyePosition;
-	DirectX::XMMATRIX mvpMatrix;
 
 private:
     std::shared_ptr<DWorld> m_world;

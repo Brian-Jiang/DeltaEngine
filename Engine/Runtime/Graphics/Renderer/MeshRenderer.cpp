@@ -127,6 +127,20 @@ void DeltaEngine::MeshRenderer::InitGraphicState(DXGraphicsContext& context) {
         ThrowIfFailed(d3d12Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
     }
 
+    // ---- Per-object constant buffer (root parameter 2) ----
+    {
+        const UINT objectCbSize = 256;
+        CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
+        auto desc = CD3DX12_RESOURCE_DESC::Buffer(objectCbSize);
+        ThrowIfFailed(d3d12Device->CreateCommittedResource(
+            &heapProps,
+            D3D12_HEAP_FLAG_NONE,
+            &desc,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            IID_PPV_ARGS(&m_objectCb)));
+    }
+
     // ---- Create vertex/index buffers and load textures for all meshes ----
     for (size_t i = 0; i < meshes.size(); ++i) {
         auto mesh = meshes[i];
@@ -270,10 +284,30 @@ void DeltaEngine::MeshRenderer::GatherDrawCalls(DXGraphicsContext& context)
 {
     auto& commandList = context.commandList;
 
+    DirectX::XMMATRIX rendererWorld = GetWorldTransform();
+
     commandList->SetPipelineState(m_pipelineState.Get());
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
+    struct ObjectData {
+        DirectX::XMFLOAT4X4 worldMatrix;
+        DirectX::XMFLOAT4 color;
+        uint32_t useInstanceMatrix;
+    } obj;
+    obj.color = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+    obj.useInstanceMatrix = 0;
+
     for (int i = 0; i < meshCount; ++i) {
+        // Per-draw model matrix: renderer world * mesh local transform.
+        DirectX::XMMATRIX model = DirectX::XMMatrixMultiply(rendererWorld, meshTransforms[i]);
+        DirectX::XMStoreFloat4x4(&obj.worldMatrix, model);
+
+        void* pObj = nullptr;
+        m_objectCb->Map(0, nullptr, &pObj);
+        memcpy(pObj, &obj, sizeof(obj));
+        m_objectCb->Unmap(0, nullptr);
+
+        commandList->SetGraphicsRootConstantBufferView(2, m_objectCb->GetGPUVirtualAddress());
         commandList->IASetVertexBuffers(0, 1, &vertexBufferViews[i]);
         commandList->IASetIndexBuffer(&indexBufferViews[i]);
 

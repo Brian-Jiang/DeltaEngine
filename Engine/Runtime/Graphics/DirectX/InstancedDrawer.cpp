@@ -78,9 +78,36 @@ void InstancedDrawer::CreateBuffer(const Microsoft::WRL::ComPtr<ID3D12Device>& d
     m_instanceBufferView.BufferLocation = m_instanceBuffer->GetGPUVirtualAddress();
     m_instanceBufferView.SizeInBytes = instanceBufferSize;
     m_instanceBufferView.StrideInBytes = sizeof(InstanceData);
+
+    // Object CB with useInstanceMatrix=1 so shader uses instance buffer world matrix.
+    {
+        const UINT objectCbSize = 256;
+        CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
+        CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Buffer(objectCbSize);
+        device->CreateCommittedResource(
+            &heapProps,
+            D3D12_HEAP_FLAG_NONE,
+            &desc,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            IID_PPV_ARGS(&m_objectCb));
+        struct ObjectData {
+            XMFLOAT4X4 worldMatrix;
+            XMFLOAT4 color;
+            uint32_t useInstanceMatrix;
+        } obj = {};
+        obj.worldMatrix._11 = obj.worldMatrix._22 = obj.worldMatrix._33 = obj.worldMatrix._44 = 1.0f;
+        obj.color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+        obj.useInstanceMatrix = 1;
+        void* p = nullptr;
+        m_objectCb->Map(0, nullptr, &p);
+        memcpy(p, &obj, sizeof(obj));
+        m_objectCb->Unmap(0, nullptr);
+    }
 }
 
 void InstancedDrawer::Draw(const std::shared_ptr<CommandList>& commandList) {
+    commandList->SetGraphicsRootConstantBufferView(2, m_objectCb->GetGPUVirtualAddress());
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
     commandList->IASetVertexBuffers(1, 1, &m_instanceBufferView);

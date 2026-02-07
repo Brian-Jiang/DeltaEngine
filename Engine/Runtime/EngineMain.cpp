@@ -172,10 +172,9 @@ void EngineMain::Draw()
     float aspectRatio = dxRenderManager->GetWidth() / static_cast<float>(dxRenderManager->GetHeight());
     m_ProjectionMatrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(m_FoV), aspectRatio, 0.1f, 100000.0f);
 
-    mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_ViewMatrix);
-    mvpMatrix = XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
-    dxRenderManager->SetMVPMatrix(mvpMatrix);
     dxRenderManager->SetCameraPosition(eyePosition);
+    dxRenderManager->SetViewMatrix(m_ViewMatrix);
+    dxRenderManager->SetProjectionMatrix(m_ProjectionMatrix);
 
     dxRenderManager->PrepareFrame();
 

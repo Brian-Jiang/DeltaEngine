@@ -12,6 +12,7 @@
 #include "DirectX/UploadBuffer.h"
 #include "DirectX/DescriptorAllocator.h"
 #include "Structures/Light.h"
+#include "Structures/Camera.h"
 #include "Runtime/Graphics/DXGraphicsContext.h"
 #include "Runtime/Graphics/DirectX/Device.h"
 
@@ -61,8 +62,9 @@ public:
 	UINT GetWidth() { return m_width; }
 	UINT GetHeight() { return m_height; }
 
-	void SetMVPMatrix(DirectX::XMMATRIX mvp) { mvpMatrix = mvp; }
-	void SetCameraPosition(DirectX::XMVECTOR cam) { DirectX::XMStoreFloat4(&cameraPosition, cam); }
+	void SetCameraPosition(DirectX::XMVECTOR cam) { DirectX::XMStoreFloat4(&m_cameraPosition, cam); }
+	void SetViewMatrix(DirectX::XMMATRIX view) { DirectX::XMStoreFloat4x4(&m_viewMatrix, view); }
+	void SetProjectionMatrix(DirectX::XMMATRIX proj) { DirectX::XMStoreFloat4x4(&m_projectionMatrix, proj); }
 
 private:
 	HWND hwnd;
@@ -114,8 +116,12 @@ private:
     UINT m_frameIndex;
 	UINT64 frameFenceValues[FrameCount] = {};
 
-	DirectX::XMMATRIX mvpMatrix;
-	DirectX::XMFLOAT4 cameraPosition;
+	// Camera (root parameter 0)
+	DirectX::XMFLOAT4X4 m_viewMatrix;
+	DirectX::XMFLOAT4X4 m_projectionMatrix;
+	DirectX::XMFLOAT4 m_cameraPosition;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_cameraCbData;
+
 	Light m_light;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_lightCbData;
 

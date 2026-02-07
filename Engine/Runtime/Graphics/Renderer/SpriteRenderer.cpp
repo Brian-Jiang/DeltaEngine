@@ -244,12 +244,44 @@ void DeltaEngine::SpriteRenderer::InitGraphicState(DXGraphicsContext& context) {
         srvDesc.Texture2D.MipLevels = 1;
         d3d12Device->CreateShaderResourceView(m_texture.Get(), &srvDesc, srvHeap->GetCPUDescriptorHandleForHeapStart());
     }
+
+    // ---- Per-object constant buffer (root parameter 2: world matrix + color) ----
+    {
+        const UINT objectCbSize = 256; // Aligned for CBV
+        CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
+        auto desc = CD3DX12_RESOURCE_DESC::Buffer(objectCbSize);
+        ThrowIfFailed(d3d12Device->CreateCommittedResource(
+            &heapProps,
+            D3D12_HEAP_FLAG_NONE,
+            &desc,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            IID_PPV_ARGS(&m_objectCb)));
+    }
 }
 
 void DeltaEngine::SpriteRenderer::GatherDrawCalls(DXGraphicsContext& context) {
     auto& commandList = context.commandList;
+
+    // Per-object: model matrix from SceneComponent, set object CB at root [2].
+    DirectX::XMMATRIX world = GetWorldTransform();
+    struct ObjectData {
+        DirectX::XMFLOAT4X4 worldMatrix;
+        DirectX::XMFLOAT4 color;
+        uint32_t useInstanceMatrix;
+    } obj;
+    DirectX::XMStoreFloat4x4(&obj.worldMatrix, world);
+    obj.color = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+    obj.useInstanceMatrix = 0;
+    void* pObj = nullptr;
+    m_objectCb->Map(0, nullptr, &pObj);
+    memcpy(pObj, &obj, sizeof(obj));
+    m_objectCb->Unmap(0, nullptr);
+
     commandList->SetPipelineState(m_pipelineState.Get());
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
+    commandList->SetGraphicsRootConstantBufferView(2, m_objectCb->GetGPUVirtualAddress());
+    commandList->SetGraphicsRootDescriptorTable(1, CD3DX12_GPU_DESCRIPTOR_HANDLE(context.srvHeap->GetGPUDescriptorHandleForHeapStart(), 0, context.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)));
     commandList->DrawInstanced(6, 1, 0, 0);
 }

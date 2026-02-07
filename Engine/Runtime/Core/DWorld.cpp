@@ -8,7 +8,8 @@
 
 using namespace DeltaEngine;
 
-DeltaEngine::DWorld::DWorld() {
+DeltaEngine::DWorld::DWorld()
+{
     std::shared_ptr<SceneComponent> sceneComponent = std::make_shared<SceneComponent>();
     m_rootSceneComponent = sceneComponent;
 }
@@ -19,7 +20,8 @@ std::shared_ptr<GameObject> DeltaEngine::DWorld::CreateGameObject() {
     return gameObject;
 }
 
-void DeltaEngine::DWorld::InitRenderers(DXGraphicsContext& context) const {
+void DeltaEngine::DWorld::InitRenderers(DXGraphicsContext& context) const
+{
     std::stack<std::shared_ptr<SceneComponent>> stack;
     stack.push(m_rootSceneComponent);
 
@@ -39,11 +41,13 @@ void DeltaEngine::DWorld::InitRenderers(DXGraphicsContext& context) const {
     }
 }
 
-void DeltaEngine::DWorld::GatherDrawCalls(DXGraphicsContext& context) const {
+void DeltaEngine::DWorld::GatherDrawCalls(DXGraphicsContext& context) const
+{
     std::stack<std::shared_ptr<SceneComponent>> stack;
     stack.push(m_rootSceneComponent);
     
-    while (!stack.empty()) {
+    while (!stack.empty())
+    {
         std::shared_ptr<SceneComponent> current = stack.top();
         stack.pop();
 
@@ -60,7 +64,8 @@ void DeltaEngine::DWorld::GatherDrawCalls(DXGraphicsContext& context) const {
     }
 }
 
-std::shared_ptr<DWorld> DeltaEngine::DWorld::CreateWorld() {
+std::shared_ptr<DWorld> DeltaEngine::DWorld::CreateWorld()
+{
     std::shared_ptr<DWorld> world = std::make_shared<DWorld>();
     return world;
 }

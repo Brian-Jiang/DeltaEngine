@@ -14,8 +14,7 @@ struct PSInput
     float4 color : COLOR;
     float3 normal : NORMAL;
     float2 uv : TEXCOORD;
-    
-    // This can be ommited in pixel shader, but the memory structure must match, so we place it last.
+    float3 worldPosition : TEXCOORD1;
     float4 position : SV_POSITION;
 };
 
@@ -39,6 +38,7 @@ struct Object
 {
     float4x4 worldMatrix;
     float4 color;
+    uint useInstanceMatrix; // 1 = use INSTANCE_WORLD from vertex buffer, 0 = use worldMatrix above
 };
 
 ConstantBuffer<Object> ObjectCB : register(b1);
@@ -61,16 +61,18 @@ PSInput VSMain(VSInput input)
 {
     PSInput result;
 
-    //result.position = position;
-    //position = mul(modelMatrix, position);
     float4 position = float4(input.position, 1.0f);
-    float4 worldPosition = mul(input.worldMatrix, position);
-    float4 cameraPosition = mul(CameraCB.viewMatrix, worldPosition);
-    cameraPosition = mul(CameraCB.projectionMatrix, cameraPosition);
+    float4 worldPosition;
+    if (ObjectCB.useInstanceMatrix != 0)
+        worldPosition = mul(input.worldMatrix, position);
+    else
+        worldPosition = mul(ObjectCB.worldMatrix, position);
+    float4 viewPosition = mul(CameraCB.viewMatrix, worldPosition);
+    float4 cameraPosition = mul(CameraCB.projectionMatrix, viewPosition);
     
     result.position = cameraPosition;
+    result.worldPosition = worldPosition.xyz;
     result.color = input.color * float4(input.instanceColor, 1.0);
-    //result.color = float4(position.z / 10.0f, 0.0f, 0.0f, 1.0f);
     result.normal = input.normal;
     result.uv = input.uv;
 
@@ -85,10 +87,10 @@ float4 PSMain(PSInput input) : SV_TARGET
     float4 textureColor = g_texture.Sample(g_sampler, input.uv);
     textureColor = float4(1.0, 1.0, 1.0, 1.0);
     
-    float3 left = normalize(LightCB.position - input.position.xyz);
+    float3 left = normalize(LightCB.position - input.worldPosition);
     float3 right = reflect(-left, input.normal);
-    float3 view = normalize(CameraCB.position.xyz - input.position.xyz);
-    float lightDistance = length(LightCB.position - input.position.xyz);
+    float3 view = normalize(CameraCB.position.xyz - input.worldPosition);
+    float lightDistance = length(LightCB.position - input.worldPosition);
     float falloff = 1.0f / (lightDistance * lightDistance);
     falloff = 1.0f;
     //return float4(left, 1.0f);

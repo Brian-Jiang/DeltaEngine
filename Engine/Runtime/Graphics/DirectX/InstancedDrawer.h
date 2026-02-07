@@ -34,6 +34,7 @@ private:
     std::shared_ptr<Mesh> m_mesh;
     std::vector<InstanceData> m_instanceData;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_instanceBuffer;
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_objectCb; // Object CB with useInstanceMatrix=1
     UINT32 m_count;
     D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
     D3D12_INDEX_BUFFER_VIEW m_indexBufferView;

@@ -37,6 +37,9 @@ private:
 	// Per-renderer pipeline state
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
 
+	/// Per-object constant buffer (world matrix + color), root parameter [2].
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_objectCb;
+
 	struct Vertex
     {
 	    DirectX::XMFLOAT3 position;

@@ -137,6 +137,40 @@ void DXRenderManager::LoadAssets()
         m_lightCbData->Unmap(0, nullptr);
     }
 
+    // ---- Camera constant buffer (root parameter 0) ----
+    {
+        m_viewMatrix = {};
+        m_viewMatrix._11 = m_viewMatrix._22 = m_viewMatrix._33 = m_viewMatrix._44 = 1.0f;
+        m_projectionMatrix = {};
+        m_projectionMatrix._11 = m_projectionMatrix._22 = m_projectionMatrix._33 = m_projectionMatrix._44 = 1.0f;
+        m_cameraPosition = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+        UINT alignedBufferSize = (sizeof(Camera) + 255) & ~255;
+
+        D3D12_HEAP_PROPERTIES heapProps = {};
+        heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
+        heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+        heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+
+        D3D12_RESOURCE_DESC resourceDesc = {};
+        resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+        resourceDesc.Width = alignedBufferSize;
+        resourceDesc.Height = 1;
+        resourceDesc.DepthOrArraySize = 1;
+        resourceDesc.MipLevels = 1;
+        resourceDesc.SampleDesc.Count = 1;
+        resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+        ThrowIfFailed(m_device->GetD3D12Device()->CreateCommittedResource(
+            &heapProps,
+            D3D12_HEAP_FLAG_NONE,
+            &resourceDesc,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            IID_PPV_ARGS(&m_cameraCbData)));
+    }
+
     // ---- Root signature (shared across all renderers) ----
     {
         D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
@@ -224,11 +258,24 @@ void DXRenderManager::PrepareFrame()
     auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
     m_currentCommandList->ResourceBarrier(1, &barrier);
 
-    // Set necessary state.
+    // Update camera CB and set necessary state.
+    {
+        Camera cameraData = {};
+        cameraData.viewMatrix = m_viewMatrix;
+        cameraData.projectionMatrix = m_projectionMatrix;
+        cameraData.position = m_cameraPosition;
+        void* pCamera = nullptr;
+        m_cameraCbData->Map(0, nullptr, &pCamera);
+        memcpy(pCamera, &cameraData, sizeof(Camera));
+        m_cameraCbData->Unmap(0, nullptr);
+    }
+
     m_currentCommandList->SetGraphicsRootSignature(m_rootSignature.Get());
     ID3D12DescriptorHeap* ppHeaps[] = { m_srvHeap.Get() };
     m_currentCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+    m_currentCommandList->SetGraphicsRootConstantBufferView(0, m_cameraCbData->GetGPUVirtualAddress());
     m_currentCommandList->SetGraphicsRootConstantBufferView(3, m_lightCbData->GetGPUVirtualAddress());
+
 
     m_currentCommandList->RSSetViewports(1, &m_viewport);
     m_currentCommandList->RSSetScissorRects(1, &m_scissorRect);
@@ -396,6 +443,9 @@ DXGraphicsContext DeltaEngine::DXRenderManager::GetGraphicsContext() const {
     context.commandList = m_currentCommandList;
     context.rootSignature = m_rootSignature;
     context.srvHeap = m_srvHeap;
+    context.viewMatrix = m_viewMatrix;
+    context.projectionMatrix = m_projectionMatrix;
+    context.cameraPosition = m_cameraPosition;
     return context;
 }
 

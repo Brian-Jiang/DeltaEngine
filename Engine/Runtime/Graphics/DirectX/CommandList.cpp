@@ -2,6 +2,7 @@
 
 #include <d3dx12.h>
 #include <assert.h>
+
 #include "Runtime/Graphics/DirectX/Resource.h"
 #include "Runtime/Graphics/DirectX/ResourceStateTracker.h"
 #include "Runtime/Graphics/DirectX/UploadBuffer.h"
@@ -60,7 +61,8 @@ void DeltaEngine::CommandList::SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heap
 }
 
 void CommandList::TransitionBarrier(Microsoft::WRL::ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES stateAfter,
-    UINT subresource, bool flushBarriers) {
+    UINT subresource, bool flushBarriers)
+{
     if (resource) {
         // The "before" state is not important. It will be resolved by the resource state tracker.
         auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(resource.Get(), D3D12_RESOURCE_STATE_COMMON, stateAfter,
