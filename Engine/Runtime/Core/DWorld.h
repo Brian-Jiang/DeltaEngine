@@ -19,7 +19,12 @@ public:
     DWorld();
 
     std::shared_ptr<GameObject> CreateGameObject();
-    void GatherDrawCalls(DXGraphicsContext context) const;
+
+    /// Walk the scene tree and call InitGraphicState on every Renderer.
+    void InitRenderers(DXGraphicsContext& context) const;
+
+    /// Walk the scene tree and call GatherDrawCalls on every Renderer.
+    void GatherDrawCalls(DXGraphicsContext& context) const;
 
     std::shared_ptr<SceneComponent> GetRootSceneComponent() const { return m_rootSceneComponent; }
 

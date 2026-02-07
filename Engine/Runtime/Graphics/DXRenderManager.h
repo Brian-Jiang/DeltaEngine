@@ -18,8 +18,10 @@
 DELTA_ENGINE_NS_BEGIN
 
 class Device;
+class CommandList;
 class RootSignature;
 class SwapChain;
+class DWorld;
 
 class DXRenderManager
 {
@@ -27,7 +29,11 @@ public:
 	DXRenderManager(HWND hwnd, UINT width, UINT height);
 	void LoadPipeline();
     void LoadAssets();
-    void InitFinish();
+
+    /// Creates a command list, initialises every renderer in the world,
+    /// executes the command list, and waits for the GPU.
+    void InitWorldRenderers(DWorld& world);
+
     void PrepareFrame();
     void RenderFrame();
     void WaitForPreviousFrame();
@@ -36,6 +42,7 @@ public:
 	void ResizeDepthBuffer(int width, int height);
     void OnDestroy();
 
+	/// Returns a context that renderers use for InitGraphicState / GatherDrawCalls.
 	DXGraphicsContext GetGraphicsContext() const;
 
 	CommandQueue& GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) const;
@@ -45,8 +52,8 @@ public:
 
 	void ToggleVSync(bool enableVSync) { g_VSync = enableVSync; }
 
+	Device& GetDeviceRef() { return *m_device; }
 	Microsoft::WRL::ComPtr<ID3D12Device2> GetDevice() { return m_device->GetD3D12Device(); }
-	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> GetCommandList() { return m_commandList; }
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> GetSRVHeap() { return m_srvHeap; }
 	bool IsFullscreen() { return g_Fullscreen; }
 	bool IsVSync() { return g_VSync; }
@@ -56,9 +63,6 @@ public:
 
 	void SetMVPMatrix(DirectX::XMMATRIX mvp) { mvpMatrix = mvp; }
 	void SetCameraPosition(DirectX::XMVECTOR cam) { DirectX::XMStoreFloat4(&cameraPosition, cam); }
-
-	//void SetModelMatrix(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList, DirectX::XMMATRIX model);
-	//void ResetModelMatrix(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList);
 
 private:
 	HWND hwnd;
@@ -78,24 +82,20 @@ private:
 
     static const UINT FrameCount = 2;
 
-	//DXCommandQueue *directCommandQueue;
-	//DXCommandQueue *copyCommandQueue;
-
     bool m_useWarpDevice;
 
 	CD3DX12_VIEWPORT m_viewport;
     D3D12_RECT m_scissorRect;
 
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapChain;
-	//Microsoft::WRL::ComPtr<ID3D12Device4> m_device;
 	std::shared_ptr<Device> m_device;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
-	// Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_commandQueue;
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
-	//Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvHeap;
-	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
-	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList5> m_commandList;
+
+	/// The command list for the current frame, obtained in PrepareFrame
+	/// and executed in RenderFrame.
+	std::shared_ptr<CommandList> m_currentCommandList;
 
     UINT m_rtvDescriptorSize;
     UINT m_width;
@@ -104,8 +104,6 @@ private:
 
 	// Depth buffer.
     Microsoft::WRL::ComPtr<ID3D12Resource> m_DepthBuffer;
-    // Descriptor heap for depth buffer.
-    //Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DSVHeap;
 	std::unique_ptr<DescriptorAllocator> m_rtvHeap;
 	DescriptorAllocation m_rtvHeapAllocation;
 
@@ -118,7 +116,6 @@ private:
 
 	DirectX::XMMATRIX mvpMatrix;
 	DirectX::XMFLOAT4 cameraPosition;
-	//DirectX::XMMATRIX m_ModelMatrix;
 	Light m_light;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_lightCbData;
 

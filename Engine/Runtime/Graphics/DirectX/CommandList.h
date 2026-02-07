@@ -153,6 +153,39 @@ public:
     void DrawIndexed(uint32_t indexCount, uint32_t instanceCount = 1, uint32_t startIndex = 0, int32_t baseVertex = 0,
         uint32_t startInstance = 0);
 
+    // ---- Low-level recording wrappers ----
+    // These forward directly to the underlying ID3D12GraphicsCommandList so
+    // that no code outside CommandList touches the raw list.
+
+    void SetPipelineState(ID3D12PipelineState* pipelineState);
+    void IASetVertexBuffers(UINT startSlot, UINT numViews, const D3D12_VERTEX_BUFFER_VIEW* views);
+    void IASetIndexBuffer(const D3D12_INDEX_BUFFER_VIEW* view);
+    void IASetPrimitiveTopology(D3D12_PRIMITIVE_TOPOLOGY topology);
+
+    void SetGraphicsRootSignature(ID3D12RootSignature* rootSignature);
+    void SetGraphicsRootConstantBufferView(uint32_t rootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS bufferLocation);
+    void SetGraphicsRootDescriptorTable(uint32_t rootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE baseDescriptor);
+
+    void SetDescriptorHeaps(UINT numHeaps, ID3D12DescriptorHeap* const* heaps);
+
+    void RSSetViewports(UINT numViewports, const D3D12_VIEWPORT* viewports);
+    void RSSetScissorRects(UINT numRects, const D3D12_RECT* rects);
+    void OMSetRenderTargets(UINT numRTs, const D3D12_CPU_DESCRIPTOR_HANDLE* rtDescriptors,
+        BOOL rtsSingleHandle, const D3D12_CPU_DESCRIPTOR_HANDLE* dsDescriptor);
+
+    void ClearRenderTargetView(D3D12_CPU_DESCRIPTOR_HANDLE rtv, const FLOAT colorRGBA[4],
+        UINT numRects = 0, const D3D12_RECT* rects = nullptr);
+    void ClearDepthStencilView(D3D12_CPU_DESCRIPTOR_HANDLE dsv, D3D12_CLEAR_FLAGS clearFlags,
+        FLOAT depth, UINT8 stencil, UINT numRects = 0, const D3D12_RECT* rects = nullptr);
+
+    void ResourceBarrier(UINT numBarriers, const D3D12_RESOURCE_BARRIER* barriers);
+    void CopyTextureRegion(const D3D12_TEXTURE_COPY_LOCATION* dst, UINT dstX, UINT dstY, UINT dstZ,
+        const D3D12_TEXTURE_COPY_LOCATION* src, const D3D12_BOX* srcBox);
+
+    void DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertex, uint32_t startInstance);
+    void DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount, uint32_t startIndex,
+        int32_t baseVertex, uint32_t startInstance);
+
     /**
      * Resolve a multisampled resource into a non-multisampled resource.
      */

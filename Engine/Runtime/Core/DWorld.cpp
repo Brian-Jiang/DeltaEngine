@@ -19,7 +19,27 @@ std::shared_ptr<GameObject> DeltaEngine::DWorld::CreateGameObject() {
     return gameObject;
 }
 
-void DeltaEngine::DWorld::GatherDrawCalls(DXGraphicsContext context) const {
+void DeltaEngine::DWorld::InitRenderers(DXGraphicsContext& context) const {
+    std::stack<std::shared_ptr<SceneComponent>> stack;
+    stack.push(m_rootSceneComponent);
+
+    while (!stack.empty()) {
+        std::shared_ptr<SceneComponent> current = stack.top();
+        stack.pop();
+
+        if (auto renderer = dynamic_cast<Renderer*>(current.get())) {
+            renderer->InitGraphicState(context);
+        }
+
+        size_t childCount = current->m_children.size();
+        for (int i = static_cast<int>(childCount) - 1; i >= 0; --i) {
+            std::shared_ptr<SceneComponent> child = current->m_children[i];
+            stack.push(child);
+        }
+    }
+}
+
+void DeltaEngine::DWorld::GatherDrawCalls(DXGraphicsContext& context) const {
     std::stack<std::shared_ptr<SceneComponent>> stack;
     stack.push(m_rootSceneComponent);
     
@@ -33,7 +53,7 @@ void DeltaEngine::DWorld::GatherDrawCalls(DXGraphicsContext context) const {
         }
 
         size_t childCount = current->m_children.size();
-        for (int i = childCount - 1; i >= 0; --i) {
+        for (int i = static_cast<int>(childCount) - 1; i >= 0; --i) {
             std::shared_ptr<SceneComponent> child = current->m_children[i];
             stack.push(child);
         }

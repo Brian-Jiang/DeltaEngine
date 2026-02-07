@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "EngineIncludes.h"
 
@@ -44,10 +44,6 @@ private:
 	SDL_Window* window;
 
 	GameState gameState;
-
-	// SpriteRenderer* sprite;
-	//SpriteRenderer *dxSprite;
-	//MeshRenderer* dxMeshRenderer;
 
 	MeshRenderer *meshRenderer;
 	MeshRenderer *meshRenderer2;

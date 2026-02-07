@@ -3,6 +3,7 @@
 #include <d3dx12.h>
 
 #include "EngineMain.h"
+#include "Runtime/Graphics/DirectX/CommandList.h"
 
 using namespace DeltaEngine;
 using namespace DirectX;
@@ -37,7 +38,6 @@ void InstancedDrawer::CreateBuffer(const Microsoft::WRL::ComPtr<ID3D12Device>& d
         };
 
         m_vertexBufferView = vertexBufferView;
-        //vertexBufferViews.push_back(vertexBufferView);
     }
 
     // Create the index buffer.
@@ -52,12 +52,10 @@ void InstancedDrawer::CreateBuffer(const Microsoft::WRL::ComPtr<ID3D12Device>& d
         };
 
         m_indexBufferView = indexBufferView;
-        //indexBufferViews.push_back(indexBufferView);
     }
 
 
     UINT instanceBufferSize = sizeof(InstanceData) * m_count;
-    //ComPtr<ID3D12Resource> instanceBuffer;
 
     CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
     CD3DX12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(instanceBufferSize);
@@ -82,10 +80,10 @@ void InstancedDrawer::CreateBuffer(const Microsoft::WRL::ComPtr<ID3D12Device>& d
     m_instanceBufferView.StrideInBytes = sizeof(InstanceData);
 }
 
-void InstancedDrawer::Draw(const Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>& commandList) {
-    commandList->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+void InstancedDrawer::Draw(const std::shared_ptr<CommandList>& commandList) {
+    commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
     commandList->IASetVertexBuffers(1, 1, &m_instanceBufferView);
     commandList->IASetIndexBuffer(&m_indexBufferView);
-    commandList->DrawIndexedInstanced(m_mesh->indices.size(), m_count, 0, 0, 0);
+    commandList->DrawIndexedInstanced(static_cast<uint32_t>(m_mesh->indices.size()), m_count, 0, 0, 0);
 }

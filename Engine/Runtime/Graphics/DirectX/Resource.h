@@ -43,7 +43,8 @@ DELTA_ENGINE_NS_BEGIN
 
 class Device;
 
-class Resource {
+class Resource
+{
 public:
     /**
      * Get the Device that was used to create this resource.

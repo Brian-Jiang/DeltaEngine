@@ -4,13 +4,21 @@
 
 #include <d3d12.h>
 #include <wrl/client.h>
+#include <memory>
 
 DELTA_ENGINE_NS_BEGIN
 
-struct DXGraphicsContext {
-    Microsoft::WRL::ComPtr<ID3D12Device> m_device;
-    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvHeap;
-    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_commandList;
+class Device;
+class CommandList;
+
+/// Passed to every renderer's InitGraphicState / GatherDrawCalls.
+/// Extend this struct whenever renderers need access to a new engine resource.
+struct DXGraphicsContext
+{
+    Device* device = nullptr;
+    std::shared_ptr<CommandList> commandList;
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
+    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> srvHeap;
 };
 
 DELTA_ENGINE_NS_END

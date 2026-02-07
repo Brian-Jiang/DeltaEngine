@@ -14,8 +14,8 @@ class Renderer : public SceneComponent
     friend class DWorld;
 
 protected:
-    virtual void InitGraphicState(DXGraphicsContext context) = 0;
-    virtual void GatherDrawCalls(DXGraphicsContext context) = 0;
+    virtual void InitGraphicState(DXGraphicsContext& context) = 0;
+    virtual void GatherDrawCalls(DXGraphicsContext& context) = 0;
 };
 
 DELTA_ENGINE_NS_END

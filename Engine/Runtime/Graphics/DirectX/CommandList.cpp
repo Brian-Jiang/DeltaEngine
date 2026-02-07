@@ -364,3 +364,98 @@ void CommandList::Close() {
     FlushResourceBarriers();
     m_d3d12CommandList->Close();
 }
+
+// ---- Low-level recording wrappers ----
+
+void CommandList::SetPipelineState(ID3D12PipelineState* pipelineState) {
+    if (m_PipelineState != pipelineState) {
+        m_PipelineState = pipelineState;
+        m_d3d12CommandList->SetPipelineState(pipelineState);
+        TrackResource(pipelineState);
+    }
+}
+
+void CommandList::IASetVertexBuffers(UINT startSlot, UINT numViews, const D3D12_VERTEX_BUFFER_VIEW* views) {
+    m_d3d12CommandList->IASetVertexBuffers(startSlot, numViews, views);
+}
+
+void CommandList::IASetIndexBuffer(const D3D12_INDEX_BUFFER_VIEW* view) {
+    m_d3d12CommandList->IASetIndexBuffer(view);
+}
+
+void CommandList::IASetPrimitiveTopology(D3D12_PRIMITIVE_TOPOLOGY topology) {
+    m_d3d12CommandList->IASetPrimitiveTopology(topology);
+}
+
+void CommandList::SetGraphicsRootSignature(ID3D12RootSignature* rootSignature) {
+    if (m_RootSignature != rootSignature) {
+        m_RootSignature = rootSignature;
+        m_d3d12CommandList->SetGraphicsRootSignature(rootSignature);
+        TrackResource(rootSignature);
+    }
+}
+
+void CommandList::SetGraphicsRootConstantBufferView(uint32_t rootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS bufferLocation) {
+    m_d3d12CommandList->SetGraphicsRootConstantBufferView(rootParameterIndex, bufferLocation);
+}
+
+void CommandList::SetGraphicsRootDescriptorTable(uint32_t rootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE baseDescriptor) {
+    m_d3d12CommandList->SetGraphicsRootDescriptorTable(rootParameterIndex, baseDescriptor);
+}
+
+void CommandList::SetDescriptorHeaps(UINT numHeaps, ID3D12DescriptorHeap* const* heaps) {
+    m_d3d12CommandList->SetDescriptorHeaps(numHeaps, heaps);
+}
+
+void CommandList::RSSetViewports(UINT numViewports, const D3D12_VIEWPORT* viewports) {
+    m_d3d12CommandList->RSSetViewports(numViewports, viewports);
+}
+
+void CommandList::RSSetScissorRects(UINT numRects, const D3D12_RECT* rects) {
+    m_d3d12CommandList->RSSetScissorRects(numRects, rects);
+}
+
+void CommandList::OMSetRenderTargets(UINT numRTs, const D3D12_CPU_DESCRIPTOR_HANDLE* rtDescriptors,
+    BOOL rtsSingleHandle, const D3D12_CPU_DESCRIPTOR_HANDLE* dsDescriptor) {
+    m_d3d12CommandList->OMSetRenderTargets(numRTs, rtDescriptors, rtsSingleHandle, dsDescriptor);
+}
+
+void CommandList::ClearRenderTargetView(D3D12_CPU_DESCRIPTOR_HANDLE rtv, const FLOAT colorRGBA[4],
+    UINT numRects, const D3D12_RECT* rects) {
+    m_d3d12CommandList->ClearRenderTargetView(rtv, colorRGBA, numRects, rects);
+}
+
+void CommandList::ClearDepthStencilView(D3D12_CPU_DESCRIPTOR_HANDLE dsv, D3D12_CLEAR_FLAGS clearFlags,
+    FLOAT depth, UINT8 stencil, UINT numRects, const D3D12_RECT* rects) {
+    m_d3d12CommandList->ClearDepthStencilView(dsv, clearFlags, depth, stencil, numRects, rects);
+}
+
+void CommandList::ResourceBarrier(UINT numBarriers, const D3D12_RESOURCE_BARRIER* barriers) {
+    m_d3d12CommandList->ResourceBarrier(numBarriers, barriers);
+}
+
+void CommandList::CopyTextureRegion(const D3D12_TEXTURE_COPY_LOCATION* dst, UINT dstX, UINT dstY, UINT dstZ,
+    const D3D12_TEXTURE_COPY_LOCATION* src, const D3D12_BOX* srcBox) {
+    m_d3d12CommandList->CopyTextureRegion(dst, dstX, dstY, dstZ, src, srcBox);
+}
+
+void CommandList::DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertex, uint32_t startInstance) {
+    FlushResourceBarriers();
+
+    for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i) {
+        m_DynamicDescriptorHeap[i]->CommitStagedDescriptorsForDraw(*this);
+    }
+
+    m_d3d12CommandList->DrawInstanced(vertexCount, instanceCount, startVertex, startInstance);
+}
+
+void CommandList::DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount, uint32_t startIndex,
+    int32_t baseVertex, uint32_t startInstance) {
+    FlushResourceBarriers();
+
+    for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i) {
+        m_DynamicDescriptorHeap[i]->CommitStagedDescriptorsForDraw(*this);
+    }
+
+    m_d3d12CommandList->DrawIndexedInstanced(indexCount, instanceCount, startIndex, baseVertex, startInstance);
+}

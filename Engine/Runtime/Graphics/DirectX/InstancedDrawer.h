@@ -11,6 +11,8 @@
 
 DELTA_ENGINE_NS_BEGIN
 
+class CommandList;
+
 struct InstanceData {
     DirectX::XMFLOAT4X4 transform;
     DirectX::XMFLOAT3 color;
@@ -22,7 +24,9 @@ public:
     void SetTransform(UINT32 index, DirectX::XMMATRIX transform);
     void SetColor(UINT32 index, DirectX::XMFLOAT3 color);
     void CreateBuffer(const Microsoft::WRL::ComPtr<ID3D12Device>& device);
-    void Draw(const Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>& commandList);
+
+    /// Draw using the CommandList wrapper.
+    void Draw(const std::shared_ptr<CommandList>& commandList);
 
     Microsoft::WRL::ComPtr<ID3D12Resource> GetInstanceBuffer() { return m_instanceBuffer; }
 

@@ -19,13 +19,11 @@ EngineMain* EngineMain::instance = nullptr;
 
 EngineMain::EngineMain() 
     : exitCode(0), renderer(nullptr), window(nullptr), 
-    gameState(GameState::PLAY), dxRenderManager(nullptr), time(nullptr)
+    gameState(GameState::PLAY), dxRenderManager(nullptr), time(nullptr),
+    meshRenderer(nullptr), meshRenderer2(nullptr), m_instancedDrawer(nullptr),
+    m_FoV(45.0f)
 {
     EngineMain::instance = this;
-
-    //dxSprite = new SpriteRenderer();
-    meshRenderer = new MeshRenderer();
-    meshRenderer2 = new MeshRenderer();
     time = new Time();
 }
 
@@ -35,18 +33,9 @@ void EngineMain::Initialize()
 
     InitSDL();
 
-    std::vector<Texture*> textures;
-
-    //auto mesh = new Mesh(g_Vertices, g_Indicies, textures);
-    //meshRenderer2->Start(*mesh, dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
-
+    // ---- Import model and set up instanced drawing ----
     auto importer = new ModelImporter();
-    //importer->Import("Assets/cottage/source/dio.fbx");
-    //importer->Import("Assets/weapon/weapon.fbx");
-    //importer->Import("Assets/home/source/home.fbx");
-    //importer->Import("Assets/car/source/datsun240k.fbx");
     importer->Import("Assets/Star.obj");
-    //meshRenderer->Start(importer->meshes, importer->meshTransforms, dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
 
     std::shared_ptr<Mesh> meshPtr(importer->meshes[0]);
     m_instancedDrawer = new InstancedDrawer(meshPtr, 10000);
@@ -62,26 +51,17 @@ void EngineMain::Initialize()
     }
 
     m_instancedDrawer->CreateBuffer(dxRenderManager->GetDevice());
-    //auto instanceBuffer = m_instancedDrawer->GetInstanceBuffer();
 
-    //dxSprite->Start(-1.0f, -1.0f, 2.0f, 2.0f, "Assets/logo.png", dxRenderManager->GetDevice(), dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap());
-
-    dxRenderManager->InitFinish();
-
-
+    // ---- Build the scene world and add renderers ----
     m_world = std::make_shared<DWorld>();
     auto go = m_world->CreateGameObject();
     auto spriteRenderer = go->AddSceneComponent<SpriteRenderer>();
+    spriteRenderer->Start(2.0f, 2.0f, "Assets/logo.png");
 
+    // Initialize all renderer GPU resources (PSOs, textures, buffers)
+    // and submit the init command list.
+    dxRenderManager->InitWorldRenderers(*m_world);
 }
-
-//void ThrowIfFailed(HRESULT hresult)
-//{
-//    if (FAILED(hresult))
-//    {
-//        throw std::exception();
-//    }
-//}
 
 void EngineMain::InitSDL() {
     int rendererFlags, windowFlags;
@@ -166,9 +146,6 @@ void EngineMain::HandleInput()
             case SDL_EVENT_QUIT:
                 gameState = GameState::EXIT;
                 break;
-       //      case SDL_EVENT_MOUSE_MOTION:
-                // // std::cout << "Mouse moved to x: " << event.motion.x << " y: " << event.motion.y << '\n';
-                // break;
             default:
                 break;
         }
@@ -181,12 +158,10 @@ void EngineMain::Draw()
 
     // Update the model matrix.
     float angle = static_cast<float>(Time::timeSinceStart * 50.f);
-    //angle = 0.f;
     const XMVECTOR rotationAxis = XMVectorSet(0, 1, 0, 0);
     auto translation = XMMatrixTranslation(0, 0, 0);
     auto rotation = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(angle));
     m_ModelMatrix = XMMatrixMultiply(rotation, translation);
-    //m_ModelMatrix = XMMatrixIdentity();
 
     // Update the view matrix.
     const XMVECTOR focusPoint = eyePosition + XMVectorSet(0, 0, 1, 0);
@@ -201,17 +176,16 @@ void EngineMain::Draw()
     mvpMatrix = XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
     dxRenderManager->SetMVPMatrix(mvpMatrix);
     dxRenderManager->SetCameraPosition(eyePosition);
-    //commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
 
     dxRenderManager->PrepareFrame();
 
-    //dxSprite->Render(dxRenderManager->GetCommandList());
-    //meshRenderer->Render(dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap(), dxRenderManager->GetDevice());
-    //meshRenderer2->Render(dxRenderManager->GetCommandList(), dxRenderManager->GetSRVHeap(), dxRenderManager->GetDevice());
-    m_instancedDrawer->Draw(dxRenderManager->GetCommandList());
-
+    // Get the graphics context (command list is active after PrepareFrame).
     DXGraphicsContext context = dxRenderManager->GetGraphicsContext();
-    // TODO gather draw call
+
+    // Draw instanced geometry.
+    //m_instancedDrawer->Draw(context.commandList);
+
+    // Gather draw calls from all renderers in the world.
     m_world->GatherDrawCalls(context);
 
     dxRenderManager->RenderFrame();
