@@ -12,12 +12,16 @@
 #include "Runtime/Graphics/DirectX/DirectX12Texture.h"
 #include "Runtime/Graphics/DirectX/Texture.h"
 #include "Runtime/Graphics/DirectX/SwapChain.h"
+#include "Runtime/Graphics/DirectX/Adapter.h"
+#include "Runtime/Graphics/DirectX/ConstantBuffer.h"
 #include "Runtime/Graphics/DXUtils.h"
+#include "Runtime/Math/Common.h"
 
 using namespace DeltaEngine;
 using namespace Microsoft::WRL;
 
-class MakeSwapChain : public SwapChain {
+class MakeSwapChain : public SwapChain
+{
 public:
     MakeSwapChain(Device& device, HWND hWnd, DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R10G10B10A2_UNORM)
         : SwapChain(device, hWnd, backBufferFormat)
@@ -42,18 +46,57 @@ void Device::ReportLiveObjects() {
     dxgiDebug->Release();
 }
 
-Device::Device(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter)
-    : m_Adapter(adapter) {
-    auto& dxgiAdapter = m_Adapter;
+Device::Device(std::shared_ptr<Adapter> adapter)
+    : m_Adapter(adapter)
+{
+    assert(m_Adapter);
+
+    auto dxgiAdapter = m_Adapter->GetDXGIAdapter();
 
     ThrowIfFailed(D3D12CreateDevice(dxgiAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_d3d12Device)));
+
+//    // Enable debug messages (only works if the debug layer has already been enabled).
+//    ComPtr<ID3D12InfoQueue> pInfoQueue;
+//    if (SUCCEEDED(m_d3d12Device.As(&pInfoQueue))) {
+//        //pInfoQueue->SetBreakOnSeverity( D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE );
+//        //pInfoQueue->SetBreakOnSeverity( D3D12_MESSAGE_SEVERITY_ERROR, TRUE );
+//        //pInfoQueue->SetBreakOnSeverity( D3D12_MESSAGE_SEVERITY_WARNING, TRUE );
+//
+//        // Suppress whole categories of messages
+//        // D3D12_MESSAGE_CATEGORY Categories[] = {};
+//
+//        // Suppress messages based on their severity level
+//        D3D12_MESSAGE_SEVERITY Severities[] = { D3D12_MESSAGE_SEVERITY_INFO };
+//
+//        // Suppress individual messages by their ID
+//        D3D12_MESSAGE_ID DenyIds[] = {
+//            D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,  // I'm really not sure how to avoid this
+//            // message.
+//
+//D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,  // This warning occurs when using capture frame while graphics
+//// debugging.
+//
+//D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,  // This warning occurs when using capture frame while graphics
+//// debugging.
+//        };
+//
+//        D3D12_INFO_QUEUE_FILTER NewFilter = {};
+//        // NewFilter.DenyList.NumCategories = _countof(Categories);
+//        // NewFilter.DenyList.pCategoryList = Categories;
+//        NewFilter.DenyList.NumSeverities = _countof(Severities);
+//        NewFilter.DenyList.pSeverityList = Severities;
+//        NewFilter.DenyList.NumIDs = _countof(DenyIds);
+//        NewFilter.DenyList.pIDList = DenyIds;
+//
+//        ThrowIfFailed(pInfoQueue->PushStorageFilter(&NewFilter));
+//    }
 
     // Enable debug messages (only works if the debug layer has already been enabled).
     ComPtr<ID3D12InfoQueue> pInfoQueue;
     if (SUCCEEDED(m_d3d12Device.As(&pInfoQueue))) {
-        //pInfoQueue->SetBreakOnSeverity( D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE );
-        //pInfoQueue->SetBreakOnSeverity( D3D12_MESSAGE_SEVERITY_ERROR, TRUE );
-        //pInfoQueue->SetBreakOnSeverity( D3D12_MESSAGE_SEVERITY_WARNING, TRUE );
+        pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
+        pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
+        pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
 
         // Suppress whole categories of messages
         // D3D12_MESSAGE_CATEGORY Categories[] = {};
@@ -63,14 +106,14 @@ Device::Device(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter)
 
         // Suppress individual messages by their ID
         D3D12_MESSAGE_ID DenyIds[] = {
-            D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,  // I'm really not sure how to avoid this
-            // message.
+            D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE, // I'm really not sure how to avoid this
+                                                                          // message.
 
-D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,  // This warning occurs when using capture frame while graphics
-// debugging.
+            D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE, // This warning occurs when using capture frame while graphics
+                                                    // debugging.
 
-D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,  // This warning occurs when using capture frame while graphics
-// debugging.
+            D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE, // This warning occurs when using capture frame while graphics
+                                                      // debugging.
         };
 
         D3D12_INFO_QUEUE_FILTER NewFilter = {};
@@ -85,14 +128,15 @@ D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,  // This warning occurs when using cap
     }
 
 
-    m_DirectCommandQueue = std::unique_ptr<CommandQueue>(new CommandQueue(*this, D3D12_COMMAND_LIST_TYPE_DIRECT));
-    m_ComputeCommandQueue = std::unique_ptr<CommandQueue>(new CommandQueue(*this, D3D12_COMMAND_LIST_TYPE_COMPUTE));
-    m_CopyCommandQueue = std::unique_ptr<CommandQueue>(new CommandQueue(*this, D3D12_COMMAND_LIST_TYPE_COPY));
+    m_DirectCommandQueue = std::make_unique<CommandQueue>(*this, D3D12_COMMAND_LIST_TYPE_DIRECT);
+    m_ComputeCommandQueue = std::make_unique<CommandQueue>(*this, D3D12_COMMAND_LIST_TYPE_COMPUTE);
+    m_CopyCommandQueue = std::make_unique<CommandQueue>(*this, D3D12_COMMAND_LIST_TYPE_COPY);
 
     // Create descriptor allocators
-    for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i) {
+    for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
+    {
         m_DescriptorAllocators[i] =
-            std::unique_ptr<DescriptorAllocator>(new DescriptorAllocator(*this, static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(i)));
+            std::make_unique<DescriptorAllocator>(*this, static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(i));
     }
 
     // Check features.
@@ -100,37 +144,19 @@ D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,  // This warning occurs when using cap
         D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData;
         featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
         if (FAILED(m_d3d12Device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData,
-            sizeof(D3D12_FEATURE_DATA_ROOT_SIGNATURE)))) {
+            sizeof(D3D12_FEATURE_DATA_ROOT_SIGNATURE))))
+        {
             featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
         }
+
         m_HighestRootSignatureVersion = featureData.HighestVersion;
     }
 }
 
 DeltaEngine::Device::~Device() {}
 
-void Device::Flush() {
-    m_DirectCommandQueue->Flush();
-    m_ComputeCommandQueue->Flush();
-    m_CopyCommandQueue->Flush();
-}
-
-DescriptorAllocation Device::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors)
+CommandQueue& Device::GetCommandQueue(D3D12_COMMAND_LIST_TYPE type)
 {
-    return m_DescriptorAllocators[type]->Allocate(numDescriptors);
-}
-
-void Device::ReleaseStaleDescriptors() {
-    for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i) {
-        m_DescriptorAllocators[i]->ReleaseStaleDescriptors();
-    }
-}
-
-void Device::ReleaseUploadResources() {
-    m_InFlightUploadResources.clear();
-}
-
-CommandQueue& Device::GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) {
     CommandQueue* commandQueue;
     switch (type) {
     case D3D12_COMMAND_LIST_TYPE_DIRECT:
@@ -147,6 +173,74 @@ CommandQueue& Device::GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) {
     }
 
     return *commandQueue;
+}
+
+void Device::Flush() {
+    m_DirectCommandQueue->Flush();
+    m_ComputeCommandQueue->Flush();
+    m_CopyCommandQueue->Flush();
+}
+
+DescriptorAllocation Device::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors)
+{
+    return m_DescriptorAllocators[type]->Allocate(numDescriptors);
+}
+
+void Device::ReleaseStaleDescriptors()
+{
+    for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
+    {
+        m_DescriptorAllocators[i]->ReleaseStaleDescriptors();
+    }
+}
+
+std::shared_ptr<SwapChain> Device::CreateSwapChain(HWND hWnd, DXGI_FORMAT backBufferFormat)
+{
+    auto swapChain = std::make_shared<MakeSwapChain>(*this, hWnd, backBufferFormat);
+    return swapChain;
+}
+
+std::shared_ptr<ConstantBuffer> Device::CreateConstantBuffer(Microsoft::WRL::ComPtr<ID3D12Resource> resource)
+{
+    std::shared_ptr<ConstantBuffer> constantBuffer = std::make_shared<ConstantBuffer>(*this, resource);
+    return constantBuffer;
+}
+
+std::shared_ptr<ByteAddressBuffer> Device::CreateByteAddressBuffer(size_t bufferSize)
+{
+    // Align-up to 4-bytes
+    bufferSize = AlignUp(bufferSize, 4);
+
+    std::shared_ptr<ByteAddressBuffer> buffer = std::make_shared<ByteAddressBuffer>(
+        *this, CD3DX12_RESOURCE_DESC::Buffer(bufferSize, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
+
+    return buffer;
+}
+
+std::shared_ptr<ByteAddressBuffer> Device::CreateByteAddressBuffer(ComPtr<ID3D12Resource> resource)
+{
+    std::shared_ptr<ByteAddressBuffer> buffer = std::make_shared<ByteAddressBuffer>(*this, resource);
+
+    return buffer;
+}
+
+std::shared_ptr<StructuredBuffer> Device::CreateStructuredBuffer(size_t numElements, size_t elementSize)
+{
+    std::shared_ptr<StructuredBuffer> structuredBuffer = std::make_shared<StructuredBuffer>(*this, numElements, elementSize);
+
+    return structuredBuffer;
+}
+
+std::shared_ptr<StructuredBuffer> Device::CreateStructuredBuffer(ComPtr<ID3D12Resource> resource, size_t numElements,
+    size_t elementSize)
+{
+    std::shared_ptr<StructuredBuffer> structuredBuffer = std::make_shared<StructuredBuffer>(*this, resource, numElements, elementSize);
+
+    return structuredBuffer;
+}
+
+void Device::ReleaseUploadResources() {
+    m_InFlightUploadResources.clear();
 }
 
 std::shared_ptr<DirectX12Texture> Device::CreateTexture(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* clearValue)
@@ -237,13 +331,7 @@ void Device::CreateTextureFromFile(DTexture* dtex, CommandList& commandList)
     dtex->SetGPUTexture(dx12Texture);
 }
 
-std::shared_ptr<SwapChain> Device::CreateSwapChain(HWND hWnd, DXGI_FORMAT backBufferFormat)
-{
-    std::shared_ptr<SwapChain> swapChain;
-    swapChain = std::make_shared<MakeSwapChain>(*this, hWnd, backBufferFormat);
 
-    return swapChain;
-}
 
 DXGI_SAMPLE_DESC Device::GetMultisampleQualityLevels(DXGI_FORMAT format, UINT numSamples,
     D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags) const

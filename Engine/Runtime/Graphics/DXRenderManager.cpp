@@ -15,6 +15,7 @@
 #include "Runtime/Graphics/DirectX/SwapChain.h"
 #include "Runtime/Graphics/DirectX/RenderTarget.h"
 #include "Runtime/Graphics/DirectX/DirectX12Texture.h"
+#include "Runtime/Graphics/DirectX/Adapter.h"
 #include "Runtime/Core/DWorld.h"
 
 using namespace Microsoft::WRL;
@@ -48,27 +49,29 @@ void DXRenderManager::LoadPipeline()
     }
 #endif
 
-    ComPtr<IDXGIFactory4> factory;
-    ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&factory)));
+    auto adapter = Adapter::Create();
 
-    auto adapter = DXUtils::GetAdapter(m_useWarpDevice);
+    //ComPtr<IDXGIFactory4> factory;
+    //ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&factory)));
+
+    //auto adapter = DXUtils::GetAdapter(m_useWarpDevice);
     m_device = std::make_shared<Device>(adapter);
 
     // Initialize descriptor allocators after device is created
-    m_rtvHeap = std::unique_ptr<DescriptorAllocator>(new DescriptorAllocator(*m_device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
-    m_DSVHeap = std::unique_ptr<DescriptorAllocator>(new DescriptorAllocator(*m_device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
+    //m_rtvHeap = std::unique_ptr<DescriptorAllocator>(new DescriptorAllocator(*m_device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
+    //m_DSVHeap = std::unique_ptr<DescriptorAllocator>(new DescriptorAllocator(*m_device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
 
     // Initialize the upload buffer
-    m_uploadBuffer = std::make_unique<UploadBuffer>(*m_device);
+    //m_uploadBuffer = std::make_unique<UploadBuffer>(*m_device);
 
-    CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+    //CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
 
     // Describe and create the swap chain.
     //m_swapChain = DXUtils::CreateSwapChain(hwnd, directCommandQueue.GetD3D12CommandQueue(), m_width, m_height, FrameCount);
     m_swapChain = m_device->CreateSwapChain(hwnd, DXGI_FORMAT_R8G8B8A8_UNORM);
 
     // This sample does not support fullscreen transitions.
-    ThrowIfFailed(factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER));
+    //ThrowIfFailed(factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER));
 
     //m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
@@ -85,7 +88,7 @@ void DXRenderManager::LoadPipeline()
     // Get the size of the RTV descriptor on the device.
     m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
-    m_DSVHeapAllocation = m_DSVHeap->Allocate(1);
+    //m_DSVHeapAllocation = m_DSVHeap->Allocate(1);
 
     // Create frame resources.
     //{
@@ -260,9 +263,9 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
         sampleDesc.Quality, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
     D3D12_CLEAR_VALUE colorClearValue;
     colorClearValue.Format = colorDesc.Format;
-    colorClearValue.Color[0] = 0.4f;
-    colorClearValue.Color[1] = 0.6f;
-    colorClearValue.Color[2] = 0.9f;
+    colorClearValue.Color[0] = 0.0f;
+    colorClearValue.Color[1] = 0.2f;
+    colorClearValue.Color[2] = 0.4f;
     colorClearValue.Color[3] = 1.0f;
 
     auto colorTexture = m_device->CreateTexture(colorDesc, &colorClearValue);
@@ -271,6 +274,7 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
     // Create a depth buffer.
     auto depthDesc = CD3DX12_RESOURCE_DESC::Tex2D(depthBufferFormat, m_width, m_height, 1, 1, sampleDesc.Count,
         sampleDesc.Quality, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
+
     D3D12_CLEAR_VALUE depthClearValue;
     depthClearValue.Format = depthDesc.Format;
     depthClearValue.DepthStencil = { 1.0f, 0 };
@@ -340,6 +344,7 @@ void DXRenderManager::PrepareFrame()
 
     // Record commands.
     const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+
     m_currentCommandList->ClearRenderTargetView(rtvHandle, clearColor);
     m_currentCommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0);
     //m_currentCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -507,7 +512,7 @@ void DXRenderManager::ResizeDepthBuffer(int width, int height) {
 
 void DXRenderManager::OnDestroy()
 {
-    WaitForPreviousFrame();
+    //WaitForPreviousFrame();
 }
 
 DXGraphicsContext DeltaEngine::DXRenderManager::GetGraphicsContext() const {

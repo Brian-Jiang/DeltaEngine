@@ -8,6 +8,7 @@
 #include "Runtime/Graphics/DirectX/CommandQueue.h"
 #include "Runtime/Graphics/DirectX/CommandList.h"
 #include "Runtime/Graphics/DirectX/DirectX12Texture.h"
+#include "Runtime/Graphics/DirectX/Adapter.h"
 #include "Runtime/Graphics/DXUtils.h"
 
 //#include <dx12lib/SwapChain.h>
@@ -44,7 +45,7 @@ SwapChain::SwapChain( Device& device, HWND hWnd, DXGI_FORMAT renderTargetFormat 
 
     // Query the factory from the adapter that was used to create the device.
     auto adapter     = m_Device.GetAdapter();
-    auto dxgiAdapter = adapter;
+    auto dxgiAdapter = adapter->GetDXGIAdapter();
 
     // Get the factory that was used to create the adapter.
     ComPtr<IDXGIFactory>  dxgiFactory;

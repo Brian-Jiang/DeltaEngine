@@ -23,37 +23,61 @@
  */
 
 /**
- *  @file ConstantBuffer.h
- *  @date October 22, 2018
+ *  @file StructuredBuffer.h
+ *  @date October 24, 2018
  *  @author Jeremiah van Oosten
  *
- *  @brief Constant buffer resource.
+ *  @brief Structured buffer resource.
  */
 
 #include "EngineIncludes.h"
 
-#include <d3d12.h> // For ID3D12Resource
-#include <wrl/client.h> // For ComPtr
-
-#include "Runtime/Graphics/DirectX/Buffer.h"
+#include "Graphics/DirectX/Buffer.h"
+#include "Graphics/DirectX/ByteAddressBuffer.h"
 
 DELTA_ENGINE_NS_BEGIN
 
-class ConstantBuffer : public Buffer
-{
-public:
+class Device;
 
-    size_t GetSizeInBytes() const
+class StructuredBuffer : public Buffer
+{
+
+public:
+    /**
+     * Get the number of elements contained in this buffer.
+     */
+    virtual size_t GetNumElements() const
     {
-        return m_SizeInBytes;
+        return m_NumElements;
+    }
+
+    /**
+     * Get the size in bytes of each element in this buffer.
+     */
+    virtual size_t GetElementSize() const
+    {
+        return m_ElementSize;
+    }
+
+    std::shared_ptr<ByteAddressBuffer> GetCounterBuffer() const
+    {
+        return m_CounterBuffer;
     }
 
 //protected:
-    ConstantBuffer( Device& device, Microsoft::WRL::ComPtr<ID3D12Resource> resource );
-    virtual ~ConstantBuffer();
+    StructuredBuffer( Device& device, size_t numElements,
+                      size_t elementSize );
+    StructuredBuffer( Device& device, Microsoft::WRL::ComPtr<ID3D12Resource> resource,
+                      size_t numElements, size_t elementSize );
+
+    virtual ~StructuredBuffer() = default;
 
 private:
-    size_t               m_SizeInBytes;
+    size_t m_NumElements;
+    size_t m_ElementSize;
+
+    // A buffer to store the internal counter for the structured buffer.
+    std::shared_ptr<ByteAddressBuffer> m_CounterBuffer;
 };
 
 DELTA_ENGINE_NS_END

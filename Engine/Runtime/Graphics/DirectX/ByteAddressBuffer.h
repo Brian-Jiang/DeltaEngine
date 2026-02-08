@@ -23,37 +23,38 @@
  */
 
 /**
- *  @file ConstantBuffer.h
+ *  @file ByteAddressBuffer.h
  *  @date October 22, 2018
  *  @author Jeremiah van Oosten
  *
- *  @brief Constant buffer resource.
+ *  @brief ByteAddressBuffer.
+ *  @see https://msdn.microsoft.com/en-us/library/ff471453(v=vs.85).aspx
  */
 
-#include "EngineIncludes.h"
+#include "Graphics/DirectX/Buffer.h"
+#include "Graphics/DirectX/DescriptorAllocation.h"
 
-#include <d3d12.h> // For ID3D12Resource
-#include <wrl/client.h> // For ComPtr
-
-#include "Runtime/Graphics/DirectX/Buffer.h"
+#include <d3dx12.h>
 
 DELTA_ENGINE_NS_BEGIN
 
-class ConstantBuffer : public Buffer
+class Device;
+
+class ByteAddressBuffer : public Buffer
 {
 public:
-
-    size_t GetSizeInBytes() const
+    size_t GetBufferSize() const
     {
-        return m_SizeInBytes;
+        return m_BufferSize;
     }
 
 //protected:
-    ConstantBuffer( Device& device, Microsoft::WRL::ComPtr<ID3D12Resource> resource );
-    virtual ~ConstantBuffer();
+    ByteAddressBuffer( Device& device, const D3D12_RESOURCE_DESC& resDesc );
+    ByteAddressBuffer( Device& device, Microsoft::WRL::ComPtr<ID3D12Resource> resource );
+    virtual ~ByteAddressBuffer() = default;
 
 private:
-    size_t               m_SizeInBytes;
+    size_t m_BufferSize;
 };
 
 DELTA_ENGINE_NS_END

@@ -32,7 +32,7 @@ public:
      */
     void ReleaseStaleDescriptors();
 
-protected:
+//protected:
     friend struct std::default_delete<DescriptorAllocator>;
     friend class Device;
     friend class DXRenderManager;

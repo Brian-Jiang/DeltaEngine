@@ -37,7 +37,7 @@ public:
 
     Microsoft::WRL::ComPtr<ID3D12CommandQueue> GetD3D12CommandQueue() const;
 
-protected:
+//protected:
     friend class std::default_delete<CommandQueue>;
     friend class Device;
 

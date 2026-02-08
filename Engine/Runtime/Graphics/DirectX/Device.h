@@ -16,6 +16,10 @@ class CommandQueue;
 class CommandList;
 class DirectX12Texture;
 class SwapChain;
+class Adapter;
+class ConstantBuffer;
+class ByteAddressBuffer;
+class StructuredBuffer;
 
 class Device : std::enable_shared_from_this<Device>
 {
@@ -29,8 +33,6 @@ public:
 
     static void ReportLiveObjects();
 
-    //Device();
-    //virtual ~Device() = default;
 
 
     /**
@@ -49,6 +51,8 @@ public:
      */
     void ReleaseUploadResources();
 
+
+    // ============================ Textures ============================
     /**
      * Create a Texture resource.
      *
@@ -69,7 +73,34 @@ public:
      */
     void CreateTextureFromFile(class DTexture* dtex, CommandList& commandList);
 
+
+    // ============================ Swap Chain ============================
+
     std::shared_ptr<SwapChain> CreateSwapChain(HWND hWnd, DXGI_FORMAT backBufferFormat);
+
+
+    // ============================ Constant Buffer ============================
+
+    std::shared_ptr<ConstantBuffer> CreateConstantBuffer(Microsoft::WRL::ComPtr<ID3D12Resource> resource);
+
+
+    // ============================ Byte Address Buffer ============================
+    /**
+     * Create a ByteAddressBuffer resource.
+     *
+     * @param resDesc A description of the resource.
+     */
+    std::shared_ptr<ByteAddressBuffer> CreateByteAddressBuffer(size_t bufferSize);
+    std::shared_ptr<ByteAddressBuffer> CreateByteAddressBuffer(Microsoft::WRL::ComPtr<ID3D12Resource> resource);
+
+
+    // ============================ Structured Buffer ============================
+    /**
+     * Create a structured buffer resource.
+     */
+    std::shared_ptr<StructuredBuffer> CreateStructuredBuffer(size_t numElements, size_t elementSize);
+    std::shared_ptr<StructuredBuffer> CreateStructuredBuffer(Microsoft::WRL::ComPtr<ID3D12Resource> resource,
+        size_t numElements, size_t elementSize);
 
     /**
      * Check if the requested multisample quality is supported for the given format.
@@ -81,7 +112,8 @@ public:
     /**
      * Get the adapter that was used to create this device.
      */
-    Microsoft::WRL::ComPtr<IDXGIAdapter4> GetAdapter() const {
+    inline std::shared_ptr<Adapter> GetAdapter() const
+    {
         return m_Adapter;
     }
 
@@ -99,11 +131,13 @@ public:
      */
     CommandQueue& GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT);
 
-    Microsoft::WRL::ComPtr<ID3D12Device2> GetD3D12Device() const {
+    inline Microsoft::WRL::ComPtr<ID3D12Device2> GetD3D12Device() const
+    {
         return m_d3d12Device;
     }
 
-    D3D_ROOT_SIGNATURE_VERSION GetHighestRootSignatureVersion() const {
+    inline D3D_ROOT_SIGNATURE_VERSION GetHighestRootSignatureVersion() const
+    {
         return m_HighestRootSignatureVersion;
     }
 
@@ -119,14 +153,14 @@ public:
 public:
     friend class DXRenderManager;
 
-    explicit Device(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter);
+    explicit Device(std::shared_ptr<Adapter> adapter);
     virtual ~Device();
     
 private:
     Microsoft::WRL::ComPtr<ID3D12Device2> m_d3d12Device;
 
     // The adapter that was used to create the device:
-    Microsoft::WRL::ComPtr<IDXGIAdapter4> m_Adapter;
+    std::shared_ptr<Adapter> m_Adapter;
 
     // Default command queues.
     std::unique_ptr<CommandQueue> m_DirectCommandQueue;

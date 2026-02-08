@@ -75,7 +75,7 @@ private:
 
     // By default, enable V-Sync.
 	// Can be toggled with the V key.
-	bool g_VSync = true;
+	//bool g_VSync = true;
 
 	bool g_TearingSupported = false;
 
@@ -96,7 +96,7 @@ private:
 	//Microsoft::WRL::ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
 	//Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
     std::shared_ptr<RootSignature> m_rootSignature;
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvHeap;
+	//Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvHeap;
 
 	/// The command list for the current frame, obtained in PrepareFrame
 	/// and executed in RenderFrame.
@@ -108,11 +108,11 @@ private:
     float m_aspectRatio;
 
 	// Depth buffer.
-    Microsoft::WRL::ComPtr<ID3D12Resource> m_DepthBuffer;
-	std::unique_ptr<DescriptorAllocator> m_rtvHeap;
+    //Microsoft::WRL::ComPtr<ID3D12Resource> m_DepthBuffer;
+	//std::unique_ptr<DescriptorAllocator> m_rtvHeap;
 	DescriptorAllocation m_rtvHeapAllocation;
 
-	std::unique_ptr<DescriptorAllocator> m_DSVHeap;
+	//std::unique_ptr<DescriptorAllocator> m_DSVHeap;
 	DescriptorAllocation m_DSVHeapAllocation;
 
     // Synchronization objects.
@@ -128,7 +128,7 @@ private:
 	Light m_light;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_lightCbData;
 
-	std::unique_ptr<UploadBuffer> m_uploadBuffer;
+	//std::unique_ptr<UploadBuffer> m_uploadBuffer;
 };
 
 DELTA_ENGINE_NS_END

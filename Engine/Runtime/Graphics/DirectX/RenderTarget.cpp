@@ -11,8 +11,8 @@ using namespace DeltaEngine;
 using namespace DirectX;
 
 RenderTarget::RenderTarget()
-: m_Textures( AttachmentPoint::NumAttachmentPoints )
-, m_Size( 0, 0 )
+    : m_Textures( AttachmentPoint::NumAttachmentPoints )
+    , m_Size( 0, 0 )
 {}
 
 // Attach a texture to the render target.
@@ -39,7 +39,10 @@ std::shared_ptr<DirectX12Texture> RenderTarget::GetTexture(AttachmentPoint attac
 void RenderTarget::Resize( DirectX::XMUINT2 size )
 {
     m_Size = size;
-    for ( auto texture: m_Textures ) { if ( texture ) texture->Resize( m_Size.x, m_Size.y ); }
+    for ( auto texture: m_Textures )
+    {
+        if ( texture ) texture->Resize( m_Size.x, m_Size.y );
+    }
 }
 void RenderTarget::Resize( uint32_t width, uint32_t height )
 {
