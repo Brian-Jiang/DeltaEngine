@@ -7,7 +7,8 @@
 using namespace DeltaEngine;
 
 Resource::Resource(Device& device, const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* clearValue)
-    : m_Device(device) {
+    : m_Device(device)
+{
     auto d3d12Device = m_Device.GetD3D12Device();
 
     if (clearValue) {
@@ -27,7 +28,8 @@ Resource::Resource(Device& device, const D3D12_RESOURCE_DESC& resourceDesc, cons
 Resource::Resource(Device& device, Microsoft::WRL::ComPtr<ID3D12Resource> resource,
     const D3D12_CLEAR_VALUE* clearValue)
     : m_Device(device)
-    , m_d3d12Resource(resource) {
+    , m_d3d12Resource(resource)
+{
     if (clearValue) {
         m_d3d12ClearValue = std::make_unique<D3D12_CLEAR_VALUE>(*clearValue);
     }

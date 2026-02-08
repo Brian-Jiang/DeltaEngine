@@ -99,7 +99,8 @@ void Device::Flush() {
     m_CopyCommandQueue->Flush();
 }
 
-DescriptorAllocation Device::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors) {
+DescriptorAllocation Device::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors)
+{
     return m_DescriptorAllocators[type]->Allocate(numDescriptors);
 }
 

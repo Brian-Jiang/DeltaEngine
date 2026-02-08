@@ -16,7 +16,8 @@ DELTA_ENGINE_NS_BEGIN
 class DescriptorAllocatorPage;
 class Device;
 
-class DescriptorAllocator {
+class DescriptorAllocator
+{
 public:
     /**
      * Allocate a number of contiguous descriptors from a CPU visible descriptor heap.

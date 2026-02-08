@@ -17,7 +17,8 @@ using namespace DeltaEngine;
 ShaderResourceView::ShaderResourceView(Device& device, const std::shared_ptr<Resource>& resource,
     const D3D12_SHADER_RESOURCE_VIEW_DESC* srv)
     : m_Device(device)
-    , m_Resource(resource) {
+    , m_Resource(resource)
+{
     assert(resource || srv);
 
     auto d3d12Resource = m_Resource ? m_Resource->GetD3D12Resource() : nullptr;

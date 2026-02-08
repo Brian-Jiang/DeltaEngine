@@ -157,11 +157,11 @@ void EngineMain::Draw()
     m_FoV = 45.0f;
 
     // Update the model matrix.
-    float angle = static_cast<float>(Time::timeSinceStart * 50.f);
-    const XMVECTOR rotationAxis = XMVectorSet(0, 1, 0, 0);
-    auto translation = XMMatrixTranslation(0, 0, 0);
-    auto rotation = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(angle));
-    m_ModelMatrix = XMMatrixMultiply(rotation, translation);
+    //float angle = static_cast<float>(Time::timeSinceStart * 50.f);
+    //const XMVECTOR rotationAxis = XMVectorSet(0, 1, 0, 0);
+    //auto translation = XMMatrixTranslation(0, 0, 0);
+    //auto rotation = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(angle));
+    //m_ModelMatrix = XMMatrixMultiply(rotation, translation);
 
     // Update the view matrix.
     const XMVECTOR focusPoint = eyePosition + XMVectorSet(0, 0, 1, 0);

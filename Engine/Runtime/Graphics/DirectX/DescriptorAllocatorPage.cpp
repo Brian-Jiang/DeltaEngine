@@ -44,7 +44,8 @@ void DescriptorAllocatorPage::AddNewBlock(uint32_t offset, uint32_t numDescripto
     offsetIt.first->second.FreeListBySizeIt = sizeIt;
 }
 
-DescriptorAllocation DescriptorAllocatorPage::Allocate(uint32_t numDescriptors) {
+DescriptorAllocation DescriptorAllocatorPage::Allocate(uint32_t numDescriptors)
+{
     std::lock_guard<std::mutex> lock(m_AllocationMutex);
 
     // There are less than the requested number of descriptors left in the heap.

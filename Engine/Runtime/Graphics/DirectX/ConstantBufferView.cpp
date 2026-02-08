@@ -10,8 +10,8 @@ using namespace DeltaEngine;
 
 ConstantBufferView::ConstantBufferView( Device& device, const std::shared_ptr<ConstantBuffer>& constantBuffer,
                                         size_t offset )
-: m_Device( device )
-, m_ConstantBuffer( constantBuffer )
+    : m_Device(device)
+    , m_ConstantBuffer( constantBuffer )
 {
     assert( constantBuffer );
 

@@ -20,7 +20,8 @@ std::shared_ptr<DescriptorAllocatorPage> DescriptorAllocator::CreateAllocatorPag
     return newPage;
 }
 
-DescriptorAllocation DescriptorAllocator::Allocate(uint32_t numDescriptors) {
+DescriptorAllocation DescriptorAllocator::Allocate(uint32_t numDescriptors)
+{
     std::lock_guard<std::mutex> lock(m_AllocationMutex);
 
     DescriptorAllocation allocation;
