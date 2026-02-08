@@ -115,6 +115,10 @@ void Device::ReleaseStaleDescriptors() {
     }
 }
 
+void Device::ReleaseUploadResources() {
+    m_InFlightUploadResources.clear();
+}
+
 CommandQueue& Device::GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) {
     CommandQueue* commandQueue;
     switch (type) {
@@ -210,6 +214,9 @@ void Device::CreateTextureFromFile(DTexture* dtex, CommandList& commandList)
     D3D12_TEXTURE_COPY_LOCATION dst = CD3DX12_TEXTURE_COPY_LOCATION(textureResource.Get(), 0);
     D3D12_TEXTURE_COPY_LOCATION src = CD3DX12_TEXTURE_COPY_LOCATION(uploadHeap.Get(), placed);
     commandList.CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+
+    // Keep the upload heap alive until the command list is executed.
+    m_InFlightUploadResources.push_back(uploadHeap);
 
     D3D12_RESOURCE_BARRIER rb = CD3DX12_RESOURCE_BARRIER::Transition(
         textureResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);

@@ -254,6 +254,9 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
     m_currentCommandList.reset();
 
     WaitForPreviousFrame();
+
+    // Release upload resources after GPU has finished executing the command list.
+    m_device->ReleaseUploadResources();
 }
 
 void DXRenderManager::PrepareFrame()
@@ -274,9 +277,14 @@ void DXRenderManager::PrepareFrame()
         cameraData.projectionMatrix = m_projectionMatrix;
         cameraData.position = m_cameraPosition;
         void* pCamera = nullptr;
-        m_cameraCbData->Map(0, nullptr, &pCamera);
-        memcpy(pCamera, &cameraData, sizeof(Camera));
-        m_cameraCbData->Unmap(0, nullptr);
+        HRESULT hr = m_cameraCbData->Map(0, nullptr, &pCamera);
+        if (SUCCEEDED(hr) && pCamera != nullptr) {
+            memcpy(pCamera, &cameraData, sizeof(Camera));
+            m_cameraCbData->Unmap(0, nullptr);
+        } else {
+            // Handle Map failure - device may have been removed
+            ThrowIfFailed(hr);
+        }
     }
 
     m_currentCommandList->SetGraphicsRootSignature(m_rootSignature);

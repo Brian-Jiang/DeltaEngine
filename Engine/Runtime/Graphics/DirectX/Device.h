@@ -4,6 +4,7 @@
 
 #include <wrl.h>
 #include <memory>
+#include <vector>
 #include <d3d12.h>
 #include <dxgi1_6.h>
 
@@ -40,6 +41,12 @@ public:
      * Release stale descriptors. This should only be called with a completed frame counter.
      */
     void ReleaseStaleDescriptors();
+
+    /**
+     * Release upload resources that are no longer needed after GPU execution.
+     * Should be called after command list execution completes.
+     */
+    void ReleaseUploadResources();
 
     /**
      * Create a Texture resource.
@@ -119,6 +126,9 @@ private:
     std::unique_ptr<DescriptorAllocator> m_DescriptorAllocators[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 
     D3D_ROOT_SIGNATURE_VERSION m_HighestRootSignatureVersion;
+
+    // Track in-flight upload resources that must stay alive until GPU execution completes.
+    std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_InFlightUploadResources;
 };
 
 DELTA_ENGINE_NS_END
