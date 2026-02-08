@@ -9,6 +9,7 @@
 #include "IO/IOManager.h"
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/DirectX/CommandList.h"
+#include "Runtime/Graphics/DirectX/RootSignature.h"
 
 using namespace DirectX;
 using namespace Microsoft::WRL;
@@ -112,7 +113,7 @@ void DeltaEngine::SpriteRenderer::InitGraphicState(DXGraphicsContext& context) {
 
         D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
         psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
-        psoDesc.pRootSignature = context.rootSignature.Get();
+        psoDesc.pRootSignature = context.rootSignature->GetD3D12RootSignature().Get();
         psoDesc.VS = { static_cast<UINT8*>(vertexShader->GetBufferPointer()), vertexShader->GetBufferSize() };
         psoDesc.PS = { static_cast<UINT8*>(pixelShader->GetBufferPointer()), pixelShader->GetBufferSize() };
         psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);

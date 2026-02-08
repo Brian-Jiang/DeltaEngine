@@ -8,7 +8,7 @@
 
 using namespace DeltaEngine;
 
-RootSignature::RootSignature(Device& device, const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc)
+RootSignature::RootSignature(std::shared_ptr<Device> device, const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc)
     : m_Device(device)
     , m_RootSignatureDesc{}
     , m_NumDescriptorsPerTable{ 0 }
@@ -109,7 +109,7 @@ void RootSignature::SetRootSignatureDesc(const D3D12_ROOT_SIGNATURE_DESC1& rootS
     CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC versionRootSignatureDesc;
     versionRootSignatureDesc.Init_1_1(numParameters, pParameters, numStaticSamplers, pStaticSamplers, flags);
 
-    D3D_ROOT_SIGNATURE_VERSION highestVersion = m_Device.GetHighestRootSignatureVersion();
+    D3D_ROOT_SIGNATURE_VERSION highestVersion = m_Device->GetHighestRootSignatureVersion();
 
     // Serialize the root signature.
     Microsoft::WRL::ComPtr<ID3DBlob> rootSignatureBlob;
@@ -117,7 +117,7 @@ void RootSignature::SetRootSignatureDesc(const D3D12_ROOT_SIGNATURE_DESC1& rootS
     ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&versionRootSignatureDesc, highestVersion,
         &rootSignatureBlob, &errorBlob));
 
-    auto d3d12Device = m_Device.GetD3D12Device();
+    auto d3d12Device = m_Device->GetD3D12Device();
 
     // Create the root signature.
     ThrowIfFailed(d3d12Device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(),

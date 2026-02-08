@@ -11,6 +11,7 @@
 #include "Core/Time.h"
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/DirectX/CommandList.h"
+#include "Runtime/Graphics/DirectX/RootSignature.h"
 #include "Runtime/Core/DWorld.h"
 
 using namespace Microsoft::WRL;
@@ -209,13 +210,21 @@ void DXRenderManager::LoadAssets()
         sampler.RegisterSpace = 0;
         sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-        CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
-        rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 1, &sampler, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+        D3D12_ROOT_SIGNATURE_DESC1 rootSignatureDesc1 = {};
+        rootSignatureDesc1.NumParameters = _countof(rootParameters);
+        rootSignatureDesc1.pParameters = rootParameters;
+        rootSignatureDesc1.NumStaticSamplers = 1;
+        rootSignatureDesc1.pStaticSamplers = &sampler;
+        rootSignatureDesc1.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+        
+        //CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
+        //rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 1, &sampler, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
-        ComPtr<ID3DBlob> signature;
-        ComPtr<ID3DBlob> error;
-        ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error));
-        ThrowIfFailed(m_device->GetD3D12Device()->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
+        //ComPtr<ID3DBlob> signature;
+        //ComPtr<ID3DBlob> error;
+        //ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error));
+        m_rootSignature = std::make_shared<RootSignature>(m_device, rootSignatureDesc1);
+        //ThrowIfFailed(m_device->GetD3D12Device()->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
     }
 
     // NOTE: PSO creation and shader compilation have been moved to
@@ -270,7 +279,7 @@ void DXRenderManager::PrepareFrame()
         m_cameraCbData->Unmap(0, nullptr);
     }
 
-    m_currentCommandList->SetGraphicsRootSignature(m_rootSignature.Get());
+    m_currentCommandList->SetGraphicsRootSignature(m_rootSignature);
     ID3D12DescriptorHeap* ppHeaps[] = { m_srvHeap.Get() };
     m_currentCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
     m_currentCommandList->SetGraphicsRootConstantBufferView(0, m_cameraCbData->GetGPUVirtualAddress());
@@ -439,7 +448,7 @@ void DXRenderManager::OnDestroy()
 
 DXGraphicsContext DeltaEngine::DXRenderManager::GetGraphicsContext() const {
     DXGraphicsContext context;
-    context.device = m_device.get();
+    context.device = m_device;
     context.commandList = m_currentCommandList;
     context.rootSignature = m_rootSignature;
     context.srvHeap = m_srvHeap;

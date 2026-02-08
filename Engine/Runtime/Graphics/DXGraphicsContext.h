@@ -11,15 +11,16 @@ DELTA_ENGINE_NS_BEGIN
 
 class Device;
 class CommandList;
+class RootSignature;
 
 /// Passed to every renderer's InitGraphicState / GatherDrawCalls.
 /// Camera data (view, projection, position) is constant for the frame;
 /// each renderer uses this plus its own model matrix for per-draw MVP.
 struct DXGraphicsContext
 {
-    Device* device = nullptr;
+    std::shared_ptr<Device> device;
     std::shared_ptr<CommandList> commandList;
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
+    std::shared_ptr<RootSignature> rootSignature;
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> srvHeap;
 
     /// Camera constant buffer data (read-only for renderers).

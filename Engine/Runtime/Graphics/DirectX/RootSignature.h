@@ -56,18 +56,17 @@ public:
     uint32_t GetDescriptorTableBitMask(D3D12_DESCRIPTOR_HEAP_TYPE descriptorHeapType) const;
     uint32_t GetNumDescriptors(uint32_t rootIndex) const;
 
-protected:
+public:
     friend class std::default_delete<RootSignature>;
 
-    RootSignature(Device& device, const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc);
-
+    RootSignature(std::shared_ptr<Device> device, const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc);
     virtual ~RootSignature();
 
 private:
     void Destroy();
     void SetRootSignatureDesc(const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc);
 
-    Device& m_Device;
+    std::shared_ptr<Device> m_Device;
     D3D12_ROOT_SIGNATURE_DESC1                  m_RootSignatureDesc;
     Microsoft::WRL::ComPtr<ID3D12RootSignature> m_RootSignature;
 

@@ -66,8 +66,10 @@ public:
      * signature.
      */
     void SetGraphicsDynamicConstantBuffer(uint32_t rootParameterIndex, size_t sizeInBytes, const void* bufferData);
+
     template<typename T>
-    void SetGraphicsDynamicConstantBuffer(uint32_t rootParameterIndex, const T& data) {
+    void SetGraphicsDynamicConstantBuffer(uint32_t rootParameterIndex, const T& data)
+    {
         SetGraphicsDynamicConstantBuffer(rootParameterIndex, sizeof(T), &data);
     }
 
@@ -76,6 +78,8 @@ public:
      */
     void SetGraphicsRootSignature(const std::shared_ptr<RootSignature>& rootSignature);
 
+
+    // ============================ CBV ============================
     /**
      * Set an inline CBV.
      *
@@ -86,14 +90,14 @@ public:
         size_t                bufferOffset = 0);
 
     /**
-     * Set an inline SRV.
-     *
-     * Note: Only Buffer resources can be used with inline SRV's
+     * Set the CBV on the rendering pipeline.
      */
-    void SetShaderResourceView(uint32_t rootParameterIndex, const std::shared_ptr<Buffer>& buffer,
-        D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE |
-        D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-        size_t bufferOffset = 0);
+    void SetConstantBufferView(uint32_t rootParameterIndex, uint32_t descriptorOffset,
+        const std::shared_ptr<ConstantBufferView>& cbv,
+        D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+
+
+    // ============================ UAV ============================
     /**
      * Set an inline UAV.
      *
@@ -104,11 +108,34 @@ public:
         size_t                bufferOffset = 0);
 
     /**
-     * Set the CBV on the rendering pipeline.
+     * Set the UAV on the graphics pipeline.
      */
-    void SetConstantBufferView(uint32_t rootParameterIndex, uint32_t descriptorOffset,
-        const std::shared_ptr<ConstantBufferView>& cbv,
-        D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+    void SetUnorderedAccessView(uint32_t rootParameterIndex, uint32_t descriptorOffset,
+        const std::shared_ptr<UnorderedAccessView>& uav,
+        D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+        UINT firstSubresource = 0,
+        UINT numSubresources = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+
+    /**
+     * Set the UAV on the graphics pipline using a specific mip of the texture.
+     */
+    void SetUnorderedAccessView(uint32_t rootParameterIndex, uint32_t descriptorOffset,
+        const std::shared_ptr<DirectX12Texture>& texture, UINT mip,
+        D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+        UINT firstSubresource = 0,
+        UINT numSubresources = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+
+    
+    // ============================ SRV ============================
+    /**
+     * Set an inline SRV.
+     *
+     * Note: Only Buffer resources can be used with inline SRV's
+     */
+    void SetShaderResourceView(uint32_t rootParameterIndex, const std::shared_ptr<Buffer>& buffer,
+        D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+        size_t bufferOffset = 0);
+
 
     /**
      * Set the SRV on the graphics pipeline.
@@ -137,23 +164,8 @@ public:
         D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE |
         D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
-    /**
-     * Set the UAV on the graphics pipeline.
-     */
-    void SetUnorderedAccessView(uint32_t rootParameterIndex, uint32_t descriptorOffset,
-        const std::shared_ptr<UnorderedAccessView>& uav,
-        D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-        UINT                  firstSubresource = 0,
-        UINT                  numSubresources = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 
-    /**
-     * Set the UAV on the graphics pipline using a specific mip of the texture.
-     */
-    void SetUnorderedAccessView(uint32_t rootParameterIndex, uint32_t descriptorOffset,
-        const std::shared_ptr<DirectX12Texture>& texture, UINT mip,
-        D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-        UINT                  firstSubresource = 0,
-        UINT                  numSubresources = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+    // ============================ Draw ============================
 
     /**
      * Draw geometry.
@@ -171,7 +183,7 @@ public:
     void IASetIndexBuffer(const D3D12_INDEX_BUFFER_VIEW* view);
     void IASetPrimitiveTopology(D3D12_PRIMITIVE_TOPOLOGY topology);
 
-    void SetGraphicsRootSignature(ID3D12RootSignature* rootSignature);
+    //void SetGraphicsRootSignature(ID3D12RootSignature* rootSignature);
     void SetGraphicsRootConstantBufferView(uint32_t rootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS bufferLocation);
     void SetGraphicsRootDescriptorTable(uint32_t rootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE baseDescriptor);
 

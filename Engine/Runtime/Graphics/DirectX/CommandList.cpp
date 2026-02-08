@@ -16,7 +16,6 @@
 #include "Runtime/Graphics/DirectX/ShaderResourceView.h"
 #include "Runtime/Graphics/DirectX/UnorderedAccessView.h"
 #include "Runtime/Graphics/DirectX/ConstantBufferView.h"
-#include "Runtime/Graphics/DirectX/DirectX12Texture.h"
 #include "Runtime/Graphics/DXUtils.h"
 
 using namespace DeltaEngine;
@@ -115,7 +114,8 @@ void CommandList::SetGraphicsDynamicConstantBuffer(uint32_t rootParameterIndex, 
     m_d3d12CommandList->SetGraphicsRootConstantBufferView(rootParameterIndex, heapAllococation.GPU);
 }
 
-void CommandList::SetGraphicsRootSignature(const std::shared_ptr<RootSignature>& rootSignature) {
+void CommandList::SetGraphicsRootSignature(const std::shared_ptr<RootSignature>& rootSignature)
+{
     assert(rootSignature);
 
     auto d3d12RootSignature = rootSignature->GetD3D12RootSignature().Get();
@@ -132,8 +132,12 @@ void CommandList::SetGraphicsRootSignature(const std::shared_ptr<RootSignature>&
     }
 }
 
+
+// ============================ CBV ============================
+
 void CommandList::SetConstantBufferView(uint32_t rootParameterIndex, const std::shared_ptr<ConstantBuffer>& buffer,
-    D3D12_RESOURCE_STATES stateAfter, size_t bufferOffset) {
+    D3D12_RESOURCE_STATES stateAfter, size_t bufferOffset)
+{
     if (buffer) {
         auto d3d12Resource = buffer->GetD3D12Resource();
         TransitionBarrier(d3d12Resource, stateAfter);
@@ -145,21 +149,28 @@ void CommandList::SetConstantBufferView(uint32_t rootParameterIndex, const std::
     }
 }
 
-void CommandList::SetShaderResourceView(uint32_t rootParameterIndex, const std::shared_ptr<Buffer>& buffer,
-    D3D12_RESOURCE_STATES stateAfter, size_t bufferOffset) {
-    if (buffer) {
-        auto d3d12Resource = buffer->GetD3D12Resource();
-        TransitionBarrier(d3d12Resource, stateAfter);
+void CommandList::SetConstantBufferView(uint32_t rootParameterIndex, uint32_t descriptorOffset,
+    const std::shared_ptr<ConstantBufferView>& cbv,
+    D3D12_RESOURCE_STATES stateAfter)
+{
+    assert(cbv);
 
-        m_DynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageInlineSRV(
-            rootParameterIndex, d3d12Resource->GetGPUVirtualAddress() + bufferOffset);
-
-        TrackResource(buffer);
+    auto constantBuffer = cbv->GetConstantBuffer();
+    if (constantBuffer) {
+        TransitionBarrier(constantBuffer, stateAfter);
+        TrackResource(constantBuffer);
     }
+
+    m_DynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(
+        rootParameterIndex, descriptorOffset, 1, cbv->GetDescriptorHandle());
 }
 
+
+// ============================ UAV ============================
+
 void CommandList::SetUnorderedAccessView(uint32_t rootParameterIndex, const std::shared_ptr<Buffer>& buffer,
-    D3D12_RESOURCE_STATES stateAfter, size_t bufferOffset) {
+    D3D12_RESOURCE_STATES stateAfter, size_t bufferOffset)
+{
     if (buffer) {
         auto d3d12Resource = buffer->GetD3D12Resource();
         TransitionBarrier(d3d12Resource, stateAfter);
@@ -171,9 +182,70 @@ void CommandList::SetUnorderedAccessView(uint32_t rootParameterIndex, const std:
     }
 }
 
+void CommandList::SetUnorderedAccessView(uint32_t rootParameterIndex, uint32_t descriptorOffset,
+    const std::shared_ptr<UnorderedAccessView>& uav, D3D12_RESOURCE_STATES stateAfter, UINT firstSubresource, UINT numSubresources)
+{
+    assert(uav);
+
+    auto resource = uav->GetResource();
+    if (resource) {
+        if (numSubresources < D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES) {
+            for (uint32_t i = 0; i < numSubresources; ++i) {
+                TransitionBarrier(resource, stateAfter, firstSubresource + i);
+            }
+        } else {
+            TransitionBarrier(resource, stateAfter);
+        }
+
+        TrackResource(resource);
+    }
+
+    m_DynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(
+        rootParameterIndex, descriptorOffset, 1, uav->GetDescriptorHandle());
+}
+
+void CommandList::SetUnorderedAccessView(uint32_t rootParameterIndex, uint32_t descriptorOffset,
+    const std::shared_ptr<DirectX12Texture>& texture, UINT mip,
+    D3D12_RESOURCE_STATES stateAfter, UINT firstSubresource,
+    UINT numSubresources)
+{
+    if (texture) {
+        if (numSubresources < D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES) {
+            for (uint32_t i = 0; i < numSubresources; ++i) {
+                TransitionBarrier(texture, stateAfter, firstSubresource + i);
+            }
+        } else {
+            TransitionBarrier(texture, stateAfter);
+        }
+
+        TrackResource(texture);
+
+        m_DynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(
+            rootParameterIndex, descriptorOffset, 1, texture->GetUnorderedAccessView(mip));
+    }
+}
+
+
+// ============================ SRV ============================
+
+void CommandList::SetShaderResourceView(uint32_t rootParameterIndex, const std::shared_ptr<Buffer>& buffer,
+    D3D12_RESOURCE_STATES stateAfter, size_t bufferOffset)
+{
+    if (buffer) {
+        auto d3d12Resource = buffer->GetD3D12Resource();
+        TransitionBarrier(d3d12Resource, stateAfter);
+
+        m_DynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageInlineSRV(
+            rootParameterIndex, d3d12Resource->GetGPUVirtualAddress() + bufferOffset);
+
+        TrackResource(buffer);
+    }
+}
+
 void CommandList::SetShaderResourceView(uint32_t rootParameterIndex, uint32_t descriptorOffset,
     const std::shared_ptr<ShaderResourceView>& srv,
-    D3D12_RESOURCE_STATES stateAfter, UINT firstSubresource, UINT numSubresources) {
+    D3D12_RESOURCE_STATES stateAfter, UINT firstSubresource, UINT numSubresources)
+{
     assert(srv);
 
     auto resource = srv->GetResource();
@@ -230,66 +302,8 @@ void CommandList::SetShaderResourceView(uint32_t rootParameterIndex, const std::
         rootParameterIndex, 0, 1, texture->GetSRVCPUHandle());
 }
 
-void CommandList::SetUnorderedAccessView(uint32_t rootParameterIndex, uint32_t descriptorOffset,
-    const std::shared_ptr<UnorderedAccessView>& uav,
-    D3D12_RESOURCE_STATES stateAfter, UINT firstSubresource,
-    UINT numSubresources) {
-    assert(uav);
 
-    auto resource = uav->GetResource();
-    if (resource) {
-        if (numSubresources < D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES) {
-            for (uint32_t i = 0; i < numSubresources; ++i) {
-                TransitionBarrier(resource, stateAfter, firstSubresource + i);
-            }
-        }
-        else {
-            TransitionBarrier(resource, stateAfter);
-        }
-
-        TrackResource(resource);
-    }
-
-    m_DynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(
-        rootParameterIndex, descriptorOffset, 1, uav->GetDescriptorHandle());
-}
-
-void CommandList::SetUnorderedAccessView(uint32_t rootParameterIndex, uint32_t descriptorOffset,
-    const std::shared_ptr<DirectX12Texture>& texture, UINT mip,
-    D3D12_RESOURCE_STATES stateAfter, UINT firstSubresource,
-    UINT numSubresources)
-{
-    if (texture) {
-        if (numSubresources < D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES) {
-            for (uint32_t i = 0; i < numSubresources; ++i) {
-                TransitionBarrier(texture, stateAfter, firstSubresource + i);
-            }
-        }
-        else {
-            TransitionBarrier(texture, stateAfter);
-        }
-
-        TrackResource(texture);
-
-        m_DynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(
-            rootParameterIndex, descriptorOffset, 1, texture->GetUnorderedAccessView(mip));
-    }
-}
-
-void CommandList::SetConstantBufferView(uint32_t rootParameterIndex, uint32_t descriptorOffset,
-    const std::shared_ptr<ConstantBufferView>& cbv,
-    D3D12_RESOURCE_STATES                      stateAfter) {
-    assert(cbv);
-
-    auto constantBuffer = cbv->GetConstantBuffer();
-    if (constantBuffer) {
-        TransitionBarrier(constantBuffer, stateAfter);
-        TrackResource(constantBuffer);
-    }
-
-    m_DynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(
-        rootParameterIndex, descriptorOffset, 1, cbv->GetDescriptorHandle());
-}
+// ============================ Draw ============================
 
 void CommandList::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertex, uint32_t startInstance) {
     FlushResourceBarriers();
@@ -311,6 +325,9 @@ void CommandList::DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint3
 
     m_d3d12CommandList->DrawIndexedInstanced(indexCount, instanceCount, startIndex, baseVertex, startInstance);
 }
+
+
+// ============================  ============================
 
 void CommandList::ResolveSubresource(const std::shared_ptr<Resource>& dstRes, const std::shared_ptr<Resource>& srcRes,
     uint32_t dstSubresource, uint32_t srcSubresource) {
@@ -408,13 +425,13 @@ void CommandList::IASetPrimitiveTopology(D3D12_PRIMITIVE_TOPOLOGY topology) {
     m_d3d12CommandList->IASetPrimitiveTopology(topology);
 }
 
-void CommandList::SetGraphicsRootSignature(ID3D12RootSignature* rootSignature) {
-    if (m_RootSignature != rootSignature) {
-        m_RootSignature = rootSignature;
-        m_d3d12CommandList->SetGraphicsRootSignature(rootSignature);
-        TrackResource(rootSignature);
-    }
-}
+//void CommandList::SetGraphicsRootSignature(ID3D12RootSignature* rootSignature) {
+//    if (m_RootSignature != rootSignature) {
+//        m_RootSignature = rootSignature;
+//        m_d3d12CommandList->SetGraphicsRootSignature(rootSignature);
+//        TrackResource(rootSignature);
+//    }
+//}
 
 void CommandList::SetGraphicsRootConstantBufferView(uint32_t rootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS bufferLocation) {
     m_d3d12CommandList->SetGraphicsRootConstantBufferView(rootParameterIndex, bufferLocation);

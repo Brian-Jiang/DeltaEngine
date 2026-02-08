@@ -33,7 +33,8 @@ DynamicDescriptorHeap::DynamicDescriptorHeap(Device& device, D3D12_DESCRIPTOR_HE
 
 DynamicDescriptorHeap::~DynamicDescriptorHeap() {}
 
-void DynamicDescriptorHeap::ParseRootSignature(const std::shared_ptr<RootSignature>& rootSignature) {
+void DynamicDescriptorHeap::ParseRootSignature(const std::shared_ptr<RootSignature>& rootSignature)
+{
     assert(rootSignature);
 
     // If the root signature changes, all descriptors must be (re)bound to the
@@ -48,8 +49,10 @@ void DynamicDescriptorHeap::ParseRootSignature(const std::shared_ptr<RootSignatu
     uint32_t descriptorTableBitMask = m_DescriptorTableBitMask;
 
     uint32_t currentOffset = 0;
-    DWORD    rootIndex;
-    while (_BitScanForward(&rootIndex, descriptorTableBitMask) && rootIndex < rootSignatureDesc.NumParameters) {
+    DWORD rootIndex;
+
+    while (_BitScanForward(&rootIndex, descriptorTableBitMask) && rootIndex < rootSignatureDesc.NumParameters)
+    {
         uint32_t numDescriptors = rootSignature->GetNumDescriptors(rootIndex);
 
         DescriptorTableCache& descriptorTableCache = m_DescriptorTableCache[rootIndex];

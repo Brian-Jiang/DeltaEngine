@@ -92,7 +92,8 @@ private:
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapChain;
 	std::shared_ptr<Device> m_device;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
-	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
+	//Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
+    std::shared_ptr<RootSignature> m_rootSignature;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvHeap;
 
 	/// The command list for the current frame, obtained in PrepareFrame
