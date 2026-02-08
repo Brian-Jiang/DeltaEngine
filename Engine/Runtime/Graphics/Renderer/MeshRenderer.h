@@ -6,7 +6,7 @@
 #include <DirectXMath.h>
 #include <wrl/client.h>
 
-#include "Graphics/Texture.h"
+#include "Runtime/Graphics/DTexture.h"
 #include "Runtime/Graphics/Renderer/Renderer.h"
 #include "Runtime/Graphics/Mesh.h"
 
@@ -28,14 +28,13 @@ protected:
     void GatherDrawCalls(DXGraphicsContext& context) override;
 
 private:
-    void LoadTexture(const Texture* texture, const DXGraphicsContext& context, UINT descriptorIndex);
-    void AddMesh(const Mesh* mesh, const DirectX::XMMATRIX meshTransform, const DXGraphicsContext& context);
+    void LoadTexture(const std::shared_ptr<DTexture>& texture, DXGraphicsContext& context);
+    void AddMesh(const Mesh* mesh, const DirectX::XMMATRIX meshTransform, DXGraphicsContext& context);
 
     std::vector<D3D12_VERTEX_BUFFER_VIEW> vertexBufferViews;
     std::vector<D3D12_INDEX_BUFFER_VIEW> indexBufferViews;
 
-    std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> textureResources;
-    std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> textureUploadResources;
+    std::vector<std::shared_ptr<DTexture>> loadedTextures;
 
     Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
 
@@ -47,8 +46,6 @@ private:
 
 	int loadedTextureCount;
 	int meshCount;
-
-    static const UINT TexturePixelSize = 4;
 };
 
 DELTA_ENGINE_NS_END

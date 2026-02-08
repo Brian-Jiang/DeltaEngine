@@ -20,7 +20,8 @@ class DynamicDescriptorHeap;
 class RootSignature;
 class ConstantBuffer;
 class Buffer;
-class Texture;
+class DirectX12Texture;
+class DTexture;
 class ShaderResourceView;
 class ConstantBufferView;
 class UnorderedAccessView;
@@ -123,11 +124,19 @@ public:
      * Set an SRV on the graphics pipeline using the default SRV for the texture.
      */
     void SetShaderResourceView(int32_t rootParameterIndex, uint32_t descriptorOffset,
-        const std::shared_ptr<Texture>& texture,
+        const std::shared_ptr<DirectX12Texture>& texture,
         D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE |
         D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
         UINT firstSubresource = 0,
         UINT numSubresources = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+
+    /**
+     * Set an SRV on the graphics pipeline from an engine-level DTexture (handles transition and descriptor staging).
+     */
+    void SetShaderResourceView(uint32_t rootParameterIndex, const std::shared_ptr<DTexture>& texture,
+        D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE |
+        D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
     /**
      * Set the UAV on the graphics pipeline.
      */
@@ -141,7 +150,7 @@ public:
      * Set the UAV on the graphics pipline using a specific mip of the texture.
      */
     void SetUnorderedAccessView(uint32_t rootParameterIndex, uint32_t descriptorOffset,
-        const std::shared_ptr<Texture>& texture, UINT mip,
+        const std::shared_ptr<DirectX12Texture>& texture, UINT mip,
         D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
         UINT                  firstSubresource = 0,
         UINT                  numSubresources = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);

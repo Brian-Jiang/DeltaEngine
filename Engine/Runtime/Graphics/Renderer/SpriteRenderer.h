@@ -6,7 +6,7 @@
 #include <DirectXMath.h>
 #include <wrl/client.h>
 
-#include "Runtime/Graphics/Texture.h"
+#include "Runtime/Graphics/DTexture.h"
 #include "Runtime/Graphics/Renderer/Renderer.h"
 
 DELTA_ENGINE_NS_BEGIN
@@ -30,9 +30,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_IndexBuffer;
 	D3D12_INDEX_BUFFER_VIEW m_IndexBufferView;
 
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
-	Microsoft::WRL::ComPtr<ID3D12Resource> textureUploadHeap;
-	Texture *texture;
+	std::shared_ptr<DTexture> m_texture;
 
 	// Per-renderer pipeline state
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
@@ -52,8 +50,6 @@ protected:
     virtual void InitGraphicState(DXGraphicsContext& context) override;
     virtual void GatherDrawCalls(DXGraphicsContext& context) override;
 
-private:
-    static const UINT TexturePixelSize = 4;
 };
 
 DELTA_ENGINE_NS_END

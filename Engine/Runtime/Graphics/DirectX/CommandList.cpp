@@ -9,12 +9,14 @@
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/DirectX/DynamicDescriptorHeap.h"
 #include "Runtime/Graphics/DirectX/RootSignature.h"
-#include "Runtime/Graphics/DirectX/Texture.h"
+#include "Runtime/Graphics/DTexture.h"
+#include "Runtime/Graphics/DirectX/DirectX12Texture.h"
 #include "Runtime/Graphics/DirectX/Buffer.h"
 #include "Runtime/Graphics/DirectX/ConstantBuffer.h"
 #include "Runtime/Graphics/DirectX/ShaderResourceView.h"
 #include "Runtime/Graphics/DirectX/UnorderedAccessView.h"
 #include "Runtime/Graphics/DirectX/ConstantBufferView.h"
+#include "Runtime/Graphics/DirectX/DirectX12Texture.h"
 #include "Runtime/Graphics/DXUtils.h"
 
 using namespace DeltaEngine;
@@ -193,9 +195,11 @@ void CommandList::SetShaderResourceView(uint32_t rootParameterIndex, uint32_t de
 }
 
 void CommandList::SetShaderResourceView(int32_t rootParameterIndex, uint32_t descriptorOffset,
-    const std::shared_ptr<Texture>& texture, D3D12_RESOURCE_STATES stateAfter,
-    UINT firstSubresource, UINT numSubresources) {
-    if (texture) {
+    const std::shared_ptr<DirectX12Texture>& texture, D3D12_RESOURCE_STATES stateAfter,
+    UINT firstSubresource, UINT numSubresources)
+{
+    if (texture)
+    {
         if (numSubresources < D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES) {
             for (uint32_t i = 0; i < numSubresources; ++i) {
                 TransitionBarrier(texture, stateAfter, firstSubresource + i);
@@ -210,6 +214,20 @@ void CommandList::SetShaderResourceView(int32_t rootParameterIndex, uint32_t des
         m_DynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(
             rootParameterIndex, descriptorOffset, 1, texture->GetShaderResourceView());
     }
+}
+
+void CommandList::SetShaderResourceView(uint32_t rootParameterIndex, const std::shared_ptr<DTexture>& texture,
+    D3D12_RESOURCE_STATES stateAfter)
+{
+    if (!texture) return;
+    ID3D12Resource* rawRes = texture->GetD3D12Resource();
+    if (!rawRes) return;
+    Microsoft::WRL::ComPtr<ID3D12Resource> res;
+    res.Attach(rawRes);
+    TransitionBarrier(res, stateAfter);
+    res.Detach();
+    m_DynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(
+        rootParameterIndex, 0, 1, texture->GetSRVCPUHandle());
 }
 
 void CommandList::SetUnorderedAccessView(uint32_t rootParameterIndex, uint32_t descriptorOffset,
@@ -237,9 +255,10 @@ void CommandList::SetUnorderedAccessView(uint32_t rootParameterIndex, uint32_t d
 }
 
 void CommandList::SetUnorderedAccessView(uint32_t rootParameterIndex, uint32_t descriptorOffset,
-    const std::shared_ptr<Texture>& texture, UINT mip,
+    const std::shared_ptr<DirectX12Texture>& texture, UINT mip,
     D3D12_RESOURCE_STATES stateAfter, UINT firstSubresource,
-    UINT numSubresources) {
+    UINT numSubresources)
+{
     if (texture) {
         if (numSubresources < D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES) {
             for (uint32_t i = 0; i < numSubresources; ++i) {

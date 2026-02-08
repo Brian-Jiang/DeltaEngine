@@ -12,7 +12,8 @@ DELTA_ENGINE_NS_BEGIN
 class DescriptorAllocator;
 class DescriptorAllocation;
 class CommandQueue;
-class Texture;
+class CommandList;
+class DirectX12Texture;
 
 class Device : std::enable_shared_from_this<Device>
 {
@@ -49,10 +50,16 @@ public:
      *
      * @returns A pointer to the created texture.
      */
-    std::shared_ptr<Texture> CreateTexture(const D3D12_RESOURCE_DESC& resourceDesc,
+    std::shared_ptr<DirectX12Texture> CreateTexture(const D3D12_RESOURCE_DESC& resourceDesc,
         const D3D12_CLEAR_VALUE* clearValue = nullptr);
-    std::shared_ptr<Texture> CreateTexture(Microsoft::WRL::ComPtr<ID3D12Resource> resource,
+    std::shared_ptr<DirectX12Texture> CreateTexture(Microsoft::WRL::ComPtr<ID3D12Resource> resource,
         const D3D12_CLEAR_VALUE* clearValue = nullptr);
+
+    /**
+     * Upload a DTexture (loaded from file) to the GPU. Allocates descriptor and creates SRV internally.
+     * Records copy and transition commands on the given command list.
+     */
+    void CreateTextureFromFile(class DTexture* dtex, CommandList& commandList);
 
     /**
      * Get the adapter that was used to create this device.

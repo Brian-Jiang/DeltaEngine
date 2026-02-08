@@ -5,6 +5,7 @@
 #include <iostream>
 
 #include "Graphics/Structures/Vertex.h"
+#include "Graphics/DTexture.h"
 #include "Graphics/Mesh.h"
 #include "IO/IOManager.h"
 #include "assimp/Importer.hpp"
@@ -133,7 +134,7 @@ Mesh *ModelImporter::ProcessMesh(aiMesh *mesh, const aiScene *scene)
 {
 	std::vector<Vertex> vertices;
     vector<unsigned int> indices;
-    vector<Texture*> textures;
+    vector<std::shared_ptr<DTexture>> textures;
     for(unsigned int i = 0; i < mesh->mNumVertices; i++)
     {
         Vertex vertex;
@@ -185,11 +186,11 @@ Mesh *ModelImporter::ProcessMesh(aiMesh *mesh, const aiScene *scene)
         if(mesh->mMaterialIndex >= 0)
 		{
 		    aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
-		    vector<Texture*> diffuseMaps = LoadMaterialTextures(scene, material, 
+		    vector<std::shared_ptr<DTexture>> diffuseMaps = LoadMaterialTextures(scene, material,
 		                                        aiTextureType_DIFFUSE, "texture_diffuse", this->sourcePath);
 		    textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
 
-		    vector<Texture*> specularMaps = LoadMaterialTextures(scene, material, 
+		    vector<std::shared_ptr<DTexture>> specularMaps = LoadMaterialTextures(scene, material,
 		                                        aiTextureType_SPECULAR, "texture_specular", this->sourcePath);
 		    textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
 		}  
@@ -218,27 +219,22 @@ std::string FindTextureFile(const std::string& directory, const std::string& fil
     return "";
 }
 
-vector<Texture*> ModelImporter::LoadMaterialTextures(const aiScene* scene, aiMaterial *mat, aiTextureType type, string typeName, const std::string& filePath)
+vector<std::shared_ptr<DTexture>> ModelImporter::LoadMaterialTextures(const aiScene* scene, aiMaterial *mat, aiTextureType type, string typeName, const std::string& filePath)
 {
 	auto folderPath = GetParentDirectory(filePath, 2);
-    vector<Texture*> textures;
+    vector<std::shared_ptr<DTexture>> textures;
     for(unsigned int i = 0; i < mat->GetTextureCount(type); i++)
     {
         aiString str;
         mat->GetTexture(type, i, &str);
-		//auto t = scene->GetEmbeddedTexture(str.C_Str());
         std::string filePath = str.C_Str();
 		if (filePath.empty()) {
 			continue;
 		}
 
         auto fileName = filePath.substr(filePath.find_last_of("\\/") + 1);
-		//auto fullFolderPath = IOManager::GetAssetFullPath(folderPath);
 		auto texturePath = FindTextureFile(folderPath, fileName);
-        auto texture = Texture::LoadFromFile(texturePath, true);
-         //texture.id = TextureFromFile(str.C_Str(), directory);
-         //texture.type = typeName;
-         //texture.path = str;
+        auto texture = DTexture::LoadFromFile(texturePath, true);
         textures.push_back(texture);
     }
     return textures;

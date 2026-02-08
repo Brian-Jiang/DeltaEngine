@@ -44,7 +44,7 @@
 
 DELTA_ENGINE_NS_BEGIN
 
-class Texture;
+class DirectX12Texture;
 
 // Don't use scoped enums to avoid the explicit cast required to use these as
 // array indices.
@@ -80,8 +80,8 @@ public:
      * @param attachmentPoint The point to attach the texture to.
      * @param [texture] Optional texture to bind to the render target. Specify nullptr to remove the texture.
      */
-    void                     AttachTexture( AttachmentPoint attachmentPoint, std::shared_ptr<Texture> texture );
-    std::shared_ptr<Texture> GetTexture( AttachmentPoint attachmentPoint ) const;
+    void AttachTexture(AttachmentPoint attachmentPoint, std::shared_ptr<DirectX12Texture> texture);
+    std::shared_ptr<DirectX12Texture> GetTexture(AttachmentPoint attachmentPoint) const;
 
     // Resize all of the textures associated with the render target.
     void             Resize( DirectX::XMUINT2 size );
@@ -100,7 +100,7 @@ public:
     // Get a list of the textures attached to the render target.
     // This method is primarily used by the CommandList when binding the
     // render target to the output merger stage of the rendering pipeline.
-    const std::vector<std::shared_ptr<Texture>>& GetTextures() const;
+    const std::vector<std::shared_ptr<DirectX12Texture>>& GetTextures() const;
 
     // Get the render target formats of the textures currently
     // attached to this render target object.
@@ -120,7 +120,7 @@ public:
     }
 
 private:
-    using RenderTargetList = std::vector<std::shared_ptr<Texture>>;
+    using RenderTargetList = std::vector<std::shared_ptr<DirectX12Texture>>;
     RenderTargetList m_Textures;
     DirectX::XMUINT2                      m_Size;
 };

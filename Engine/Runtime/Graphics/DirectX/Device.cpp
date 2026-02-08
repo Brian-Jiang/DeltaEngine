@@ -1,10 +1,15 @@
 #include "Runtime/Graphics/DirectX/Device.h"
 
 #include <assert.h>
+#include <d3dx12.h>
 #include <dxgidebug.h>
+
+#include "Runtime/Graphics/DTexture.h"
 #include "Runtime/Graphics/DirectX/CommandQueue.h"
+#include "Runtime/Graphics/DirectX/CommandList.h"
 #include "Runtime/Graphics/DirectX/DescriptorAllocation.h"
 #include "Runtime/Graphics/DirectX/DescriptorAllocator.h"
+#include "Runtime/Graphics/DirectX/DirectX12Texture.h"
 #include "Runtime/Graphics/DirectX/Texture.h"
 #include "Runtime/Graphics/DXUtils.h"
 
@@ -129,14 +134,87 @@ CommandQueue& Device::GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) {
     return *commandQueue;
 }
 
-std::shared_ptr<Texture> Device::CreateTexture(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* clearValue) {
-    std::shared_ptr<Texture> texture = std::make_shared<Texture>(*this, resourceDesc, clearValue);
-
-    return texture;
+std::shared_ptr<DirectX12Texture> Device::CreateTexture(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* clearValue)
+{
+    return std::make_shared<DirectX12Texture>(*this, resourceDesc, clearValue);
 }
 
-std::shared_ptr<Texture> Device::CreateTexture(Microsoft::WRL::ComPtr<ID3D12Resource> resource, const D3D12_CLEAR_VALUE* clearValue) {
-    std::shared_ptr<Texture> texture = std::make_shared<Texture>(*this, resource, clearValue);
+std::shared_ptr<DirectX12Texture> Device::CreateTexture(Microsoft::WRL::ComPtr<ID3D12Resource> resource, const D3D12_CLEAR_VALUE* clearValue)
+{
+    return std::make_shared<DirectX12Texture>(*this, resource, clearValue);
+}
 
-    return texture;
+void Device::CreateTextureFromFile(DTexture* dtex, CommandList& commandList)
+{
+    if (!dtex || dtex->GetData().empty())
+        return;
+
+    auto d3d12Device = GetD3D12Device();
+    UINT textureWidth = dtex->GetWidth();
+    UINT textureHeight = dtex->GetHeight();
+    const UINT pixelSize = 4;
+    UINT64 rowPitch = textureWidth * pixelSize;
+    UINT64 alignedRowPitch = (rowPitch + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1);
+    UINT64 textureSize = alignedRowPitch * textureHeight;
+
+    D3D12_RESOURCE_DESC textureDesc = {};
+    textureDesc.MipLevels = 1;
+    textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    textureDesc.Width = textureWidth;
+    textureDesc.Height = textureHeight;
+    textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+    textureDesc.DepthOrArraySize = 1;
+    textureDesc.SampleDesc.Count = 1;
+    textureDesc.SampleDesc.Quality = 0;
+    textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+
+    ComPtr<ID3D12Resource> textureResource;
+    CD3DX12_HEAP_PROPERTIES heapDefault(D3D12_HEAP_TYPE_DEFAULT);
+    ThrowIfFailed(d3d12Device->CreateCommittedResource(
+        &heapDefault,
+        D3D12_HEAP_FLAG_NONE,
+        &textureDesc,
+        D3D12_RESOURCE_STATE_COPY_DEST,
+        nullptr,
+        IID_PPV_ARGS(&textureResource)));
+
+    ComPtr<ID3D12Resource> uploadHeap;
+    CD3DX12_HEAP_PROPERTIES heapUpload(D3D12_HEAP_TYPE_UPLOAD);
+    CD3DX12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(textureSize);
+    ThrowIfFailed(d3d12Device->CreateCommittedResource(
+        &heapUpload,
+        D3D12_HEAP_FLAG_NONE,
+        &bufferDesc,
+        D3D12_RESOURCE_STATE_GENERIC_READ,
+        nullptr,
+        IID_PPV_ARGS(&uploadHeap)));
+
+    const unsigned char* rawData = dtex->GetData().data();
+    UINT8* pData = nullptr;
+    uploadHeap->Map(0, nullptr, reinterpret_cast<void**>(&pData));
+    for (UINT y = 0; y < textureHeight; ++y)
+        memcpy(pData + y * alignedRowPitch, rawData + y * rowPitch, rowPitch);
+    uploadHeap->Unmap(0, nullptr);
+
+    D3D12_SUBRESOURCE_FOOTPRINT pitchedDesc = {};
+    pitchedDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    pitchedDesc.Width = textureWidth;
+    pitchedDesc.Height = textureHeight;
+    pitchedDesc.Depth = 1;
+    pitchedDesc.RowPitch = static_cast<UINT>(alignedRowPitch);
+
+    D3D12_PLACED_SUBRESOURCE_FOOTPRINT placed = { 0 };
+    placed.Offset = 0;
+    placed.Footprint = pitchedDesc;
+
+    D3D12_TEXTURE_COPY_LOCATION dst = CD3DX12_TEXTURE_COPY_LOCATION(textureResource.Get(), 0);
+    D3D12_TEXTURE_COPY_LOCATION src = CD3DX12_TEXTURE_COPY_LOCATION(uploadHeap.Get(), placed);
+    commandList.CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+
+    D3D12_RESOURCE_BARRIER rb = CD3DX12_RESOURCE_BARRIER::Transition(
+        textureResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    commandList.ResourceBarrier(1, &rb);
+
+    std::shared_ptr<DirectX12Texture> dx12Texture = std::make_shared<DirectX12Texture>(*this, textureResource, nullptr);
+    dtex->SetGPUTexture(dx12Texture);
 }

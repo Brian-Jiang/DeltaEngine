@@ -4,7 +4,7 @@
 #include <dxcapi.h>
 #include <iostream>
 
-#include "Graphics/Texture.h"
+#include "Graphics/DTexture.h"
 #include "Graphics/DXUtils.h"
 #include "IO/IOManager.h"
 #include "Runtime/EngineMain.h"
@@ -143,13 +143,11 @@ void DeltaEngine::MeshRenderer::InitGraphicState(DXGraphicsContext& context) {
 
     // ---- Create vertex/index buffers and load textures for all meshes ----
     for (size_t i = 0; i < meshes.size(); ++i) {
-        auto mesh = meshes[i];
-        auto meshTransform = meshTransforms[i];
-        AddMesh(mesh, meshTransform, context);
+        AddMesh(meshes[i], meshTransforms[i], context);
     }
 }
 
-void MeshRenderer::AddMesh(const Mesh* mesh, const XMMATRIX meshTransform, const DXGraphicsContext& context)
+void MeshRenderer::AddMesh(const Mesh* mesh, const XMMATRIX meshTransform, DXGraphicsContext& context)
 {
     auto& uploadBuffer = EngineMain::instance->dxRenderManager->GetUploadBuffer();
 
@@ -189,95 +187,19 @@ void MeshRenderer::AddMesh(const Mesh* mesh, const XMMATRIX meshTransform, const
     }
 
     for (size_t i = 0; i < mesh->textures.size(); ++i) {
-        auto texture = mesh->textures[i];
-        LoadTexture(texture, context, loadedTextureCount++);
+        LoadTexture(mesh->textures[i], context);
+        ++loadedTextureCount;
     }
 
     ++meshCount;
 }
 
-void MeshRenderer::LoadTexture(const Texture* texture, const DXGraphicsContext& context, UINT descriptorIndex)
+void MeshRenderer::LoadTexture(const std::shared_ptr<DTexture>& texture, DXGraphicsContext& context)
 {
-    auto d3d12Device = context.device->GetD3D12Device();
-    auto& commandList = context.commandList;
-
-    auto textureHeight = texture->GetHeight();
-    auto textureWidth = texture->GetWidth();
-
-    D3D12_RESOURCE_DESC textureDesc = {};
-    textureDesc.MipLevels = 1;
-    textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    textureDesc.Width = textureWidth;
-    textureDesc.Height = textureHeight;
-    textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-    textureDesc.DepthOrArraySize = 1;
-    textureDesc.SampleDesc.Count = 1;
-    textureDesc.SampleDesc.Quality = 0;
-    textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-
-    auto hp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-    ComPtr<ID3D12Resource> textureResource;
-    ThrowIfFailed(d3d12Device->CreateCommittedResource(
-        &hp,
-        D3D12_HEAP_FLAG_NONE,
-        &textureDesc,
-        D3D12_RESOURCE_STATE_COPY_DEST,
-        nullptr,
-        IID_PPV_ARGS(&textureResource)));
-
-    UINT64 rowPitch = textureWidth * 4;
-    UINT64 alignedRowPitch = (rowPitch + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1);
-    UINT64 textureSize = alignedRowPitch * textureHeight;
-
-    hp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-    auto uploadHeapDesc = CD3DX12_RESOURCE_DESC::Buffer(textureSize);
-    ComPtr<ID3D12Resource> textureUploadHeap;
-    ThrowIfFailed(d3d12Device->CreateCommittedResource(
-        &hp,
-        D3D12_HEAP_FLAG_NONE,
-        &uploadHeapDesc,
-        D3D12_RESOURCE_STATE_GENERIC_READ,
-        nullptr,
-        IID_PPV_ARGS(&textureUploadHeap)));
-
-    auto rawData = texture->GetData().data();
-
-    D3D12_SUBRESOURCE_FOOTPRINT pitchedDesc = {};
-    pitchedDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    pitchedDesc.Width = textureWidth;
-    pitchedDesc.Height = textureHeight;
-    pitchedDesc.Depth = 1;
-    pitchedDesc.RowPitch = static_cast<UINT>(alignedRowPitch);
-
-    UINT8* pData;
-    textureUploadHeap->Map(0, nullptr, reinterpret_cast<void**>(&pData));
-    for (UINT y = 0; y < textureHeight; y++) {
-        memcpy(pData + y * alignedRowPitch, rawData + y * rowPitch, rowPitch);
-    }
-    textureUploadHeap->Unmap(0, nullptr);
-
-    D3D12_PLACED_SUBRESOURCE_FOOTPRINT placedTexture2D = { 0 };
-    placedTexture2D.Offset = 0;
-    placedTexture2D.Footprint = pitchedDesc;
-    
-    D3D12_TEXTURE_COPY_LOCATION dst = CD3DX12_TEXTURE_COPY_LOCATION(textureResource.Get(), 0);
-    D3D12_TEXTURE_COPY_LOCATION src = CD3DX12_TEXTURE_COPY_LOCATION(textureUploadHeap.Get(), placedTexture2D);
-    commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
-
-    auto rb = CD3DX12_RESOURCE_BARRIER::Transition(
-        textureResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    commandList->ResourceBarrier(1, &rb);
-
-    D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-    srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-    srvDesc.Format = textureDesc.Format;
-    srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-    srvDesc.Texture2D.MipLevels = 1;
-    CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(context.srvHeap->GetCPUDescriptorHandleForHeapStart(), descriptorIndex, context.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
-    d3d12Device->CreateShaderResourceView(textureResource.Get(), &srvDesc, srvHandle);
-
-    this->textureResources.push_back(textureResource);
-	this->textureUploadResources.push_back(textureUploadHeap);
+    if (!texture || texture->GetData().empty())
+        return;
+    context.device->CreateTextureFromFile(texture.get(), *context.commandList);
+    loadedTextures.push_back(texture);
 }
 
 void DeltaEngine::MeshRenderer::GatherDrawCalls(DXGraphicsContext& context)
@@ -311,10 +233,9 @@ void DeltaEngine::MeshRenderer::GatherDrawCalls(DXGraphicsContext& context)
         commandList->IASetVertexBuffers(0, 1, &vertexBufferViews[i]);
         commandList->IASetIndexBuffer(&indexBufferViews[i]);
 
-        if (i < loadedTextureCount) {
-            commandList->SetGraphicsRootDescriptorTable(1, CD3DX12_GPU_DESCRIPTOR_HANDLE(context.srvHeap->GetGPUDescriptorHandleForHeapStart(), i, context.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)));
-        }
+        if (i < static_cast<int>(loadedTextures.size()))
+            commandList->SetShaderResourceView(1, loadedTextures[i]);
 
-        commandList->DrawIndexedInstanced(static_cast<uint32_t>(this->meshes[i]->indices.size()), 1, 0, 0, 0);
+        commandList->DrawIndexed(static_cast<uint32_t>(meshes[i]->indices.size()), 1, 0, 0, 0);
     }
 }

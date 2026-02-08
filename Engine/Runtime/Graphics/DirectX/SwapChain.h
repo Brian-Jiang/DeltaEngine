@@ -126,7 +126,7 @@ public:
      *
      * @returns The current backbuffer index after the present.
      */
-    UINT Present( const std::shared_ptr<Texture>& texture = nullptr );
+    UINT Present(const std::shared_ptr<DirectX12Texture>& texture = nullptr);
 
     /**
      * Get the format that is used to create the backbuffer.
@@ -159,7 +159,7 @@ private:
     // the next frame is allowed to be rendered.
     CommandQueue&                           m_CommandQueue;
     Microsoft::WRL::ComPtr<IDXGISwapChain4> m_dxgiSwapChain;
-    std::shared_ptr<Texture>                m_BackBufferTextures[BufferCount];
+    std::shared_ptr<DirectX12Texture> m_BackBufferTextures[BufferCount];
     mutable RenderTarget                    m_RenderTarget;
 
     // The current backbuffer index of the swap chain.

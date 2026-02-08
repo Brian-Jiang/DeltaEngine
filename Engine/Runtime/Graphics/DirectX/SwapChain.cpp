@@ -7,7 +7,7 @@
 #include "Runtime/Graphics/DirectX/ResourceStateTracker.h"
 #include "Runtime/Graphics/DirectX/CommandQueue.h"
 #include "Runtime/Graphics/DirectX/CommandList.h"
-#include "Runtime/Graphics/DirectX/Texture.h"
+#include "Runtime/Graphics/DirectX/DirectX12Texture.h"
 #include "Runtime/Graphics/DXUtils.h"
 
 //#include <dx12lib/SwapChain.h>
@@ -162,7 +162,7 @@ const RenderTarget& SwapChain::GetRenderTarget() const
     return m_RenderTarget;
 }
 
-UINT SwapChain::Present( const std::shared_ptr<Texture>& texture )
+UINT SwapChain::Present(const std::shared_ptr<DirectX12Texture>& texture)
 {
     auto commandList = m_CommandQueue.GetCommandList();
 

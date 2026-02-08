@@ -4,7 +4,7 @@
 #include <dxcapi.h>
 #include <iostream>
 
-#include "Graphics/Texture.h"
+#include "Graphics/DTexture.h"
 #include "Graphics/DXUtils.h"
 #include "IO/IOManager.h"
 #include "Runtime/Graphics/DirectX/Device.h"
@@ -14,7 +14,7 @@ using namespace DirectX;
 using namespace Microsoft::WRL;
 using namespace DeltaEngine;
 
-SpriteRenderer::SpriteRenderer(): width(0), height(0), vertexBufferView(), texture(nullptr)
+SpriteRenderer::SpriteRenderer(): width(0), height(0), vertexBufferView()
 {
 }
 
@@ -169,80 +169,11 @@ void DeltaEngine::SpriteRenderer::InitGraphicState(DXGraphicsContext& context) {
         vertexBufferView.SizeInBytes = sizeof(triangleVertices);
     }
 
-    // ---- Create the texture ----
+    // ---- Create the texture via device (upload + SRV handled internally) ----
     {
-        texture = Texture::LoadFromFile(this->m_texturePath);
-        auto textureHeight = texture->GetHeight();
-        auto textureWidth = texture->GetWidth();
-
-        D3D12_RESOURCE_DESC textureDesc = {};
-        textureDesc.MipLevels = 1;
-        textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        textureDesc.Width = textureWidth;
-        textureDesc.Height = textureHeight;
-        textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-        textureDesc.DepthOrArraySize = 1;
-        textureDesc.SampleDesc.Count = 1;
-        textureDesc.SampleDesc.Quality = 0;
-        textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-
-        auto hp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-        ThrowIfFailed(d3d12Device->CreateCommittedResource(
-            &hp,
-            D3D12_HEAP_FLAG_NONE,
-            &textureDesc,
-            D3D12_RESOURCE_STATE_COPY_DEST,
-            nullptr,
-            IID_PPV_ARGS(&m_texture)));
-
-        UINT64 rowPitch = textureWidth * TexturePixelSize;
-        UINT64 alignedRowPitch = (rowPitch + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1);
-        UINT64 textureSize = alignedRowPitch * textureHeight;
-
-        hp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-        auto uploadHeapDesc = CD3DX12_RESOURCE_DESC::Buffer(textureSize);
-        ThrowIfFailed(d3d12Device->CreateCommittedResource(
-            &hp,
-            D3D12_HEAP_FLAG_NONE,
-            &uploadHeapDesc,
-            D3D12_RESOURCE_STATE_GENERIC_READ,
-            nullptr,
-            IID_PPV_ARGS(&textureUploadHeap)));
-
-        auto rawData = texture->GetData().data();
-
-        D3D12_SUBRESOURCE_FOOTPRINT pitchedDesc = {};
-        pitchedDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        pitchedDesc.Width = textureWidth;
-        pitchedDesc.Height = textureHeight;
-        pitchedDesc.Depth = 1;
-        pitchedDesc.RowPitch = (UINT)alignedRowPitch;
-
-        UINT8* pData;
-        textureUploadHeap->Map(0, nullptr, reinterpret_cast<void**>(&pData));
-        for (size_t y = 0; y < textureHeight; y++) {
-            memcpy(pData + y * alignedRowPitch, rawData + y * rowPitch, rowPitch);
-        }
-        textureUploadHeap->Unmap(0, nullptr);
-
-        D3D12_PLACED_SUBRESOURCE_FOOTPRINT placedTexture2D = { 0 };
-        placedTexture2D.Offset = 0;
-        placedTexture2D.Footprint = pitchedDesc;
-
-        D3D12_TEXTURE_COPY_LOCATION dst = CD3DX12_TEXTURE_COPY_LOCATION(m_texture.Get(), 0);
-        D3D12_TEXTURE_COPY_LOCATION src = CD3DX12_TEXTURE_COPY_LOCATION(textureUploadHeap.Get(), placedTexture2D);
-        commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
-
-        auto rb = CD3DX12_RESOURCE_BARRIER::Transition(
-            m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-        commandList->ResourceBarrier(1, &rb);
-
-        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-        srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-        srvDesc.Format = textureDesc.Format;
-        srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-        srvDesc.Texture2D.MipLevels = 1;
-        d3d12Device->CreateShaderResourceView(m_texture.Get(), &srvDesc, srvHeap->GetCPUDescriptorHandleForHeapStart());
+        m_texture = DTexture::LoadFromFile(std::string(m_texturePath));
+        if (m_texture && !m_texture->GetData().empty())
+            context.device->CreateTextureFromFile(m_texture.get(), *context.commandList);
     }
 
     // ---- Per-object constant buffer (root parameter 2: world matrix + color) ----
@@ -282,6 +213,6 @@ void DeltaEngine::SpriteRenderer::GatherDrawCalls(DXGraphicsContext& context) {
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
     commandList->SetGraphicsRootConstantBufferView(2, m_objectCb->GetGPUVirtualAddress());
-    commandList->SetGraphicsRootDescriptorTable(1, CD3DX12_GPU_DESCRIPTOR_HANDLE(context.srvHeap->GetGPUDescriptorHandleForHeapStart(), 0, context.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)));
-    commandList->DrawInstanced(6, 1, 0, 0);
+    commandList->SetShaderResourceView(1, m_texture);
+    commandList->Draw(6, 1, 0, 0);
 }
