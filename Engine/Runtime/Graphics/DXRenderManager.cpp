@@ -12,6 +12,9 @@
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/DirectX/CommandList.h"
 #include "Runtime/Graphics/DirectX/RootSignature.h"
+#include "Runtime/Graphics/DirectX/SwapChain.h"
+#include "Runtime/Graphics/DirectX/RenderTarget.h"
+#include "Runtime/Graphics/DirectX/DirectX12Texture.h"
 #include "Runtime/Core/DWorld.h"
 
 using namespace Microsoft::WRL;
@@ -61,12 +64,13 @@ void DXRenderManager::LoadPipeline()
     CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
 
     // Describe and create the swap chain.
-    m_swapChain = DXUtils::CreateSwapChain(hwnd, directCommandQueue.GetD3D12CommandQueue(), m_width, m_height, FrameCount);
+    //m_swapChain = DXUtils::CreateSwapChain(hwnd, directCommandQueue.GetD3D12CommandQueue(), m_width, m_height, FrameCount);
+    m_swapChain = m_device->CreateSwapChain(hwnd, DXGI_FORMAT_R8G8B8A8_UNORM);
 
     // This sample does not support fullscreen transitions.
     ThrowIfFailed(factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER));
 
-    m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+    //m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
     // Create descriptor heaps.
     {
@@ -84,16 +88,16 @@ void DXRenderManager::LoadPipeline()
     m_DSVHeapAllocation = m_DSVHeap->Allocate(1);
 
     // Create frame resources.
-    {
-        m_rtvHeapAllocation = m_rtvHeap->Allocate(FrameCount);
+    //{
+    //    m_rtvHeapAllocation = m_rtvHeap->Allocate(FrameCount);
 
-        // Create a RTV for each frame.
-        for (UINT n = 0; n < FrameCount; n++)
-        {
-            ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
-            m_device->GetD3D12Device()->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, m_rtvHeapAllocation.GetDescriptorHandle(n));
-        }
-    }
+    //    // Create a RTV for each frame.
+    //    for (UINT n = 0; n < FrameCount; n++)
+    //    {
+    //        ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
+    //        m_device->GetD3D12Device()->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, m_rtvHeapAllocation.GetDescriptorHandle(n));
+    //    }
+    //}
 
     g_TearingSupported = DXUtils::CheckTearingSupport();
 }
@@ -234,23 +238,56 @@ void DXRenderManager::LoadAssets()
     ResizeDepthBuffer(m_width, m_height);
 
     // Create synchronization objects.
-    {
-        for (UINT n = 0; n < FrameCount; n++)
-        {
-            frameFenceValues[n] = 0;
-        }
-    }
+    //{
+    //    for (UINT n = 0; n < FrameCount; n++)
+    //    {
+    //        frameFenceValues[n] = 0;
+    //    }
+    //}
 }
 
 void DXRenderManager::InitWorldRenderers(DWorld& world)
 {
+    // Create a color buffer with sRGB for gamma correction.
+    DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT;
+
+    // Check the best multisample quality level that can be used for the given back buffer format.
+    DXGI_SAMPLE_DESC sampleDesc = m_device->GetMultisampleQualityLevels(backBufferFormat);
+
+    // Create an off-screen render target with a single color buffer and a depth buffer.
+    auto colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(backBufferFormat, m_width, m_height, 1, 1, sampleDesc.Count,
+        sampleDesc.Quality, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+    D3D12_CLEAR_VALUE colorClearValue;
+    colorClearValue.Format = colorDesc.Format;
+    colorClearValue.Color[0] = 0.4f;
+    colorClearValue.Color[1] = 0.6f;
+    colorClearValue.Color[2] = 0.9f;
+    colorClearValue.Color[3] = 1.0f;
+
+    auto colorTexture = m_device->CreateTexture(colorDesc, &colorClearValue);
+    colorTexture->SetName(L"Color Render Target");
+
+    // Create a depth buffer.
+    auto depthDesc = CD3DX12_RESOURCE_DESC::Tex2D(depthBufferFormat, m_width, m_height, 1, 1, sampleDesc.Count,
+        sampleDesc.Quality, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
+    D3D12_CLEAR_VALUE depthClearValue;
+    depthClearValue.Format = depthDesc.Format;
+    depthClearValue.DepthStencil = { 1.0f, 0 };
+
+    auto depthTexture = m_device->CreateTexture(depthDesc, &depthClearValue);
+    depthTexture->SetName(L"Depth Render Target");
+
+    m_renderTarget->AttachTexture(AttachmentPoint::Color0, colorTexture);
+    m_renderTarget->AttachTexture(AttachmentPoint::DepthStencil, depthTexture);
+
     CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
     m_currentCommandList = directCommandQueue.GetCommandList();
 
     DXGraphicsContext context = GetGraphicsContext();
     world.InitRenderers(context);
 
-    frameFenceValues[m_frameIndex] = directCommandQueue.ExecuteCommandList(m_currentCommandList);
+    directCommandQueue.ExecuteCommandList(m_currentCommandList);
     m_currentCommandList.reset();
 
     WaitForPreviousFrame();
@@ -305,77 +342,96 @@ void DXRenderManager::PrepareFrame()
     const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
     m_currentCommandList->ClearRenderTargetView(rtvHandle, clearColor);
     m_currentCommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0);
-    m_currentCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    //m_currentCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
 
 void DXRenderManager::RenderFrame()
 {
     // Transition back buffer to present state.
-    auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-    m_currentCommandList->ResourceBarrier(1, &barrier);
+    //auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+    //m_currentCommandList->ResourceBarrier(1, &barrier);
 
-    // Execute the *same* command list that PrepareFrame opened.
-    CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
-    frameFenceValues[m_frameIndex] = directCommandQueue.ExecuteCommandList(m_currentCommandList);
-    m_currentCommandList.reset();
+    //// Execute the *same* command list that PrepareFrame opened.
+    //CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+    //frameFenceValues[m_frameIndex] = directCommandQueue.ExecuteCommandList(m_currentCommandList);
+    //m_currentCommandList.reset();
 
     // Present the frame.
-    UINT syncInterval = g_VSync ? 1 : 0;
-    UINT presentFlags = g_TearingSupported && !g_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
-    ThrowIfFailed(m_swapChain->Present(syncInterval, presentFlags));
+    //UINT syncInterval = g_VSync ? 1 : 0;
+    //UINT presentFlags = g_TearingSupported && !g_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
+    //ThrowIfFailed(m_swapChain->Present(syncInterval, presentFlags));
+    m_swapChain->Present();
 
     // Wait until frame is done rendering.
-    WaitForPreviousFrame();
+    //WaitForPreviousFrame();
 }
 
-void DXRenderManager::WaitForPreviousFrame()
-{
-    // Wait until the previous frame is finished.
-    CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
-    directCommandQueue.WaitForFenceValue(frameFenceValues[m_frameIndex]);
-
-    m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
-}
+//void DXRenderManager::WaitForPreviousFrame()
+//{
+//    // Wait until the previous frame is finished.
+//    CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+//    directCommandQueue.WaitForFenceValue(frameFenceValues[m_frameIndex]);
+//
+//    m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+//}
 
 void DXRenderManager::Resize(UINT width, UINT height)
 {
-    if (m_width != width || m_height != height)
-    {
-        //CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
-        //directCommandQueue.Flush();
-        m_device->Flush();
+    m_width = std::max(1u, width);
+    m_height = std::max(1u, height);
 
-        // Release the resources holding references to the swap chain.
-        for (UINT n = 0; n < FrameCount; n++)
-        {
-            m_renderTargets[n].Reset();
-        }
+    m_swapChain->Resize(width, height);
 
-        m_width = std::max(1u, width);
-        m_height = std::max(1u, height);
+    m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+    m_viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, static_cast<float>(m_width), static_cast<float>(m_height));
+    m_renderTarget->Resize(m_width, m_height);
 
-        // Resize the swap chain to the desired dimensions.
-        DXGI_SWAP_CHAIN_DESC desc = {};
-        ThrowIfFailed(m_swapChain->GetDesc(&desc));
-        ThrowIfFailed(m_swapChain->ResizeBuffers(FrameCount, m_width, m_height, desc.BufferDesc.Format, desc.Flags));
+  //  if (m_width != width || m_height != height)
+  //  {
+  //      // Wait for all frames to complete before releasing resources
+  //      CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+  //      for (UINT n = 0; n < FrameCount; n++)
+  //      {
+  //          directCommandQueue.WaitForFenceValue(frameFenceValues[n]);
+  //      }
+  //      
+  //      // Now it's safe to flush and release resources
+  //      m_device->Flush();
 
-        m_viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, static_cast<float>(m_width), static_cast<float>(m_height));
+  //      // Release the depth buffer before resizing
+  //      m_DepthBuffer.Reset();
 
-		ResizeDepthBuffer(m_width, m_height);
-        
-        m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+  //      // Release the resources holding references to the swap chain.
+  //      for (UINT n = 0; n < FrameCount; n++)
+  //      {
+  //          m_renderTargets[n].Reset();
+  //      }
 
-        m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+  //      m_width = std::max(1u, width);
+  //      m_height = std::max(1u, height);
 
-        // Create frame resources.
-        {
-            for (UINT n = 0; n < FrameCount; n++)
-            {
-                ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
-                m_device->GetD3D12Device()->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, m_rtvHeapAllocation.GetDescriptorHandle(n));
-            }
-        }
-    }
+  //      // Resize the swap chain to the desired dimensions.
+  //      DXGI_SWAP_CHAIN_DESC desc = {};
+  //      ThrowIfFailed(m_swapChain->GetDesc(&desc));
+  //      ThrowIfFailed(m_swapChain->ResizeBuffers(FrameCount, m_width, m_height, desc.BufferDesc.Format, desc.Flags));
+
+  //      m_viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, static_cast<float>(m_width), static_cast<float>(m_height));
+
+		//ResizeDepthBuffer(m_width, m_height);
+  //      
+  //      m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+
+  //      m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+
+  //      // Create frame resources.
+  //      {
+  //          for (UINT n = 0; n < FrameCount; n++)
+  //          {
+  //              ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
+  //              m_device->GetD3D12Device()->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, m_rtvHeapAllocation.GetDescriptorHandle(n));
+  //          }
+  //      }
+  //  }
 }
 
 void DXRenderManager::SetFullscreen(bool fullscreen)

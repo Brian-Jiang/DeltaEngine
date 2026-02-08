@@ -15,6 +15,7 @@ class DescriptorAllocation;
 class CommandQueue;
 class CommandList;
 class DirectX12Texture;
+class SwapChain;
 
 class Device : std::enable_shared_from_this<Device>
 {
@@ -68,6 +69,15 @@ public:
      */
     void CreateTextureFromFile(class DTexture* dtex, CommandList& commandList);
 
+    std::shared_ptr<SwapChain> CreateSwapChain(HWND hWnd, DXGI_FORMAT backBufferFormat);
+
+    /**
+     * Check if the requested multisample quality is supported for the given format.
+     */
+    DXGI_SAMPLE_DESC GetMultisampleQualityLevels(
+        DXGI_FORMAT format, UINT numSamples = D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT,
+        D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE) const;
+
     /**
      * Get the adapter that was used to create this device.
      */
@@ -100,7 +110,8 @@ public:
     /**
      * Gets the size of the handle increment for the given type of descriptor heap.
      */
-    UINT GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const {
+    inline UINT GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const
+    {
         return m_d3d12Device->GetDescriptorHandleIncrementSize(type);
     }
 

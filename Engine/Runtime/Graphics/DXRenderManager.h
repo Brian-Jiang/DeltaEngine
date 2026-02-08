@@ -22,6 +22,7 @@ class Device;
 class CommandList;
 class RootSignature;
 class SwapChain;
+class RenderTarget;
 class DWorld;
 
 class DXRenderManager
@@ -37,7 +38,7 @@ public:
 
     void PrepareFrame();
     void RenderFrame();
-    void WaitForPreviousFrame();
+    //void WaitForPreviousFrame();
 	void Resize(UINT width, UINT height);
 	void SetFullscreen(bool fullscreen);
 	void ResizeDepthBuffer(int width, int height);
@@ -89,9 +90,10 @@ private:
 	CD3DX12_VIEWPORT m_viewport;
     D3D12_RECT m_scissorRect;
 
-	Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapChain;
+    std::shared_ptr<SwapChain> m_swapChain;
 	std::shared_ptr<Device> m_device;
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
+    std::shared_ptr<RenderTarget> m_renderTarget;
+	//Microsoft::WRL::ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
 	//Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
     std::shared_ptr<RootSignature> m_rootSignature;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvHeap;
@@ -114,8 +116,8 @@ private:
 	DescriptorAllocation m_DSVHeapAllocation;
 
     // Synchronization objects.
-    UINT m_frameIndex;
-	UINT64 frameFenceValues[FrameCount] = {};
+    //UINT m_frameIndex;
+	//UINT64 frameFenceValues[FrameCount] = {};
 
 	// Camera (root parameter 0)
 	DirectX::XMFLOAT4X4 m_viewMatrix;

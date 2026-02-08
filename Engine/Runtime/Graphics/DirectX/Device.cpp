@@ -11,10 +11,21 @@
 #include "Runtime/Graphics/DirectX/DescriptorAllocator.h"
 #include "Runtime/Graphics/DirectX/DirectX12Texture.h"
 #include "Runtime/Graphics/DirectX/Texture.h"
+#include "Runtime/Graphics/DirectX/SwapChain.h"
 #include "Runtime/Graphics/DXUtils.h"
 
 using namespace DeltaEngine;
 using namespace Microsoft::WRL;
+
+class MakeSwapChain : public SwapChain {
+public:
+    MakeSwapChain(Device& device, HWND hWnd, DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R10G10B10A2_UNORM)
+        : SwapChain(device, hWnd, backBufferFormat)
+    {
+    }
+
+    virtual ~MakeSwapChain() { }
+};
 
 void Device::EnableDebugLayer() {
     ComPtr<ID3D12Debug> debugInterface;
@@ -224,4 +235,37 @@ void Device::CreateTextureFromFile(DTexture* dtex, CommandList& commandList)
 
     std::shared_ptr<DirectX12Texture> dx12Texture = std::make_shared<DirectX12Texture>(*this, textureResource, nullptr);
     dtex->SetGPUTexture(dx12Texture);
+}
+
+std::shared_ptr<SwapChain> Device::CreateSwapChain(HWND hWnd, DXGI_FORMAT backBufferFormat)
+{
+    std::shared_ptr<SwapChain> swapChain;
+    swapChain = std::make_shared<MakeSwapChain>(*this, hWnd, backBufferFormat);
+
+    return swapChain;
+}
+
+DXGI_SAMPLE_DESC Device::GetMultisampleQualityLevels(DXGI_FORMAT format, UINT numSamples,
+    D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags) const
+{
+    DXGI_SAMPLE_DESC sampleDesc = { 1, 0 };
+
+    D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS qualityLevels;
+    qualityLevels.Format = format;
+    qualityLevels.SampleCount = 1;
+    qualityLevels.Flags = flags;
+    qualityLevels.NumQualityLevels = 0;
+
+    while (
+        qualityLevels.SampleCount <= numSamples && SUCCEEDED(m_d3d12Device->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &qualityLevels, sizeof(D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS))) && qualityLevels.NumQualityLevels > 0)
+    {
+        // That works...
+        sampleDesc.Count = qualityLevels.SampleCount;
+        sampleDesc.Quality = qualityLevels.NumQualityLevels - 1;
+
+        // But can we do better?
+        qualityLevels.SampleCount *= 2;
+    }
+
+    return sampleDesc;
 }

@@ -25,16 +25,16 @@ using namespace DeltaEngine;
 using namespace Microsoft::WRL;
 
 SwapChain::SwapChain( Device& device, HWND hWnd, DXGI_FORMAT renderTargetFormat )
-: m_Device( device )
-, m_CommandQueue( device.GetCommandQueue( D3D12_COMMAND_LIST_TYPE_DIRECT ) )
-, m_hWnd( hWnd )
-, m_FenceValues { 0 }
-, m_Width( 0u )
-, m_Height( 0u )
-, m_RenderTargetFormat( renderTargetFormat )
-, m_VSync( true )
-, m_TearingSupported( false )
-, m_Fullscreen( false )
+    : m_Device( device )
+    , m_CommandQueue( device.GetCommandQueue( D3D12_COMMAND_LIST_TYPE_DIRECT ) )
+    , m_hWnd( hWnd )
+    , m_FenceValues { 0 }
+    , m_Width( 0u )
+    , m_Height( 0u )
+    , m_RenderTargetFormat( renderTargetFormat )
+    , m_VSync( true )
+    , m_TearingSupported( false )
+    , m_Fullscreen( false )
 {
     assert( hWnd );  // Must be a valid window handle!
 
