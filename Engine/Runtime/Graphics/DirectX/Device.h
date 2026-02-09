@@ -7,6 +7,7 @@
 #include <vector>
 #include <d3d12.h>
 #include <dxgi1_6.h>
+#include <xstring>
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -20,6 +21,14 @@ class Adapter;
 class ConstantBuffer;
 class ByteAddressBuffer;
 class StructuredBuffer;
+class PipelineStateObject;
+class RootSignature;
+class ShaderResourceView;
+class ConstantBufferView;
+class UnorderedAccessView;
+class Resource;
+class IndexBuffer;
+class VertexBuffer;
 
 class Device : std::enable_shared_from_this<Device>
 {
@@ -33,17 +42,31 @@ public:
 
     static void ReportLiveObjects();
 
-
+    /**
+     * Create a new DX12 device using the provided adapter.
+     * If no adapter is specified, then the highest performance adapter will be  chosen.
+     */
+    static std::shared_ptr<Device> Create(std::shared_ptr<Adapter> adapter = nullptr);
 
     /**
-     * Flush all command queues.
+     * Get a description of the adapter that was used to create the device.
      */
-    void Flush();
+    std::wstring GetDescription() const;
 
     /**
-     * Release stale descriptors. This should only be called with a completed frame counter.
+     * Allocate a number of CPU visible descriptors.
      */
-    void ReleaseStaleDescriptors();
+    DescriptorAllocation AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors = 1);
+
+    /**
+     * Gets the size of the handle increment for the given type of descriptor heap.
+     */
+    inline UINT GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const
+    {
+        return m_d3d12Device->GetDescriptorHandleIncrementSize(type);
+    }
+
+    
 
     /**
      * Release upload resources that are no longer needed after GPU execution.
@@ -76,11 +99,17 @@ public:
 
     // ============================ Swap Chain ============================
 
-    std::shared_ptr<SwapChain> CreateSwapChain(HWND hWnd, DXGI_FORMAT backBufferFormat);
+    /**
+     * Create a swapchain using the provided OS window handle.
+     */
+    std::shared_ptr<SwapChain> CreateSwapChain(HWND hWnd, DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R10G10B10A2_UNORM);
 
 
     // ============================ Constant Buffer ============================
 
+    /**
+     * Create a ConstantBuffer from a given ID3D12Resoure.
+     */
     std::shared_ptr<ConstantBuffer> CreateConstantBuffer(Microsoft::WRL::ComPtr<ID3D12Resource> resource);
 
 
@@ -102,12 +131,53 @@ public:
     std::shared_ptr<StructuredBuffer> CreateStructuredBuffer(Microsoft::WRL::ComPtr<ID3D12Resource> resource,
         size_t numElements, size_t elementSize);
 
+
+    // ============================ Index Buffer ============================
+
+    std::shared_ptr<IndexBuffer> CreateIndexBuffer(size_t numIndices, DXGI_FORMAT indexFormat);
+    std::shared_ptr<IndexBuffer> CreateIndexBuffer(Microsoft::WRL::ComPtr<ID3D12Resource> resource, size_t numIndices,
+        DXGI_FORMAT indexFormat);
+
+
+    // ============================ Vertex Buffer ============================
+
+    std::shared_ptr<VertexBuffer> CreateVertexBuffer(size_t numVertices, size_t vertexStride);
+    std::shared_ptr<VertexBuffer> CreateVertexBuffer(Microsoft::WRL::ComPtr<ID3D12Resource> resource,
+        size_t numVertices, size_t vertexStride);
+
+
+    std::shared_ptr<RootSignature> CreateRootSignature(const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc);
+
+    template <class PipelineStateStream>
+    std::shared_ptr<PipelineStateObject> CreatePipelineStateObject(PipelineStateStream& pipelineStateStream)
+    {
+        D3D12_PIPELINE_STATE_STREAM_DESC pipelineStateStreamDesc = { sizeof(PipelineStateStream),
+            &pipelineStateStream };
+
+        return DoCreatePipelineStateObject(pipelineStateStreamDesc);
+    }
+
+    std::shared_ptr<ConstantBufferView> CreateConstantBufferView(const std::shared_ptr<ConstantBuffer>& constantBuffer,
+        size_t offset = 0);
+
+    std::shared_ptr<ShaderResourceView>
+    CreateShaderResourceView(const std::shared_ptr<Resource>& resource,
+        const D3D12_SHADER_RESOURCE_VIEW_DESC* srv = nullptr);
+
+    std::shared_ptr<UnorderedAccessView>
+    CreateUnorderedAccessView(const std::shared_ptr<Resource>& resource,
+        const std::shared_ptr<Resource>& counterResource = nullptr,
+        const D3D12_UNORDERED_ACCESS_VIEW_DESC* uav = nullptr);
+
     /**
-     * Check if the requested multisample quality is supported for the given format.
+     * Flush all command queues.
      */
-    DXGI_SAMPLE_DESC GetMultisampleQualityLevels(
-        DXGI_FORMAT format, UINT numSamples = D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT,
-        D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE) const;
+    void Flush();
+
+    /**
+     * Release stale descriptors. This should only be called with a completed frame counter.
+     */
+    void ReleaseStaleDescriptors();
 
     /**
      * Get the adapter that was used to create this device.
@@ -116,11 +186,6 @@ public:
     {
         return m_Adapter;
     }
-
-    /**
-     * Allocate a number of CPU visible descriptors.
-     */
-    DescriptorAllocation AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors = 1);
 
     /**
      * Get a command queue. Valid types are:
@@ -142,12 +207,11 @@ public:
     }
 
     /**
-     * Gets the size of the handle increment for the given type of descriptor heap.
+     * Check if the requested multisample quality is supported for the given format.
      */
-    inline UINT GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const
-    {
-        return m_d3d12Device->GetDescriptorHandleIncrementSize(type);
-    }
+    DXGI_SAMPLE_DESC GetMultisampleQualityLevels(
+        DXGI_FORMAT format, UINT numSamples = D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT,
+        D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE) const;
 
 
 public:
@@ -155,6 +219,9 @@ public:
 
     explicit Device(std::shared_ptr<Adapter> adapter);
     virtual ~Device();
+
+    std::shared_ptr<PipelineStateObject>
+    DoCreatePipelineStateObject(const D3D12_PIPELINE_STATE_STREAM_DESC& pipelineStateStreamDesc);
     
 private:
     Microsoft::WRL::ComPtr<ID3D12Device2> m_d3d12Device;
@@ -171,9 +238,6 @@ private:
     std::unique_ptr<DescriptorAllocator> m_DescriptorAllocators[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 
     D3D_ROOT_SIGNATURE_VERSION m_HighestRootSignatureVersion;
-
-    // Track in-flight upload resources that must stay alive until GPU execution completes.
-    std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_InFlightUploadResources;
 };
 
 DELTA_ENGINE_NS_END

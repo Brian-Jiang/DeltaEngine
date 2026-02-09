@@ -50,15 +50,15 @@ public:
 	CommandQueue& GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) const;
     UINT GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const;
 
-	UploadBuffer& GetUploadBuffer() { return *m_uploadBuffer; }
+	//UploadBuffer& GetUploadBuffer() { return *m_uploadBuffer; }
 
-	void ToggleVSync(bool enableVSync) { g_VSync = enableVSync; }
+	//void ToggleVSync(bool enableVSync) { g_VSync = enableVSync; }
 
 	Device& GetDeviceRef() { return *m_device; }
 	Microsoft::WRL::ComPtr<ID3D12Device2> GetDevice() { return m_device->GetD3D12Device(); }
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> GetSRVHeap() { return m_srvHeap; }
+	//Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> GetSRVHeap() { return m_srvHeap; }
 	bool IsFullscreen() { return g_Fullscreen; }
-	bool IsVSync() { return g_VSync; }
+	//bool IsVSync() { return g_VSync; }
 
 	UINT GetWidth() { return m_width; }
 	UINT GetHeight() { return m_height; }
