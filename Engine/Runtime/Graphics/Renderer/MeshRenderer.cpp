@@ -30,7 +30,8 @@ void MeshRenderer::Start(const std::vector<Mesh*>& meshes, const std::vector<XMM
 	this->meshTransforms = meshTransforms;
 }
 
-void DeltaEngine::MeshRenderer::InitGraphicState(DXGraphicsContext& context) {
+void DeltaEngine::MeshRenderer::InitGraphicState(DXGraphicsContext& context)
+{
     auto d3d12Device = context.device->GetD3D12Device();
 
     // ---- Compile shaders and create PSO ----

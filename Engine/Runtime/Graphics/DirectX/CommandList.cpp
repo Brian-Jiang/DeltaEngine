@@ -195,10 +195,12 @@ ComPtr<ID3D12Resource> CommandList::CopyBuffer(size_t bufferSize, const void* bu
     {
         auto d3d12Device = m_Device.GetD3D12Device();
 
+        CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
+        CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize, flags);
         ThrowIfFailed(d3d12Device->CreateCommittedResource(
-            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), 
+            &heapProps, 
             D3D12_HEAP_FLAG_NONE,
-            &CD3DX12_RESOURCE_DESC::Buffer(bufferSize, flags), 
+            &resourceDesc, 
             D3D12_RESOURCE_STATE_COMMON,
             nullptr,
             IID_PPV_ARGS(&d3d12Resource)
@@ -211,10 +213,12 @@ ComPtr<ID3D12Resource> CommandList::CopyBuffer(size_t bufferSize, const void* bu
         {
             // Create an upload resource to use as an intermediate buffer to copy the buffer resource
             ComPtr<ID3D12Resource> uploadResource;
+            CD3DX12_HEAP_PROPERTIES uploadHeapProps(D3D12_HEAP_TYPE_UPLOAD);
+            CD3DX12_RESOURCE_DESC uploadResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
             ThrowIfFailed(d3d12Device->CreateCommittedResource(
-                &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+                &uploadHeapProps,
                 D3D12_HEAP_FLAG_NONE,
-                &CD3DX12_RESOURCE_DESC::Buffer(bufferSize),
+                &uploadResourceDesc,
                 D3D12_RESOURCE_STATE_GENERIC_READ,
                 nullptr,
                 IID_PPV_ARGS(&uploadResource)
@@ -360,8 +364,9 @@ std::shared_ptr<DirectX12Texture> CommandList::LoadTextureFromFile(const std::ws
         auto d3d12Device = m_Device.GetD3D12Device();
         Microsoft::WRL::ComPtr<ID3D12Resource> textureResource;
 
+        CD3DX12_HEAP_PROPERTIES textureHeapProps(D3D12_HEAP_TYPE_DEFAULT);
         ThrowIfFailed(d3d12Device->CreateCommittedResource(
-            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), 
+            &textureHeapProps, 
             D3D12_HEAP_FLAG_NONE, 
             &textureDesc,
             D3D12_RESOURCE_STATE_COMMON,
@@ -640,8 +645,9 @@ void CommandList::PanoToCubemap(const std::shared_ptr<DirectX12Texture>& cubemap
         stagingDesc.Format = DirectX12Texture::GetUAVCompatableFormat(cubemapDesc.Format);
         stagingDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
+        CD3DX12_HEAP_PROPERTIES stagingHeapProps(D3D12_HEAP_TYPE_DEFAULT);
         ThrowIfFailed(d3d12Device->CreateCommittedResource(
-            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE, &stagingDesc,
+            &stagingHeapProps, D3D12_HEAP_FLAG_NONE, &stagingDesc,
             D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&stagingResource)
 
                 ));
@@ -750,9 +756,11 @@ void CommandList::CopyTextureSubresource(const std::shared_ptr<DirectX12Texture>
 
         // Create a temporary (intermediate) resource for uploading the subresources
         ComPtr<ID3D12Resource> intermediateResource;
+        CD3DX12_HEAP_PROPERTIES intermediateHeapProps(D3D12_HEAP_TYPE_UPLOAD);
+        CD3DX12_RESOURCE_DESC intermediateResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(requiredSize);
         ThrowIfFailed(d3d12Device->CreateCommittedResource(
-            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD), D3D12_HEAP_FLAG_NONE,
-            &CD3DX12_RESOURCE_DESC::Buffer(requiredSize), D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+            &intermediateHeapProps, D3D12_HEAP_FLAG_NONE,
+            &intermediateResourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
             IID_PPV_ARGS(&intermediateResource)));
 
         UpdateSubresources(m_d3d12CommandList.Get(), destinationResource.Get(), intermediateResource.Get(), 0,
@@ -824,10 +832,12 @@ void CommandList::SetDynamicVertexBuffer(uint32_t slot, size_t numVertices, size
 
 void CommandList::SetIndexBuffer(const std::shared_ptr<IndexBuffer>& indexBuffer)
 {
-    if (indexBuffer) {
+    if (indexBuffer)
+    {
         TransitionBarrier(indexBuffer, D3D12_RESOURCE_STATE_INDEX_BUFFER);
         TrackResource(indexBuffer);
-        m_d3d12CommandList->IASetIndexBuffer(&(indexBuffer->GetIndexBufferView()));
+        D3D12_INDEX_BUFFER_VIEW indexBufferView = indexBuffer->GetIndexBufferView();
+        m_d3d12CommandList->IASetIndexBuffer(&indexBufferView);
     }
 }
 

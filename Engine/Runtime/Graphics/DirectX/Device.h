@@ -72,7 +72,7 @@ public:
      * Release upload resources that are no longer needed after GPU execution.
      * Should be called after command list execution completes.
      */
-    void ReleaseUploadResources();
+    //void ReleaseUploadResources();
 
 
     // ============================ Textures ============================

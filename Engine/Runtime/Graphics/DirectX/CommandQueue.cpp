@@ -102,7 +102,8 @@ void CommandQueue::Flush() {
     WaitForFenceValue(m_FenceValue);
 }
 
-std::shared_ptr<CommandList> CommandQueue::GetCommandList() {
+std::shared_ptr<CommandList> CommandQueue::GetCommandList()
+{
     std::shared_ptr<CommandList> commandList;
 
     // If there is a command list on the queue.
@@ -126,7 +127,8 @@ uint64_t CommandQueue::ExecuteCommandList(std::shared_ptr<CommandList> commandLi
     return ExecuteCommandLists(std::vector<std::shared_ptr<CommandList>>({ commandList }));
 }
 
-uint64_t CommandQueue::ExecuteCommandLists(const std::vector<std::shared_ptr<CommandList>>& commandLists) {
+uint64_t CommandQueue::ExecuteCommandLists(const std::vector<std::shared_ptr<CommandList>>& commandLists)
+{
     ResourceStateTracker::Lock();
 
     // Command lists that need to put back on the command list queue.
@@ -170,13 +172,15 @@ uint64_t CommandQueue::ExecuteCommandLists(const std::vector<std::shared_ptr<Com
     ResourceStateTracker::Unlock();
 
     // Queue command lists for reuse.
-    for (auto commandList : toBeQueued) {
+    for (auto commandList : toBeQueued)
+    {
         m_InFlightCommandLists.Push({ fenceValue, commandList });
     }
 
     // If there are any command lists that generate mips then execute those
     // after the initial resource command lists have finished.
-    if (generateMipsCommandLists.size() > 0) {
+    if (generateMipsCommandLists.size() > 0)
+    {
         auto& computeQueue = m_Device.GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COMPUTE);
         computeQueue.Wait(*this);
         computeQueue.ExecuteCommandLists(generateMipsCommandLists);

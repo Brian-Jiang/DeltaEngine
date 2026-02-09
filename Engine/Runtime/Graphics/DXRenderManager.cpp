@@ -23,11 +23,13 @@ using namespace DeltaEngine;
 using namespace DirectX;
 
 DXRenderManager::DXRenderManager(HWND hwnd, UINT width, UINT height)
-    : hwnd(hwnd), m_width(width), m_height(height),
+    : hwnd(hwnd), m_width(width), m_height(height), g_Fullscreen(false),
     m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
-    m_scissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX)),
-    m_rtvDescriptorSize(0)
+    m_scissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX))
 {
+#if _DEBUG
+    Device::EnableDebugLayer();
+#endif
 
     // Check for DirectX Math library support.
     if (!DirectX::XMVerifyCPUSupport())
@@ -35,7 +37,7 @@ DXRenderManager::DXRenderManager(HWND hwnd, UINT width, UINT height)
         MessageBoxA(NULL, "Failed to verify DirectX Math library support.", "Error", MB_OK | MB_ICONERROR);
     }
 
-    m_useWarpDevice = false;
+    //m_useWarpDevice = false;
     m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
     LoadPipeline();
     LoadAssets();
@@ -43,19 +45,14 @@ DXRenderManager::DXRenderManager(HWND hwnd, UINT width, UINT height)
 
 void DXRenderManager::LoadPipeline()
 {
-#if defined(_DEBUG)
-    {
-        Device::EnableDebugLayer();
-    }
-#endif
-
-    auto adapter = Adapter::Create();
+    //auto adapter = Adapter::Create();
 
     //ComPtr<IDXGIFactory4> factory;
     //ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&factory)));
 
     //auto adapter = DXUtils::GetAdapter(m_useWarpDevice);
-    m_device = std::make_shared<Device>(adapter);
+
+    m_device = Device::Create();
 
     // Initialize descriptor allocators after device is created
     //m_rtvHeap = std::unique_ptr<DescriptorAllocator>(new DescriptorAllocator(*m_device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
@@ -68,6 +65,7 @@ void DXRenderManager::LoadPipeline()
 
     // Describe and create the swap chain.
     //m_swapChain = DXUtils::CreateSwapChain(hwnd, directCommandQueue.GetD3D12CommandQueue(), m_width, m_height, FrameCount);
+
     m_swapChain = m_device->CreateSwapChain(hwnd, DXGI_FORMAT_R8G8B8A8_UNORM);
 
     // This sample does not support fullscreen transitions.
@@ -76,17 +74,17 @@ void DXRenderManager::LoadPipeline()
     //m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
     // Create descriptor heaps.
-    {
-        // Describe and create a shader resource view (SRV) heap for the texture.
-        D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-        srvHeapDesc.NumDescriptors = 30;
-        srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-        srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-        ThrowIfFailed(m_device->GetD3D12Device()->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvHeap)));
-    }
+    //{
+    //    // Describe and create a shader resource view (SRV) heap for the texture.
+    //    D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
+    //    srvHeapDesc.NumDescriptors = 30;
+    //    srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+    //    srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+    //    ThrowIfFailed(m_device->GetD3D12Device()->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvHeap)));
+    //}
 
     // Get the size of the RTV descriptor on the device.
-    m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+    //m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
     //m_DSVHeapAllocation = m_DSVHeap->Allocate(1);
 
@@ -102,7 +100,7 @@ void DXRenderManager::LoadPipeline()
     //    }
     //}
 
-    g_TearingSupported = DXUtils::CheckTearingSupport();
+    //g_TearingSupported = DXUtils::CheckTearingSupport();
 }
 
 void DXRenderManager::LoadAssets()
@@ -230,7 +228,7 @@ void DXRenderManager::LoadAssets()
         //ComPtr<ID3DBlob> signature;
         //ComPtr<ID3DBlob> error;
         //ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error));
-        m_rootSignature = std::make_shared<RootSignature>(m_device, rootSignatureDesc1);
+        //m_rootSignature = std::make_shared<RootSignature>(m_device, rootSignatureDesc1);
         //ThrowIfFailed(m_device->GetD3D12Device()->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
     }
 
@@ -238,7 +236,7 @@ void DXRenderManager::LoadAssets()
     // individual Renderer::InitGraphicState() implementations.
 
     // Resize/Create the depth buffer.
-    ResizeDepthBuffer(m_width, m_height);
+    //ResizeDepthBuffer(m_width, m_height);
 
     // Create synchronization objects.
     //{
@@ -261,6 +259,7 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
     // Create an off-screen render target with a single color buffer and a depth buffer.
     auto colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(backBufferFormat, m_width, m_height, 1, 1, sampleDesc.Count,
         sampleDesc.Quality, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+
     D3D12_CLEAR_VALUE colorClearValue;
     colorClearValue.Format = colorDesc.Format;
     colorClearValue.Color[0] = 0.0f;
@@ -285,19 +284,19 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
     m_renderTarget->AttachTexture(AttachmentPoint::Color0, colorTexture);
     m_renderTarget->AttachTexture(AttachmentPoint::DepthStencil, depthTexture);
 
-    CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
-    m_currentCommandList = directCommandQueue.GetCommandList();
+    //CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+    //m_currentCommandList = directCommandQueue.GetCommandList();
 
     DXGraphicsContext context = GetGraphicsContext();
     world.InitRenderers(context);
 
-    directCommandQueue.ExecuteCommandList(m_currentCommandList);
-    m_currentCommandList.reset();
+    //directCommandQueue.ExecuteCommandList(m_currentCommandList);
+    //m_currentCommandList.reset();
 
-    WaitForPreviousFrame();
+    //WaitForPreviousFrame();
 
     // Release upload resources after GPU has finished executing the command list.
-    m_device->ReleaseUploadResources();
+    //m_device->ReleaseUploadResources();
 }
 
 void DXRenderManager::PrepareFrame()
@@ -305,11 +304,12 @@ void DXRenderManager::PrepareFrame()
     m_device->ReleaseStaleDescriptors();
 
     CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
-    m_currentCommandList = directCommandQueue.GetCommandList();
+    auto commandList = directCommandQueue.GetCommandList();
 
     // Indicate that the back buffer will be used as a render target.
-    auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-    m_currentCommandList->ResourceBarrier(1, &barrier);
+    //auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+    //m_currentCommandList->ResourceBarrier(1, &barrier);
+    commandList->SetRenderTarget(*m_renderTarget);
 
     // Update camera CB and set necessary state.
     {
@@ -328,25 +328,39 @@ void DXRenderManager::PrepareFrame()
         }
     }
 
-    m_currentCommandList->SetGraphicsRootSignature(m_rootSignature);
-    ID3D12DescriptorHeap* ppHeaps[] = { m_srvHeap.Get() };
-    m_currentCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-    m_currentCommandList->SetGraphicsRootConstantBufferView(0, m_cameraCbData->GetGPUVirtualAddress());
-    m_currentCommandList->SetGraphicsRootConstantBufferView(3, m_lightCbData->GetGPUVirtualAddress());
+    //m_currentCommandList->SetGraphicsRootSignature(m_rootSignature);
+    //ID3D12DescriptorHeap* ppHeaps[] = { m_srvHeap.Get() };
+    //m_currentCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+    //m_currentCommandList->SetGraphicsRootConstantBufferView(0, m_cameraCbData->GetGPUVirtualAddress());
+    //m_currentCommandList->SetGraphicsRootConstantBufferView(3, m_lightCbData->GetGPUVirtualAddress());
 
 
-    m_currentCommandList->RSSetViewports(1, &m_viewport);
-    m_currentCommandList->RSSetScissorRects(1, &m_scissorRect);
+    //m_currentCommandList->RSSetViewports(1, &m_viewport);
+    //m_currentCommandList->RSSetScissorRects(1, &m_scissorRect);
 
-    auto rtvHandle = m_rtvHeapAllocation.GetDescriptorHandle(m_frameIndex);
-    auto dsvHandle = m_DSVHeapAllocation.GetDescriptorHandle(0);
-    m_currentCommandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+    //auto rtvHandle = m_rtvHeapAllocation.GetDescriptorHandle(m_frameIndex);
+    //auto dsvHandle = m_DSVHeapAllocation.GetDescriptorHandle(0);
+    //m_currentCommandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
     // Record commands.
     const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+    commandList->ClearTexture(m_renderTarget->GetTexture(AttachmentPoint::Color0), clearColor);
+    commandList->ClearDepthStencilTexture(m_renderTarget->GetTexture(AttachmentPoint::DepthStencil), D3D12_CLEAR_FLAG_DEPTH);
 
-    m_currentCommandList->ClearRenderTargetView(rtvHandle, clearColor);
-    m_currentCommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0);
+    commandList->SetViewport(m_viewport);
+    commandList->SetScissorRect(m_scissorRect);
+    commandList->SetRenderTarget(*m_renderTarget);
+
+    auto swapChainBackBuffer = m_swapChain->GetRenderTarget().GetTexture(AttachmentPoint::Color0);
+    auto msaaRenderTarget = m_renderTarget->GetTexture(AttachmentPoint::Color0);
+
+    commandList->ResolveSubresource(swapChainBackBuffer, msaaRenderTarget);
+
+    directCommandQueue.ExecuteCommandList(commandList);
+    m_swapChain->Present();
+
+    //m_currentCommandList->ClearRenderTargetView(rtvHandle, clearColor);
+    //m_currentCommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0);
     //m_currentCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
 
@@ -385,11 +399,11 @@ void DXRenderManager::Resize(UINT width, UINT height)
     m_width = std::max(1u, width);
     m_height = std::max(1u, height);
 
-    m_swapChain->Resize(width, height);
-
     m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
     m_viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, static_cast<float>(m_width), static_cast<float>(m_height));
     m_renderTarget->Resize(m_width, m_height);
+
+    m_swapChain->Resize(width, height);
 
   //  if (m_width != width || m_height != height)
   //  {
@@ -477,37 +491,37 @@ void DXRenderManager::SetFullscreen(bool fullscreen)
 }
 
 void DXRenderManager::ResizeDepthBuffer(int width, int height) {
-    WaitForPreviousFrame();
-    CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
-    directCommandQueue.Flush();
+ //   WaitForPreviousFrame();
+ //   CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+ //   directCommandQueue.Flush();
 
-	width = std::max(1, width);
-	height = std::max(1, height);
+	//width = std::max(1, width);
+	//height = std::max(1, height);
 
-    D3D12_CLEAR_VALUE optimizedClearValue = {};
-    optimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
-    optimizedClearValue.DepthStencil = { 1.0f, 0 };
+ //   D3D12_CLEAR_VALUE optimizedClearValue = {};
+ //   optimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
+ //   optimizedClearValue.DepthStencil = { 1.0f, 0 };
 
-    auto hp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-    auto rd = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, width, height,
-        1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
-    ThrowIfFailed(m_device->GetD3D12Device()->CreateCommittedResource(
-        &hp,
-        D3D12_HEAP_FLAG_NONE,
-        &rd,
-        D3D12_RESOURCE_STATE_DEPTH_WRITE,
-        &optimizedClearValue,
-        IID_PPV_ARGS(&m_DepthBuffer)
-    ));
+ //   auto hp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+ //   auto rd = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, width, height,
+ //       1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
+ //   ThrowIfFailed(m_device->GetD3D12Device()->CreateCommittedResource(
+ //       &hp,
+ //       D3D12_HEAP_FLAG_NONE,
+ //       &rd,
+ //       D3D12_RESOURCE_STATE_DEPTH_WRITE,
+ //       &optimizedClearValue,
+ //       IID_PPV_ARGS(&m_DepthBuffer)
+ //   ));
 
-    D3D12_DEPTH_STENCIL_VIEW_DESC dsv = {};
-    dsv.Format = DXGI_FORMAT_D32_FLOAT;
-    dsv.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-    dsv.Texture2D.MipSlice = 0;
-    dsv.Flags = D3D12_DSV_FLAG_NONE;
+ //   D3D12_DEPTH_STENCIL_VIEW_DESC dsv = {};
+ //   dsv.Format = DXGI_FORMAT_D32_FLOAT;
+ //   dsv.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+ //   dsv.Texture2D.MipSlice = 0;
+ //   dsv.Flags = D3D12_DSV_FLAG_NONE;
 
-    auto dsvHandle = m_DSVHeapAllocation.GetDescriptorHandle(0);
-    m_device->GetD3D12Device()->CreateDepthStencilView(m_DepthBuffer.Get(), &dsv, dsvHandle);
+ //   auto dsvHandle = m_DSVHeapAllocation.GetDescriptorHandle(0);
+ //   m_device->GetD3D12Device()->CreateDepthStencilView(m_DepthBuffer.Get(), &dsv, dsvHandle);
 }
 
 void DXRenderManager::OnDestroy()
@@ -515,12 +529,13 @@ void DXRenderManager::OnDestroy()
     //WaitForPreviousFrame();
 }
 
-DXGraphicsContext DeltaEngine::DXRenderManager::GetGraphicsContext() const {
+DXGraphicsContext DeltaEngine::DXRenderManager::GetGraphicsContext() const
+{
     DXGraphicsContext context;
     context.device = m_device;
-    context.commandList = m_currentCommandList;
-    context.rootSignature = m_rootSignature;
-    context.srvHeap = m_srvHeap;
+    //context.commandList = m_currentCommandList;
+    //context.rootSignature = m_rootSignature;
+    //context.srvHeap = m_srvHeap;
     context.viewMatrix = m_viewMatrix;
     context.projectionMatrix = m_projectionMatrix;
     context.cameraPosition = m_cameraPosition;

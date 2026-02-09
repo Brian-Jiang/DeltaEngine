@@ -59,10 +59,12 @@ std::shared_ptr<Adapter> Adapter::Create(DXGI_GPU_PREFERENCE gpuPreference, bool
 
     ThrowIfFailed(::CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(&dxgiFactory6)));
 
-    if (useWarp) {
+    if (useWarp)
+    {
         ThrowIfFailed(dxgiFactory6->EnumWarpAdapter(IID_PPV_ARGS(&dxgiAdapter)));
         ThrowIfFailed(dxgiAdapter.As(&dxgiAdapter4));
-    } else {
+    } else
+    {
         for (UINT i = 0; dxgiFactory6->EnumAdapterByGpuPreference(i, gpuPreference, IID_PPV_ARGS(&dxgiAdapter)) != DXGI_ERROR_NOT_FOUND;
             ++i) {
             if (SUCCEEDED(D3D12CreateDevice(dxgiAdapter.Get(), D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device),
@@ -73,7 +75,8 @@ std::shared_ptr<Adapter> Adapter::Create(DXGI_GPU_PREFERENCE gpuPreference, bool
         }
     }
 
-    if (dxgiAdapter4) {
+    if (dxgiAdapter4)
+    {
         adapter = std::make_shared<MakeAdapter>(dxgiAdapter4);
     }
 

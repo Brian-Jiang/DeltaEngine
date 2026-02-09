@@ -50,7 +50,7 @@ void EngineMain::Initialize()
         }
     }
 
-    m_instancedDrawer->CreateBuffer(dxRenderManager->GetDevice());
+    //m_instancedDrawer->CreateBuffer(dxRenderManager->GetDevice());
 
     // ---- Build the scene world and add renderers ----
     m_world = std::make_shared<DWorld>();

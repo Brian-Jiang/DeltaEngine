@@ -15,6 +15,7 @@
 #include "Structures/Camera.h"
 #include "Runtime/Graphics/DXGraphicsContext.h"
 #include "Runtime/Graphics/DirectX/Device.h"
+#include "Runtime/Graphics/DirectX/SwapChain.h"
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -39,6 +40,7 @@ public:
     void PrepareFrame();
     void RenderFrame();
     //void WaitForPreviousFrame();
+
 	void Resize(UINT width, UINT height);
 	void SetFullscreen(bool fullscreen);
 	void ResizeDepthBuffer(int width, int height);
@@ -52,13 +54,13 @@ public:
 
 	//UploadBuffer& GetUploadBuffer() { return *m_uploadBuffer; }
 
-	//void ToggleVSync(bool enableVSync) { g_VSync = enableVSync; }
+	void ToggleVSync(bool enableVSync) { m_swapChain->SetVSync(enableVSync); }
 
 	Device& GetDeviceRef() { return *m_device; }
-	Microsoft::WRL::ComPtr<ID3D12Device2> GetDevice() { return m_device->GetD3D12Device(); }
+	//Microsoft::WRL::ComPtr<ID3D12Device2> GetDevice() { return m_device->GetD3D12Device(); }
 	//Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> GetSRVHeap() { return m_srvHeap; }
 	bool IsFullscreen() { return g_Fullscreen; }
-	//bool IsVSync() { return g_VSync; }
+	bool IsVSync() { return m_swapChain->GetVSync(); }
 
 	UINT GetWidth() { return m_width; }
 	UINT GetHeight() { return m_height; }
@@ -77,32 +79,32 @@ private:
 	// Can be toggled with the V key.
 	//bool g_VSync = true;
 
-	bool g_TearingSupported = false;
+	//bool g_TearingSupported = false;
 
 	// By default, use windowed mode.
 	// Can be toggled with the Alt+Enter or F11
 	bool g_Fullscreen = false;
 
-    static const UINT FrameCount = 2;
+    //static const UINT FrameCount = 2;
 
-    bool m_useWarpDevice;
+    //bool m_useWarpDevice;
 
+	D3D12_RECT m_scissorRect;
 	CD3DX12_VIEWPORT m_viewport;
-    D3D12_RECT m_scissorRect;
 
     std::shared_ptr<SwapChain> m_swapChain;
 	std::shared_ptr<Device> m_device;
     std::shared_ptr<RenderTarget> m_renderTarget;
 	//Microsoft::WRL::ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
 	//Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
-    std::shared_ptr<RootSignature> m_rootSignature;
+    //std::shared_ptr<RootSignature> m_rootSignature;
 	//Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvHeap;
 
 	/// The command list for the current frame, obtained in PrepareFrame
 	/// and executed in RenderFrame.
-	std::shared_ptr<CommandList> m_currentCommandList;
+	//std::shared_ptr<CommandList> m_currentCommandList;
 
-    UINT m_rtvDescriptorSize;
+    //UINT m_rtvDescriptorSize;
     UINT m_width;
     UINT m_height;
     float m_aspectRatio;
@@ -110,10 +112,10 @@ private:
 	// Depth buffer.
     //Microsoft::WRL::ComPtr<ID3D12Resource> m_DepthBuffer;
 	//std::unique_ptr<DescriptorAllocator> m_rtvHeap;
-	DescriptorAllocation m_rtvHeapAllocation;
+	//DescriptorAllocation m_rtvHeapAllocation;
 
 	//std::unique_ptr<DescriptorAllocator> m_DSVHeap;
-	DescriptorAllocation m_DSVHeapAllocation;
+	//DescriptorAllocation m_DSVHeapAllocation;
 
     // Synchronization objects.
     //UINT m_frameIndex;

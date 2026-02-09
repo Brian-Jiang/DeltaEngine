@@ -199,7 +199,9 @@ void ResourceStateTracker::CommitFinalResourceStates()
 
     // Commit final resource states to the global resource state array (map).
     for ( const auto& resourceState: m_FinalResourceState )
-    { ms_GlobalResourceState[resourceState.first] = resourceState.second; }
+    {
+        ms_GlobalResourceState[resourceState.first] = resourceState.second;
+    }
 
     m_FinalResourceState.clear();
 }
