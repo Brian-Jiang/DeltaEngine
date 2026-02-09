@@ -14,11 +14,173 @@
 #include "Runtime/Graphics/DirectX/SwapChain.h"
 #include "Runtime/Graphics/DirectX/Adapter.h"
 #include "Runtime/Graphics/DirectX/ConstantBuffer.h"
+#include "Runtime/Graphics/DirectX/UnorderedAccessView.h"
+#include "Runtime/Graphics/DirectX/ShaderResourceView.h"
+#include "Runtime/Graphics/DirectX/ConstantBufferView.h"
+#include "Runtime/Graphics/DirectX/PipelineStateObject.h"
+#include "Runtime/Graphics/DirectX/RootSignature.h"
+#include "Runtime/Graphics/DirectX/StructuredBuffer.h"
+#include "Runtime/Graphics/DirectX/VertexBuffer.h"
+#include "Runtime/Graphics/DirectX/IndexBuffer.h"
 #include "Runtime/Graphics/DXUtils.h"
 #include "Runtime/Math/Common.h"
 
 using namespace DeltaEngine;
 using namespace Microsoft::WRL;
+
+class MakeUnorderedAccessView : public UnorderedAccessView
+{
+public:
+    MakeUnorderedAccessView(Device& device, const std::shared_ptr<Resource>& resource,
+        const std::shared_ptr<Resource>& counterResource,
+        const D3D12_UNORDERED_ACCESS_VIEW_DESC* uav)
+        : UnorderedAccessView(device, resource, counterResource, uav)
+    {
+    }
+
+    virtual ~MakeUnorderedAccessView() { }
+};
+
+class MakeShaderResourceView : public ShaderResourceView
+{
+public:
+    MakeShaderResourceView(Device& device, const std::shared_ptr<Resource>& resource,
+        const D3D12_SHADER_RESOURCE_VIEW_DESC* srv)
+        : ShaderResourceView(device, resource, srv)
+    {
+    }
+
+    virtual ~MakeShaderResourceView() { }
+};
+
+class MakeConstantBufferView : public ConstantBufferView
+{
+public:
+    MakeConstantBufferView(Device& device, const std::shared_ptr<ConstantBuffer>& constantBuffer, size_t offset)
+        : ConstantBufferView(device, constantBuffer, offset)
+    {
+    }
+
+    virtual ~MakeConstantBufferView() { }
+};
+
+class MakePipelineStateObject : public PipelineStateObject
+{
+public:
+    MakePipelineStateObject(Device& device, const D3D12_PIPELINE_STATE_STREAM_DESC& desc)
+        : PipelineStateObject(device, desc)
+    {
+    }
+
+    virtual ~MakePipelineStateObject() { }
+};
+class MakeRootSignature : public RootSignature
+{
+public:
+    MakeRootSignature(Device& device, const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc)
+        : RootSignature(device, rootSignatureDesc)
+    {
+    }
+
+    virtual ~MakeRootSignature() { }
+};
+
+class MakeDirectX12Texture : public DirectX12Texture
+{
+public:
+    MakeDirectX12Texture(Device& device, const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* clearValue)
+        : DirectX12Texture(device, resourceDesc, clearValue)
+    {
+    }
+
+    MakeDirectX12Texture(Device& device, Microsoft::WRL::ComPtr<ID3D12Resource> resource, const D3D12_CLEAR_VALUE* clearValue)
+        : DirectX12Texture(device, resource, clearValue)
+    {
+    }
+
+    virtual ~MakeDirectX12Texture() { }
+};
+
+class MakeStructuredBuffer : public StructuredBuffer {
+public:
+    MakeStructuredBuffer(Device& device, size_t numElements, size_t elementSize)
+        : StructuredBuffer(device, numElements, elementSize)
+    {
+    }
+
+    MakeStructuredBuffer(Device& device, ComPtr<ID3D12Resource> resource, size_t numElements, size_t elementSize)
+        : StructuredBuffer(device, resource, numElements, elementSize)
+    {
+    }
+
+    virtual ~MakeStructuredBuffer() { }
+};
+
+class MakeVertexBuffer : public VertexBuffer {
+public:
+    MakeVertexBuffer(Device& device, size_t numVertices, size_t vertexStride)
+        : VertexBuffer(device, numVertices, vertexStride)
+    {
+    }
+
+    MakeVertexBuffer(Device& device, ComPtr<ID3D12Resource> resource, size_t numVertices, size_t vertexStride)
+        : VertexBuffer(device, resource, numVertices, vertexStride)
+    {
+    }
+
+    virtual ~MakeVertexBuffer() { }
+};
+
+class MakeIndexBuffer : public IndexBuffer {
+public:
+    MakeIndexBuffer(Device& device, size_t numIndices, DXGI_FORMAT indexFormat)
+        : IndexBuffer(device, numIndices, indexFormat)
+    {
+    }
+
+    MakeIndexBuffer(Device& device, Microsoft::WRL::ComPtr<ID3D12Resource> resource, size_t numIndices,
+        DXGI_FORMAT indexFormat)
+        : IndexBuffer(device, resource, numIndices, indexFormat)
+    {
+    }
+
+    virtual ~MakeIndexBuffer() = default;
+};
+
+class MakeConstantBuffer : public ConstantBuffer {
+public:
+    MakeConstantBuffer(Device& device, ComPtr<ID3D12Resource> resource)
+        : ConstantBuffer(device, resource)
+    {
+    }
+
+    virtual ~MakeConstantBuffer() = default;
+};
+
+class MakeByteAddressBuffer : public ByteAddressBuffer {
+public:
+    MakeByteAddressBuffer(Device& device, const D3D12_RESOURCE_DESC& desc)
+        : ByteAddressBuffer(device, desc)
+    {
+    }
+
+    MakeByteAddressBuffer(Device& device, Microsoft::WRL::ComPtr<ID3D12Resource> resource)
+        : ByteAddressBuffer(device, resource)
+    {
+    }
+
+    virtual ~MakeByteAddressBuffer() = default;
+};
+
+class MakeDescriptorAllocator : public DescriptorAllocator {
+public:
+    MakeDescriptorAllocator(Device& device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptorsPerHeap = 256)
+        : DescriptorAllocator(device, type, numDescriptorsPerHeap)
+    {
+    }
+
+    virtual ~MakeDescriptorAllocator() { }
+};
 
 class MakeSwapChain : public SwapChain
 {
@@ -31,14 +193,37 @@ public:
     virtual ~MakeSwapChain() { }
 };
 
-void Device::EnableDebugLayer() {
+class MakeCommandQueue : public CommandQueue
+{
+public:
+    MakeCommandQueue(Device& device, D3D12_COMMAND_LIST_TYPE type)
+        : CommandQueue(device, type)
+    {
+    }
+
+    virtual ~MakeCommandQueue() { }
+};
+
+class MakeDevice : public Device
+{
+public:
+    MakeDevice(std::shared_ptr<Adapter> adapter)
+        : Device(adapter)
+    {
+    }
+
+    virtual ~MakeDevice() { }
+};
+
+void Device::EnableDebugLayer()
+{
     ComPtr<ID3D12Debug> debugInterface;
     ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface)));
     debugInterface->EnableDebugLayer();
 }
 
-void Device::ReportLiveObjects() {
-
+void Device::ReportLiveObjects()
+{
     IDXGIDebug1* dxgiDebug;
     DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug));
 
@@ -46,10 +231,24 @@ void Device::ReportLiveObjects() {
     dxgiDebug->Release();
 }
 
+std::shared_ptr<Device> Device::Create(std::shared_ptr<Adapter> adapter)
+{
+    return std::make_shared<MakeDevice>(adapter);
+}
+
+std::wstring Device::GetDescription() const
+{
+    return m_Adapter->GetDescription();
+}
+
 Device::Device(std::shared_ptr<Adapter> adapter)
     : m_Adapter(adapter)
 {
-    assert(m_Adapter);
+    if (!m_Adapter)
+    {
+        m_Adapter = Adapter::Create();
+        assert(m_Adapter);
+    }
 
     auto dxgiAdapter = m_Adapter->GetDXGIAdapter();
 
@@ -127,7 +326,6 @@ Device::Device(std::shared_ptr<Adapter> adapter)
         ThrowIfFailed(pInfoQueue->PushStorageFilter(&NewFilter));
     }
 
-
     m_DirectCommandQueue = std::make_unique<CommandQueue>(*this, D3D12_COMMAND_LIST_TYPE_DIRECT);
     m_ComputeCommandQueue = std::make_unique<CommandQueue>(*this, D3D12_COMMAND_LIST_TYPE_COMPUTE);
     m_CopyCommandQueue = std::make_unique<CommandQueue>(*this, D3D12_COMMAND_LIST_TYPE_COPY);
@@ -158,7 +356,8 @@ DeltaEngine::Device::~Device() {}
 CommandQueue& Device::GetCommandQueue(D3D12_COMMAND_LIST_TYPE type)
 {
     CommandQueue* commandQueue;
-    switch (type) {
+    switch (type)
+    {
     case D3D12_COMMAND_LIST_TYPE_DIRECT:
         commandQueue = m_DirectCommandQueue.get();
         break;
@@ -202,7 +401,7 @@ std::shared_ptr<SwapChain> Device::CreateSwapChain(HWND hWnd, DXGI_FORMAT backBu
 
 std::shared_ptr<ConstantBuffer> Device::CreateConstantBuffer(Microsoft::WRL::ComPtr<ID3D12Resource> resource)
 {
-    std::shared_ptr<ConstantBuffer> constantBuffer = std::make_shared<ConstantBuffer>(*this, resource);
+    std::shared_ptr<ConstantBuffer> constantBuffer = std::make_shared<MakeConstantBuffer>(*this, resource);
     return constantBuffer;
 }
 
@@ -211,7 +410,7 @@ std::shared_ptr<ByteAddressBuffer> Device::CreateByteAddressBuffer(size_t buffer
     // Align-up to 4-bytes
     bufferSize = AlignUp(bufferSize, 4);
 
-    std::shared_ptr<ByteAddressBuffer> buffer = std::make_shared<ByteAddressBuffer>(
+    std::shared_ptr<ByteAddressBuffer> buffer = std::make_shared<MakeByteAddressBuffer>(
         *this, CD3DX12_RESOURCE_DESC::Buffer(bufferSize, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
 
     return buffer;
@@ -219,14 +418,14 @@ std::shared_ptr<ByteAddressBuffer> Device::CreateByteAddressBuffer(size_t buffer
 
 std::shared_ptr<ByteAddressBuffer> Device::CreateByteAddressBuffer(ComPtr<ID3D12Resource> resource)
 {
-    std::shared_ptr<ByteAddressBuffer> buffer = std::make_shared<ByteAddressBuffer>(*this, resource);
+    std::shared_ptr<ByteAddressBuffer> buffer = std::make_shared<MakeByteAddressBuffer>(*this, resource);
 
     return buffer;
 }
 
 std::shared_ptr<StructuredBuffer> Device::CreateStructuredBuffer(size_t numElements, size_t elementSize)
 {
-    std::shared_ptr<StructuredBuffer> structuredBuffer = std::make_shared<StructuredBuffer>(*this, numElements, elementSize);
+    std::shared_ptr<StructuredBuffer> structuredBuffer = std::make_shared<MakeStructuredBuffer>(*this, numElements, elementSize);
 
     return structuredBuffer;
 }
@@ -234,102 +433,172 @@ std::shared_ptr<StructuredBuffer> Device::CreateStructuredBuffer(size_t numEleme
 std::shared_ptr<StructuredBuffer> Device::CreateStructuredBuffer(ComPtr<ID3D12Resource> resource, size_t numElements,
     size_t elementSize)
 {
-    std::shared_ptr<StructuredBuffer> structuredBuffer = std::make_shared<StructuredBuffer>(*this, resource, numElements, elementSize);
+    std::shared_ptr<StructuredBuffer> structuredBuffer = std::make_shared<MakeStructuredBuffer>(*this, resource, numElements, elementSize);
 
     return structuredBuffer;
 }
 
-void Device::ReleaseUploadResources() {
-    m_InFlightUploadResources.clear();
+std::shared_ptr<IndexBuffer> Device::CreateIndexBuffer(size_t numIndices, DXGI_FORMAT indexFormat)
+{
+    std::shared_ptr<IndexBuffer> indexBuffer = std::make_shared<MakeIndexBuffer>(*this, numIndices, indexFormat);
+
+    return indexBuffer;
+}
+
+std::shared_ptr<IndexBuffer> Device::CreateIndexBuffer(Microsoft::WRL::ComPtr<ID3D12Resource> resource, size_t numIndices,
+    DXGI_FORMAT indexFormat)
+{
+    std::shared_ptr<IndexBuffer> indexBuffer = std::make_shared<MakeIndexBuffer>(*this, resource, numIndices, indexFormat);
+
+    return indexBuffer;
+}
+
+std::shared_ptr<VertexBuffer> Device::CreateVertexBuffer(size_t numVertices, size_t vertexStride)
+{
+    std::shared_ptr<VertexBuffer> vertexBuffer = std::make_shared<MakeVertexBuffer>(*this, numVertices, vertexStride);
+
+    return vertexBuffer;
+}
+
+std::shared_ptr<VertexBuffer> Device::CreateVertexBuffer(Microsoft::WRL::ComPtr<ID3D12Resource> resource, size_t numVertices,
+    size_t vertexStride)
+{
+    std::shared_ptr<VertexBuffer> vertexBuffer = std::make_shared<MakeVertexBuffer>(*this, resource, numVertices, vertexStride);
+
+    return vertexBuffer;
 }
 
 std::shared_ptr<DirectX12Texture> Device::CreateTexture(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* clearValue)
 {
-    return std::make_shared<DirectX12Texture>(*this, resourceDesc, clearValue);
+    return std::make_shared<MakeDirectX12Texture>(*this, resourceDesc, clearValue);
 }
 
 std::shared_ptr<DirectX12Texture> Device::CreateTexture(Microsoft::WRL::ComPtr<ID3D12Resource> resource, const D3D12_CLEAR_VALUE* clearValue)
 {
-    return std::make_shared<DirectX12Texture>(*this, resource, clearValue);
+    return std::make_shared<MakeDirectX12Texture>(*this, resource, clearValue);
 }
 
-void Device::CreateTextureFromFile(DTexture* dtex, CommandList& commandList)
+std::shared_ptr<RootSignature> Device::CreateRootSignature(const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc)
 {
-    if (!dtex || dtex->GetData().empty())
-        return;
+    std::shared_ptr<RootSignature> rootSignature = std::make_shared<MakeRootSignature>(*this, rootSignatureDesc);
 
-    auto d3d12Device = GetD3D12Device();
-    UINT textureWidth = dtex->GetWidth();
-    UINT textureHeight = dtex->GetHeight();
-    const UINT pixelSize = 4;
-    UINT64 rowPitch = textureWidth * pixelSize;
-    UINT64 alignedRowPitch = (rowPitch + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1);
-    UINT64 textureSize = alignedRowPitch * textureHeight;
-
-    D3D12_RESOURCE_DESC textureDesc = {};
-    textureDesc.MipLevels = 1;
-    textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    textureDesc.Width = textureWidth;
-    textureDesc.Height = textureHeight;
-    textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-    textureDesc.DepthOrArraySize = 1;
-    textureDesc.SampleDesc.Count = 1;
-    textureDesc.SampleDesc.Quality = 0;
-    textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-
-    ComPtr<ID3D12Resource> textureResource;
-    CD3DX12_HEAP_PROPERTIES heapDefault(D3D12_HEAP_TYPE_DEFAULT);
-    ThrowIfFailed(d3d12Device->CreateCommittedResource(
-        &heapDefault,
-        D3D12_HEAP_FLAG_NONE,
-        &textureDesc,
-        D3D12_RESOURCE_STATE_COPY_DEST,
-        nullptr,
-        IID_PPV_ARGS(&textureResource)));
-
-    ComPtr<ID3D12Resource> uploadHeap;
-    CD3DX12_HEAP_PROPERTIES heapUpload(D3D12_HEAP_TYPE_UPLOAD);
-    CD3DX12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(textureSize);
-    ThrowIfFailed(d3d12Device->CreateCommittedResource(
-        &heapUpload,
-        D3D12_HEAP_FLAG_NONE,
-        &bufferDesc,
-        D3D12_RESOURCE_STATE_GENERIC_READ,
-        nullptr,
-        IID_PPV_ARGS(&uploadHeap)));
-
-    const unsigned char* rawData = dtex->GetData().data();
-    UINT8* pData = nullptr;
-    uploadHeap->Map(0, nullptr, reinterpret_cast<void**>(&pData));
-    for (UINT y = 0; y < textureHeight; ++y)
-        memcpy(pData + y * alignedRowPitch, rawData + y * rowPitch, rowPitch);
-    uploadHeap->Unmap(0, nullptr);
-
-    D3D12_SUBRESOURCE_FOOTPRINT pitchedDesc = {};
-    pitchedDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    pitchedDesc.Width = textureWidth;
-    pitchedDesc.Height = textureHeight;
-    pitchedDesc.Depth = 1;
-    pitchedDesc.RowPitch = static_cast<UINT>(alignedRowPitch);
-
-    D3D12_PLACED_SUBRESOURCE_FOOTPRINT placed = { 0 };
-    placed.Offset = 0;
-    placed.Footprint = pitchedDesc;
-
-    D3D12_TEXTURE_COPY_LOCATION dst = CD3DX12_TEXTURE_COPY_LOCATION(textureResource.Get(), 0);
-    D3D12_TEXTURE_COPY_LOCATION src = CD3DX12_TEXTURE_COPY_LOCATION(uploadHeap.Get(), placed);
-    commandList.CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
-
-    // Keep the upload heap alive until the command list is executed.
-    m_InFlightUploadResources.push_back(uploadHeap);
-
-    D3D12_RESOURCE_BARRIER rb = CD3DX12_RESOURCE_BARRIER::Transition(
-        textureResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    commandList.ResourceBarrier(1, &rb);
-
-    std::shared_ptr<DirectX12Texture> dx12Texture = std::make_shared<DirectX12Texture>(*this, textureResource, nullptr);
-    dtex->SetGPUTexture(dx12Texture);
+    return rootSignature;
 }
+
+std::shared_ptr<PipelineStateObject> Device::DoCreatePipelineStateObject(
+    const D3D12_PIPELINE_STATE_STREAM_DESC& pipelineStateStreamDesc)
+{
+    std::shared_ptr<PipelineStateObject> pipelineStateObject = std::make_shared<MakePipelineStateObject>(*this, pipelineStateStreamDesc);
+
+    return pipelineStateObject;
+}
+
+std::shared_ptr<ConstantBufferView> Device::CreateConstantBufferView(const std::shared_ptr<ConstantBuffer>& constantBuffer, size_t offset)
+{
+    std::shared_ptr<ConstantBufferView> constantBufferView = std::make_shared<MakeConstantBufferView>(*this, constantBuffer, offset);
+
+    return constantBufferView;
+}
+
+std::shared_ptr<ShaderResourceView> Device::CreateShaderResourceView(const std::shared_ptr<Resource>& resource,
+    const D3D12_SHADER_RESOURCE_VIEW_DESC* srv)
+{
+    std::shared_ptr<ShaderResourceView> shaderResourceView = std::make_shared<MakeShaderResourceView>(*this, resource, srv);
+
+    return shaderResourceView;
+}
+
+std::shared_ptr<UnorderedAccessView> Device::CreateUnorderedAccessView(const std::shared_ptr<Resource>& resource,
+    const std::shared_ptr<Resource>& counterResource,
+    const D3D12_UNORDERED_ACCESS_VIEW_DESC* uav)
+{
+    std::shared_ptr<UnorderedAccessView> unorderedAccessView = std::make_shared<MakeUnorderedAccessView>(*this, resource, counterResource, uav);
+
+    return unorderedAccessView;
+}
+
+//void Device::ReleaseUploadResources()
+//{
+//    m_InFlightUploadResources.clear();
+//}
+//
+//void Device::CreateTextureFromFile(DTexture* dtex, CommandList& commandList)
+//{
+//    if (!dtex || dtex->GetData().empty())
+//        return;
+//
+//    auto d3d12Device = GetD3D12Device();
+//    UINT textureWidth = dtex->GetWidth();
+//    UINT textureHeight = dtex->GetHeight();
+//    const UINT pixelSize = 4;
+//    UINT64 rowPitch = textureWidth * pixelSize;
+//    UINT64 alignedRowPitch = (rowPitch + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1);
+//    UINT64 textureSize = alignedRowPitch * textureHeight;
+//
+//    D3D12_RESOURCE_DESC textureDesc = {};
+//    textureDesc.MipLevels = 1;
+//    textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+//    textureDesc.Width = textureWidth;
+//    textureDesc.Height = textureHeight;
+//    textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+//    textureDesc.DepthOrArraySize = 1;
+//    textureDesc.SampleDesc.Count = 1;
+//    textureDesc.SampleDesc.Quality = 0;
+//    textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+//
+//    ComPtr<ID3D12Resource> textureResource;
+//    CD3DX12_HEAP_PROPERTIES heapDefault(D3D12_HEAP_TYPE_DEFAULT);
+//    ThrowIfFailed(d3d12Device->CreateCommittedResource(
+//        &heapDefault,
+//        D3D12_HEAP_FLAG_NONE,
+//        &textureDesc,
+//        D3D12_RESOURCE_STATE_COPY_DEST,
+//        nullptr,
+//        IID_PPV_ARGS(&textureResource)));
+//
+//    ComPtr<ID3D12Resource> uploadHeap;
+//    CD3DX12_HEAP_PROPERTIES heapUpload(D3D12_HEAP_TYPE_UPLOAD);
+//    CD3DX12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(textureSize);
+//    ThrowIfFailed(d3d12Device->CreateCommittedResource(
+//        &heapUpload,
+//        D3D12_HEAP_FLAG_NONE,
+//        &bufferDesc,
+//        D3D12_RESOURCE_STATE_GENERIC_READ,
+//        nullptr,
+//        IID_PPV_ARGS(&uploadHeap)));
+//
+//    const unsigned char* rawData = dtex->GetData().data();
+//    UINT8* pData = nullptr;
+//    uploadHeap->Map(0, nullptr, reinterpret_cast<void**>(&pData));
+//    for (UINT y = 0; y < textureHeight; ++y)
+//        memcpy(pData + y * alignedRowPitch, rawData + y * rowPitch, rowPitch);
+//    uploadHeap->Unmap(0, nullptr);
+//
+//    D3D12_SUBRESOURCE_FOOTPRINT pitchedDesc = {};
+//    pitchedDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+//    pitchedDesc.Width = textureWidth;
+//    pitchedDesc.Height = textureHeight;
+//    pitchedDesc.Depth = 1;
+//    pitchedDesc.RowPitch = static_cast<UINT>(alignedRowPitch);
+//
+//    D3D12_PLACED_SUBRESOURCE_FOOTPRINT placed = { 0 };
+//    placed.Offset = 0;
+//    placed.Footprint = pitchedDesc;
+//
+//    D3D12_TEXTURE_COPY_LOCATION dst = CD3DX12_TEXTURE_COPY_LOCATION(textureResource.Get(), 0);
+//    D3D12_TEXTURE_COPY_LOCATION src = CD3DX12_TEXTURE_COPY_LOCATION(uploadHeap.Get(), placed);
+//    commandList.CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+//
+//    // Keep the upload heap alive until the command list is executed.
+//    m_InFlightUploadResources.push_back(uploadHeap);
+//
+//    D3D12_RESOURCE_BARRIER rb = CD3DX12_RESOURCE_BARRIER::Transition(
+//        textureResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+//    commandList.ResourceBarrier(1, &rb);
+//
+//    std::shared_ptr<DirectX12Texture> dx12Texture = std::make_shared<DirectX12Texture>(*this, textureResource, nullptr);
+//    dtex->SetGPUTexture(dx12Texture);
+//}
 
 
 

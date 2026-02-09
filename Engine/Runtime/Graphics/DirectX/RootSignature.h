@@ -59,14 +59,14 @@ public:
 public:
     friend class std::default_delete<RootSignature>;
 
-    RootSignature(std::shared_ptr<Device> device, const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc);
+    RootSignature(Device& device, const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc);
     virtual ~RootSignature();
 
 private:
     void Destroy();
     void SetRootSignatureDesc(const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc);
 
-    std::shared_ptr<Device> m_Device;
+    Device& m_Device;
     D3D12_ROOT_SIGNATURE_DESC1                  m_RootSignatureDesc;
     Microsoft::WRL::ComPtr<ID3D12RootSignature> m_RootSignature;
 
