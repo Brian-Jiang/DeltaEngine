@@ -4,7 +4,7 @@
 #include <dxcapi.h>
 #include <iostream>
 
-#include "Graphics/DTexture.h"
+#include "Core/DTexture.h"
 #include "Graphics/DXUtils.h"
 #include "IO/IOManager.h"
 #include "Runtime/EngineMain.h"

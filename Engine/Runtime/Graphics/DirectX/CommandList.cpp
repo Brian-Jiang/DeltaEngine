@@ -11,7 +11,7 @@
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/DirectX/DynamicDescriptorHeap.h"
 #include "Runtime/Graphics/DirectX/RootSignature.h"
-#include "Runtime/Graphics/DTexture.h"
+#include "Runtime/Core/DTexture.h"
 #include "Runtime/Graphics/DirectX/DirectX12Texture.h"
 #include "Runtime/Graphics/DirectX/Buffer.h"
 #include "Runtime/Graphics/DirectX/ConstantBuffer.h"

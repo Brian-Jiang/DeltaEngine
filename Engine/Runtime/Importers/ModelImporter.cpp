@@ -5,7 +5,7 @@
 #include <iostream>
 
 #include "Graphics/Structures/Vertex.h"
-#include "Graphics/DTexture.h"
+#include "Core/DTexture.h"
 #include "Graphics/Mesh.h"
 #include "IO/IOManager.h"
 #include "assimp/Importer.hpp"

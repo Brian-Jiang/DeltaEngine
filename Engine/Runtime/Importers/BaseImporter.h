@@ -12,7 +12,7 @@ public:
 	BaseImporter();
 	~BaseImporter();
 
-	virtual void Import(const std::string& filePath) = 0;
+	virtual void Import(const std::wstring& filePath) = 0;
 };
 
 DELTA_ENGINE_NS_END

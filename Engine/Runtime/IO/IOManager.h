@@ -14,6 +14,7 @@ public:
 	static bool readFileToBuffer(const std::string &filePath, std::vector<char>& buffer);
 	static std::wstring GetAssetFullPath(LPCWSTR assetName);
 	static std::string GetAssetFullPath(const std::string & assetName);
+    static std::wstring GetEngineSourceAssetFullPath(std::wstring assetName);
 };
 
 DELTA_ENGINE_NS_END

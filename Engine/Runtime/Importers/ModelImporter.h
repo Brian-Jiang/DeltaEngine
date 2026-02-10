@@ -8,7 +8,7 @@
 #include "assimp/scene.h"
 #include "Graphics/Mesh.h"
 #include "Importers/BaseImporter.h"
-#include "Graphics/DTexture.h"
+#include "Core/DTexture.h"
 
 DELTA_ENGINE_NS_BEGIN
 

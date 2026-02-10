@@ -4,7 +4,7 @@
 #include <d3dx12.h>
 #include <dxgidebug.h>
 
-#include "Runtime/Graphics/DTexture.h"
+#include "Runtime/Core/DTexture.h"
 #include "Runtime/Graphics/DirectX/CommandQueue.h"
 #include "Runtime/Graphics/DirectX/CommandList.h"
 #include "Runtime/Graphics/DirectX/DescriptorAllocation.h"

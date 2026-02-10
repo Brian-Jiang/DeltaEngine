@@ -10,7 +10,7 @@ DELTA_ENGINE_NS_BEGIN
 class TextureImporter : public BaseImporter
 {
 public:
-	void Import(const std::string& filePath) override;
+	void Import(const std::wstring& filePath) override;
 
 	std::vector<unsigned char> data;
 	int width;

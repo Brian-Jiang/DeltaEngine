@@ -6,7 +6,7 @@
 
 #include "Runtime/Core/DObject.h"
 #include "Graphics/Structures/Vertex.h"
-#include "Graphics/DTexture.h"
+#include "Core/DTexture.h"
 
 DELTA_ENGINE_NS_BEGIN
 

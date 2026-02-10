@@ -6,7 +6,7 @@
 #include <DirectXMath.h>
 #include <wrl/client.h>
 
-#include "Runtime/Graphics/DTexture.h"
+#include "Runtime/Core/DTexture.h"
 #include "Runtime/Graphics/Renderer/Renderer.h"
 #include "Runtime/Graphics/Mesh.h"
 
