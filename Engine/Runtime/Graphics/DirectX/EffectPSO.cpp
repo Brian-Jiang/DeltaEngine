@@ -7,8 +7,9 @@
 #include "Graphics/DirectX/PipelineStateObject.h"
 #include "Graphics/DirectX/RootSignature.h"
 #include "Graphics/DXUtils.h"
-#include "Runtime/IO/IOManager.h"
-//#include <dx12lib/VertexTypes.h>
+#include "IO/IOManager.h"
+#include "Graphics/DirectX/VertexTypes.h"
+#include "Graphics/DirectX/DirectX12Texture.h"
 
 //#include <d3dcompiler.h>
 #include <dxcapi.h>
@@ -29,6 +30,8 @@ EffectPSO::EffectPSO( std::shared_ptr<Device> device, bool enableLighting, bool 
     m_pAlignedMVP = (MVP*)_aligned_malloc( sizeof( MVP ), 16 );
 
     // ---- Compile shaders and create PSO ----
+    ComPtr<IDxcBlob> vertexShader;
+    ComPtr<IDxcBlob> pixelShader;
     {
         ComPtr<IDxcUtils> dxcUtils;
         ComPtr<IDxcCompiler3> compiler;
@@ -59,7 +62,7 @@ EffectPSO::EffectPSO( std::shared_ptr<Device> device, bool enableLighting, bool 
             std::string errorMessage(static_cast<const char*>(error->GetBufferPointer()), error->GetBufferSize());
             std::cerr << errorMessage << std::endl;
         }
-        ComPtr<IDxcBlob> vertexShader;
+        
         vsResult->GetResult(&vertexShader);
 
         // Pixel shader
@@ -73,7 +76,7 @@ EffectPSO::EffectPSO( std::shared_ptr<Device> device, bool enableLighting, bool 
             std::string errorMessage(static_cast<const char*>(error->GetBufferPointer()), error->GetBufferSize());
             std::cerr << errorMessage << std::endl;
         }
-        ComPtr<IDxcBlob> pixelShader;
+        
         psResult->GetResult(&pixelShader);
     }
 
@@ -133,6 +136,8 @@ EffectPSO::EffectPSO( std::shared_ptr<Device> device, bool enableLighting, bool 
         CD3DX12_PIPELINE_STATE_STREAM_VS                    VS;
         CD3DX12_PIPELINE_STATE_STREAM_PS                    PS;
         CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER            RasterizerState;
+        CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC BlendState;
+        CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL DepthStencilState;
         CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT          InputLayout;
         CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY    PrimitiveTopologyType;
         CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT  DSVFormat;
@@ -157,11 +162,30 @@ EffectPSO::EffectPSO( std::shared_ptr<Device> device, bool enableLighting, bool 
         rasterizerState.CullMode = D3D12_CULL_MODE_NONE;
     }
 
+    CD3DX12_BLEND_DESC blendDesc = {};
+    blendDesc.AlphaToCoverageEnable = FALSE;
+    blendDesc.IndependentBlendEnable = FALSE;
+    blendDesc.RenderTarget[0].BlendEnable = FALSE;
+    blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+    blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+    blendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+    blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+    blendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+    blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
+    CD3DX12_DEPTH_STENCIL_DESC depthStencilState(D3D12_DEFAULT);
+    depthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+    depthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+    depthStencilState.StencilEnable = FALSE;
+
+    pipelineStateStream.InputLayout = VertexPositionNormalTangentBitangentTexture::InputLayout;
     pipelineStateStream.pRootSignature        = m_RootSignature->GetD3D12RootSignature().Get();
-    pipelineStateStream.VS                    = CD3DX12_SHADER_BYTECODE( vertexShaderBlob.Get() );
-    pipelineStateStream.PS                    = CD3DX12_SHADER_BYTECODE( pixelShaderBlob.Get() );
+    pipelineStateStream.VS = CD3DX12_SHADER_BYTECODE { static_cast<UINT8*>(vertexShader->GetBufferPointer()), vertexShader->GetBufferSize() };
+    pipelineStateStream.PS = CD3DX12_SHADER_BYTECODE { static_cast<UINT8*>(pixelShader->GetBufferPointer()), pixelShader->GetBufferSize() };
     pipelineStateStream.RasterizerState       = rasterizerState;
-    pipelineStateStream.InputLayout           = VertexPositionNormalTangentBitangentTexture::InputLayout;
+    pipelineStateStream.BlendState = blendDesc;
+    pipelineStateStream.DepthStencilState = depthStencilState;
     pipelineStateStream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
     pipelineStateStream.DSVFormat             = depthBufferFormat;
     pipelineStateStream.RTVFormats            = rtvFormats;
@@ -187,7 +211,7 @@ EffectPSO::~EffectPSO()
     _aligned_free( m_pAlignedMVP );
 }
 
-inline void EffectPSO::BindTexture( CommandList& commandList, uint32_t offset, const std::shared_ptr<Texture>& texture )
+inline void EffectPSO::BindTexture( CommandList& commandList, uint32_t offset, const std::shared_ptr<DirectX12Texture>& texture )
 {
     if ( texture )
     {
