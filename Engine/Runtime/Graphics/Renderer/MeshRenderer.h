@@ -14,6 +14,11 @@ DELTA_ENGINE_NS_BEGIN
 
 class EngineMain;
 
+struct MeshRendererSettings
+{
+    // Future settings for mesh rendering (e.g., culling mode, shadow casting, etc.) can be added here.
+};
+
 class MeshRenderer: public Renderer
 {
 public:

@@ -7,7 +7,7 @@
 #include <DirectXMath.h>
 #include <wrl.h>
 
-#include "Graphics/Mesh.h"
+//#include "Graphics/Mesh.h"
 
 DELTA_ENGINE_NS_BEGIN
 
