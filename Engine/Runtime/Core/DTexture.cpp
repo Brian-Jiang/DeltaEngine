@@ -61,7 +61,7 @@ void DeltaEngine::DTexture::LoadTexture()
 }
 
 
-std::shared_ptr<DTexture> DTexture::LoadFromFile(const std::string& filePath, bool sRGB)
+std::shared_ptr<DTexture> DTexture::LoadFromFile(const std::wstring& filePath, bool sRGB)
 {
     return std::make_shared<DTexture>(filePath, sRGB);
 }

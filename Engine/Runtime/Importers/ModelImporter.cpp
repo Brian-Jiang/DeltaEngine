@@ -6,7 +6,7 @@
 
 #include "Graphics/Structures/Vertex.h"
 #include "Core/DTexture.h"
-#include "Graphics/Mesh.h"
+//#include "Graphics/Mesh.h"
 #include "IO/IOManager.h"
 #include "assimp/Importer.hpp"
 #include "assimp/postprocess.h"
@@ -130,7 +130,7 @@ void ModelImporter::ProcessNode(aiNode *node, const aiScene *scene, DirectX::XMM
     }
 }
 
-Mesh *ModelImporter::ProcessMesh(aiMesh *mesh, const aiScene *scene)
+DMesh *ModelImporter::ProcessMesh(aiMesh *mesh, const aiScene *scene)
 {
 	std::vector<Vertex> vertices;
     vector<unsigned int> indices;
@@ -196,7 +196,7 @@ Mesh *ModelImporter::ProcessMesh(aiMesh *mesh, const aiScene *scene)
 		}  
     }
 
-    return new Mesh(vertices, indices, textures);
+    return nullptr;
 }
 
 std::string GetParentDirectory(const std::string& filePath, int levelsUp) {
@@ -234,7 +234,7 @@ vector<std::shared_ptr<DTexture>> ModelImporter::LoadMaterialTextures(const aiSc
 
         auto fileName = filePath.substr(filePath.find_last_of("\\/") + 1);
 		auto texturePath = FindTextureFile(folderPath, fileName);
-        auto texture = DTexture::LoadFromFile(texturePath, true);
+        auto texture = DTexture::LoadFromFile(std::wstring(texturePath.begin(), texturePath.end()), true);
         textures.push_back(texture);
     }
     return textures;

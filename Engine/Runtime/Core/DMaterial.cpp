@@ -42,3 +42,8 @@ void DMaterial::SetDepthStencilState(const CD3DX12_PIPELINE_STATE_STREAM_DEPTH_S
 {
     m_depthStencilState = depthStencilState;
 }
+
+void DeltaEngine::DMaterial::AddTexture(std::shared_ptr<DTexture> texture)
+{
+    m_textures.push_back(texture);
+}

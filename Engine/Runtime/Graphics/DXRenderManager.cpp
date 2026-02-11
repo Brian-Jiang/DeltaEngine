@@ -68,6 +68,8 @@ void DXRenderManager::LoadPipeline()
 
     m_swapChain = m_device->CreateSwapChain(hwnd, DXGI_FORMAT_R8G8B8A8_UNORM);
 
+    m_renderTarget = std::make_shared<RenderTarget>();
+
     // This sample does not support fullscreen transitions.
     //ThrowIfFailed(factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER));
 

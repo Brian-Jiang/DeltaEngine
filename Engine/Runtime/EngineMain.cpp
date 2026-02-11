@@ -40,16 +40,16 @@ void EngineMain::Initialize()
 
     //std::shared_ptr<Mesh> meshPtr(importer->meshes[0]);
     //m_instancedDrawer = new InstancedDrawer(meshPtr, 10000);
-    UINT32 idx = 0;
-    for (size_t i = 0; i < 100; i++) {
-        for (size_t j = 0; j < 100; j++) {
-            auto tranlate = XMMatrixTranslation(i / 10.0f, j / 10.0f, 0.0f);
-            //m_instancedDrawer->SetTransform(idx, tranlate);
-            XMFLOAT3 color(1.0f, 0.843f, 0.0f);
-            //m_instancedDrawer->SetColor(idx, color);
-            ++idx;
-        }
-    }
+    //UINT32 idx = 0;
+    //for (size_t i = 0; i < 100; i++) {
+    //    for (size_t j = 0; j < 100; j++) {
+    //        auto tranlate = XMMatrixTranslation(i / 10.0f, j / 10.0f, 0.0f);
+    //        //m_instancedDrawer->SetTransform(idx, tranlate);
+    //        XMFLOAT3 color(1.0f, 0.843f, 0.0f);
+    //        //m_instancedDrawer->SetColor(idx, color);
+    //        ++idx;
+    //    }
+    //}
 
     //m_instancedDrawer->CreateBuffer(dxRenderManager->GetDevice());
 
@@ -64,21 +64,22 @@ void EngineMain::Initialize()
     dxRenderManager->InitWorldRenderers(*m_world);
 }
 
-void EngineMain::InitSDL() {
+void EngineMain::InitSDL()
+{
     int rendererFlags, windowFlags;
-
     rendererFlags = SDL_RENDERER_ACCELERATED;
-
     windowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
 
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+    if (SDL_Init(SDL_INIT_VIDEO) < 0)
+    {
         printf("Couldn't initialize SDL: %s\n", SDL_GetError());
         gameState = GameState::Error;
     }
 
     window = SDL_CreateWindow("Delta Editor", SCREEN_WIDTH, SCREEN_HEIGHT, windowFlags);
 
-    if (!window) {
+    if (!window)
+    {
         printf("Failed to open %d x %d window: %s\n", SCREEN_WIDTH, SCREEN_HEIGHT, SDL_GetError());
         gameState = GameState::Error;
     }
@@ -91,7 +92,8 @@ void EngineMain::StartMainLoop()
 {
     eyePosition = XMVectorSet(0, 0, -10, 1);
 
-    while (gameState == GameState::PLAY) {
+    while (gameState == GameState::PLAY)
+    {
         time->TickTime();
         
         HandleInput();
@@ -112,35 +114,45 @@ void EngineMain::StartMainLoop()
 void EngineMain::HandleInput()
 {
     SDL_Event event;
-    while (SDL_PollEvent(&event)) {
+    while (SDL_PollEvent(&event))
+    {
         auto key = event.key.keysym.sym;
-        switch (event.type) {
+        switch (event.type)
+        {
             case SDL_EVENT_WINDOW_RESIZED:
                 dxRenderManager->Resize(event.window.data1, event.window.data2);
                 break;
             case SDL_EVENT_KEY_DOWN:
-                if (key == SDLK_F11) {
+                if (key == SDLK_F11)
+                {
                     dxRenderManager->SetFullscreen(!dxRenderManager->IsFullscreen());
-                } else if (key == SDLK_v)
+                }
+                else if (key == SDLK_v)
                 {
                     dxRenderManager->ToggleVSync(!dxRenderManager->IsVSync());
                 }
-                else if (key == SDLK_DOWN || key == SDLK_s) {
+                else if (key == SDLK_DOWN || key == SDLK_s)
+                {
                     eyePosition -= XMVectorSet(0, 0, 1.f, 0);
                 }
-                else if (key == SDLK_UP || key == SDLK_w) {
+                else if (key == SDLK_UP || key == SDLK_w)
+                {
                     eyePosition += XMVectorSet(0, 0, 1.f, 0);
                 }
-                else if (key == SDLK_LEFT || key == SDLK_a) {
+                else if (key == SDLK_LEFT || key == SDLK_a)
+                {
                     eyePosition -= XMVectorSet(1.f, 0, 0, 0);
                 }
-                else if (key == SDLK_RIGHT || key == SDLK_d) {
+                else if (key == SDLK_RIGHT || key == SDLK_d)
+                {
                     eyePosition += XMVectorSet(1.f, 0, 0, 0);
                 }
-                else if (key == SDLK_q) {
+                else if (key == SDLK_q)
+                {
                     eyePosition += XMVectorSet(0, 1.f, 0, 0);
                 }
-                else if (key == SDLK_e) {
+                else if (key == SDLK_e)
+                {
                     eyePosition -= XMVectorSet(0, 1.f, 0, 0);
                 }
                 break;
@@ -180,7 +192,7 @@ void EngineMain::Draw()
     dxRenderManager->PrepareFrame();
 
     // Get the graphics context (command list is active after PrepareFrame).
-    DXGraphicsContext context = dxRenderManager->GetGraphicsContext();
+    std::shared_ptr<DXGraphicsContext> context = dxRenderManager->GetGraphicsContext();
 
     // Draw instanced geometry.
     //m_instancedDrawer->Draw(context.commandList);

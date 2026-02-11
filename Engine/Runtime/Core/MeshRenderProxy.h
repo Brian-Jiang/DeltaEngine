@@ -3,6 +3,7 @@
 #include "EngineIncludes.h"
 
 #include <vector>
+#include <map>
 #include <string>
 #include <memory>
 #include <d3d12.h>

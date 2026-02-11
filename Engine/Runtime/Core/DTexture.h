@@ -7,6 +7,8 @@
 #include <memory>
 #include <d3d12.h>
 
+#include "Core/DObject.h"
+
 namespace DirectX
 {
     struct TexMetadata;
@@ -16,7 +18,7 @@ namespace DirectX
 
 DELTA_ENGINE_NS_BEGIN
 
-class DTexture
+class DTexture : public DObject, public std::enable_shared_from_this<DTexture>
 {
 public:
     DTexture();
@@ -39,7 +41,7 @@ private:
 
 
 public:
-    static std::shared_ptr<DTexture> LoadFromFile(const std::string& filePath, bool sRGB = false);
+    static std::shared_ptr<DTexture> LoadFromFile(const std::wstring& filePath, bool sRGB = false);
 };
 
 DELTA_ENGINE_NS_END

@@ -29,6 +29,7 @@ public:
     void SetShader(std::shared_ptr<DShader> shader);
     void SetBlendState(const CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC& blendDesc);
     void SetDepthStencilState(const CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL& depthStencilState);
+    void AddTexture(std::shared_ptr<DTexture> texture);
 
     inline std::shared_ptr<DShader> GetShader() const { return m_shader; }
     inline CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC GetBlendState() const { return m_blendDesc; }

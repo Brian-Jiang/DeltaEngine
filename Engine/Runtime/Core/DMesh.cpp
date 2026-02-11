@@ -7,6 +7,7 @@
 #include "assimp/postprocess.h"
 #include "assimp/scene.h"
 #include "IO/IOManager.h"
+#include "Core/DMaterial.h"
 
 using namespace DeltaEngine;
 
@@ -16,7 +17,7 @@ DMesh::DMesh(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices,
     std::shared_ptr<DMaterial>& material)
     : m_vertices(vertices)
     , m_indices(indices)
-    , m_materials(material)
+    , m_material(material)
 {
     
 }
@@ -123,8 +124,8 @@ void DMesh::ProcessNode(aiNode* node, const aiScene* scene, DirectX::XMMATRIX ac
         aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
         // if (mesh->mNumFaces > 5) continue;
 
-        meshes.push_back(ProcessMesh(mesh, scene));
-        meshTransforms.push_back(accTransform);
+        //meshes.push_back(ProcessMesh(mesh, scene));
+        //meshTransforms.push_back(accTransform);
         // meshDxTransforms.push_back(dxTransform);
     }
     // then do the same for each of its children
@@ -133,7 +134,7 @@ void DMesh::ProcessNode(aiNode* node, const aiScene* scene, DirectX::XMMATRIX ac
     }
 }
 
-DMesh* DMesh::ProcessMesh(aiMesh* mesh, const aiScene* scene)
+void DMesh::ProcessMesh(aiMesh* mesh, const aiScene* scene)
 {
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
@@ -192,19 +193,32 @@ DMesh* DMesh::ProcessMesh(aiMesh* mesh, const aiScene* scene)
     // process material
     if (mesh->mMaterialIndex >= 0)
     {
+        std::wstring fullPath = IOManager::GetEngineSourceAssetFullPath(m_sourcePath);
+        std::filesystem::path path(fullPath);
         aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-        std::vector<std::shared_ptr<DTexture>> diffuseMaps = LoadMaterialTextures(scene, material,
-            aiTextureType_DIFFUSE, "texture_diffuse", this->m_sourcePath);
+
+        std::vector<std::shared_ptr<DTexture>> diffuseMaps = LoadMaterialTextures(
+            scene, material, aiTextureType_DIFFUSE, "texture_diffuse", path.string());
         textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
 
         std::vector<std::shared_ptr<DTexture>> specularMaps = LoadMaterialTextures(scene, material,
-            aiTextureType_SPECULAR, "texture_specular", this->m_sourcePath);
+            aiTextureType_SPECULAR, "texture_specular", path.string());
         textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
     }
 
-    return new DMesh(vertices, indices, textures);
+    m_vertices = vertices;
+    m_indices = indices;
+    //m_material = std::make_shared<DMaterial>();
+    //m_material->AddTexture(textures[0]);
+    for (const auto& texture : textures)
+    {
+        m_material->AddTexture(texture);
+    }
+
+    //return std::make_shared<DMesh>(vertices, indices, textures);
 }
 
+// todo use wstring for file paths?
 std::string GetParentDirectory(const std::string& filePath, int levelsUp)
 {
     namespace fs = std::filesystem;
@@ -242,8 +256,9 @@ std::vector<std::shared_ptr<DTexture>> DMesh::LoadMaterialTextures(const aiScene
 
         auto fileName = filePath.substr(filePath.find_last_of("\\/") + 1);
         auto texturePath = FindTextureFile(folderPath, fileName);
-        auto texture = DTexture::LoadFromFile(texturePath, true);
+        auto texture = DTexture::LoadFromFile(std::wstring(texturePath.begin(), texturePath.end()), true);
         textures.push_back(texture);
     }
+
     return textures;
 }

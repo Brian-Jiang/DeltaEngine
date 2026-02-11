@@ -34,7 +34,7 @@ void MeshRenderer::SetMesh(std::shared_ptr<DMesh>& mesh)
     CreateMeshRenderProxy();
 }
 
-void DeltaEngine::MeshRenderer::InitGraphicState(std::shared_ptr<DXGraphicsContext> context)
+void MeshRenderer::InitGraphicState(std::shared_ptr<DXGraphicsContext> context)
 {
     if (m_meshRenderProxy)
     {

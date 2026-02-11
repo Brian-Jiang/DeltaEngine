@@ -6,7 +6,8 @@
 using namespace std;
 using namespace DeltaEngine;
 
-int main() {
+int main()
+{
 	auto engine = new EngineMain();
     engine->Initialize();
     printf("Delta Engine Init");
