@@ -35,12 +35,12 @@
 
 #include "Graphics/DirectX/Visitor.h"
 
-class Camera;
-class EffectPSO;
 
 DELTA_ENGINE_NS_BEGIN
 
 class CommandList;
+class EffectPSO;
+class Camera;
 
 class SceneVisitor : public Visitor
 {

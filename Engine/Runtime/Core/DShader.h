@@ -29,9 +29,11 @@ public:
     void SetPixelShaderEntryPoint(const std::wstring& entryPoint);
     void SetVertexShaderTargetProfile(const std::wstring& targetProfile);
     void SetPixelShaderTargetProfile(const std::wstring& targetProfile);
+    void SetInputLayout(const std::vector<D3D12_INPUT_ELEMENT_DESC>& inputLayout);
 
     inline IDxcBlob* GetVertexShaderBlob() const { return m_vertexShaderBlob.Get(); }
     inline IDxcBlob* GetPixelShaderBlob() const { return m_pixelShaderBlob.Get(); }
+    inline const std::vector<D3D12_INPUT_ELEMENT_DESC>& GetInputLayout() const { return m_inputLayout; }
 
 private:
     void CompileShader();

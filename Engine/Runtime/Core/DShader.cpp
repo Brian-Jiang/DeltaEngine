@@ -79,6 +79,11 @@ void DeltaEngine::DShader::SetPixelShaderTargetProfile(const std::wstring& targe
     CompileShader();
 }
 
+void DeltaEngine::DShader::SetInputLayout(const std::vector<D3D12_INPUT_ELEMENT_DESC>& inputLayout)
+{
+    m_inputLayout = inputLayout;
+}
+
 void DShader::CompileShader()
 {
     ComPtr<IDxcUtils> dxcUtils;

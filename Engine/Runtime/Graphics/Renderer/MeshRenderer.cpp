@@ -11,12 +11,16 @@
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/DirectX/CommandList.h"
 #include "Runtime/Graphics/DirectX/RootSignature.h"
+#include "Runtime/Core/MeshRenderProxy.h"
 
 using namespace DirectX;
 using namespace Microsoft::WRL;
 using namespace DeltaEngine;
 
-MeshRenderer::MeshRenderer() : meshCount(0), loadedTextureCount(0)
+MeshRenderer::MeshRenderer()
+    : meshCount(0)
+    , loadedTextureCount(0)
+    , m_dirty(true)
 {
 }
 
@@ -24,221 +28,141 @@ MeshRenderer::~MeshRenderer()
 {
 }
 
-void MeshRenderer::Start(const std::vector<Mesh*>& meshes, const std::vector<XMMATRIX>& meshTransforms)
+void MeshRenderer::SetMesh(std::shared_ptr<DMesh>& mesh)
 {
-	this->meshes = meshes;
-	this->meshTransforms = meshTransforms;
+    m_mesh = mesh;
+    CreateMeshRenderProxy();
 }
 
-void DeltaEngine::MeshRenderer::InitGraphicState(DXGraphicsContext& context)
+void DeltaEngine::MeshRenderer::InitGraphicState(std::shared_ptr<DXGraphicsContext> context)
 {
-    auto d3d12Device = context.device->GetD3D12Device();
-
-    // ---- Compile shaders and create PSO ----
+    if (m_meshRenderProxy)
     {
-        //ComPtr<IDxcUtils> dxcUtils;
-        //ComPtr<IDxcCompiler3> compiler;
-        //ComPtr<IDxcIncludeHandler> includeHandler;
-        //ThrowIfFailed(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)));
-        //ThrowIfFailed(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils)));
-        //ThrowIfFailed(dxcUtils->CreateDefaultIncludeHandler(&includeHandler));
-
-        //std::wstring shaderPath = IOManager::GetAssetFullPath(L"Shaders/Shaders.hlsl");
-        //ComPtr<IDxcBlobEncoding> sourceBlob;
-        //ThrowIfFailed(dxcUtils->LoadFile(shaderPath.c_str(), nullptr, &sourceBlob));
-
-        //BOOL known;
-        //UINT32 encoding;
-        //ThrowIfFailed(sourceBlob->GetEncoding(&known, &encoding));
-        //DxcBuffer sourceBuffer{ .Ptr = sourceBlob->GetBufferPointer(), .Size = sourceBlob->GetBufferSize(), .Encoding = encoding };
-
-        //// Vertex shader
-        //ComPtr<IDxcCompilerArgs> arguments;
-        //ThrowIfFailed(dxcUtils->BuildArguments(shaderPath.c_str(), L"VSMain", L"vs_6_0", nullptr, 0, nullptr, 0, &arguments));
-        //ComPtr<IDxcResult> vsResult;
-        //ThrowIfFailed(compiler->Compile(&sourceBuffer, arguments->GetArguments(), arguments->GetCount(), includeHandler.Get(), IID_PPV_ARGS(&vsResult)));
-        //HRESULT hr;
-        //ThrowIfFailed(vsResult->GetStatus(&hr));
-        //if (FAILED(hr)) {
-        //    ComPtr<IDxcBlobEncoding> error;
-        //    vsResult->GetErrorBuffer(&error);
-        //    std::string errorMessage(static_cast<const char*>(error->GetBufferPointer()), error->GetBufferSize());
-        //    std::cerr << errorMessage << std::endl;
-        //}
-        //ComPtr<IDxcBlob> vertexShader;
-        //vsResult->GetResult(&vertexShader);
-
-        //// Pixel shader
-        //ThrowIfFailed(dxcUtils->BuildArguments(shaderPath.c_str(), L"PSMain", L"ps_6_0", nullptr, 0, nullptr, 0, &arguments));
-        //ComPtr<IDxcResult> psResult;
-        //compiler->Compile(&sourceBuffer, arguments->GetArguments(), arguments->GetCount(), includeHandler.Get(), IID_PPV_ARGS(&psResult));
-        //psResult->GetStatus(&hr);
-        //if (FAILED(hr)) {
-        //    ComPtr<IDxcBlobEncoding> error;
-        //    psResult->GetErrorBuffer(&error);
-        //    std::string errorMessage(static_cast<const char*>(error->GetBufferPointer()), error->GetBufferSize());
-        //    std::cerr << errorMessage << std::endl;
-        //}
-        //ComPtr<IDxcBlob> pixelShader;
-        //psResult->GetResult(&pixelShader);
-
-        //// Input layout matching Shaders.hlsl
-        //D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
-        //    { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        //    { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        //    { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        //    { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-
-        //    // Instance data (per-instance, unique to each instance)
-        //    { "INSTANCE_WORLD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
-        //    { "INSTANCE_WORLD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 16, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
-        //    { "INSTANCE_WORLD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 32, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
-        //    { "INSTANCE_WORLD", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 48, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
-        //    { "INSTANCE_COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 64, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
-        //};
-
-        //D3D12_BLEND_DESC blendDesc = {};
-        //blendDesc.AlphaToCoverageEnable = FALSE;
-        //blendDesc.IndependentBlendEnable = FALSE;
-        //blendDesc.RenderTarget[0].BlendEnable = FALSE;
-        //blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
-        //blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-        //blendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
-        //blendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
-        //blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
-        //blendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
-        //blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-
-        //D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-        //psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
-        //psoDesc.pRootSignature = context.rootSignature->GetD3D12RootSignature().Get();
-        //psoDesc.VS = { static_cast<UINT8*>(vertexShader->GetBufferPointer()), vertexShader->GetBufferSize() };
-        //psoDesc.PS = { static_cast<UINT8*>(pixelShader->GetBufferPointer()), pixelShader->GetBufferSize() };
-        //psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-        //psoDesc.BlendState = blendDesc;
-        //psoDesc.DepthStencilState.DepthEnable = TRUE;
-        //psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-        //psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-        //psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-        //psoDesc.DepthStencilState.StencilEnable = FALSE;
-        //psoDesc.SampleMask = UINT_MAX;
-        //psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-        //psoDesc.NumRenderTargets = 1;
-        //psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-        //psoDesc.SampleDesc.Count = 1;
-        //ThrowIfFailed(d3d12Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+        m_meshRenderProxy->BuildPipelineStateObject(context);
     }
 
-    // ---- Per-object constant buffer (root parameter 2) ----
-    {
-        const UINT objectCbSize = 256;
-        CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
-        auto desc = CD3DX12_RESOURCE_DESC::Buffer(objectCbSize);
-        ThrowIfFailed(d3d12Device->CreateCommittedResource(
-            &heapProps,
-            D3D12_HEAP_FLAG_NONE,
-            &desc,
-            D3D12_RESOURCE_STATE_GENERIC_READ,
-            nullptr,
-            IID_PPV_ARGS(&m_objectCb)));
-    }
+    //auto d3d12Device = context.device->GetD3D12Device();
 
-    // ---- Create vertex/index buffers and load textures for all meshes ----
-    for (size_t i = 0; i < meshes.size(); ++i)
-    {
-        AddMesh(meshes[i], meshTransforms[i], context);
-    }
+    //// ---- Per-object constant buffer (root parameter 2) ----
+    //{
+    //    const UINT objectCbSize = 256;
+    //    CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
+    //    auto desc = CD3DX12_RESOURCE_DESC::Buffer(objectCbSize);
+    //    ThrowIfFailed(d3d12Device->CreateCommittedResource(
+    //        &heapProps,
+    //        D3D12_HEAP_FLAG_NONE,
+    //        &desc,
+    //        D3D12_RESOURCE_STATE_GENERIC_READ,
+    //        nullptr,
+    //        IID_PPV_ARGS(&m_objectCb)));
+    //}
+
+    //// ---- Create vertex/index buffers and load textures for all meshes ----
+    //for (size_t i = 0; i < meshes.size(); ++i)
+    //{
+    //    AddMesh(meshes[i], meshTransforms[i], context);
+    //}
 }
 
-void MeshRenderer::AddMesh(const Mesh* mesh, const XMMATRIX meshTransform, DXGraphicsContext& context)
+//void MeshRenderer::AddMesh(const Mesh* mesh, const XMMATRIX meshTransform, DXGraphicsContext& context)
+//{
+//    auto& uploadBuffer = EngineMain::instance->dxRenderManager->GetUploadBuffer();
+//
+//    // Create the vertex buffer.
+//    //{
+//    //    const UINT vertexBufferSize = static_cast<UINT>(mesh->vertices.size() * sizeof(Vertex));
+//    //    auto addrPair = uploadBuffer.Allocate(vertexBufferSize, sizeof(Vertex));
+//    //    memcpy(addrPair.CPU, mesh->vertices.data(), vertexBufferSize);
+//    //    D3D12_VERTEX_BUFFER_VIEW vertexBufferView{
+//    //        addrPair.GPU,
+//    //        vertexBufferSize,
+//    //        sizeof(Vertex)
+//    //    };
+//
+//    //    vertexBufferViews.push_back(vertexBufferView);
+//    //}
+//
+//    //// Create the index buffer.
+//    //{
+//    //    const UINT indexBufferSize = static_cast<UINT>(mesh->indices.size() * sizeof(unsigned int));
+//    //    auto addrPair = uploadBuffer.Allocate(indexBufferSize, sizeof(unsigned int));
+//    //    memcpy(addrPair.CPU, mesh->indices.data(), indexBufferSize);
+//    //    D3D12_INDEX_BUFFER_VIEW indexBufferView{
+//    //        addrPair.GPU,
+//    //        indexBufferSize,
+//    //        DXGI_FORMAT_R32_UINT
+//    //    };
+//
+//    //    indexBufferViews.push_back(indexBufferView);
+//    //}
+//
+//    // Create model matrix
+//    {
+//        const UINT constantBufferSize = sizeof(DirectX::XMFLOAT4X4);
+//        auto addrPair = uploadBuffer.Allocate(constantBufferSize, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+//        DirectX::XMStoreFloat4x4(static_cast<DirectX::XMFLOAT4X4*>(addrPair.CPU), meshTransform);
+//    }
+//
+//    for (size_t i = 0; i < mesh->textures.size(); ++i) {
+//        LoadTexture(mesh->textures[i], context);
+//        ++loadedTextureCount;
+//    }
+//
+//    ++meshCount;
+//}
+
+void DeltaEngine::MeshRenderer::CreateMeshRenderProxy()
 {
-    auto& uploadBuffer = EngineMain::instance->dxRenderManager->GetUploadBuffer();
-
-    // Create the vertex buffer.
-    {
-        const UINT vertexBufferSize = static_cast<UINT>(mesh->vertices.size() * sizeof(Vertex));
-        auto addrPair = uploadBuffer.Allocate(vertexBufferSize, sizeof(Vertex));
-        memcpy(addrPair.CPU, mesh->vertices.data(), vertexBufferSize);
-        D3D12_VERTEX_BUFFER_VIEW vertexBufferView{
-            addrPair.GPU,
-            vertexBufferSize,
-            sizeof(Vertex)
-        };
-
-        vertexBufferViews.push_back(vertexBufferView);
-    }
-
-    // Create the index buffer.
-    {
-        const UINT indexBufferSize = static_cast<UINT>(mesh->indices.size() * sizeof(unsigned int));
-        auto addrPair = uploadBuffer.Allocate(indexBufferSize, sizeof(unsigned int));
-        memcpy(addrPair.CPU, mesh->indices.data(), indexBufferSize);
-        D3D12_INDEX_BUFFER_VIEW indexBufferView{
-            addrPair.GPU,
-            indexBufferSize,
-            DXGI_FORMAT_R32_UINT
-        };
-
-        indexBufferViews.push_back(indexBufferView);
-    }
-
-    // Create model matrix
-    {
-        const UINT constantBufferSize = sizeof(DirectX::XMFLOAT4X4);
-        auto addrPair = uploadBuffer.Allocate(constantBufferSize, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
-        DirectX::XMStoreFloat4x4(static_cast<DirectX::XMFLOAT4X4*>(addrPair.CPU), meshTransform);
-    }
-
-    for (size_t i = 0; i < mesh->textures.size(); ++i) {
-        LoadTexture(mesh->textures[i], context);
-        ++loadedTextureCount;
-    }
-
-    ++meshCount;
+    m_meshRenderProxy = std::make_shared<MeshRenderProxy>(m_mesh, std::make_shared<MeshRendererSettings>(m_settings));
 }
 
-void MeshRenderer::LoadTexture(const std::shared_ptr<DTexture>& texture, DXGraphicsContext& context)
+//void MeshRenderer::LoadTexture(const std::shared_ptr<DTexture>& texture, DXGraphicsContext& context)
+//{
+//    if (!texture || texture->GetData().empty())
+//        return;
+//    context.device->CreateTextureFromFile(texture.get(), *context.commandList);
+//    loadedTextures.push_back(texture);
+//}
+
+void DeltaEngine::MeshRenderer::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context)
 {
-    if (!texture || texture->GetData().empty())
-        return;
-    context.device->CreateTextureFromFile(texture.get(), *context.commandList);
-    loadedTextures.push_back(texture);
-}
-
-void DeltaEngine::MeshRenderer::GatherDrawCalls(DXGraphicsContext& context)
-{
-    auto& commandList = context.commandList;
-
-    DirectX::XMMATRIX rendererWorld = GetWorldTransform();
-
-    commandList->SetPipelineState(m_pipelineState.Get());
-    commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-    struct ObjectData {
-        DirectX::XMFLOAT4X4 worldMatrix;
-        DirectX::XMFLOAT4 color;
-        uint32_t useInstanceMatrix;
-    } obj;
-    obj.color = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-    obj.useInstanceMatrix = 0;
-
-    for (int i = 0; i < meshCount; ++i) {
-        // Per-draw model matrix: renderer world * mesh local transform.
-        DirectX::XMMATRIX model = DirectX::XMMatrixMultiply(rendererWorld, meshTransforms[i]);
-        DirectX::XMStoreFloat4x4(&obj.worldMatrix, model);
-
-        void* pObj = nullptr;
-        m_objectCb->Map(0, nullptr, &pObj);
-        memcpy(pObj, &obj, sizeof(obj));
-        m_objectCb->Unmap(0, nullptr);
-
-        commandList->SetGraphicsRootConstantBufferView(2, m_objectCb->GetGPUVirtualAddress());
-        commandList->IASetVertexBuffers(0, 1, &vertexBufferViews[i]);
-        commandList->IASetIndexBuffer(&indexBufferViews[i]);
-
-        if (i < static_cast<int>(loadedTextures.size()))
-            commandList->SetShaderResourceView(1, loadedTextures[i]);
-
-        commandList->DrawIndexed(static_cast<uint32_t>(meshes[i]->indices.size()), 1, 0, 0, 0);
+    if (m_meshRenderProxy)
+    {
+        m_meshRenderProxy->GatherDrawCalls(context);
     }
+
+    //auto& commandList = context.commandList;
+
+    //DirectX::XMMATRIX rendererWorld = GetWorldTransform();
+
+    //commandList->SetPipelineState(m_pipelineState.Get());
+    //commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    //struct ObjectData {
+    //    DirectX::XMFLOAT4X4 worldMatrix;
+    //    DirectX::XMFLOAT4 color;
+    //    uint32_t useInstanceMatrix;
+    //} obj;
+    //obj.color = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+    //obj.useInstanceMatrix = 0;
+
+    //for (int i = 0; i < meshCount; ++i) {
+    //    // Per-draw model matrix: renderer world * mesh local transform.
+    //    DirectX::XMMATRIX model = DirectX::XMMatrixMultiply(rendererWorld, meshTransforms[i]);
+    //    DirectX::XMStoreFloat4x4(&obj.worldMatrix, model);
+
+    //    void* pObj = nullptr;
+    //    m_objectCb->Map(0, nullptr, &pObj);
+    //    memcpy(pObj, &obj, sizeof(obj));
+    //    m_objectCb->Unmap(0, nullptr);
+
+    //    commandList->SetGraphicsRootConstantBufferView(2, m_objectCb->GetGPUVirtualAddress());
+    //    commandList->IASetVertexBuffers(0, 1, &vertexBufferViews[i]);
+    //    commandList->IASetIndexBuffer(&indexBufferViews[i]);
+
+    //    if (i < static_cast<int>(loadedTextures.size()))
+    //        commandList->SetShaderResourceView(1, loadedTextures[i]);
+
+    //    commandList->DrawIndexed(static_cast<uint32_t>(meshes[i]->indices.size()), 1, 0, 0, 0);
+    //}
 }

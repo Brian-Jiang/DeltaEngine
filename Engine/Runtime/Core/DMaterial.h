@@ -14,6 +14,7 @@
 DELTA_ENGINE_NS_BEGIN
 
 class DShader;
+class DTexture;
 
 class DMaterial : public DObject
 {
@@ -37,6 +38,7 @@ private:
     std::shared_ptr<DShader> m_shader;
     CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC m_blendDesc;
     CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL m_depthStencilState;
+    std::vector<std::shared_ptr<DTexture>> m_textures;
 };
 
 DELTA_ENGINE_NS_END

@@ -8,6 +8,8 @@
 #include "Graphics/DirectX/RootSignature.h"
 #include "Graphics/DirectX/CommandQueue.h"
 #include "Graphics/DirectX/CommandList.h"
+#include "Graphics/DirectX/IndexBuffer.h"
+#include "Graphics/DirectX/VertexBuffer.h"
 #include "Core/DMesh.h"
 #include "Core/DMaterial.h"
 #include "Core/DShader.h"
@@ -28,6 +30,12 @@ DeltaEngine::MeshRenderProxy::MeshRenderProxy(std::shared_ptr<DMesh> mesh, std::
 
 DeltaEngine::MeshRenderProxy::~MeshRenderProxy()
 {
+}
+
+void DeltaEngine::MeshRenderProxy::SetMesh(std::shared_ptr<DMesh> mesh)
+{
+    m_mesh = mesh;
+    m_meshDirty = true;
 }
 
 void DeltaEngine::MeshRenderProxy::BuildPipelineStateObject(std::shared_ptr<DXGraphicsContext> renderContext)
@@ -91,22 +99,8 @@ void DeltaEngine::MeshRenderProxy::BuildPipelineStateObject(std::shared_ptr<DXGr
     //    rasterizerState.CullMode = D3D12_CULL_MODE_NONE;
     //}
 
-    CD3DX12_BLEND_DESC blendDesc = {};
-    blendDesc.AlphaToCoverageEnable = FALSE;
-    blendDesc.IndependentBlendEnable = FALSE;
-    blendDesc.RenderTarget[0].BlendEnable = FALSE;
-    blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
-    blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-    blendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
-    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
-    blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
-    blendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
-    blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-
-    CD3DX12_DEPTH_STENCIL_DESC depthStencilState(D3D12_DEFAULT);
-    depthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-    depthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-    depthStencilState.StencilEnable = FALSE;
+    CD3DX12_BLEND_DESC blendDesc = m_mesh->GetMaterial()->GetBlendState();
+    CD3DX12_DEPTH_STENCIL_DESC depthStencilState = m_mesh->GetMaterial()->GetDepthStencilState();
 
     IDxcBlob* vertexShader = m_mesh->GetMaterial()->GetShader()->GetVertexShaderBlob();
     CD3DX12_SHADER_BYTECODE vertexShaderBytecode { static_cast<UINT8*>(vertexShader->GetBufferPointer()), vertexShader->GetBufferSize() };
@@ -114,7 +108,8 @@ void DeltaEngine::MeshRenderProxy::BuildPipelineStateObject(std::shared_ptr<DXGr
     IDxcBlob* pixelShader = m_mesh->GetMaterial()->GetShader()->GetPixelShaderBlob();
     CD3DX12_SHADER_BYTECODE pixelShaderBytecode { static_cast<UINT8*>(pixelShader->GetBufferPointer()), pixelShader->GetBufferSize() };
 
-    pipelineStateStream.InputLayout = VertexPositionNormalTangentBitangentTexture::InputLayout;
+    std::vector<D3D12_INPUT_ELEMENT_DESC> layout = m_mesh->GetMaterial()->GetShader()->GetInputLayout();
+    pipelineStateStream.InputLayout = { layout.data(), static_cast<UINT>(layout.size()) };
     pipelineStateStream.pRootSignature = m_rootSignature->GetD3D12RootSignature().Get();
     pipelineStateStream.VS = vertexShaderBytecode;
     pipelineStateStream.PS = pixelShaderBytecode;
@@ -133,19 +128,59 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
 {
     CommandQueue& commandQueue = renderContext->device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
     std::shared_ptr<CommandList> commandList = commandQueue.GetCommandList();
+
+    if (m_meshDirty)
+    {
+        std::shared_ptr<VertexBuffer> vertexBuffer = commandList->CopyVertexBuffer(m_mesh->GetVertices());
+        m_VertexBuffers = { {0, vertexBuffer} };
+        m_IndexBuffer = commandList->CopyIndexBuffer(m_mesh->GetIndices());
+        //m_PrimitiveTopology = m_mesh->GetPrimitiveTopology();
+        //m_AABB = m_mesh->GetAABB();
+        BuildPipelineStateObject(renderContext);
+        m_meshDirty = false;
+    }
+
+    
     commandList->SetPrimitiveTopology(m_PrimitiveTopology);
 
-    for (auto vertexBuffer : m_VertexBuffers) {
+    for (auto vertexBuffer : m_VertexBuffers)
+    {
         commandList->SetVertexBuffer(vertexBuffer.first, vertexBuffer.second);
     }
 
     auto indexCount = GetIndexCount();
     auto vertexCount = GetVertexCount();
 
-    if (indexCount > 0) {
+    if (indexCount > 0)
+    {
         commandList->SetIndexBuffer(m_IndexBuffer);
         commandList->DrawIndexed(indexCount, 1u, 0u, 0u, 0u);
-    } else if (vertexCount > 0) {
+    }
+    else if (vertexCount > 0)
+    {
         commandList->Draw(vertexCount, 1u, 0u, 0u);
     }
+}
+
+size_t DeltaEngine::MeshRenderProxy::GetIndexCount() const
+{
+    size_t indexCount = 0;
+    if (m_IndexBuffer) {
+        indexCount = m_IndexBuffer->GetNumIndices();
+    }
+
+    return indexCount;
+}
+
+size_t DeltaEngine::MeshRenderProxy::GetVertexCount() const
+{
+    size_t vertexCount = 0;
+
+    // To count the number of vertices in the mesh, just take the number of vertices in the first vertex buffer.
+    BufferMap::const_iterator iter = m_VertexBuffers.cbegin();
+    if (iter != m_VertexBuffers.cend()) {
+        vertexCount = iter->second->GetNumVertices();
+    }
+
+    return vertexCount;
 }

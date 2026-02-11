@@ -3,6 +3,7 @@
 #include "Runtime/EngineIncludes.h"
 
 #include <chrono>
+#include <memory>
 #include <dxgi1_6.h>
 #include <d3d12.h>
 #include <d3dx12.h>
@@ -47,7 +48,7 @@ public:
     void OnDestroy();
 
 	/// Returns a context that renderers use for InitGraphicState / GatherDrawCalls.
-	DXGraphicsContext GetGraphicsContext() const;
+    std::shared_ptr<DXGraphicsContext> GetGraphicsContext() const;
 
 	CommandQueue& GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) const;
     UINT GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const;

@@ -382,9 +382,9 @@ public:
     /**
      * Set an SRV on the graphics pipeline from an engine-level DTexture (handles transition and descriptor staging).
      */
-    void SetShaderResourceView(uint32_t rootParameterIndex, const std::shared_ptr<DTexture>& texture,
-        D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE |
-        D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+    //void SetShaderResourceView(uint32_t rootParameterIndex, const std::shared_ptr<DTexture>& texture,
+    //    D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE |
+    //    D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
 
     // ============================  ============================

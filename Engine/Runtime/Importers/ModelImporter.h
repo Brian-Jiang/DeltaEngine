@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "assimp/scene.h"
-#include "Graphics/Mesh.h"
+#include "Core/DMesh.h"
 #include "Importers/BaseImporter.h"
 #include "Core/DTexture.h"
 
@@ -21,7 +21,7 @@ struct DxTransform {
 class ModelImporter : public BaseImporter
 {
 public:
-	std::vector<Mesh*> meshes;
+	std::vector<DMesh*> meshes;
 	std::vector<DirectX::XMMATRIX> meshTransforms;
 	std::vector<DxTransform> meshDxTransforms;
 	std::vector<std::shared_ptr<DTexture>> textures;
@@ -31,7 +31,7 @@ public:
 
 	void Import(const std::string& filePath) override;
 	void ProcessNode(aiNode* node, const aiScene* scene, DirectX::XMMATRIX accTransform);
-	Mesh *ProcessMesh(aiMesh* mesh, const aiScene* scene);
+	DMesh *ProcessMesh(aiMesh* mesh, const aiScene* scene);
 	std::vector<std::shared_ptr<DTexture>> LoadMaterialTextures(const aiScene* scene, aiMaterial* mat, aiTextureType type, std::string typeName, const std::string& filePath);
 
 	std::string sourcePath;

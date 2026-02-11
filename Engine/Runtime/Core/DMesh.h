@@ -19,12 +19,20 @@ public:
     DMesh();
     DMesh(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices, std::shared_ptr<DMaterial>& material);
 
+    void ImportMesh();
+    void ProcessNode(aiNode* node, const aiScene* scene, DirectX::XMMATRIX accTransform);
+    DMesh* ProcessMesh(aiMesh* mesh, const aiScene* scene);
+    std::vector<std::shared_ptr<DTexture>> LoadMaterialTextures(const aiScene* scene, aiMaterial* mat, aiTextureType type, std::string typeName, const std::string& filePath);
+
+    inline const std::vector<Vertex>& GetVertices() const { return m_vertices; }
+    inline const std::vector<unsigned int>& GetIndices() const { return m_indices; }
     inline std::shared_ptr<DMaterial> GetMaterial() const { return m_materials; }
 
 private:
     std::vector<Vertex> m_vertices;
     std::vector<unsigned int> m_indices;
     std::shared_ptr<DMaterial> m_materials;
+    std::wstring m_sourcePath;
 };
 
 DELTA_ENGINE_NS_END

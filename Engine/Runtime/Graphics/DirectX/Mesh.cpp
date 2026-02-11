@@ -104,7 +104,7 @@ void Mesh::Draw( CommandList& commandList, uint32_t instanceCount, uint32_t star
 
 void Mesh::Accept( Visitor& visitor )
 {
-    visitor.Visit( *this );
+    //visitor.Visit( *this );
 }
 
 void Mesh::SetAABB( const DirectX::BoundingBox& aabb )

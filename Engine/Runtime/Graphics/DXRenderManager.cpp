@@ -287,7 +287,7 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
     //CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
     //m_currentCommandList = directCommandQueue.GetCommandList();
 
-    DXGraphicsContext context = GetGraphicsContext();
+    auto context = GetGraphicsContext();
     world.InitRenderers(context);
 
     //directCommandQueue.ExecuteCommandList(m_currentCommandList);
@@ -529,16 +529,16 @@ void DXRenderManager::OnDestroy()
     //WaitForPreviousFrame();
 }
 
-DXGraphicsContext DeltaEngine::DXRenderManager::GetGraphicsContext() const
+std::shared_ptr<DXGraphicsContext> DeltaEngine::DXRenderManager::GetGraphicsContext() const
 {
-    DXGraphicsContext context;
-    context.device = m_device;
-    //context.commandList = m_currentCommandList;
-    //context.rootSignature = m_rootSignature;
-    //context.srvHeap = m_srvHeap;
-    context.viewMatrix = m_viewMatrix;
-    context.projectionMatrix = m_projectionMatrix;
-    context.cameraPosition = m_cameraPosition;
+    auto context = std::make_shared<DXGraphicsContext>();
+    context->device = m_device;
+    //context->commandList = m_currentCommandList;
+    //context->rootSignature = m_rootSignature;
+    //context->srvHeap = m_srvHeap;
+    context->viewMatrix = m_viewMatrix;
+    context->projectionMatrix = m_projectionMatrix;
+    context->cameraPosition = m_cameraPosition;
     return context;
 }
 

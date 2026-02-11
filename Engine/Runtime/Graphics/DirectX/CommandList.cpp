@@ -1121,23 +1121,23 @@ void CommandList::SetShaderResourceView(int32_t rootParameterIndex, uint32_t des
     }
 }
 
-void CommandList::SetShaderResourceView(uint32_t rootParameterIndex, const std::shared_ptr<DTexture>& texture,
-    D3D12_RESOURCE_STATES stateAfter)
-{
-    if (!texture) return;
-    ID3D12Resource* rawRes = texture->GetD3D12Resource();
-    if (!rawRes) return;
-    // Keep resource alive until command list is reset (prevents OBJECT_DELETED_WHILE_STILL_IN_USE).
-    Microsoft::WRL::ComPtr<ID3D12Object> objRef;
-    if (SUCCEEDED(rawRes->QueryInterface(IID_PPV_ARGS(&objRef))))
-        TrackResource(objRef);
-    Microsoft::WRL::ComPtr<ID3D12Resource> res;
-    res.Attach(rawRes);
-    TransitionBarrier(res, stateAfter);
-    res.Detach();
-    m_DynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(
-        rootParameterIndex, 0, 1, texture->GetSRVCPUHandle());
-}
+//void CommandList::SetShaderResourceView(uint32_t rootParameterIndex, const std::shared_ptr<DTexture>& texture,
+//    D3D12_RESOURCE_STATES stateAfter)
+//{
+//    if (!texture) return;
+//    ID3D12Resource* rawRes = texture->GetD3D12Resource();
+//    if (!rawRes) return;
+//    // Keep resource alive until command list is reset (prevents OBJECT_DELETED_WHILE_STILL_IN_USE).
+//    Microsoft::WRL::ComPtr<ID3D12Object> objRef;
+//    if (SUCCEEDED(rawRes->QueryInterface(IID_PPV_ARGS(&objRef))))
+//        TrackResource(objRef);
+//    Microsoft::WRL::ComPtr<ID3D12Resource> res;
+//    res.Attach(rawRes);
+//    TransitionBarrier(res, stateAfter);
+//    res.Detach();
+//    m_DynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(
+//        rootParameterIndex, 0, 1, texture->GetSRVCPUHandle());
+//}
 
 
 // ============================  ============================

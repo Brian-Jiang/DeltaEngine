@@ -20,7 +20,7 @@ std::shared_ptr<GameObject> DeltaEngine::DWorld::CreateGameObject() {
     return gameObject;
 }
 
-void DeltaEngine::DWorld::InitRenderers(DXGraphicsContext& context) const
+void DeltaEngine::DWorld::InitRenderers(std::shared_ptr<DXGraphicsContext> context) const
 {
     std::stack<std::shared_ptr<SceneComponent>> stack;
     stack.push(m_rootSceneComponent);
@@ -41,7 +41,7 @@ void DeltaEngine::DWorld::InitRenderers(DXGraphicsContext& context) const
     }
 }
 
-void DeltaEngine::DWorld::GatherDrawCalls(DXGraphicsContext& context) const
+void DeltaEngine::DWorld::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const
 {
     std::stack<std::shared_ptr<SceneComponent>> stack;
     stack.push(m_rootSceneComponent);

@@ -47,7 +47,7 @@ private:
 
 	MeshRenderer *meshRenderer;
 	MeshRenderer *meshRenderer2;
-	InstancedDrawer* m_instancedDrawer;
+	//InstancedDrawer* m_instancedDrawer;
 
 	float m_FoV;
 

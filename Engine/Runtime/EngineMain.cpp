@@ -20,7 +20,8 @@ EngineMain* EngineMain::instance = nullptr;
 EngineMain::EngineMain() 
     : exitCode(0), renderer(nullptr), window(nullptr), 
     gameState(GameState::PLAY), dxRenderManager(nullptr), time(nullptr),
-    meshRenderer(nullptr), meshRenderer2(nullptr), m_instancedDrawer(nullptr),
+    meshRenderer(nullptr), meshRenderer2(nullptr),
+    //, m_instancedDrawer(nullptr),
     m_FoV(45.0f)
 {
     EngineMain::instance = this;
@@ -34,18 +35,18 @@ void EngineMain::Initialize()
     InitSDL();
 
     // ---- Import model and set up instanced drawing ----
-    auto importer = new ModelImporter();
-    importer->Import("Assets/Star.obj");
+    //auto importer = new ModelImporter();
+    //importer->Import("Assets/Star.obj");
 
-    std::shared_ptr<Mesh> meshPtr(importer->meshes[0]);
-    m_instancedDrawer = new InstancedDrawer(meshPtr, 10000);
+    //std::shared_ptr<Mesh> meshPtr(importer->meshes[0]);
+    //m_instancedDrawer = new InstancedDrawer(meshPtr, 10000);
     UINT32 idx = 0;
     for (size_t i = 0; i < 100; i++) {
         for (size_t j = 0; j < 100; j++) {
             auto tranlate = XMMatrixTranslation(i / 10.0f, j / 10.0f, 0.0f);
-            m_instancedDrawer->SetTransform(idx, tranlate);
+            //m_instancedDrawer->SetTransform(idx, tranlate);
             XMFLOAT3 color(1.0f, 0.843f, 0.0f);
-            m_instancedDrawer->SetColor(idx, color);
+            //m_instancedDrawer->SetColor(idx, color);
             ++idx;
         }
     }
@@ -55,8 +56,8 @@ void EngineMain::Initialize()
     // ---- Build the scene world and add renderers ----
     m_world = std::make_shared<DWorld>();
     auto go = m_world->CreateGameObject();
-    auto spriteRenderer = go->AddSceneComponent<SpriteRenderer>();
-    spriteRenderer->Start(2.0f, 2.0f, "Assets/logo.png");
+    //auto spriteRenderer = go->AddSceneComponent<SpriteRenderer>();
+    //spriteRenderer->Start(2.0f, 2.0f, "Assets/logo.png");
 
     // Initialize all renderer GPU resources (PSOs, textures, buffers)
     // and submit the init command list.

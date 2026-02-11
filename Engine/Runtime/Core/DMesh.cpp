@@ -1,5 +1,13 @@
 #include "Core/DMesh.h"
 
+#include <filesystem>
+#include <iostream>
+
+#include "assimp/Importer.hpp"
+#include "assimp/postprocess.h"
+#include "assimp/scene.h"
+#include "IO/IOManager.h"
+
 using namespace DeltaEngine;
 
 DMesh::DMesh() {}
@@ -13,3 +21,229 @@ DMesh::DMesh(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices,
     
 }
 
+void DMesh::ImportMesh()
+{
+    // Assimp::Importer::SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, true)
+
+    std::wstring fullPath = IOManager::GetEngineSourceAssetFullPath(m_sourcePath);
+    std::filesystem::path path(fullPath);
+    Assimp::Importer import;
+    import.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, true);
+    unsigned int flags =
+        // aiProcess_CalcTangentSpace |
+        // aiProcess_JoinIdenticalVertices |
+        // aiProcess_Triangulate |
+        // aiProcess_RemoveComponent |
+        // aiProcess_GenSmoothNormals |
+        // aiProcess_SplitLargeMeshes |
+        // aiProcess_ValidateDataStructure |
+        ////aiProcess_ImproveCacheLocality | // handled by optimizePostTransform()
+        // aiProcess_RemoveRedundantMaterials |
+        aiProcess_SortByPType |
+        // aiProcess_FindInvalidData |
+        // aiProcess_GenUVCoords |
+        // aiProcess_TransformUVCoords |
+        // aiProcess_OptimizeMeshes |
+        // aiProcess_OptimizeGraph;
+
+        // aiProcess_CalcTangentSpace |
+        // aiProcess_JoinIdenticalVertices |
+        aiProcess_Triangulate |
+        // aiProcess_RemoveComponent |
+        // aiProcess_GenSmoothNormals |
+        aiProcess_GenBoundingBoxes |
+        ////aiProcess_SplitLargeMeshes |
+        ////aiProcess_ValidateDataStructure |
+        aiProcess_FlipUVs | aiProcess_MakeLeftHanded |
+        // aiProcess_ConvertToLeftHanded |
+        aiProcess_ImproveCacheLocality | aiProcess_FlipWindingOrder |
+        // aiProcess_RemoveRedundantMaterials | // remove redundant materials
+        // aiProcess_FindDegenerates | // remove degenerated polygons from the import
+        // aiProcess_FindInvalidData | // detect invalid model data, such as invalid normal vectors
+        // aiProcess_GenUVCoords | // convert spherical, cylindrical, box and planar mapping to proper UVs
+        aiProcess_TransformUVCoords | // preprocess UV transformations (scaling, translation ...)
+        // aiProcess_OptimizeMeshes | // join small meshes, if possible;
+        aiProcess_PreTransformVertices | //-- fixes the transformation issue.
+        0;
+
+    const aiScene* scene = import.ReadFile(path.string(), flags);
+
+    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
+    {
+        // cout << "ERROR::ASSIMP::" << import.GetErrorString() << endl;
+        std::cerr << "ERROR::ASSIMP::" << import.GetErrorString() << std::endl;
+        return;
+    }
+    // directory = filePath.substr(0, filePath.find_last_of('/'));
+
+    ProcessNode(scene->mRootNode, scene, DirectX::XMMatrixIdentity());
+}
+
+void DMesh::ProcessNode(aiNode* node, const aiScene* scene, DirectX::XMMATRIX accTransform)
+{
+    auto localTransformation = DirectX::XMMATRIX(&(node->mTransformation.a1));
+
+    //aiVector3D scaling, position;
+    //aiQuaternion rotation;
+    //node->mTransformation.Decompose(scaling, rotation, position);
+    //DxTransform dxTransform {
+    //    DirectX::XMVectorSet(position.x, position.y, position.z, 1.0f),
+    //    DirectX::XMVectorSet(rotation.x, rotation.y, rotation.z, rotation.w),
+    //    DirectX::XMVectorSet(scaling.x, scaling.y, scaling.z, 1.0f)
+    //};
+
+    //auto dxmTrans = DirectX::XMMatrixTransformation(
+    //    DirectX::XMVectorZero(),
+    //    DirectX::XMQuaternionIdentity(),
+    //    dxTransform.scale,
+
+    //    DirectX::XMVectorZero(),
+    //    dxTransform.rotation,
+
+    //    dxTransform.position);
+
+    accTransform = XMMatrixMultiply(accTransform, localTransformation);
+
+    // node->mTransformation
+    //  process all the node's meshes (if any)
+    //   auto nodeTransform = node->mTransformation;
+    // auto nodeLookup = node;
+    //   while (nodeLookup->mParent != nullptr) {
+    //	nodeLookup = nodeLookup->mParent;
+    //	nodeTransform = nodeLookup->mTransformation * nodeTransform;
+    //   }
+
+    // auto nodeTransform2 = DirectX::XMMATRIX(&nodeTransform.a1);
+
+    // auto transform = DirectX::XMMATRIX(&node->mTransformation.a1);
+    // accTransform = XMMatrixMultiply(transform, accTransform);
+
+    for (unsigned int i = 0; i < node->mNumMeshes; i++)
+    {
+        aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
+        // if (mesh->mNumFaces > 5) continue;
+
+        meshes.push_back(ProcessMesh(mesh, scene));
+        meshTransforms.push_back(accTransform);
+        // meshDxTransforms.push_back(dxTransform);
+    }
+    // then do the same for each of its children
+    for (unsigned int i = 0; i < node->mNumChildren; i++) {
+        ProcessNode(node->mChildren[i], scene, accTransform);
+    }
+}
+
+DMesh* DMesh::ProcessMesh(aiMesh* mesh, const aiScene* scene)
+{
+    std::vector<Vertex> vertices;
+    std::vector<unsigned int> indices;
+    std::vector<std::shared_ptr<DTexture>> textures;
+    for (unsigned int i = 0; i < mesh->mNumVertices; i++)
+    {
+        Vertex vertex {};
+        vertex.color = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+
+        // process vertex positions, normals and texture coordinates
+        DirectX::XMFLOAT3 position(&mesh->mVertices[i].x);
+        //DirectX::XMFLOAT3 position;
+        //position.x = mesh->mVertices[i].x;
+        //position.y = mesh->mVertices[i].y;
+        //position.z = mesh->mVertices[i].z;
+        vertex.position = position;
+
+        DirectX::XMFLOAT3 normal(&mesh->mNormals[i].x);
+        //DirectX::XMFLOAT3 vector;
+        //vector.x = mesh->mNormals[i].x;
+        //vector.y = mesh->mNormals[i].y;
+        //vector.z = mesh->mNormals[i].z;
+        vertex.normal = normal;
+
+        if (mesh->mTextureCoords[0]) // does the mesh contain texture coordinates?
+        {
+            DirectX::XMFLOAT2 vec;
+            vec.x = mesh->mTextureCoords[0][i].x;
+            vec.y = mesh->mTextureCoords[0][i].y;
+            // const aiVector3D* aiTextureCoordinates{ mesh->mTextureCoords[0U] };
+            // vertex.uv = DirectX::XMFLOAT2(reinterpret_cast<const float*>(&aiTextureCoordinates[i]));
+            vertex.uv = vec;
+        }
+        //     else if (mesh->mTextureCoords[1]) {
+        // std::cout << "UV: " << mesh->mTextureCoords[1][i].x << ", " << mesh->mTextureCoords[1][i].y << "\n";
+        //     }
+        else 
+        {
+            vertex.uv = DirectX::XMFLOAT2(0.0f, 0.0f);
+        }
+
+        vertices.push_back(vertex);
+        // std::cout << "UV: " << vertex.uv.x << ", " << vertex.uv.y << "\n";
+    }
+
+    // process indices
+    for (unsigned int i = 0; i < mesh->mNumFaces; i++)
+    {
+        aiFace face = mesh->mFaces[i];
+        for (unsigned int j = 0; j < face.mNumIndices; j++)
+        {
+            indices.push_back(face.mIndices[j]);
+        }
+    }
+
+    // process material
+    if (mesh->mMaterialIndex >= 0)
+    {
+        aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+        std::vector<std::shared_ptr<DTexture>> diffuseMaps = LoadMaterialTextures(scene, material,
+            aiTextureType_DIFFUSE, "texture_diffuse", this->m_sourcePath);
+        textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
+
+        std::vector<std::shared_ptr<DTexture>> specularMaps = LoadMaterialTextures(scene, material,
+            aiTextureType_SPECULAR, "texture_specular", this->m_sourcePath);
+        textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
+    }
+
+    return new DMesh(vertices, indices, textures);
+}
+
+std::string GetParentDirectory(const std::string& filePath, int levelsUp)
+{
+    namespace fs = std::filesystem;
+    fs::path path(filePath);
+    for (int i = 0; i < levelsUp; ++i) {
+        path = path.parent_path();
+    }
+    return path.string();
+}
+
+std::string FindTextureFile(const std::string& directory, const std::string& fileName)
+{
+    namespace fs = std::filesystem;
+    auto fullDirectory = IOManager::GetAssetFullPath(directory);
+    for (const auto& entry : fs::recursive_directory_iterator(fullDirectory)) {
+        if (entry.is_regular_file() && entry.path().filename() == fileName) {
+            return entry.path().string();
+        }
+    }
+    return "";
+}
+
+std::vector<std::shared_ptr<DTexture>> DMesh::LoadMaterialTextures(const aiScene* scene, aiMaterial* mat, aiTextureType type, std::string typeName, const std::string& filePath)
+{
+    auto folderPath = GetParentDirectory(filePath, 2);
+    std::vector<std::shared_ptr<DTexture>> textures;
+    for (unsigned int i = 0; i < mat->GetTextureCount(type); i++)
+    {
+        aiString str;
+        mat->GetTexture(type, i, &str);
+        std::string filePath = str.C_Str();
+        if (filePath.empty()) {
+            continue;
+        }
+
+        auto fileName = filePath.substr(filePath.find_last_of("\\/") + 1);
+        auto texturePath = FindTextureFile(folderPath, fileName);
+        auto texture = DTexture::LoadFromFile(texturePath, true);
+        textures.push_back(texture);
+    }
+    return textures;
+}
