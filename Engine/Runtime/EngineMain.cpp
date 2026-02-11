@@ -19,7 +19,7 @@ EngineMain* EngineMain::instance = nullptr;
 
 EngineMain::EngineMain() 
     : exitCode(0), renderer(nullptr), window(nullptr), 
-    gameState(GameState::PLAY), dxRenderManager(nullptr), time(nullptr),
+    gameState(GameState::PLAY), time(nullptr),
     meshRenderer(nullptr), meshRenderer2(nullptr),
     //, m_instancedDrawer(nullptr),
     m_FoV(45.0f)
@@ -62,6 +62,8 @@ void EngineMain::Initialize()
     // Initialize all renderer GPU resources (PSOs, textures, buffers)
     // and submit the init command list.
     dxRenderManager->InitWorldRenderers(*m_world);
+
+    //atexit(&Device::ReportLiveObjects);
 }
 
 void EngineMain::InitSDL()
@@ -85,7 +87,7 @@ void EngineMain::InitSDL()
     }
 
     auto hwnd = static_cast<HWND>(SDL_GetProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr));
-    dxRenderManager = new DXRenderManager(hwnd, SCREEN_WIDTH, SCREEN_HEIGHT);
+    dxRenderManager = std::make_unique<DXRenderManager>(hwnd, SCREEN_WIDTH, SCREEN_HEIGHT);
 }
 
 void EngineMain::StartMainLoop()
@@ -107,6 +109,9 @@ void EngineMain::StartMainLoop()
     }
 
     dxRenderManager->OnDestroy();
+    dxRenderManager.reset();
+
+    Device::ReportLiveObjects();
     
     SDL_Quit();
 }

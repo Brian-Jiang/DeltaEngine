@@ -31,7 +31,7 @@ public:
 
 	int exitCode;
 
-	DXRenderManager* dxRenderManager;
+	std::unique_ptr<DXRenderManager> dxRenderManager;
 
 	static EngineMain* instance;
 
