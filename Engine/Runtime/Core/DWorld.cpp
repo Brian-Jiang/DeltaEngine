@@ -66,6 +66,11 @@ void DeltaEngine::DWorld::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> con
     }
 }
 
+void DeltaEngine::DWorld::Clear()
+{
+    m_gameObjects.clear();
+}
+
 std::shared_ptr<DWorld> DeltaEngine::DWorld::CreateWorld()
 {
     std::shared_ptr<DWorld> world = std::make_shared<DWorld>();

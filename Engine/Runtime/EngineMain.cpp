@@ -146,6 +146,9 @@ void EngineMain::StartMainLoop()
         exitCode = 1;
     }
 
+    m_world->Clear();
+    m_world.reset();
+
     dxRenderManager->OnDestroy();
     dxRenderManager.reset();
 

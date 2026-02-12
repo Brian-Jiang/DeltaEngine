@@ -29,6 +29,9 @@ public:
 
     std::shared_ptr<SceneComponent> GetRootSceneComponent() const { return m_rootSceneComponent; }
 
+    /// Clears all game objects and breaks the circular reference between the world and game objects.
+    void Clear();
+
     static std::shared_ptr<DWorld> CreateWorld();
 
 private:

@@ -550,7 +550,10 @@ void DXRenderManager::SetFullscreen(bool fullscreen)
 
 void DXRenderManager::OnDestroy()
 {
-    //WaitForPreviousFrame();
+    //m_device->Flush();
+
+    //m_renderTarget.reset();
+    //m_swapChain.reset();
 }
 
 std::shared_ptr<DXGraphicsContext> DeltaEngine::DXRenderManager::GetGraphicsContext()
