@@ -61,23 +61,17 @@ public:
 	void SetViewMatrix(DirectX::XMMATRIX view) { DirectX::XMStoreFloat4x4(&m_viewMatrix, view); }
 	void SetProjectionMatrix(DirectX::XMMATRIX proj) { DirectX::XMStoreFloat4x4(&m_projectionMatrix, proj); }
 
+	inline std::shared_ptr<RootSignature> GetRootSignature() const { return m_rootSignature; }
+
 private:
 	HWND hwnd;
 
 	// Window rectangle (used to toggle fullscreen state).
 	RECT g_WindowRect;
 
-    // By default, enable V-Sync.
-	// Can be toggled with the V key.
-	//bool g_VSync = true;
-
-	//bool g_TearingSupported = false;
-
 	// By default, use windowed mode.
 	// Can be toggled with the Alt+Enter or F11
 	bool g_Fullscreen = false;
-
-    //static const UINT FrameCount = 2;
 
     //bool m_useWarpDevice;
 
@@ -88,7 +82,7 @@ private:
 	std::shared_ptr<Device> m_device;
     std::shared_ptr<RenderTarget> m_renderTarget;
 
-    //std::shared_ptr<RootSignature> m_rootSignature;
+    std::shared_ptr<RootSignature> m_rootSignature;
 
 	/// The command list for the current frame, obtained in PrepareFrame
 	/// and executed in RenderFrame.

@@ -52,60 +52,34 @@ void DXRenderManager::LoadPipeline()
 
 void DXRenderManager::LoadAssets()
 {
+    // todo root signature should bind to pass?
     // ---- Root signature (shared across all renderers) ----
-    {
-        D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
-        featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
 
-        if (FAILED(m_device->GetD3D12Device()->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
-        {
-            featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
-        }
+    D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
+        D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 
-        CD3DX12_DESCRIPTOR_RANGE1 ranges[1]{};
-        ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
+    CD3DX12_DESCRIPTOR_RANGE1 ranges[1] {};
+    ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
 
-        CD3DX12_ROOT_PARAMETER1 rootParameters[4]{};
-        // Camera
-        rootParameters[0].InitAsConstantBufferView(0);
-        // Texture
-        rootParameters[1].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
-        // Object
-        rootParameters[2].InitAsConstantBufferView(1);
-        // Light
-        rootParameters[3].InitAsConstantBufferView(2);
+    CD3DX12_ROOT_PARAMETER1 rootParameters[4] {};
+    // Camera
+    rootParameters[0].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+    // Texture
+    rootParameters[1].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
+    // Object
+    rootParameters[2].InitAsConstantBufferView(1);
+    // Light
+    rootParameters[3].InitAsConstantBufferView(2);
 
-        //D3D12_STATIC_SAMPLER_DESC sampler = {};
-        //sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-        //sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-        //sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-        //sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-        //sampler.MipLODBias = 0;
-        //sampler.MaxAnisotropy = 0;
-        //sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-        //sampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-        //sampler.MinLOD = 0.0f;
-        //sampler.MaxLOD = D3D12_FLOAT32_MAX;
-        //sampler.ShaderRegister = 0;
-        //sampler.RegisterSpace = 0;
-        //sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    CD3DX12_STATIC_SAMPLER_DESC anisotropicSampler(0, D3D12_FILTER_ANISOTROPIC);
 
-        //D3D12_ROOT_SIGNATURE_DESC1 rootSignatureDesc1 = {};
-        //rootSignatureDesc1.NumParameters = _countof(rootParameters);
-        //rootSignatureDesc1.pParameters = rootParameters;
-        //rootSignatureDesc1.NumStaticSamplers = 1;
-        //rootSignatureDesc1.pStaticSamplers = &sampler;
-        //rootSignatureDesc1.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-        
-        //CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
-        //rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 1, &sampler, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+    CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
+    rootSignatureDescription.Init_1_1(4, rootParameters, 1, &anisotropicSampler, rootSignatureFlags);
 
-        //ComPtr<ID3DBlob> signature;
-        //ComPtr<ID3DBlob> error;
-        //ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error));
-        //m_rootSignature = std::make_shared<RootSignature>(m_device, rootSignatureDesc1);
-        //ThrowIfFailed(m_device->GetD3D12Device()->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
-    }
+    m_rootSignature = m_device->CreateRootSignature(rootSignatureDescription.Desc_1_1);
 }
 
 void DXRenderManager::InitWorldRenderers(DWorld& world)
@@ -164,6 +138,7 @@ void DXRenderManager::PrepareFrame()
     commandList->SetViewport(m_viewport);
     commandList->SetScissorRect(m_scissorRect);
     commandList->SetRenderTarget(*m_renderTarget);
+    commandList->SetGraphicsRootSignature(m_rootSignature);
 }
 
 void DXRenderManager::RenderFrame()
