@@ -241,6 +241,7 @@ void EngineMain::Draw()
     //m_instancedDrawer->Draw(context.commandList);
 
     // Gather draw calls from all renderers in the world.
+
     m_world->GatherDrawCalls(context);
 
     dxRenderManager->RenderFrame();

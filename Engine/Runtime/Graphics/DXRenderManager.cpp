@@ -202,27 +202,27 @@ void DXRenderManager::LoadAssets()
         // Light
         rootParameters[3].InitAsConstantBufferView(2);
 
-        D3D12_STATIC_SAMPLER_DESC sampler = {};
-        sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-        sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-        sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-        sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-        sampler.MipLODBias = 0;
-        sampler.MaxAnisotropy = 0;
-        sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-        sampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-        sampler.MinLOD = 0.0f;
-        sampler.MaxLOD = D3D12_FLOAT32_MAX;
-        sampler.ShaderRegister = 0;
-        sampler.RegisterSpace = 0;
-        sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+        //D3D12_STATIC_SAMPLER_DESC sampler = {};
+        //sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+        //sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+        //sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+        //sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+        //sampler.MipLODBias = 0;
+        //sampler.MaxAnisotropy = 0;
+        //sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+        //sampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+        //sampler.MinLOD = 0.0f;
+        //sampler.MaxLOD = D3D12_FLOAT32_MAX;
+        //sampler.ShaderRegister = 0;
+        //sampler.RegisterSpace = 0;
+        //sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-        D3D12_ROOT_SIGNATURE_DESC1 rootSignatureDesc1 = {};
-        rootSignatureDesc1.NumParameters = _countof(rootParameters);
-        rootSignatureDesc1.pParameters = rootParameters;
-        rootSignatureDesc1.NumStaticSamplers = 1;
-        rootSignatureDesc1.pStaticSamplers = &sampler;
-        rootSignatureDesc1.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+        //D3D12_ROOT_SIGNATURE_DESC1 rootSignatureDesc1 = {};
+        //rootSignatureDesc1.NumParameters = _countof(rootParameters);
+        //rootSignatureDesc1.pParameters = rootParameters;
+        //rootSignatureDesc1.NumStaticSamplers = 1;
+        //rootSignatureDesc1.pStaticSamplers = &sampler;
+        //rootSignatureDesc1.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
         
         //CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
         //rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 1, &sampler, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
@@ -307,11 +307,13 @@ void DXRenderManager::PrepareFrame()
 
     CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
     auto commandList = directCommandQueue.GetCommandList();
+    m_currentCommandList = commandList;
 
     // Indicate that the back buffer will be used as a render target.
     //auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
     //m_currentCommandList->ResourceBarrier(1, &barrier);
-    commandList->SetRenderTarget(*m_renderTarget);
+
+    //commandList->SetRenderTarget(*m_renderTarget);
 
     // Update camera CB and set necessary state.
     {
@@ -353,13 +355,13 @@ void DXRenderManager::PrepareFrame()
     commandList->SetScissorRect(m_scissorRect);
     commandList->SetRenderTarget(*m_renderTarget);
 
-    auto swapChainBackBuffer = m_swapChain->GetRenderTarget().GetTexture(AttachmentPoint::Color0);
-    auto msaaRenderTarget = m_renderTarget->GetTexture(AttachmentPoint::Color0);
+    //auto swapChainBackBuffer = m_swapChain->GetRenderTarget().GetTexture(AttachmentPoint::Color0);
+    //auto msaaRenderTarget = m_renderTarget->GetTexture(AttachmentPoint::Color0);
 
-    commandList->ResolveSubresource(swapChainBackBuffer, msaaRenderTarget);
+  
 
-    directCommandQueue.ExecuteCommandList(commandList);
-    m_swapChain->Present();
+    //directCommandQueue.ExecuteCommandList(commandList);
+    //m_swapChain->Present();
 
     //m_currentCommandList->ClearRenderTargetView(rtvHandle, clearColor);
     //m_currentCommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0);
@@ -381,6 +383,15 @@ void DXRenderManager::RenderFrame()
     //UINT syncInterval = g_VSync ? 1 : 0;
     //UINT presentFlags = g_TearingSupported && !g_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
     //ThrowIfFailed(m_swapChain->Present(syncInterval, presentFlags));
+
+    auto swapChainBackBuffer = m_swapChain->GetRenderTarget().GetTexture(AttachmentPoint::Color0);
+    auto msaaRenderTarget = m_renderTarget->GetTexture(AttachmentPoint::Color0);
+    m_currentCommandList->ResolveSubresource(swapChainBackBuffer, msaaRenderTarget);
+
+    CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+
+    directCommandQueue.ExecuteCommandList(m_currentCommandList);
+    m_currentCommandList = nullptr;
     m_swapChain->Present();
 
     // Wait until frame is done rendering.
@@ -535,7 +546,7 @@ std::shared_ptr<DXGraphicsContext> DeltaEngine::DXRenderManager::GetGraphicsCont
 {
     auto context = std::make_shared<DXGraphicsContext>();
     context->device = m_device;
-    //context->commandList = m_currentCommandList;
+    context->commandList = m_currentCommandList;
     //context->rootSignature = m_rootSignature;
     //context->srvHeap = m_srvHeap;
     context->viewMatrix = m_viewMatrix;

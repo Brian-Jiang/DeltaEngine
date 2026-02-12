@@ -96,6 +96,7 @@ private:
     std::shared_ptr<SwapChain> m_swapChain;
 	std::shared_ptr<Device> m_device;
     std::shared_ptr<RenderTarget> m_renderTarget;
+
 	//Microsoft::WRL::ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
 	//Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
     //std::shared_ptr<RootSignature> m_rootSignature;
@@ -103,7 +104,7 @@ private:
 
 	/// The command list for the current frame, obtained in PrepareFrame
 	/// and executed in RenderFrame.
-	//std::shared_ptr<CommandList> m_currentCommandList;
+	std::shared_ptr<CommandList> m_currentCommandList;
 
     //UINT m_rtvDescriptorSize;
     UINT m_width;
