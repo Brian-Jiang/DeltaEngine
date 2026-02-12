@@ -1,5 +1,7 @@
 #include "Runtime/Graphics/DirectX/Resource.h"
 
+#include <d3dx12.h>
+
 #include "Runtime/Graphics/DirectX/ResourceStateTracker.h"
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Graphics/DXUtils.h"

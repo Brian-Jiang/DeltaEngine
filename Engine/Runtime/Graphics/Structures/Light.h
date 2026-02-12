@@ -6,10 +6,10 @@
 
 DELTA_ENGINE_NS_BEGIN
 
-struct Light {
-    DirectX::XMFLOAT3 position;
-    float _padding;
-    DirectX::XMFLOAT3 color;
+struct alignas(16) Light
+{
+    DirectX::XMVECTOR position;
+    DirectX::XMVECTOR color;
     float intensity;
 };
 

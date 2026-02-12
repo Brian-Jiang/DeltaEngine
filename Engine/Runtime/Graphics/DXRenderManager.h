@@ -130,8 +130,8 @@ private:
 	DirectX::XMFLOAT4 m_cameraPosition;
 	//Microsoft::WRL::ComPtr<ID3D12Resource> m_cameraCbData;
 
-	Light m_light;
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_lightCbData;
+	//Light m_light;
+	//Microsoft::WRL::ComPtr<ID3D12Resource> m_lightCbData;
 
 	//std::unique_ptr<UploadBuffer> m_uploadBuffer;
 };

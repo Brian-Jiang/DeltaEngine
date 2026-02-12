@@ -1,7 +1,8 @@
 #include "Graphics/DirectX/UploadBuffer.h"
 
-#include "Graphics/DirectX/Device.h"
+#include <d3dx12.h>
 
+#include "Graphics/DirectX/Device.h"
 #include "Math/Common.h"
 #include "Graphics/DXUtils.h"
 

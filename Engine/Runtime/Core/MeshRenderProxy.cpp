@@ -11,7 +11,7 @@
 #include "Graphics/DirectX/IndexBuffer.h"
 #include "Graphics/DirectX/VertexBuffer.h"
 #include "Graphics/Structures/Camera.h"
-#include "Graphics/DXGraphicsContext.h"
+#include "Graphics/Structures/Light.h"
 #include "Graphics/DXRenderManager.h"
 #include "Core/DMesh.h"
 #include "Core/DMaterial.h"
@@ -187,6 +187,13 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
     obj.useInstanceMatrix = 0;
 
     commandList->SetGraphicsDynamicConstantBuffer(2, obj);
+
+    Light lightData = {};
+    lightData.position = DirectX::XMVectorSet(0.0f, -2.0f, 0.0f, 1.0f);
+    lightData.intensity = 1.0f;
+    lightData.color = DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 1.0f);
+
+    commandList->SetGraphicsDynamicConstantBuffer(3, lightData);
 
 
     commandList->SetPipelineState(m_pipelineStateObject);

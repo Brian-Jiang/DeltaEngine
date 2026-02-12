@@ -108,42 +108,42 @@ void DXRenderManager::LoadPipeline()
 void DXRenderManager::LoadAssets()
 {
     // ---- Light constant buffer (stays in DXRenderManager) ----
-    m_light.position = XMFLOAT3(0.0f, 5.0f, 3.0f);
-    m_light.intensity = 1.0f;
-    m_light.color = XMFLOAT3(1.0f, 1.0f, 1.0f);
+    //m_light.position = XMFLOAT3(0.0f, 5.0f, 3.0f);
+    //m_light.intensity = 1.0f;
+    //m_light.color = XMFLOAT3(1.0f, 1.0f, 1.0f);
 
-    {
-        UINT alignedBufferSize = (sizeof(Light) + 255) & ~255;
+    //{
+    //    UINT alignedBufferSize = (sizeof(Light) + 255) & ~255;
 
-        D3D12_HEAP_PROPERTIES heapProps = {};
-        heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
-        heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-        heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+    //    D3D12_HEAP_PROPERTIES heapProps = {};
+    //    heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
+    //    heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+    //    heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 
-        D3D12_RESOURCE_DESC resourceDesc = {};
-        resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-        resourceDesc.Width = alignedBufferSize;
-        resourceDesc.Height = 1;
-        resourceDesc.DepthOrArraySize = 1;
-        resourceDesc.MipLevels = 1;
-        resourceDesc.SampleDesc.Count = 1;
-        resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-        resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+    //    D3D12_RESOURCE_DESC resourceDesc = {};
+    //    resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+    //    resourceDesc.Width = alignedBufferSize;
+    //    resourceDesc.Height = 1;
+    //    resourceDesc.DepthOrArraySize = 1;
+    //    resourceDesc.MipLevels = 1;
+    //    resourceDesc.SampleDesc.Count = 1;
+    //    resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+    //    resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
-        HRESULT hr = m_device->GetD3D12Device()->CreateCommittedResource(
-            &heapProps,
-            D3D12_HEAP_FLAG_NONE,
-            &resourceDesc,
-            D3D12_RESOURCE_STATE_GENERIC_READ,
-            nullptr,
-            IID_PPV_ARGS(&m_lightCbData)
-        );
+    //    HRESULT hr = m_device->GetD3D12Device()->CreateCommittedResource(
+    //        &heapProps,
+    //        D3D12_HEAP_FLAG_NONE,
+    //        &resourceDesc,
+    //        D3D12_RESOURCE_STATE_GENERIC_READ,
+    //        nullptr,
+    //        IID_PPV_ARGS(&m_lightCbData)
+    //    );
 
-        Light* mappedLightBuffer = nullptr;
-        m_lightCbData->Map(0, nullptr, reinterpret_cast<void**>(&mappedLightBuffer));
-        memcpy(mappedLightBuffer, &m_light, sizeof(Light));
-        m_lightCbData->Unmap(0, nullptr);
-    }
+    //    Light* mappedLightBuffer = nullptr;
+    //    m_lightCbData->Map(0, nullptr, reinterpret_cast<void**>(&mappedLightBuffer));
+    //    memcpy(mappedLightBuffer, &m_light, sizeof(Light));
+    //    m_lightCbData->Unmap(0, nullptr);
+    //}
 
     // ---- Camera constant buffer (root parameter 0) ----
     {

@@ -1,7 +1,6 @@
 #include <iostream>
 
 #include "Runtime/EngineMain.h"
-#include "Runtime/Graphics/DXUtils.h"
 
 using namespace std;
 using namespace DeltaEngine;
@@ -16,8 +15,6 @@ int main()
     auto returnCode = engine->exitCode;
 
     delete engine;
-
-    //DXUtils::ReportLiveDXGIObjects();
 
     return returnCode;
 }
