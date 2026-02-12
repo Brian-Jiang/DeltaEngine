@@ -10,7 +10,6 @@
 #include "Runtime/Graphics/DirectX/DescriptorAllocation.h"
 #include "Runtime/Graphics/DirectX/DescriptorAllocator.h"
 #include "Runtime/Graphics/DirectX/DirectX12Texture.h"
-#include "Runtime/Graphics/DirectX/Texture.h"
 #include "Runtime/Graphics/DirectX/SwapChain.h"
 #include "Runtime/Graphics/DirectX/Adapter.h"
 #include "Runtime/Graphics/DirectX/ConstantBuffer.h"

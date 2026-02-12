@@ -5,7 +5,6 @@
 
 #include "Graphics/DXUtils.h"
 #include "Importers/ModelImporter.h"
-#include "Graphics/DirectX/VertexAttributes.h"
 #include "Graphics/Structures/Vertex.h"
 #include "Runtime/Core/GameObject.h"
 #include "Core/DShader.h"
