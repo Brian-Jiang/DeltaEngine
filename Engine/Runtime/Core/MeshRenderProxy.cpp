@@ -10,6 +10,9 @@
 #include "Graphics/DirectX/CommandList.h"
 #include "Graphics/DirectX/IndexBuffer.h"
 #include "Graphics/DirectX/VertexBuffer.h"
+#include "Graphics/Structures/Camera.h"
+#include "Graphics/DXGraphicsContext.h"
+#include "Graphics/DXRenderManager.h"
 #include "Core/DMesh.h"
 #include "Core/DMaterial.h"
 #include "Core/DShader.h"
@@ -59,12 +62,13 @@ void DeltaEngine::MeshRenderProxy::BuildPipelineStateObject(std::shared_ptr<DXGr
     //rootParameters[RootParameters::DirectionalLights].InitAsShaderResourceView( 2, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL );
     //rootParameters[RootParameters::Textures].InitAsDescriptorTable( 1, &descriptorRage, D3D12_SHADER_VISIBILITY_PIXEL );
 
+    // todo make root signature global
     CD3DX12_DESCRIPTOR_RANGE1 ranges[1]{};
     ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
 
     CD3DX12_ROOT_PARAMETER1 rootParameters[4]{};
     // Camera
-    rootParameters[0].InitAsConstantBufferView(0);
+    rootParameters[0].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
     // Texture
     rootParameters[1].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
     // Object
@@ -159,8 +163,33 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
         m_meshDirty = false;
     }
 
-    commandList->SetPipelineState(m_pipelineStateObject);
     commandList->SetGraphicsRootSignature(m_rootSignature);
+
+    Camera cameraData = {};
+    auto viewMatrix = DirectX::XMMatrixTranslation(0.0f, 5.0f, 25.0f);
+    auto projectionMatrix = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV4, renderContext->renderManager->GetAspectRatio(), 0.1f, 1000.0f);
+    cameraData.viewMatrix = viewMatrix;
+    cameraData.projectionMatrix = projectionMatrix;
+    cameraData.position = DirectX::XMVectorSet(0.0f, 5.0f, 25.0f, 1.0f);
+    commandList->SetGraphicsDynamicConstantBuffer(0, cameraData);
+
+
+    struct ObjectData
+    {
+        DirectX::XMMATRIX worldMatrix;
+        DirectX::XMFLOAT4 color;
+        uint32_t useInstanceMatrix;
+    } obj;
+    DirectX::XMMATRIX rendererWorld = DirectX::XMMatrixTranslation(0.0f, 0.0f, 0.0f);
+    //DirectX::XMMATRIX model = DirectX::XMMatrixMultiply(rendererWorld, meshTransforms[i]);
+    obj.worldMatrix = rendererWorld;
+    obj.color = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+    obj.useInstanceMatrix = 0;
+
+    commandList->SetGraphicsDynamicConstantBuffer(2, obj);
+
+
+    commandList->SetPipelineState(m_pipelineStateObject);
     commandList->SetPrimitiveTopology(m_PrimitiveTopology);
 
     for (auto vertexBuffer : m_VertexBuffers)

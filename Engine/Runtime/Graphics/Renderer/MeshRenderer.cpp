@@ -138,8 +138,9 @@ void DeltaEngine::MeshRenderer::GatherDrawCalls(std::shared_ptr<DXGraphicsContex
     //commandList->SetPipelineState(m_pipelineState.Get());
     //commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    //struct ObjectData {
-    //    DirectX::XMFLOAT4X4 worldMatrix;
+    //struct ObjectData
+    //{
+    //    DirectX::XMMATRIX worldMatrix;
     //    DirectX::XMFLOAT4 color;
     //    uint32_t useInstanceMatrix;
     //} obj;

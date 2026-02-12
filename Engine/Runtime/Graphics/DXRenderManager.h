@@ -27,7 +27,7 @@ class SwapChain;
 class RenderTarget;
 class DWorld;
 
-class DXRenderManager
+class DXRenderManager : public std::enable_shared_from_this<DXRenderManager>
 {
 public:
 	DXRenderManager(HWND hwnd, UINT width, UINT height);
@@ -44,20 +44,20 @@ public:
 
 	void Resize(UINT width, UINT height);
 	void SetFullscreen(bool fullscreen);
-	void ResizeDepthBuffer(int width, int height);
+	//void ResizeDepthBuffer(int width, int height);
     void OnDestroy();
 
 	/// Returns a context that renderers use for InitGraphicState / GatherDrawCalls.
-    std::shared_ptr<DXGraphicsContext> GetGraphicsContext() const;
+    std::shared_ptr<DXGraphicsContext> GetGraphicsContext();
 
-	CommandQueue& GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) const;
-    UINT GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const;
+	//CommandQueue& GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) const;
+    //UINT GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const;
 
 	//UploadBuffer& GetUploadBuffer() { return *m_uploadBuffer; }
 
 	void ToggleVSync(bool enableVSync) { m_swapChain->SetVSync(enableVSync); }
 
-	Device& GetDeviceRef() { return *m_device; }
+	//Device& GetDeviceRef() { return *m_device; }
 	//Microsoft::WRL::ComPtr<ID3D12Device2> GetDevice() { return m_device->GetD3D12Device(); }
 	//Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> GetSRVHeap() { return m_srvHeap; }
 	bool IsFullscreen() { return g_Fullscreen; }
@@ -65,6 +65,7 @@ public:
 
 	UINT GetWidth() { return m_width; }
 	UINT GetHeight() { return m_height; }
+    inline float GetAspectRatio() { return m_aspectRatio; }
 
 	void SetCameraPosition(DirectX::XMVECTOR cam) { DirectX::XMStoreFloat4(&m_cameraPosition, cam); }
 	void SetViewMatrix(DirectX::XMMATRIX view) { DirectX::XMStoreFloat4x4(&m_viewMatrix, view); }
@@ -127,7 +128,7 @@ private:
 	DirectX::XMFLOAT4X4 m_viewMatrix;
 	DirectX::XMFLOAT4X4 m_projectionMatrix;
 	DirectX::XMFLOAT4 m_cameraPosition;
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_cameraCbData;
+	//Microsoft::WRL::ComPtr<ID3D12Resource> m_cameraCbData;
 
 	Light m_light;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_lightCbData;

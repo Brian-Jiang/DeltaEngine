@@ -125,7 +125,7 @@ void EngineMain::InitSDL()
     }
 
     auto hwnd = static_cast<HWND>(SDL_GetProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr));
-    dxRenderManager = std::make_unique<DXRenderManager>(hwnd, SCREEN_WIDTH, SCREEN_HEIGHT);
+    dxRenderManager = std::make_shared<DXRenderManager>(hwnd, SCREEN_WIDTH, SCREEN_HEIGHT);
 }
 
 void EngineMain::StartMainLoop()
