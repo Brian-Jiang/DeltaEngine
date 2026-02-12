@@ -7,7 +7,7 @@
 #include "SimpleMath.h"
 #include "Core/SceneComponent.h"
 #include "Graphics/Structures/Vertex.h"
-#include "Core/Component.h"
+#include "Core/DComponent.h"
 
 DELTA_ENGINE_NS_BEGIN
 

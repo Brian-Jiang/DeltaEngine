@@ -4,6 +4,7 @@
 
 #include <DirectXMath.h>
 #include <memory>
+#include <vector>
 
 #include "Graphics/DXRenderManager.h"
 #include "Graphics/Renderer/SpriteRenderer.h"

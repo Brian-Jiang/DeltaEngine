@@ -14,9 +14,11 @@ DeltaEngine::DWorld::DWorld()
     m_rootSceneComponent = sceneComponent;
 }
 
-std::shared_ptr<GameObject> DeltaEngine::DWorld::CreateGameObject() {
+std::shared_ptr<GameObject> DeltaEngine::DWorld::CreateGameObject()
+{
     std::shared_ptr<GameObject> gameObject = std::make_shared<GameObject>();
     gameObject->m_currentWorld = shared_from_this();
+    m_gameObjects.push_back(gameObject);
     return gameObject;
 }
 

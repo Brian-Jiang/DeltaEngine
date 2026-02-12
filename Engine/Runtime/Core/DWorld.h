@@ -3,6 +3,7 @@
 #include "EngineIncludes.h"
 
 #include <memory>
+#include <vector>
 
 #include "Core/DObject.h"
 #include "Runtime/Graphics/DXGraphicsContext.h"
@@ -32,6 +33,7 @@ public:
 
 private:
     std::shared_ptr<SceneComponent> m_rootSceneComponent;
+    std::vector<std::shared_ptr<GameObject>> m_gameObjects;
 };
 
 DELTA_ENGINE_NS_END

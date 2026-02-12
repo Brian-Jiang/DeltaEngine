@@ -8,6 +8,8 @@
 #include "Graphics/DirectX/VertexAttributes.h"
 #include "Graphics/Structures/Vertex.h"
 #include "Runtime/Core/GameObject.h"
+#include "Core/DShader.h"
+#include "Core/DMaterial.h"
 
 #define SCREEN_WIDTH   1280
 #define SCREEN_HEIGHT  720
@@ -55,15 +57,51 @@ void EngineMain::Initialize()
 
     // ---- Build the scene world and add renderers ----
     m_world = std::make_shared<DWorld>();
-    auto go = m_world->CreateGameObject();
+    std::shared_ptr<GameObject> go = m_world->CreateGameObject();
+    std::shared_ptr<MeshRenderer> meshRenderer = go->AddSceneComponent<MeshRenderer>();
+    std::shared_ptr<DShader> shader = std::make_shared<DShader>(
+        L"Shaders.hlsl",
+        L"VSMain", L"PSMain",
+        L"vs_6_0", L"ps_6_0"
+    );
+
+    //D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
+    //    { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    //    { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    //    { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    //    { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+
+    //    // Instance data (per-instance, unique to each instance)
+    //    { "INSTANCE_WORLD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+    //    { "INSTANCE_WORLD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 16, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+    //    { "INSTANCE_WORLD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 32, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+    //    { "INSTANCE_WORLD", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 48, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+    //    { "INSTANCE_COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 64, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+    //};
+
+    shader->SetInputLayout({
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    });
+    std::shared_ptr<DMaterial> material = std::make_shared<DMaterial>(shader);
+    std::shared_ptr<DMesh> mesh = std::make_shared<DMesh>(std::wstring(L"Star.obj"), material);
+    meshRenderer->SetMesh(mesh);
+
+    // todo shaders, materials
+
     //auto spriteRenderer = go->AddSceneComponent<SpriteRenderer>();
     //spriteRenderer->Start(2.0f, 2.0f, "Assets/logo.png");
 
     // Initialize all renderer GPU resources (PSOs, textures, buffers)
     // and submit the init command list.
+
     dxRenderManager->InitWorldRenderers(*m_world);
 
     //atexit(&Device::ReportLiveObjects);
+
+    //std::shared_ptr<GameObject> go
 }
 
 void EngineMain::InitSDL()

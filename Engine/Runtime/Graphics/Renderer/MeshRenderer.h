@@ -27,8 +27,7 @@ public:
     MeshRenderer();
     ~MeshRenderer();
 
-    /// Store mesh data. Actual GPU resource creation happens in InitGraphicState.
-    void SetMesh(std::shared_ptr<DMesh>& mesh);
+    void SetMesh(std::shared_ptr<DMesh> mesh);
 
 protected:
     void InitGraphicState(std::shared_ptr<DXGraphicsContext> context) override;

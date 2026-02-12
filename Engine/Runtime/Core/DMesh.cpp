@@ -11,7 +11,20 @@
 
 using namespace DeltaEngine;
 
-DMesh::DMesh() {}
+DMesh::DMesh() { }
+
+DMesh::DMesh(std::wstring sourcePath)
+    : m_sourcePath(sourcePath)
+{
+    ImportMesh();
+}
+
+DMesh::DMesh(std::wstring sourcePath, std::shared_ptr<DMaterial> material)
+    : m_sourcePath(sourcePath)
+    , m_material(material)
+{
+    ImportMesh();
+}
 
 DMesh::DMesh(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices,
     std::shared_ptr<DMaterial>& material)
@@ -123,6 +136,8 @@ void DMesh::ProcessNode(aiNode* node, const aiScene* scene, DirectX::XMMATRIX ac
     {
         aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
         // if (mesh->mNumFaces > 5) continue;
+
+        ProcessMesh(mesh, scene);
 
         //meshes.push_back(ProcessMesh(mesh, scene));
         //meshTransforms.push_back(accTransform);

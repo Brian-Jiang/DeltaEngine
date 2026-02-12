@@ -6,7 +6,7 @@
 #include <memory>
 
 #include "Core/DObject.h"
-#include "Core/Component.h"
+#include "Core/DComponent.h"
 #include "Core/SceneComponent.h"
 #include "Core/DWorld.h"
 
@@ -20,7 +20,7 @@ public:
 	GameObject();
 	~GameObject();
 
-	template <typename T> requires IsComponent<T>
+	template <typename T> requires IsDComponent<T>
 	std::shared_ptr<T> AddComponent()
     {
         std::shared_ptr<T> component = std::make_shared<T>();
@@ -33,14 +33,17 @@ public:
     {
         std::shared_ptr<T> sceneComponent = std::make_shared<T>();
         m_sceneComponents.push_back(sceneComponent);
-        if (m_rootSceneComponent.expired()) {
+        if (m_rootSceneComponent.expired())
+        {
             m_rootSceneComponent = sceneComponent;
             auto worldSceneRoot = m_currentWorld->GetRootSceneComponent();
-            if (worldSceneRoot) {
+            if (worldSceneRoot)
+            {
                 sceneComponent->SetParent(worldSceneRoot);
             }
         }
-        else {
+        else
+        {
             sceneComponent->SetParent(m_rootSceneComponent.lock());
         }
 
@@ -49,13 +52,13 @@ public:
 
     void Destroy();
 
-	std::shared_ptr<DWorld> GetCurrentWorld() const { return m_currentWorld; }
+	inline std::shared_ptr<DWorld> GetCurrentWorld() const { return m_currentWorld; }
     std::shared_ptr<SceneComponent> GetRootSceneComponent() const { return m_rootSceneComponent.lock(); }
 
 private:
     std::weak_ptr<SceneComponent> m_rootSceneComponent;
     std::vector<std::shared_ptr<SceneComponent>> m_sceneComponents;
-	std::vector<std::shared_ptr<Component>> m_components;
+	std::vector<std::shared_ptr<DComponent>> m_components;
 	std::shared_ptr<DWorld> m_currentWorld;
 };
 

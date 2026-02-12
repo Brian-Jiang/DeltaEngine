@@ -23,6 +23,8 @@ class DMesh : public DObject
 {
 public:
     DMesh();
+    DMesh(std::wstring sourcePath);
+    DMesh(std::wstring sourcePath, std::shared_ptr<DMaterial> material);
     DMesh(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices, std::shared_ptr<DMaterial>& material);
 
     void ImportMesh();

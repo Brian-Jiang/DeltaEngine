@@ -15,7 +15,7 @@ class PipelineStateObject;
 class RootSignature;
 struct DXGraphicsContext;
 class DMesh;
-class MeshRendererSettings;
+struct MeshRendererSettings;
 class IndexBuffer;
 class VertexBuffer;
 
