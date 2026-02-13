@@ -214,9 +214,6 @@ std::shared_ptr<DXGraphicsContext> DeltaEngine::DXRenderManager::GetGraphicsCont
     context->renderManager = shared_from_this();
     context->device = m_device;
     context->commandList = m_currentCommandList;
-    //context->rootSignature = m_rootSignature;
-    context->viewMatrix = m_viewMatrix;
-    context->projectionMatrix = m_projectionMatrix;
-    context->cameraPosition = m_cameraPosition;
+
     return context;
 }

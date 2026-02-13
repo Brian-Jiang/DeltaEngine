@@ -57,10 +57,6 @@ public:
     inline UINT GetHeight() const { return m_height; }
     inline float GetAspectRatio() const { return m_aspectRatio; }
 
-	void SetCameraPosition(DirectX::XMVECTOR cam) { DirectX::XMStoreFloat4(&m_cameraPosition, cam); }
-	void SetViewMatrix(DirectX::XMMATRIX view) { DirectX::XMStoreFloat4x4(&m_viewMatrix, view); }
-	void SetProjectionMatrix(DirectX::XMMATRIX proj) { DirectX::XMStoreFloat4x4(&m_projectionMatrix, proj); }
-
 	inline std::shared_ptr<RootSignature> GetRootSignature() const { return m_rootSignature; }
 
 private:
@@ -92,9 +88,9 @@ private:
     UINT m_height;
     float m_aspectRatio;
 
-	DirectX::XMFLOAT4X4 m_viewMatrix;
-	DirectX::XMFLOAT4X4 m_projectionMatrix;
-	DirectX::XMFLOAT4 m_cameraPosition;
+	//DirectX::XMFLOAT4X4 m_viewMatrix;
+	//DirectX::XMFLOAT4X4 m_projectionMatrix;
+	//DirectX::XMFLOAT4 m_cameraPosition;
 };
 
 DELTA_ENGINE_NS_END

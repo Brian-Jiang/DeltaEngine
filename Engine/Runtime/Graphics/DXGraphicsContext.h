@@ -26,9 +26,9 @@ struct DXGraphicsContext
     //Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> srvHeap;
 
     /// Camera constant buffer data (read-only for renderers).
-    DirectX::XMFLOAT4X4 viewMatrix;
-    DirectX::XMFLOAT4X4 projectionMatrix;
-    DirectX::XMFLOAT4 cameraPosition;
+    //DirectX::XMFLOAT4X4 viewMatrix;
+    //DirectX::XMFLOAT4X4 projectionMatrix;
+    //DirectX::XMFLOAT4 cameraPosition;
 };
 
 DELTA_ENGINE_NS_END

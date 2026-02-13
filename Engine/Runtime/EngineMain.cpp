@@ -21,10 +21,8 @@ EngineMain* EngineMain::instance = nullptr;
 
 EngineMain::EngineMain() 
     : exitCode(0), renderer(nullptr), window(nullptr), 
-    gameState(GameState::PLAY), time(nullptr),
-    meshRenderer(nullptr), meshRenderer2(nullptr),
+    gameState(GameState::PLAY), time(nullptr)
     //, m_instancedDrawer(nullptr),
-    m_FoV(45.0f)
 {
     EngineMain::instance = this;
     time = new Time();
@@ -36,27 +34,10 @@ void EngineMain::Initialize()
 
     InitSDL();
 
-    // ---- Import model and set up instanced drawing ----
-    //auto importer = new ModelImporter();
-    //importer->Import("Assets/Star.obj");
-
-    //std::shared_ptr<Mesh> meshPtr(importer->meshes[0]);
-    //m_instancedDrawer = new InstancedDrawer(meshPtr, 10000);
-    //UINT32 idx = 0;
-    //for (size_t i = 0; i < 100; i++) {
-    //    for (size_t j = 0; j < 100; j++) {
-    //        auto tranlate = XMMatrixTranslation(i / 10.0f, j / 10.0f, 0.0f);
-    //        //m_instancedDrawer->SetTransform(idx, tranlate);
-    //        XMFLOAT3 color(1.0f, 0.843f, 0.0f);
-    //        //m_instancedDrawer->SetColor(idx, color);
-    //        ++idx;
-    //    }
-    //}
-
-    //m_instancedDrawer->CreateBuffer(dxRenderManager->GetDevice());
 
     // ---- Build the scene world and add renderers ----
     m_world = std::make_shared<DWorld>();
+
 
     // ---------- game object: mesh renderer
     std::shared_ptr<GameObject> go = m_world->CreateGameObject();
@@ -78,12 +59,17 @@ void EngineMain::Initialize()
     std::shared_ptr<DMesh> mesh = std::make_shared<DMesh>(std::wstring(L"Star.obj"), material);
     meshRenderer->SetMesh(mesh);
 
+
     // ---------- game object: camera
     std::shared_ptr<GameObject> cameraGo = m_world->CreateGameObject();
     m_cameraGameObject = cameraGo;
     std::shared_ptr<Camera> camera = cameraGo->AddSceneComponent<Camera>();
     camera->SetLocalPosition(0.0f, 5.0f, -25.0f);
     camera->UpdateParameters(DirectX::XM_PIDIV4, static_cast<float>(SCREEN_WIDTH) / SCREEN_HEIGHT, 0.1f, 1000.0f);
+
+
+    // ---------- game object: light
+    
 
     // D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
     //     { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
@@ -99,18 +85,33 @@ void EngineMain::Initialize()
     //    { "INSTANCE_COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 64, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
     //};
 
+    // ---- Import model and set up instanced drawing ----
+    // auto importer = new ModelImporter();
+    // importer->Import("Assets/Star.obj");
+
+    // std::shared_ptr<Mesh> meshPtr(importer->meshes[0]);
+    // m_instancedDrawer = new InstancedDrawer(meshPtr, 10000);
+    // UINT32 idx = 0;
+    // for (size_t i = 0; i < 100; i++) {
+    //     for (size_t j = 0; j < 100; j++) {
+    //         auto tranlate = XMMatrixTranslation(i / 10.0f, j / 10.0f, 0.0f);
+    //         //m_instancedDrawer->SetTransform(idx, tranlate);
+    //         XMFLOAT3 color(1.0f, 0.843f, 0.0f);
+    //         //m_instancedDrawer->SetColor(idx, color);
+    //         ++idx;
+    //     }
+    // }
+
+    // m_instancedDrawer->CreateBuffer(dxRenderManager->GetDevice());
+
 
     //auto spriteRenderer = go->AddSceneComponent<SpriteRenderer>();
     //spriteRenderer->Start(2.0f, 2.0f, "Assets/logo.png");
 
-    // Initialize all renderer GPU resources (PSOs, textures, buffers)
-    // and submit the init command list.
 
     dxRenderManager->InitWorldRenderers(*m_world);
 
     //atexit(&Device::ReportLiveObjects);
-
-    //std::shared_ptr<GameObject> go
 }
 
 void EngineMain::InitSDL()
@@ -139,8 +140,6 @@ void EngineMain::InitSDL()
 
 void EngineMain::StartMainLoop()
 {
-    eyePosition = XMVectorSet(0, 0, -10, 1);
-
     while (gameState == GameState::PLAY)
     {
         time->TickTime();
@@ -190,27 +189,27 @@ void EngineMain::HandleInput()
                 }
                 else if (key == SDLK_DOWN || key == SDLK_s)
                 {
-                    eyePosition -= XMVectorSet(0, 0, 1.f, 0);
+                    m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() - XMFLOAT3(0, 0, 1.f));
                 }
                 else if (key == SDLK_UP || key == SDLK_w)
                 {
-                    eyePosition += XMVectorSet(0, 0, 1.f, 0);
+                    m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() + XMFLOAT3(0, 0, 1.f));
                 }
                 else if (key == SDLK_LEFT || key == SDLK_a)
                 {
-                    eyePosition -= XMVectorSet(1.f, 0, 0, 0);
+                    m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() - XMFLOAT3(1.f, 0, 0));
                 }
                 else if (key == SDLK_RIGHT || key == SDLK_d)
                 {
-                    eyePosition += XMVectorSet(1.f, 0, 0, 0);
+                    m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() + XMFLOAT3(1.f, 0, 0));
                 }
                 else if (key == SDLK_q)
                 {
-                    eyePosition += XMVectorSet(0, 1.f, 0, 0);
+                    m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() - XMFLOAT3(0, 1.f, 0));
                 }
                 else if (key == SDLK_e)
                 {
-                    eyePosition -= XMVectorSet(0, 1.f, 0, 0);
+                    m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() + XMFLOAT3(0, 1.f, 0));
                 }
                 break;
             case SDL_EVENT_QUIT:
@@ -224,40 +223,10 @@ void EngineMain::HandleInput()
 
 void EngineMain::Draw()
 {
-    m_FoV = 45.0f;
-
-    // Update the model matrix.
-    //float angle = static_cast<float>(Time::timeSinceStart * 50.f);
-    //const XMVECTOR rotationAxis = XMVectorSet(0, 1, 0, 0);
-    //auto translation = XMMatrixTranslation(0, 0, 0);
-    //auto rotation = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(angle));
-    //m_ModelMatrix = XMMatrixMultiply(rotation, translation);
-
-    // Update the view matrix.
-    const XMVECTOR focusPoint = eyePosition + XMVectorSet(0, 0, 1, 0);
-    const XMVECTOR upDirection = XMVectorSet(0, 1, 0, 0);
-    m_ViewMatrix = XMMatrixLookAtLH(eyePosition, focusPoint, upDirection);
-
-    // Update the projection matrix.
-    float aspectRatio = dxRenderManager->GetWidth() / static_cast<float>(dxRenderManager->GetHeight());
-    m_ProjectionMatrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(m_FoV), aspectRatio, 0.1f, 100000.0f);
-
-    dxRenderManager->SetCameraPosition(eyePosition);
-    dxRenderManager->SetViewMatrix(m_ViewMatrix);
-    dxRenderManager->SetProjectionMatrix(m_ProjectionMatrix);
-
     dxRenderManager->PrepareFrame();
 
-    // Get the graphics context (command list is active after PrepareFrame).
     std::shared_ptr<DXGraphicsContext> context = dxRenderManager->GetGraphicsContext();
-
-    // Draw instanced geometry.
-    //m_instancedDrawer->Draw(context.commandList);
-
-    // Gather draw calls from all renderers in the world.
-
     m_world->PreGatherDrawCalls(context);
-
     m_world->GatherDrawCalls(context);
 
     dxRenderManager->RenderFrame();

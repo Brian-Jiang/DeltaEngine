@@ -46,21 +46,11 @@ private:
 
 	GameState gameState;
 
-	MeshRenderer *meshRenderer;
-	MeshRenderer *meshRenderer2;
 	//InstancedDrawer* m_instancedDrawer;
 
-	float m_FoV;
 
     Time* time;
-	
-public:
-	//DirectX::XMMATRIX m_ModelMatrix;
-	DirectX::XMMATRIX m_ViewMatrix;
-	DirectX::XMMATRIX m_ProjectionMatrix;
-	DirectX::XMVECTOR eyePosition;
 
-private:
     std::shared_ptr<DWorld> m_world;
     std::shared_ptr<GameObject> m_cameraGameObject;
 
