@@ -8,7 +8,7 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${HEADER_FILES} ${SOURCE_F
 
 add_library(${TARGET_NAME} ${HEADER_FILES} ${SOURCE_FILES})
 
-set_target_properties(${TARGET_NAME} PROPERTIES CXX_STANDARD 20)
+set_target_properties(${TARGET_NAME} PROPERTIES CXX_STANDARD 23)
 set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "Engine")
 
 add_dependencies(${TARGET_NAME} CopyDxcBin)
@@ -16,8 +16,6 @@ add_dependencies(${TARGET_NAME} CopyDxcBin)
 target_compile_options(${TARGET_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->")
 target_compile_options(${TARGET_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/WX->")
 
-# target_link_libraries(${TARGET_NAME} PRIVATE glew)
-# target_link_libraries(${TARGET_NAME} PRIVATE glfw)
 target_link_libraries(${TARGET_NAME} PRIVATE SDL3::SDL3)
 target_link_libraries(${TARGET_NAME} PRIVATE imgui)
 target_link_libraries(${TARGET_NAME} PRIVATE assimp)

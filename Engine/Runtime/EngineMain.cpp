@@ -4,7 +4,8 @@
 #include <memory>
 
 #include "Graphics/DXUtils.h"
-#include "Importers/ModelImporter.h"
+//#include "Importers/ModelImporter.h"
+#include "Core/DMesh.h"
 #include "Graphics/Structures/Vertex.h"
 #include "Runtime/Core/GameObject.h"
 #include "Core/DShader.h"
