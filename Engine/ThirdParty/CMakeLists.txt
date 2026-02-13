@@ -17,7 +17,6 @@ add_custom_target(CopyDxcBin ALL
 
 set_target_properties(CopyDxcBin PROPERTIES FOLDER ${utility_folder})
 
-# set_target_properties(glfw PROPERTIES FOLDER ${third_party_folder})
 # set_target_properties(SDL3-static PROPERTIES FOLDER ${third_party_folder})
 
 
