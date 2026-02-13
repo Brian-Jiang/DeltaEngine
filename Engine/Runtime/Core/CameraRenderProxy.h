@@ -15,6 +15,7 @@ public:
     CameraRenderProxy();
     CameraRenderProxy(float fov, float aspectRatio, float nearPlane, float farPlane);
     void UpdateTransform(DirectX::XMMATRIX worldMatrix);
+    void UpdateAspectRatio(float aspectRatio);
     void UpdateParameters(float fov, float aspectRatio, float nearPlane, float farPlane);
     void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext);
 

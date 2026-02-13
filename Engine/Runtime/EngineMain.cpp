@@ -12,6 +12,10 @@
 #include "Core/DMaterial.h"
 #include "Core/Camera.h"
 
+//#include "imgui.h"
+//#include "backends/imgui_impl_sdl3.h"
+//#include "backends/imgui_impl_dx12.h"
+
 #define SCREEN_WIDTH   1280
 #define SCREEN_HEIGHT  720
 
@@ -35,6 +39,11 @@ void EngineMain::Initialize()
 
     InitSDL();
 
+    //IMGUI_CHECKVERSION();
+    //ImGui::CreateContext();
+    //ImGui::ShowDemoWindow();
+    //ImGui_ImplSDL3_InitForD3D(window);
+    //ImGui_ImplDX12_Init(g_pd3dDevice, g_pd3dDeviceContext);
 
     // ---- Build the scene world and add renderers ----
     m_world = std::make_shared<DWorld>();
@@ -174,8 +183,8 @@ void EngineMain::HandleInput()
         switch (event.type)
         {
             case SDL_EVENT_WINDOW_RESIZED:
-                // todo camera not update
                 dxRenderManager->Resize(event.window.data1, event.window.data2);
+                m_cameraGameObject->GetRootSceneComponent<Camera>()->UpdateAspectRatio(static_cast<float>(event.window.data1) / event.window.data2);
                 break;
             case SDL_EVENT_KEY_DOWN:
             {

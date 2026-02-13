@@ -22,6 +22,12 @@ void DeltaEngine::CameraRenderProxy::UpdateTransform(DirectX::XMMATRIX worldMatr
     RecalculateViewProjectionMatrix();
 }
 
+void DeltaEngine::CameraRenderProxy::UpdateAspectRatio(float aspectRatio)
+{
+    m_aspectRatio = aspectRatio;
+    RecalculateViewProjectionMatrix();
+}
+
 void DeltaEngine::CameraRenderProxy::UpdateParameters(float fov, float aspectRatio, float nearPlane, float farPlane)
 {
     m_fov = fov;

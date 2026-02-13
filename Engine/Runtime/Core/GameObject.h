@@ -53,7 +53,13 @@ public:
     void Destroy();
 
 	inline std::shared_ptr<DWorld> GetCurrentWorld() const { return m_currentWorld; }
-    std::shared_ptr<SceneComponent> GetRootSceneComponent() const { return m_rootSceneComponent.lock(); }
+    inline std::shared_ptr<SceneComponent> GetRootSceneComponent() const { return m_rootSceneComponent.lock(); }
+
+    template <typename T> requires IsSceneComponent<T>
+    inline std::shared_ptr<T> GetRootSceneComponent() const
+    {
+        return std::static_pointer_cast<T>(m_rootSceneComponent.lock()); 
+    }
 
 private:
     std::weak_ptr<SceneComponent> m_rootSceneComponent;

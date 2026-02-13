@@ -11,11 +11,17 @@ Camera::Camera()
     m_renderProxy = std::make_shared<CameraRenderProxy>(m_fov, m_aspectRatio, m_near, m_far);
 }
 
-DeltaEngine::Camera::~Camera()
+Camera::~Camera()
 {
 }
 
-void DeltaEngine::Camera::UpdateParameters(float fov, float aspectRatio, float nearPlane, float farPlane)
+void DeltaEngine::Camera::UpdateAspectRatio(float aspectRatio)
+{
+    m_aspectRatio = aspectRatio;
+    m_renderProxy->UpdateAspectRatio(aspectRatio);
+}
+
+void Camera::UpdateParameters(float fov, float aspectRatio, float nearPlane, float farPlane)
 {
     m_fov = fov;
     m_aspectRatio = aspectRatio;
@@ -29,7 +35,7 @@ void Camera::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext
     m_renderProxy->PreGatherDrawCalls(renderContext);
 }
 
-void DeltaEngine::Camera::OnTransformChanged()
+void Camera::OnTransformChanged()
 {
     SceneComponent::OnTransformChanged();
 

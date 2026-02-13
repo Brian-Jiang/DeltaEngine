@@ -21,6 +21,7 @@ public:
     Camera();
     ~Camera();
 
+    void UpdateAspectRatio(float aspectRatio);
     void UpdateParameters(float fov, float aspectRatio, float nearPlane, float farPlane);
     //void Tick();
 
