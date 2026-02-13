@@ -12,11 +12,7 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "ASSIMP_BUILD_TESTS": "OFF",
-        "SDL_TEST_LIBRARY": "OFF",
-        "BUILD_TESTING": "OFF",
-        "SDL_DISABLE_UNINSTALL": "ON",
-        "ASSIMP_INSTALL": "OFF"
+        "BUILD_TESTING": "OFF"
       },
       "vendor": {
         "microsoft.com/VisualStudioSettings/CMake/1.0": {

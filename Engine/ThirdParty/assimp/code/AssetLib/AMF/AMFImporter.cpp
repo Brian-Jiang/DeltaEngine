@@ -3,7 +3,7 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2024, assimp team
+Copyright (c) 2006-2026, assimp team
 
 All rights reserved.
 
@@ -327,8 +327,7 @@ void AMFImporter::ParseNode_Root() {
 // Multi elements - Yes.
 // Parent element - <amf>.
 void AMFImporter::ParseNode_Constellation(XmlNode &node) {
-    std::string id;
-    id = node.attribute("id").as_string();
+    std::string id = node.attribute("id").as_string();
 
     // create and if needed - define new grouping object.
     AMFNodeElementBase *ne = new AMFConstellation(mNodeElement_Cur);
@@ -384,17 +383,17 @@ void AMFImporter::ParseNode_Instance(XmlNode &node) {
         for (auto &currentNode : node.children()) {
             const std::string &currentName = currentNode.name();
             if (currentName == "deltax") {
-                XmlParser::getValueAsFloat(currentNode, als.Delta.x);
+                XmlParser::getValueAsReal(currentNode, als.Delta.x);
             } else if (currentName == "deltay") {
-                XmlParser::getValueAsFloat(currentNode, als.Delta.y);
+                XmlParser::getValueAsReal(currentNode, als.Delta.y);
             } else if (currentName == "deltaz") {
-                XmlParser::getValueAsFloat(currentNode, als.Delta.z);
+                XmlParser::getValueAsReal(currentNode, als.Delta.z);
             } else if (currentName == "rx") {
-                XmlParser::getValueAsFloat(currentNode, als.Delta.x);
+                XmlParser::getValueAsReal(currentNode, als.Delta.x);
             } else if (currentName == "ry") {
-                XmlParser::getValueAsFloat(currentNode, als.Delta.y);
+                XmlParser::getValueAsReal(currentNode, als.Delta.y);
             } else if (currentName == "rz") {
-                XmlParser::getValueAsFloat(currentNode, als.Delta.z);
+                XmlParser::getValueAsReal(currentNode, als.Delta.z);
             }
         }
         ParseHelper_Node_Exit();
@@ -474,7 +473,7 @@ void AMFImporter::ParseNode_Metadata(XmlNode &node) {
 
     // read attribute
     ne = new AMFMetadata(mNodeElement_Cur);
-    ((AMFMetadata *)ne)->Type = type;
+    ((AMFMetadata *)ne)->MetaType = type;
     ((AMFMetadata *)ne)->Value = value;
     mNodeElement_Cur->Child.push_back(ne); // Add element to child list of current element
     mNodeElement_List.push_back(ne); // and to node element list because its a new object in graph.
