@@ -5,6 +5,7 @@ set(DELTA_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 include(sdl3.cmake)
 include(imgui.cmake)
 include(dxtk12.cmake)
+include(dxtex.cmake)
 include(assimp.cmake)
 
 add_custom_target(CopyDxcBin ALL

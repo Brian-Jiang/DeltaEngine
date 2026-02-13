@@ -1,11 +1,11 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-cmake_minimum_required (VERSION 3.20)
+cmake_minimum_required (VERSION 3.21)
 
-set(DIRECTXTK12_VERSION 1.5.9)
+set(DIRECTXTK12_VERSION 1.6.4)
 
-if(WINDOWS_STORE OR (DEFINED XBOX_CONSOLE_TARGET))
+if(XBOX_CONSOLE_TARGET STREQUAL "durango")
   set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
 endif()
 
@@ -14,6 +14,12 @@ project (DirectXTK12
   DESCRIPTION "DirectX Tool Kit for DirectX 12"
   HOMEPAGE_URL "https://go.microsoft.com/fwlink/?LinkID=615561"
   LANGUAGES CXX)
+
+if(DEFINED XBOX_CONSOLE_TARGET)
+  set(CMAKE_CXX_STANDARD_LIBRARIES "")
+endif()
+
+option(BUILD_SHARED_LIBS "Build DirectXTK as a shared library" OFF)
 
 option(BUILD_XAUDIO_WIN10 "Build for XAudio 2.9" ON)
 option(BUILD_XAUDIO_REDIST "Build for XAudio2Redist" OFF)
@@ -28,6 +34,10 @@ option(ENABLE_SPECTRE_MITIGATION "Build using /Qspectre for MSVC" OFF)
 option(DISABLE_MSVC_ITERATOR_DEBUGGING "Disable iterator debugging in Debug configurations with the MSVC CRT" OFF)
 
 option(ENABLE_CODE_ANALYSIS "Use Static Code Analysis on build" OFF)
+
+option(ENABLE_CODE_COVERAGE "Build with code-coverage" OFF)
+
+option(ENABLE_CODE_PROFILING "Build for profiling" OFF)
 
 option(USE_PREBUILT_SHADERS "Use externally built HLSL shaders" OFF)
 
@@ -70,6 +80,7 @@ elseif(WINDOWS_STORE)
 endif()
 
 include(GNUInstallDirs)
+include(build/CompilerAndLinker.cmake)
 
 #--- Library
 set(LIBRARY_HEADERS
@@ -98,6 +109,7 @@ set(LIBRARY_SOURCES
     Src/BasicEffect.cpp
     Src/BasicPostProcess.cpp
     Src/BufferHelpers.cpp
+    Src/CMO.h
     Src/CommonStates.cpp
     Src/d3dx12.h
     Src/DDSTextureLoader.cpp
@@ -190,8 +202,17 @@ set(SHADER_SOURCES ${SHADER_SOURCES}
     Src/Shaders/Structures.fxh
     Src/Shaders/Utilities.fxh)
 
+# Xbox-specific extensions
+if(DEFINED XBOX_CONSOLE_TARGET)
+  set(LIBRARY_HEADERS ${LIBRARY_HEADERS}
+      Inc/XboxDDSTextureLoader.h)
+
+  set(LIBRARY_SOURCES ${LIBRARY_SOURCES}
+      Src/XboxDDSTextureLoader.cpp)
+endif()
+
 if(MINGW)
-   set(BUILD_XAUDIO_WIN10 OFF)
+  set(BUILD_XAUDIO_WIN10 OFF)
 endif()
 
 if(WINDOWS_STORE
@@ -248,23 +269,62 @@ else()
 endif()
 
 if(NOT USE_PREBUILT_SHADERS)
-    if(BUILD_DXIL_SHADERS AND VCPKG_TOOLCHAIN AND (NOT BUILD_SCARLETT_SHADERS) AND (NOT BUILD_XBOXONE_SHADERS))
+    if(BUILD_SCARLETT_SHADERS OR BUILD_XBOXONE_SHADERS)
+    elseif(BUILD_DXIL_SHADERS AND VCPKG_TOOLCHAIN)
         message(STATUS "Using VCPKG for DirectXShaderCompiler (${VCPKG_HOST_TRIPLET}).")
         find_program(DIRECTX_DXC_TOOL DXC.EXE
           REQUIRED NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_SYSTEM_PATH NO_DEFAULT_PATH
-          HINTS ${DIRECTX_DXC_PATH})
+          HINTS ${DIRECTX_DXC_PATH}
+                "${CMAKE_CURRENT_LIST_DIR}/build/vcpkg_installed/${VCPKG_HOST_TRIPLET}/tools/directx-dxc")
+    elseif(BUILD_DXIL_SHADERS)
+        find_program(DIRECTX_DXC_TOOL DXC.EXE
+          HINTS "C:/Program Files (x86)/Windows Kits/10/bin/${CMAKE_SYSTEM_VERSION}/${DIRECTX_HOST_ARCH}"
+                "C:/Program Files (x86)/Windows Kits/10/bin/${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}/${DIRECTX_HOST_ARCH}")
+        message(STATUS "Using DirectXShaderCompiler found in ${DIRECTX_DXC_TOOL}")
+    else()
+        find_program(DIRECTX_FXC_TOOL FXC.EXE
+          HINTS "C:/Program Files (x86)/Windows Kits/10/bin/${CMAKE_SYSTEM_VERSION}/${DIRECTX_HOST_ARCH}"
+                "C:/Program Files (x86)/Windows Kits/10/bin/${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}/${DIRECTX_HOST_ARCH}")
+        message(STATUS "Using LegacyShaderCompiler found in ${DIRECTX_FXC_TOOL}")
     endif()
     add_custom_command(
         OUTPUT "${COMPILED_SHADERS}/SpriteEffect_SpriteVertexShader.inc"
         MAIN_DEPENDENCY "${PROJECT_SOURCE_DIR}/Src/Shaders/CompileShaders.cmd"
         DEPENDS ${SHADER_SOURCES}
         COMMENT "Generating HLSL shaders..."
-        COMMAND ${CMAKE_COMMAND} -E env CompileShadersOutput="${COMPILED_SHADERS}" $<$<BOOL:${DIRECTX_DXC_TOOL}>:DirectXShaderCompiler=${DIRECTX_DXC_TOOL}> CompileShaders.cmd ARGS ${ShaderOpts} > "${COMPILED_SHADERS}/compileshaders.log"
+        COMMAND ${CMAKE_COMMAND} -E env CompileShadersOutput="${COMPILED_SHADERS}" $<$<BOOL:${DIRECTX_DXC_TOOL}>:DirectXShaderCompiler=${DIRECTX_DXC_TOOL}> $<$<BOOL:${DIRECTX_FXC_TOOL}>:LegacyShaderCompiler=${DIRECTX_FXC_TOOL}> CompileShaders.cmd ARGS ${ShaderOpts} > "${COMPILED_SHADERS}/compileshaders.log"
         WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/Src/Shaders"
         USES_TERMINAL)
 endif()
 
-add_library(${PROJECT_NAME} STATIC ${LIBRARY_SOURCES} ${LIBRARY_HEADERS})
+if(WIN32 AND BUILD_SHARED_LIBS)
+  message(STATUS "Build library as a DLL")
+
+  configure_file(
+      "${CMAKE_CURRENT_SOURCE_DIR}/build/DirectXTK12.rc.in"
+      "${CMAKE_CURRENT_BINARY_DIR}/DirectXTK12.rc" @ONLY)
+
+  add_library(${PROJECT_NAME} SHARED ${LIBRARY_SOURCES} ${LIBRARY_HEADERS} "${CMAKE_CURRENT_BINARY_DIR}/DirectXTK12.rc")
+
+  target_compile_definitions(${PROJECT_NAME} PRIVATE DIRECTX_TOOLKIT_EXPORT)
+  target_compile_definitions(${PROJECT_NAME} INTERFACE DIRECTX_TOOLKIT_IMPORT)
+
+  if(XBOX_CONSOLE_TARGET MATCHES "scarlett")
+    target_link_libraries(${PROJECT_NAME} PRIVATE xgameplatform.lib d3d12_xs.lib pixevt.lib)
+  elseif(XBOX_CONSOLE_TARGET MATCHES "xboxone")
+    target_link_libraries(${PROJECT_NAME} PRIVATE xgameplatform.lib d3d12_x.lib pixevt.lib)
+  elseif(XBOX_CONSOLE_TARGET MATCHES "durango")
+    target_link_libraries(${PROJECT_NAME} PRIVATE kernelx.lib combase.lib d3d12_x.lib xi.lib)
+  else()
+    target_link_libraries(${PROJECT_NAME} PRIVATE d3d12.lib)
+  endif()
+
+  if(MINGW)
+    target_link_libraries(${PROJECT_NAME} PRIVATE xinput1_4.lib)
+  endif()
+else()
+  add_library(${PROJECT_NAME} ${LIBRARY_SOURCES} ${LIBRARY_HEADERS})
+endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${COMPILED_SHADERS} Src)
 
@@ -290,7 +350,11 @@ endif()
 
 if(MINGW)
     find_package(directxmath CONFIG REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PUBLIC Microsoft::DirectXMath)
+
     find_package(directx-headers CONFIG REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PUBLIC Microsoft::DirectX-Headers)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC USING_DIRECTX_HEADERS)
 else()
     find_package(directxmath CONFIG QUIET)
     find_package(directx-headers CONFIG QUIET)
@@ -298,13 +362,13 @@ endif()
 
 if(directxmath_FOUND)
     message(STATUS "Using DirectXMath package")
-    target_link_libraries(${PROJECT_NAME} PUBLIC Microsoft::DirectXMath)
+    target_link_libraries(${PROJECT_NAME} PRIVATE Microsoft::DirectXMath)
 endif()
 
 if(directx-headers_FOUND)
     message(STATUS "Using DirectX-Headers package")
-    target_link_libraries(${PROJECT_NAME} PUBLIC Microsoft::DirectX-Headers)
-    target_compile_definitions(${PROJECT_NAME} PUBLIC USING_DIRECTX_HEADERS)
+    target_link_libraries(${PROJECT_NAME} PRIVATE Microsoft::DirectX-Headers)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USING_DIRECTX_HEADERS)
 endif()
 
 if(BUILD_XAUDIO_REDIST
@@ -319,10 +383,15 @@ include(CheckIncludeFileCXX)
 
 if(BUILD_GAMEINPUT)
     message(STATUS "Using GameInput for GamePad/Keyboard/Mouse.")
-    set(CMAKE_REQUIRED_QUIET ON)
-    CHECK_INCLUDE_FILE_CXX(GameInput.h GAMEINPUT_HEADER)
-    if(NOT GAMEINPUT_HEADER)
-        message(FATAL_ERROR "Microsoft GDK required to build GameInput. See https://aka.ms/gdk")
+    find_package(gameinput CONFIG QUIET)
+    if(gameinput_FOUND)
+      target_link_libraries(${PROJECT_NAME} PUBLIC Microsoft::GameInput)
+    else()
+      set(CMAKE_REQUIRED_QUIET ON)
+      CHECK_INCLUDE_FILE_CXX(GameInput.h GAMEINPUT_HEADER)
+      if(NOT GAMEINPUT_HEADER)
+          message(FATAL_ERROR "Microsoft GDK required to build GameInput. See https://aka.ms/gdk")
+      endif()
     endif()
     target_compile_definitions(${PROJECT_NAME} PUBLIC USING_GAMEINPUT)
 elseif(BUILD_WGI)
@@ -402,8 +471,6 @@ if(MSVC)
     endif()
 endif()
 
-include(build/CompilerAndLinker.cmake)
-
 target_compile_definitions(${PROJECT_NAME} PRIVATE ${COMPILER_DEFINES})
 target_compile_options(${PROJECT_NAME} PRIVATE ${COMPILER_SWITCHES})
 target_link_options(${PROJECT_NAME} PRIVATE ${LINKER_SWITCHES})
@@ -416,11 +483,25 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|IntelLLVM")
     target_compile_options(${PROJECT_NAME} PRIVATE ${WarningsLib})
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     target_compile_options(${PROJECT_NAME} PRIVATE "-Wno-ignored-attributes" "-Walloc-size-larger-than=4GB")
+
+    if(BUILD_SHARED_LIBS)
+      target_compile_options(${PROJECT_NAME} PRIVATE "-Wno-attributes")
+    endif()
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
     set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 14)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    if(BUILD_SHARED_LIBS)
+      target_compile_options(${PROJECT_NAME} PRIVATE /wd4251 /wd4275)
+    endif()
+
     if(ENABLE_CODE_ANALYSIS)
+      message(STATUS "Building with Code Analysis (PREFIX)")
       target_compile_options(${PROJECT_NAME} PRIVATE /analyze /WX)
+    endif()
+
+    if(ENABLE_CODE_PROFILING)
+      message(STATUS "Building with /PROFILE")
+      target_link_options(${PROJECT_NAME} PRIVATE /profile)
     endif()
 
     if(ENABLE_SPECTRE_MITIGATION
@@ -430,11 +511,15 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
         target_compile_options(${PROJECT_NAME} PRIVATE "/Qspectre")
     endif()
 
-    if(BUILD_FUZZING
-        AND (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.32)
-        AND (NOT WINDOWS_STORE))
-          target_compile_options(${PROJECT_NAME} PRIVATE ${ASAN_SWITCHES})
-          target_link_libraries(${PROJECT_NAME} PRIVATE ${ASAN_LIBS})
+
+    if(BUILD_FUZZING AND (NOT WINDOWS_STORE))
+      string(REPLACE "/DNDEBUG" "" CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE})
+      string(REPLACE "/DNDEBUG" "" CMAKE_CXX_FLAGS_RELWITHDEBINFO ${CMAKE_CXX_FLAGS_RELWITHDEBINFO})
+
+      if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.32)
+        target_compile_options(${PROJECT_NAME} PRIVATE ${ASAN_SWITCHES})
+        target_link_libraries(${PROJECT_NAME} PRIVATE ${ASAN_LIBS})
+      endif()
     endif()
 endif()
 
@@ -464,6 +549,10 @@ if(WIN32 AND (NOT WINDOWS_STORE) AND (NOT (DEFINED XBOX_CONSOLE_TARGET)))
     if(BUILD_TESTING AND (EXISTS "${CMAKE_CURRENT_LIST_DIR}/Tests/CMakeLists.txt"))
         enable_testing()
         add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/Tests)
+
+        if(ENABLE_CODE_COVERAGE AND (DEFINED COV_COMPILER_SWITCHES))
+          target_compile_options(${PROJECT_NAME} PRIVATE ${COV_COMPILER_SWITCHES})
+        endif()
     elseif(BUILD_FUZZING AND (EXISTS "${CMAKE_CURRENT_LIST_DIR}/Tests/fuzzloaders/CMakeLists.txt"))
         message(STATUS "Building for fuzzing")
         add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/Tests/fuzzloaders)

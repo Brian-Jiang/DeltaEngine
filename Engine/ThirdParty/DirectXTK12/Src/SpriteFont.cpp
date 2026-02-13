@@ -39,19 +39,18 @@ public:
         size_t glyphCount,
         float lineSpacing) noexcept(false);
 
+    Impl(const Impl&) = delete;
+    Impl& operator=(const Impl&) = delete;
+
+    Impl(Impl&&) = default;
+    Impl& operator=(Impl&&) = default;
+
     Glyph const* FindGlyph(wchar_t character) const;
 
     void SetDefaultCharacter(wchar_t character);
 
     template<typename TAction>
     void ForEachGlyph(_In_z_ wchar_t const* text, TAction action, bool ignoreWhitespace) const;
-
-    void CreateTextureResource(_In_ ID3D12Device* device,
-        ResourceUploadBatch& upload,
-        uint32_t width, uint32_t height,
-        DXGI_FORMAT format,
-        uint32_t stride, uint32_t rows,
-        _In_reads_(stride * rows) const uint8_t* data) noexcept(false);
 
     const wchar_t* ConvertUTF8(_In_z_ const char *text) noexcept(false);
 
@@ -65,6 +64,13 @@ public:
     float lineSpacing;
 
 private:
+    void CreateTextureResource(_In_ ID3D12Device* device,
+        ResourceUploadBatch& upload,
+        uint32_t width, uint32_t height,
+        DXGI_FORMAT format,
+        uint32_t stride, uint32_t rows,
+        _In_reads_(stride * rows) const uint8_t* data) noexcept(false);
+
     size_t utfBufferSize;
     std::unique_ptr<wchar_t[]> utfBuffer;
 };
@@ -111,6 +117,9 @@ SpriteFont::Impl::Impl(
     lineSpacing(0),
     utfBufferSize(0)
 {
+    if (!device || !reader)
+        throw std::invalid_argument("Direct3D device is null");
+
     // Validate the header.
     for (char const* magic = spriteFontMagic; *magic; magic++)
     {
@@ -194,6 +203,11 @@ SpriteFont::Impl::Impl(
     lineSpacing(ilineSpacing),
     utfBufferSize(0)
 {
+    if (!itexture.ptr)
+    {
+        throw std::invalid_argument("Sprite sheet texture required");
+    }
+
     if (!std::is_sorted(iglyphs, iglyphs + glyphCount))
     {
         throw std::runtime_error("Glyphs must be in ascending codepoint order");
@@ -423,8 +437,7 @@ SpriteFont::SpriteFont(ID3D12Device* device, ResourceUploadBatch& upload, uint8_
 _Use_decl_annotations_
 SpriteFont::SpriteFont(D3D12_GPU_DESCRIPTOR_HANDLE texture, XMUINT2 textureSize, Glyph const* glyphs, size_t glyphCount, float lineSpacing)
     : pImpl(std::make_unique<Impl>(texture, textureSize, glyphs, glyphCount, lineSpacing))
-{
-}
+{}
 
 
 SpriteFont::SpriteFont(SpriteFont&&) noexcept = default;
@@ -515,7 +528,7 @@ XMVECTOR XM_CALLCONV SpriteFont::MeasureString(_In_z_ wchar_t const* text, bool 
         {
             UNREFERENCED_PARAMETER(advance);
 
-            auto const w = static_cast<float>(glyph->Subrect.right - glyph->Subrect.left);
+            const auto w = static_cast<float>(glyph->Subrect.right - glyph->Subrect.left);
             auto h = static_cast<float>(glyph->Subrect.bottom - glyph->Subrect.top) + glyph->YOffset;
 
             h = iswspace(wchar_t(glyph->Character)) ?
@@ -535,9 +548,9 @@ RECT SpriteFont::MeasureDrawBounds(_In_z_ wchar_t const* text, XMFLOAT2 const& p
 
     pImpl->ForEachGlyph(text, [&](Glyph const* glyph, float x, float y, float advance) noexcept
         {
-            auto const isWhitespace = iswspace(wchar_t(glyph->Character));
-            auto const w = static_cast<float>(glyph->Subrect.right - glyph->Subrect.left);
-            auto const h = isWhitespace ?
+            const auto isWhitespace = iswspace(wchar_t(glyph->Character));
+            const auto w = static_cast<float>(glyph->Subrect.right - glyph->Subrect.left);
+            const auto h = isWhitespace ?
                 pImpl->lineSpacing :
                 static_cast<float>(glyph->Subrect.bottom - glyph->Subrect.top);
 
@@ -692,8 +705,7 @@ SpriteFont::SpriteFont(
         device, upload,
         reinterpret_cast<const unsigned short*>(fileName),
         cpuDescriptorDest, gpuDescriptor, forceSRGB)
-{
-}
+{}
 
 void SpriteFont::DrawString(_In_ SpriteBatch* spriteBatch, _In_z_ __wchar_t const* text, XMFLOAT2 const& position, FXMVECTOR color, float rotation, XMFLOAT2 const& origin, float scale, SpriteEffects effects, float layerDepth) const
 {

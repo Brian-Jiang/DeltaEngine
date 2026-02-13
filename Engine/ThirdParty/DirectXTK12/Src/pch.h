@@ -11,7 +11,7 @@
 
 #ifdef _MSC_VER
 // Off by default warnings
-#pragma warning(disable : 4619 4061 4265 4355 4365 4571 4623 4625 4626 4628 4668 4710 4711 4746 4774 4820 4987 5026 5027 5031 5032 5039 5045 5219 5246 5264 26812)
+#pragma warning(disable : 4619 4061 4265 4355 4365 4571 4623 4625 4626 4628 4668 4710 4711 4746 4774 4820 4865 4987 5026 5027 5031 5032 5039 5045 5219 5246 5264 26812)
 // C4619 #pragma warning: there is no warning number 'X'
 // C4061 enumerator 'X' in switch of enum 'X' is not explicitly handled by a case label
 // C4265 class has virtual functions, but destructor is not virtual
@@ -28,6 +28,7 @@
 // C4746 volatile access of '<expression>' is subject to /volatile:<iso|ms> setting
 // C4774 format string expected in argument 3 is not a string literal
 // C4820 padding added after data member
+// C4865 the underlying type will change from 'int' to 'unsigned int' when '/Zc:enumTypes' is specified on the command line
 // C4987 nonstandard extension used
 // C5026 move constructor was implicitly defined as deleted
 // C5027 move assignment operator was implicitly defined as deleted
@@ -252,6 +253,15 @@
 #include <ocidl.h>
 #else
 #include <OCIdl.h>
+#endif
+
+#if defined(USING_GAMEINPUT) && defined(__MINGW32__)
+namespace GameInput { namespace v1 { interface IGameInput; } }
+template<> inline auto __mingw_uuidof<GameInput::v1::IGameInput>() -> GUID const&
+{
+    static constexpr GUID the_uuid = { 0x40ffb7e4,0x6150,0x407a,0xb4,0x39,0x13,0x2b,0xad,0xc0,0x8d,0x2d };
+    return the_uuid;
+}
 #endif
 
 #ifndef __MINGW32__

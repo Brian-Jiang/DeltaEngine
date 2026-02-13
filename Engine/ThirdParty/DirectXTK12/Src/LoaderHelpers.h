@@ -16,6 +16,12 @@
 #include "DDSTextureLoader.h"
 #include "PlatformHelpers.h"
 
+#include <algorithm>
+#include <cfloat>
+#include <cmath>
+#include <memory>
+#include <new>
+#include <tuple>
 
 namespace DirectX
 {
@@ -334,13 +340,13 @@ namespace DirectX
                 return E_FAIL;
             }
 
-            if (ddsDataSize < (sizeof(uint32_t) + sizeof(DDS_HEADER)))
+            if (ddsDataSize < DDS_MIN_HEADER_SIZE)
             {
                 return E_FAIL;
             }
 
             // DDS files always start with the same magic number ("DDS ")
-            auto const dwMagicNumber = *reinterpret_cast<const uint32_t*>(ddsData);
+            const auto dwMagicNumber = *reinterpret_cast<const uint32_t*>(ddsData);
             if (dwMagicNumber != DDS_MAGIC)
             {
                 return E_FAIL;
@@ -361,7 +367,7 @@ namespace DirectX
                 (MAKEFOURCC('D', 'X', '1', '0') == hdr->ddspf.fourCC))
             {
                 // Must be long enough for both headers and magic value
-                if (ddsDataSize < (sizeof(uint32_t) + sizeof(DDS_HEADER) + sizeof(DDS_HEADER_DXT10)))
+                if (ddsDataSize < DDS_DX10_HEADER_SIZE)
                 {
                     return E_FAIL;
                 }
@@ -371,8 +377,7 @@ namespace DirectX
 
             // setup the pointers in the process request
             *header = hdr;
-            auto offset = sizeof(uint32_t)
-                + sizeof(DDS_HEADER)
+            auto offset = DDS_MIN_HEADER_SIZE
                 + (bDXT10Header ? sizeof(DDS_HEADER_DXT10) : 0u);
             *bitData = ddsData + offset;
             *bitSize = ddsDataSize - offset;
@@ -396,20 +401,10 @@ namespace DirectX
             *bitSize = 0;
 
             // open the file
-        #if (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
             ScopedHandle hFile(safe_handle(CreateFile2(
                 fileName,
                 GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING,
                 nullptr)));
-        #else
-            ScopedHandle hFile(safe_handle(CreateFileW(
-                fileName,
-                GENERIC_READ, FILE_SHARE_READ,
-                nullptr,
-                OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,
-                nullptr)));
-        #endif
-
             if (!hFile)
             {
                 return HRESULT_FROM_WIN32(GetLastError());
@@ -429,7 +424,7 @@ namespace DirectX
             }
 
             // Need at least enough data to fill the header and magic number to be a valid DDS
-            if (fileInfo.EndOfFile.LowPart < (sizeof(uint32_t) + sizeof(DDS_HEADER)))
+            if (fileInfo.EndOfFile.LowPart < DDS_MIN_HEADER_SIZE)
             {
                 return E_FAIL;
             }
@@ -461,7 +456,7 @@ namespace DirectX
             }
 
             // DDS files always start with the same magic number ("DDS ")
-            auto const dwMagicNumber = *reinterpret_cast<const uint32_t*>(ddsData.get());
+            const auto dwMagicNumber = *reinterpret_cast<const uint32_t*>(ddsData.get());
             if (dwMagicNumber != DDS_MAGIC)
             {
                 ddsData.reset();
@@ -484,7 +479,7 @@ namespace DirectX
                 (MAKEFOURCC('D', 'X', '1', '0') == hdr->ddspf.fourCC))
             {
                 // Must be long enough for both headers and magic value
-                if (fileInfo.EndOfFile.LowPart < (sizeof(uint32_t) + sizeof(DDS_HEADER) + sizeof(DDS_HEADER_DXT10)))
+                if (fileInfo.EndOfFile.LowPart < DDS_DX10_HEADER_SIZE)
                 {
                     ddsData.reset();
                     return E_FAIL;
@@ -495,7 +490,7 @@ namespace DirectX
 
             // setup the pointers in the process request
             *header = hdr;
-            auto offset = sizeof(uint32_t) + sizeof(DDS_HEADER)
+            auto offset = DDS_MIN_HEADER_SIZE
                 + (bDXT10Header ? sizeof(DDS_HEADER_DXT10) : 0u);
             *bitData = ddsData.get() + offset;
             *bitSize = fileInfo.EndOfFile.LowPart - offset;
@@ -524,6 +519,9 @@ namespace DirectX
             size_t bpe = 0;
             switch (fmt)
             {
+            case DXGI_FORMAT_UNKNOWN:
+                return E_INVALIDARG;
+
             case DXGI_FORMAT_BC1_TYPELESS:
             case DXGI_FORMAT_BC1_UNORM:
             case DXGI_FORMAT_BC1_UNORM_SRGB:
@@ -971,7 +969,7 @@ namespace DirectX
                 if (MAKEFOURCC('D', 'X', '1', '0') == header->ddspf.fourCC)
                 {
                     auto d3d10ext = reinterpret_cast<const DDS_HEADER_DXT10*>(reinterpret_cast<const uint8_t*>(header) + sizeof(DDS_HEADER));
-                    auto const mode = static_cast<DDS_ALPHA_MODE>(d3d10ext->miscFlags2 & DDS_MISC_FLAGS2_ALPHA_MODE_MASK);
+                    const auto mode = static_cast<DDS_ALPHA_MODE>(d3d10ext->miscFlags2 & DDS_MISC_FLAGS2_ALPHA_MODE_MASK);
                     switch (mode)
                     {
                     case DDS_ALPHA_MODE_STRAIGHT:

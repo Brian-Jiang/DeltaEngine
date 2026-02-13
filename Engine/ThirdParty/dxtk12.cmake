@@ -1,17 +1,5 @@
-set(BUILD_XAUDIO_WIN10 OFF)
+set(BUILD_SHARED_LIBS ON)
 
-set(DIRECTX_DXC_PATH "${CMAKE_CURRENT_SOURCE_DIR}/dxc/bin/x64")
-add_subdirectory(DirectXTK12)
+add_subdirectory(DirectXTK12 ${CMAKE_BINARY_DIR}/bin/CMake/DirectXTK12)
 
 set_target_properties(DirectXTK12 PROPERTIES FOLDER ${third_party_folder})
-
-
-set(BUILD_SAMPLE OFF)
-set(BUILD_TOOLS OFF)
-set(BUILD_XBOX_EXTS_SCARLETT OFF)
-set(BUILD_XBOX_EXTS_XBOXONE OFF)
-set(BUILD_DX11 OFF)
-
-add_subdirectory(DirectXTex)
-
-set_target_properties(DirectXTex PROPERTIES FOLDER ${third_party_folder})

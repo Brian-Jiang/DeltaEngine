@@ -88,6 +88,16 @@ namespace
 // GameInput
 //======================================================================================
 
+#if defined(GAMEINPUT_API_VERSION) && (GAMEINPUT_API_VERSION == 1)
+using namespace GameInput::v1;
+#elif defined(GAMEINPUT_API_VERSION) && (GAMEINPUT_API_VERSION == 2)
+using namespace GameInput::v2;
+#elif defined(GAMEINPUT_API_VERSION) && (GAMEINPUT_API_VERSION == 3)
+using namespace GameInput::v3;
+#endif
+
+using GameInputCreateFn = HRESULT(*)(IGameInput**);
+
 class GamePad::Impl
 {
 public:
@@ -104,7 +114,26 @@ public:
 
         s_gamePad = this;
 
+    #if defined(_GAMING_XBOX) || defined(GAMEINPUT_API_VERSION)
         HRESULT hr = GameInputCreate(mGameInput.GetAddressOf());
+    #else
+        if (!s_gameInputCreate)
+        {
+            s_gameInputModule = LoadLibraryExW(L"GameInput.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+            if (s_gameInputModule)
+            {
+                s_gameInputCreate = reinterpret_cast<GameInputCreateFn>(static_cast<void*>(GetProcAddress(s_gameInputModule, "GameInputCreate")));
+            }
+
+            if (!s_gameInputCreate)
+            {
+                DebugTrace("ERROR: GetProcAddress GameInputCreate failed\n");
+                throw std::runtime_error("GameInput.dll is not installed on this system");
+            }
+        }
+
+        HRESULT hr = s_gameInputCreate(mGameInput.GetAddressOf());
+    #endif
         if (SUCCEEDED(hr))
         {
             ThrowIfFailed(mGameInput->RegisterDeviceCallback(
@@ -120,10 +149,10 @@ public:
         {
             DebugTrace("ERROR: GameInputCreate [gamepad] failed with %08X\n", static_cast<unsigned int>(hr));
         #ifdef _GAMING_XBOX
-            ThrowIfFailed(hr);
-        #elif defined(_DEBUG)
+            throw com_exception(hr);
+        #else
             DebugTrace(
-                "\t**** Check that the 'GameInput Service' is running on this system.    ****\n"
+                "\t**** Install the latest GameInputRedist package on this system.       ****\n"
                 "\t**** NOTE: All calls to GetState will be reported as 'not connected'. ****\n");
         #endif
         }
@@ -141,7 +170,11 @@ public:
         {
             if (mGameInput)
             {
+            #if defined(GAMEINPUT_API_VERSION) && (GAMEINPUT_API_VERSION >= 1)
+                if (!mGameInput->UnregisterCallback(mDeviceToken))
+            #else
                 if (!mGameInput->UnregisterCallback(mDeviceToken, UINT64_MAX))
+            #endif
                 {
                     DebugTrace("ERROR: GameInput::UnregisterCallback [gamepad] failed");
                 }
@@ -189,7 +222,11 @@ public:
             if (reading->GetGamepadState(&pad))
             {
                 state.connected = true;
+            #if defined(GAMEINPUT_API_VERSION) && (GAMEINPUT_API_VERSION >= 1)
+                state.packet = reading->GetTimestamp();
+            #else
                 state.packet = reading->GetSequenceNumber(GameInputKindGamepad);
+            #endif
 
                 state.buttons.a = (pad.buttons & GameInputGamepadA) != 0;
                 state.buttons.b = (pad.buttons & GameInputGamepadB) != 0;
@@ -233,7 +270,12 @@ public:
             {
                 if (device->GetDeviceStatus() & GameInputDeviceConnected)
                 {
+                #if defined(GAMEINPUT_API_VERSION) && (GAMEINPUT_API_VERSION >= 1)
+                    const GameInputDeviceInfo* deviceInfo = nullptr;
+                    device->GetDeviceInfo(&deviceInfo);
+                #else
                     auto deviceInfo = device->GetDeviceInfo();
+                #endif
                     caps.connected = true;
                     caps.gamepadType = Capabilities::GAMEPAD;
                     caps.id = deviceInfo->deviceId;
@@ -398,9 +440,19 @@ private:
             SetEvent(impl->mCtrlChanged);
         }
     }
+
+#if !defined(_GAMING_XBOX) && !defined(GAMEINPUT_API_VERSION)
+    static HMODULE s_gameInputModule;
+    static GameInputCreateFn s_gameInputCreate;
+#endif
 };
 
 GamePad::Impl* GamePad::Impl::s_gamePad = nullptr;
+
+#if !defined(_GAMING_XBOX) && !defined(GAMEINPUT_API_VERSION)
+HMODULE GamePad::Impl::s_gameInputModule = nullptr;
+GameInputCreateFn GamePad::Impl::s_gameInputCreate = nullptr;
+#endif
 
 void GamePad::RegisterEvents(HANDLE ctrlChanged) noexcept
 {
@@ -408,7 +460,7 @@ void GamePad::RegisterEvents(HANDLE ctrlChanged) noexcept
 }
 
 _Success_(return)
-bool GamePad::GetDevice(int player, _Outptr_ IGameInputDevice * *device) noexcept
+bool GamePad::GetDevice(int player, _Outptr_ GameInputDevice_t * *device) noexcept
 {
     return pImpl->GetDevice(player, device);
 }
@@ -1286,11 +1338,6 @@ public:
         mOwner(owner),
         mConnected{},
         mLastReadTime{}
-    #if (_WIN32_WINNT < _WIN32_WINNT_WIN8)
-        , mLeftMotor{}
-        , mRightMotor{}
-        , mSuspended(false)
-    #endif
     {
         for (int j = 0; j < XUSER_MAX_COUNT; ++j)
         {
@@ -1319,15 +1366,6 @@ public:
 
         if (!ThrottleRetry(player, time))
         {
-        #if (_WIN32_WINNT < _WIN32_WINNT_WIN8)
-            if (mSuspended)
-            {
-                memset(&state, 0, sizeof(State));
-                state.connected = mConnected[player];
-                return;
-            }
-        #endif
-
             XINPUT_STATE xstate;
             const DWORD result = XInputGetState(DWORD(player), &xstate);
             if (result == ERROR_DEVICE_NOT_CONNECTED)
@@ -1414,7 +1452,6 @@ public:
                 if (xcaps.Type == XINPUT_DEVTYPE_GAMEPAD)
                 {
                     static_assert(Capabilities::GAMEPAD == XINPUT_DEVSUBTYPE_GAMEPAD, "xinput.h mismatch");
-                #if (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
                     static_assert(XINPUT_DEVSUBTYPE_WHEEL == Capabilities::WHEEL, "xinput.h mismatch");
                     static_assert(XINPUT_DEVSUBTYPE_ARCADE_STICK == Capabilities::ARCADE_STICK, "xinput.h mismatch");
                 #ifndef __MINGW32__
@@ -1426,19 +1463,13 @@ public:
                     static_assert(XINPUT_DEVSUBTYPE_DRUM_KIT == Capabilities::DRUM_KIT, "xinput.h mismatch");
                     static_assert(XINPUT_DEVSUBTYPE_GUITAR_BASS == Capabilities::GUITAR_BASS, "xinput.h mismatch");
                     static_assert(XINPUT_DEVSUBTYPE_ARCADE_PAD == Capabilities::ARCADE_PAD, "xinput.h mismatch");
-                #endif
 
                     caps.gamepadType = Capabilities::Type(xcaps.SubType);
                 }
 
                 // Hard-coded VID/PID
                 caps.vid = 0x045E;
-            #if (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
                 caps.pid = (xcaps.Flags & XINPUT_CAPS_WIRELESS) ? 0x0719 : 0;
-            #else
-                caps.pid = 0;
-            #endif
-
                 return;
             }
         }
@@ -1463,14 +1494,6 @@ public:
         UNREFERENCED_PARAMETER(leftTrigger);
         UNREFERENCED_PARAMETER(rightTrigger);
 
-    #if (_WIN32_WINNT < _WIN32_WINNT_WIN8)
-        mLeftMotor[player] = leftMotor;
-        mRightMotor[player] = rightMotor;
-
-        if (mSuspended)
-            return mConnected[player];
-    #endif
-
         XINPUT_VIBRATION xvibration;
         xvibration.wLeftMotorSpeed = WORD(leftMotor * 0xFFFF);
         xvibration.wRightMotorSpeed = WORD(rightMotor * 0xFFFF);
@@ -1494,24 +1517,8 @@ public:
     {
     #if (_WIN32_WINNT >= _WIN32_WINNT_WIN10)
         // XInput focus is handled automatically on Windows 10
-    #elif (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
-        XInputEnable(FALSE);
     #else
-        // For XInput 9.1.0, we have to emulate the behavior of XInputEnable( FALSE )
-        if (!mSuspended)
-        {
-            for (size_t j = 0; j < XUSER_MAX_COUNT; ++j)
-            {
-                if (mConnected[j])
-                {
-                    XINPUT_VIBRATION xvibration;
-                    xvibration.wLeftMotorSpeed = xvibration.wRightMotorSpeed = 0;
-                    std::ignore = XInputSetState(DWORD(j), &xvibration);
-                }
-            }
-
-            mSuspended = true;
-        }
+        XInputEnable(FALSE);
     #endif
     }
 
@@ -1519,31 +1526,8 @@ public:
     {
     #if (_WIN32_WINNT >= _WIN32_WINNT_WIN10)
         // XInput focus is handled automatically on Windows 10
-    #elif (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
-        XInputEnable(TRUE);
     #else
-        // For XInput 9.1.0, we have to emulate the behavior of XInputEnable( TRUE )
-        if (mSuspended)
-        {
-            const ULONGLONG time = GetTickCount64();
-
-            for (int j = 0; j < XUSER_MAX_COUNT; ++j)
-            {
-                if (mConnected[j])
-                {
-                    XINPUT_VIBRATION xvibration;
-                    xvibration.wLeftMotorSpeed = WORD(mLeftMotor[j] * 0xFFFF);
-                    xvibration.wRightMotorSpeed = WORD(mRightMotor[j] * 0xFFFF);
-                    const DWORD result = XInputSetState(DWORD(j), &xvibration);
-                    if (result == ERROR_DEVICE_NOT_CONNECTED)
-                    {
-                        ClearSlot(j, time);
-                    }
-                }
-            }
-
-            mSuspended = false;
-        }
+        XInputEnable(TRUE);
     #endif
     }
 
@@ -1554,13 +1538,6 @@ public:
 private:
     bool        mConnected[XUSER_MAX_COUNT];
     ULONGLONG   mLastReadTime[XUSER_MAX_COUNT];
-
-#if (_WIN32_WINNT < _WIN32_WINNT_WIN8)
-    // Variables for emulating XInputEnable on XInput 9.1.0
-    float       mLeftMotor[XUSER_MAX_COUNT];
-    float       mRightMotor[XUSER_MAX_COUNT];
-    bool        mSuspended;
-#endif
 
     bool ThrottleRetry(int player, ULONGLONG time)
     {
@@ -1596,9 +1573,6 @@ private:
     {
         mConnected[player] = false;
         mLastReadTime[player] = time;
-    #if (_WIN32_WINNT < _WIN32_WINNT_WIN8)
-        mLeftMotor[player] = mRightMotor[player] = 0.f;
-    #endif
     }
 
     int GetMostRecent()
@@ -1635,8 +1609,7 @@ GamePad::Impl* GamePad::Impl::s_gamePad = nullptr;
 // Public constructor.
 GamePad::GamePad() noexcept(false)
     : pImpl(std::make_unique<Impl>(this))
-{
-}
+{}
 
 
 // Move constructor.
