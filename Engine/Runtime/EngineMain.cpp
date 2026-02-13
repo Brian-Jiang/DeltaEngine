@@ -244,6 +244,8 @@ void EngineMain::Draw()
 
     // Gather draw calls from all renderers in the world.
 
+
+
     m_world->GatherDrawCalls(context);
 
     dxRenderManager->RenderFrame();

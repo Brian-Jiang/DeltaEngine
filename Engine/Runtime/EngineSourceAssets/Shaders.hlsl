@@ -45,10 +45,9 @@ ConstantBuffer<Object> ObjectCB : register(b1);
 
 struct Light
 {
-    float3 position;
-    float3 color;
+    float4 position;
+    float4 color;
     float intensity;
-
 };
 
 ConstantBuffer<Light> LightCB : register(b2);
@@ -88,17 +87,17 @@ float4 PSMain(PSInput input) : SV_TARGET
     
     
     float4 textureColor = g_texture.Sample(g_sampler, input.uv);
-    textureColor = float4(1.0, 1.0, 1.0, 1.0);
+    textureColor = float4(1.0, 0.0, 1.0, 1.0);
     
-    float3 left = normalize(LightCB.position - input.worldPosition);
-    float3 right = reflect(-left, input.normal);
+    float3 left = normalize(LightCB.position.xyz - input.worldPosition);
+    float3 right = reflect(left, input.normal);
     float3 view = normalize(CameraCB.position.xyz - input.worldPosition);
-    float lightDistance = length(LightCB.position - input.worldPosition);
+    float lightDistance = length(LightCB.position.xyz - input.worldPosition);
     float falloff = 1.0f / (lightDistance * lightDistance);
-    falloff = 1.0f;
+    //falloff = 1.0f;
     //return float4(left, 1.0f);
     
-    float4 lightColor = float4(LightCB.color, 1.0f);
+    float4 lightColor = LightCB.color;
     float4 ambient = float4(0.1f, 0.1f, 0.1f, 1.0f) * input.color * textureColor;
     float4 diffuse = max(dot(input.normal, left), 0.0) * LightCB.intensity * falloff * input.color * textureColor * lightColor;
     float4 specular = pow(max(dot(right, view), 0.0), 32) * LightCB.intensity * falloff * lightColor;

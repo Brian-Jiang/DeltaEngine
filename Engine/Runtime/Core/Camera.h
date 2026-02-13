@@ -21,8 +21,8 @@ public:
     void Start(DirectX::XMFLOAT3 forward, DirectX::XMFLOAT3 up, float fov, float aspectRatio, float nearPlane, float farPlane);
     void Tick();
 
-    DirectX::XMMATRIX GetViewMatrix() const { return m_viewMatrix; }
-    DirectX::XMMATRIX GetProjectionMatrix() const { return m_projectionMatrix; }
+    //inline DirectX::XMMATRIX GetViewMatrix() const { return m_viewMatrix; }
+    //inline DirectX::XMMATRIX GetProjectionMatrix() const { return m_projectionMatrix; }
 
 protected:
     void OnTransformChanged() override;
