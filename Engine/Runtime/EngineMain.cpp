@@ -117,9 +117,7 @@ void EngineMain::Initialize()
 
 void EngineMain::InitSDL()
 {
-    int rendererFlags, windowFlags;
-    rendererFlags = SDL_RENDERER_ACCELERATED;
-    windowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
+    SDL_WindowFlags windowFlags = SDL_WINDOW_RESIZABLE;
 
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
@@ -135,7 +133,7 @@ void EngineMain::InitSDL()
         gameState = GameState::Error;
     }
 
-    auto hwnd = static_cast<HWND>(SDL_GetProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr));
+    auto hwnd = static_cast<HWND>(SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr));
     dxRenderManager = std::make_shared<DXRenderManager>(hwnd, SCREEN_WIDTH, SCREEN_HEIGHT);
 }
 
@@ -173,46 +171,34 @@ void EngineMain::HandleInput()
     SDL_Event event;
     while (SDL_PollEvent(&event))
     {
-        auto key = event.key.keysym.sym;
         switch (event.type)
         {
             case SDL_EVENT_WINDOW_RESIZED:
+                // todo camera not update
                 dxRenderManager->Resize(event.window.data1, event.window.data2);
                 break;
             case SDL_EVENT_KEY_DOWN:
-                if (key == SDLK_F11)
-                {
+            {
+                SDL_Keycode key = event.key.key;
+                if (key == SDLK_F11) {
                     dxRenderManager->SetFullscreen(!dxRenderManager->IsFullscreen());
-                }
-                else if (key == SDLK_v)
-                {
+                } else if (key == SDLK_V) {
                     dxRenderManager->ToggleVSync(!dxRenderManager->IsVSync());
-                }
-                else if (key == SDLK_DOWN || key == SDLK_s)
-                {
+                } else if (key == SDLK_DOWN || key == SDLK_S) {
                     m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() - XMFLOAT3(0, 0, 1.f));
-                }
-                else if (key == SDLK_UP || key == SDLK_w)
-                {
+                } else if (key == SDLK_UP || key == SDLK_W) {
                     m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() + XMFLOAT3(0, 0, 1.f));
-                }
-                else if (key == SDLK_LEFT || key == SDLK_a)
-                {
+                } else if (key == SDLK_LEFT || key == SDLK_A) {
                     m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() - XMFLOAT3(1.f, 0, 0));
-                }
-                else if (key == SDLK_RIGHT || key == SDLK_d)
-                {
+                } else if (key == SDLK_RIGHT || key == SDLK_D) {
                     m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() + XMFLOAT3(1.f, 0, 0));
-                }
-                else if (key == SDLK_q)
-                {
+                } else if (key == SDLK_Q) {
                     m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() - XMFLOAT3(0, 1.f, 0));
-                }
-                else if (key == SDLK_e)
-                {
+                } else if (key == SDLK_E) {
                     m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() + XMFLOAT3(0, 1.f, 0));
                 }
                 break;
+            }
             case SDL_EVENT_QUIT:
                 gameState = GameState::EXIT;
                 break;
