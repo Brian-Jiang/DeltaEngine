@@ -32,20 +32,20 @@ static const char IOStreamAlphabetString[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 /* Fixture */
 
-static void IOStreamSetUp(void *arg)
+static void SDLCALL IOStreamSetUp(void **arg)
 {
     size_t fileLen;
-    FILE *handle;
+    SDL_IOStream *handle;
     size_t writtenLen;
-    int result;
+    bool result;
 
     /* Clean up from previous runs (if any); ignore errors */
-    (void)remove(IOStreamReadTestFilename);
-    (void)remove(IOStreamWriteTestFilename);
-    (void)remove(IOStreamAlphabetFilename);
+    SDL_RemovePath(IOStreamReadTestFilename);
+    SDL_RemovePath(IOStreamWriteTestFilename);
+    SDL_RemovePath(IOStreamAlphabetFilename);
 
     /* Create a test file */
-    handle = fopen(IOStreamReadTestFilename, "w");
+    handle = SDL_IOFromFile(IOStreamReadTestFilename, "w");
     SDLTest_AssertCheck(handle != NULL, "Verify creation of file '%s' returned non NULL handle", IOStreamReadTestFilename);
     if (handle == NULL) {
         return;
@@ -53,13 +53,13 @@ static void IOStreamSetUp(void *arg)
 
     /* Write some known text into it */
     fileLen = SDL_strlen(IOStreamHelloWorldTestString);
-    writtenLen = fwrite(IOStreamHelloWorldTestString, 1, fileLen, handle);
+    writtenLen = SDL_WriteIO(handle, IOStreamHelloWorldTestString, fileLen);
     SDLTest_AssertCheck(fileLen == writtenLen, "Verify number of written bytes, expected %i, got %i", (int)fileLen, (int)writtenLen);
-    result = fclose(handle);
-    SDLTest_AssertCheck(result == 0, "Verify result from fclose, expected 0, got %i", result);
+    result = SDL_CloseIO(handle);
+    SDLTest_AssertCheck(result == true, "Verify result from SDL_CloseIO, expected true, got %s", result ? "true" : "false");
 
     /* Create a second test file */
-    handle = fopen(IOStreamAlphabetFilename, "w");
+    handle = SDL_IOFromFile(IOStreamAlphabetFilename, "w");
     SDLTest_AssertCheck(handle != NULL, "Verify creation of file '%s' returned non NULL handle", IOStreamAlphabetFilename);
     if (handle == NULL) {
         return;
@@ -67,15 +67,15 @@ static void IOStreamSetUp(void *arg)
 
     /* Write alphabet text into it */
     fileLen = SDL_strlen(IOStreamAlphabetString);
-    writtenLen = fwrite(IOStreamAlphabetString, 1, fileLen, handle);
+    writtenLen = SDL_WriteIO(handle, IOStreamAlphabetString, fileLen);
     SDLTest_AssertCheck(fileLen == writtenLen, "Verify number of written bytes, expected %i, got %i", (int)fileLen, (int)writtenLen);
-    result = fclose(handle);
-    SDLTest_AssertCheck(result == 0, "Verify result from fclose, expected 0, got %i", result);
+    result = SDL_CloseIO(handle);
+    SDLTest_AssertCheck(result == true, "Verify result from SDL_CloseIO, expected true, got %s", result ? "true" : "false");
 
     SDLTest_AssertPass("Creation of test file completed");
 }
 
-static void IOStreamTearDown(void *arg)
+static void SDLCALL IOStreamTearDown(void *arg)
 {
     int result;
 
@@ -95,7 +95,7 @@ static void IOStreamTearDown(void *arg)
  * \sa SDL_SeekIO
  * \sa SDL_ReadIO
  */
-static void testGenericIOStreamValidations(SDL_IOStream *rw, SDL_bool write)
+static void testGenericIOStreamValidations(SDL_IOStream *rw, bool write)
 {
     char buf[sizeof(IOStreamHelloWorldTestString)];
     Sint64 i;
@@ -190,7 +190,111 @@ static void testGenericIOStreamValidations(SDL_IOStream *rw, SDL_bool write)
         (int)i);
 
     /* Invalid whence seek */
-    i = SDL_SeekIO(rw, 0, 999);
+    i = SDL_SeekIO(rw, 0, (SDL_IOWhence)999);
+    SDLTest_AssertPass("Call to SDL_SeekIO(...,0,invalid_whence) succeeded");
+    SDLTest_AssertCheck(
+        i == (Sint64)(-1),
+        "Verify seek with SDL_SeekIO (invalid_whence); expected: -1, got %i",
+        (int)i);
+}
+
+/**
+ * Makes sure parameters work properly. Local helper function.
+ *
+ * \sa SDL_SeekIO
+ * \sa SDL_ReadIO
+ */
+static void testEmptyIOStreamValidations(SDL_IOStream *rw, bool write)
+{
+    char con[sizeof(IOStreamHelloWorldTestString)];
+    char buf[sizeof(IOStreamHelloWorldTestString)];
+    Sint64 i;
+    size_t s;
+    int seekPos = SDLTest_RandomIntegerInRange(4, 8);
+
+    /* Clear control & buffer */
+    SDL_zeroa(con);
+    SDL_zeroa(buf);
+
+    /* Set to start. */
+    i = SDL_SeekIO(rw, 0, SDL_IO_SEEK_SET);
+    SDLTest_AssertPass("Call to SDL_SeekIO succeeded");
+    SDLTest_AssertCheck(i == (Sint64)0, "Verify seek to 0 with SDL_SeekIO (SDL_IO_SEEK_SET), expected 0, got %" SDL_PRIs64, i);
+
+    /* Test write */
+    s = SDL_WriteIO(rw, IOStreamHelloWorldTestString, sizeof(IOStreamHelloWorldTestString) - 1);
+    SDLTest_AssertPass("Call to SDL_WriteIO succeeded");
+    if (write) {
+        SDLTest_AssertCheck(s == 0, "Verify result of writing with SDL_WriteIO, expected 0, got %i", (int)s);
+    } else {
+        SDLTest_AssertCheck(s == 0, "Verify result of writing with SDL_WriteIO, expected 0, got %i", (int)s);
+    }
+
+    /* Test seek to random position */
+    i = SDL_SeekIO(rw, seekPos, SDL_IO_SEEK_SET);
+    SDLTest_AssertPass("Call to SDL_SeekIO succeeded");
+    SDLTest_AssertCheck(i == 0, "Verify seek to %i with SDL_SeekIO (SDL_IO_SEEK_SET), expected 0, got %" SDL_PRIs64, seekPos, i);
+
+    /* Test seek back to start */
+    i = SDL_SeekIO(rw, 0, SDL_IO_SEEK_SET);
+    SDLTest_AssertPass("Call to SDL_SeekIO succeeded");
+    SDLTest_AssertCheck(i == (Sint64)0, "Verify seek to 0 with SDL_SeekIO (SDL_IO_SEEK_SET), expected 0, got %" SDL_PRIs64, i);
+
+    /* Test read */
+    s = SDL_ReadIO(rw, buf, sizeof(IOStreamHelloWorldTestString) - 1);
+    SDLTest_AssertPass("Call to SDL_ReadIO succeeded");
+    SDLTest_AssertCheck(s == 0, "Verify result from SDL_ReadIO, expected 0, got %i", (int)s);
+    SDLTest_AssertCheck(
+        SDL_memcmp(buf, con, sizeof(IOStreamHelloWorldTestString) - 1) == 0,
+        "Verify that buffer remains unchanged, expected '%s', got '%s'", con, buf);
+
+    /* Test seek back to start */
+    i = SDL_SeekIO(rw, 0, SDL_IO_SEEK_SET);
+    SDLTest_AssertPass("Call to SDL_SeekIO succeeded");
+    SDLTest_AssertCheck(i == (Sint64)0, "Verify seek to 0 with SDL_SeekIO (SDL_IO_SEEK_SET), expected 0, got %" SDL_PRIs64, i);
+
+    /* Test printf */
+    s = SDL_IOprintf(rw, "%s", IOStreamHelloWorldTestString);
+    SDLTest_AssertPass("Call to SDL_IOprintf succeeded");
+    if (write) {
+        SDLTest_AssertCheck(s == 0, "Verify result of writing with SDL_IOprintf, expected 0, got %i", (int)s);
+    } else {
+        SDLTest_AssertCheck(s == 0, "Verify result of writing with SDL_WriteIO, expected 0, got %i", (int)s);
+    }
+
+    /* Test seek back to start */
+    i = SDL_SeekIO(rw, 0, SDL_IO_SEEK_SET);
+    SDLTest_AssertPass("Call to SDL_SeekIO succeeded");
+    SDLTest_AssertCheck(i == (Sint64)0, "Verify seek to 0 with SDL_SeekIO (SDL_IO_SEEK_SET), expected 0, got %" SDL_PRIs64, i);
+
+    /* Test read */
+    s = SDL_ReadIO(rw, buf, sizeof(IOStreamHelloWorldTestString) - 1);
+    SDLTest_AssertPass("Call to SDL_ReadIO succeeded");
+    SDLTest_AssertCheck(
+        s == 0,
+        "Verify result from SDL_ReadIO, expected 0, got %i",
+        (int)s);
+    SDLTest_AssertCheck(
+        SDL_memcmp(buf, con, sizeof(IOStreamHelloWorldTestString) - 1) == 0,
+        "Verify that buffer remains unchanged, expected '%s', got '%s'", con, buf);
+
+    /* More seek tests. */
+    i = SDL_SeekIO(rw, -4, SDL_IO_SEEK_CUR);
+    SDLTest_AssertPass("Call to SDL_SeekIO(...,-4,SDL_IO_SEEK_CUR) succeeded");
+    SDLTest_AssertCheck(
+        i == 0,
+        "Verify seek to -4 with SDL_SeekIO (SDL_IO_SEEK_CUR), expected 0, got %i",
+        (int)i);
+
+    i = SDL_SeekIO(rw, -1, SDL_IO_SEEK_END);
+    SDLTest_AssertPass("Call to SDL_SeekIO(...,-1,SDL_IO_SEEK_END) succeeded");
+    SDLTest_AssertCheck(
+        i == 0,
+        "Verify seek to -1 with SDL_SeekIO (SDL_IO_SEEK_END), expected 0, got %i",
+        (int)i);
+
+    /* Invalid whence seek */
+    i = SDL_SeekIO(rw, 0, (SDL_IOWhence)999);
     SDLTest_AssertPass("Call to SDL_SeekIO(...,0,invalid_whence) succeeded");
     SDLTest_AssertCheck(
         i == (Sint64)(-1),
@@ -204,7 +308,7 @@ static void testGenericIOStreamValidations(SDL_IOStream *rw, SDL_bool write)
  * \sa SDL_IOFromFile
  *
  */
-static int iostrm_testParamNegative(void *arg)
+static int SDLCALL iostrm_testParamNegative(void *arg)
 {
     SDL_IOStream *iostrm;
 
@@ -233,14 +337,6 @@ static int iostrm_testParamNegative(void *arg)
     SDLTest_AssertPass("Call to SDL_IOFromMem(NULL, 10) succeeded");
     SDLTest_AssertCheck(iostrm == NULL, "Verify SDL_IOFromMem(NULL, 10) returns NULL");
 
-    iostrm = SDL_IOFromMem((void *)IOStreamAlphabetString, 0);
-    SDLTest_AssertPass("Call to SDL_IOFromMem(data, 0) succeeded");
-    SDLTest_AssertCheck(iostrm == NULL, "Verify SDL_IOFromMem(data, 0) returns NULL");
-
-    iostrm = SDL_IOFromConstMem((const void *)IOStreamAlphabetString, 0);
-    SDLTest_AssertPass("Call to SDL_IOFromConstMem(data, 0) succeeded");
-    SDLTest_AssertCheck(iostrm == NULL, "Verify SDL_IOFromConstMem(data, 0) returns NULL");
-
     return TEST_COMPLETED;
 }
 
@@ -250,7 +346,7 @@ static int iostrm_testParamNegative(void *arg)
  * \sa SDL_IOFromMem
  * \sa SDL_CloseIO
  */
-static int iostrm_testMem(void *arg)
+static int SDLCALL iostrm_testMem(void *arg)
 {
     char mem[sizeof(IOStreamHelloWorldTestString)];
     SDL_IOStream *rw;
@@ -270,12 +366,12 @@ static int iostrm_testMem(void *arg)
     }
 
     /* Run generic tests */
-    testGenericIOStreamValidations(rw, SDL_TRUE);
+    testGenericIOStreamValidations(rw, true);
 
     /* Close */
     result = SDL_CloseIO(rw);
     SDLTest_AssertPass("Call to SDL_CloseIO() succeeded");
-    SDLTest_AssertCheck(result == 0, "Verify result value is 0; got: %d", result);
+    SDLTest_AssertCheck(result == true, "Verify result value is true; got: %d", result);
 
     return TEST_COMPLETED;
 }
@@ -286,7 +382,7 @@ static int iostrm_testMem(void *arg)
  * \sa SDL_IOFromConstMem
  * \sa SDL_CloseIO
  */
-static int iostrm_testConstMem(void *arg)
+static int SDLCALL iostrm_testConstMem(void *arg)
 {
     SDL_IOStream *rw;
     int result;
@@ -302,12 +398,126 @@ static int iostrm_testConstMem(void *arg)
     }
 
     /* Run generic tests */
-    testGenericIOStreamValidations(rw, SDL_FALSE);
+    testGenericIOStreamValidations(rw, false);
 
     /* Close handle */
     result = SDL_CloseIO(rw);
     SDLTest_AssertPass("Call to SDL_CloseIO() succeeded");
-    SDLTest_AssertCheck(result == 0, "Verify result value is 0; got: %d", result);
+    SDLTest_AssertCheck(result == true, "Verify result value is true; got: %d", result);
+
+    return TEST_COMPLETED;
+}
+
+/**
+ * Tests opening nothing.
+ * 
+ * \sa SDL_IOFromMem
+ * \sa SDL_CloseIO
+ */
+static int SDLCALL iostrm_testMemEmpty(void *arg)
+{
+    char mem[sizeof(IOStreamHelloWorldTestString)];
+    SDL_IOStream *rw;
+    int result;
+
+    /* Clear buffer */
+    SDL_zeroa(mem);
+
+    /* Open empty */
+    rw = SDL_IOFromMem(mem, 0);
+    SDLTest_AssertPass("Call to SDL_IOFromMem() succeeded");
+    SDLTest_AssertCheck(rw != NULL, "Verify opening memory with SDL_IOFromMem does not return NULL");
+
+    /* Bail out if NULL */
+    if (rw == NULL) {
+        return TEST_ABORTED;
+    }
+
+    /* Run generic tests */
+    testEmptyIOStreamValidations(rw, true);
+
+    /* Close */
+    result = SDL_CloseIO(rw);
+    SDLTest_AssertPass("Call to SDL_CloseIO() succeeded");
+    SDLTest_AssertCheck(result == true, "Verify result value is true; got: %d", result);
+
+    return TEST_COMPLETED;
+}
+
+/**
+ * Tests opening nothing.
+ * 
+ * \sa SDL_IOFromMem
+ * \sa SDL_CloseIO
+ */
+static int SDLCALL iostrm_testConstMemEmpty(void *arg)
+{
+    SDL_IOStream *rw;
+    int result;
+
+    /* Open handle */
+    rw = SDL_IOFromConstMem(IOStreamHelloWorldCompString, 0);
+    SDLTest_AssertPass("Call to SDL_IOFromConstMem() succeeded");
+    SDLTest_AssertCheck(rw != NULL, "Verify opening memory with SDL_IOFromConstMem does not return NULL");
+
+    /* Bail out if NULL */
+    if (rw == NULL) {
+        return TEST_ABORTED;
+    }
+
+    /* Run generic tests */
+    testEmptyIOStreamValidations(rw, false);
+
+    /* Close handle */
+    result = SDL_CloseIO(rw);
+    SDLTest_AssertPass("Call to SDL_CloseIO() succeeded");
+    SDLTest_AssertCheck(result == true, "Verify result value is true; got: %d", result);
+
+    return TEST_COMPLETED;
+}
+
+static int free_call_count;
+void SDLCALL test_free(void* mem) {
+    free_call_count++;
+    SDL_free(mem);
+}
+
+static int SDLCALL iostrm_testMemWithFree(void *arg)
+{
+    void *mem;
+    SDL_IOStream *rw;
+    int result;
+
+    /* Allocate some memory */
+    mem = SDL_malloc(sizeof(IOStreamHelloWorldCompString) - 1);
+    if (mem == NULL) {
+        return TEST_ABORTED;
+    }
+
+    /* Open handle */
+    rw = SDL_IOFromMem(mem, sizeof(IOStreamHelloWorldCompString) - 1);
+    SDLTest_AssertPass("Call to SDL_IOFromMem() succeeded");
+    SDLTest_AssertCheck(rw != NULL, "Verify opening memory with SDL_IOFromMem does not return NULL");
+
+    /* Bail out if NULL */
+    if (rw == NULL) {
+        return TEST_ABORTED;
+    }
+
+    /* Set the free function */
+    free_call_count = 0;
+    result = SDL_SetPointerProperty(SDL_GetIOProperties(rw), SDL_PROP_IOSTREAM_MEMORY_FREE_FUNC_POINTER, test_free);
+    SDLTest_AssertPass("Call to SDL_SetPointerProperty() succeeded");
+    SDLTest_AssertCheck(result == true, "Verify result value is true; got %d", result);
+
+    /* Run generic tests */
+    testGenericIOStreamValidations(rw, true);
+
+    /* Close handle */
+    result = SDL_CloseIO(rw);
+    SDLTest_AssertPass("Call to SDL_CloseIO() succeeded");
+    SDLTest_AssertCheck(result == true, "Verify result value is true; got: %d", result);
+    SDLTest_AssertCheck(free_call_count == 1, "Verify the custom free function was called once; call count: %d", free_call_count);
 
     return TEST_COMPLETED;
 }
@@ -318,7 +528,7 @@ static int iostrm_testConstMem(void *arg)
  * \sa SDL_IOFromDynamicMem
  * \sa SDL_CloseIO
  */
-static int iostrm_testDynamicMem(void *arg)
+static int SDLCALL iostrm_testDynamicMem(void *arg)
 {
     SDL_IOStream *rw;
     SDL_PropertiesID props;
@@ -340,23 +550,23 @@ static int iostrm_testDynamicMem(void *arg)
     SDL_SetNumberProperty(props, SDL_PROP_IOSTREAM_DYNAMIC_CHUNKSIZE_NUMBER, 1);
 
     /* Run generic tests */
-    testGenericIOStreamValidations(rw, SDL_TRUE);
+    testGenericIOStreamValidations(rw, true);
 
     /* Get the dynamic memory and verify it */
-    mem = (char *)SDL_GetProperty(props, SDL_PROP_IOSTREAM_DYNAMIC_MEMORY_POINTER, NULL);
-    SDLTest_AssertPass("Call to SDL_GetProperty(props, SDL_PROP_IOSTREAM_DYNAMIC_MEMORY_POINTER, NULL) succeeded");
+    mem = (char *)SDL_GetPointerProperty(props, SDL_PROP_IOSTREAM_DYNAMIC_MEMORY_POINTER, NULL);
+    SDLTest_AssertPass("Call to SDL_GetPointerProperty(props, SDL_PROP_IOSTREAM_DYNAMIC_MEMORY_POINTER, NULL) succeeded");
     SDLTest_AssertCheck(mem != NULL, "Verify memory value is not NULL");
     mem[SDL_GetIOSize(rw)] = '\0';
     SDLTest_AssertCheck(SDL_strcmp(mem, IOStreamHelloWorldTestString) == 0, "Verify memory value is correct");
 
     /* Take the memory and free it ourselves */
-    SDL_SetProperty(props, SDL_PROP_IOSTREAM_DYNAMIC_MEMORY_POINTER, NULL);
+    SDL_SetPointerProperty(props, SDL_PROP_IOSTREAM_DYNAMIC_MEMORY_POINTER, NULL);
     SDL_free(mem);
 
     /* Close */
     result = SDL_CloseIO(rw);
     SDLTest_AssertPass("Call to SDL_CloseIO() succeeded");
-    SDLTest_AssertCheck(result == 0, "Verify result value is 0; got: %d", result);
+    SDLTest_AssertCheck(result == true, "Verify result value is true; got: %d", result);
 
     return TEST_COMPLETED;
 }
@@ -367,7 +577,7 @@ static int iostrm_testDynamicMem(void *arg)
  * \sa SDL_IOFromFile
  * \sa SDL_CloseIO
  */
-static int iostrm_testFileRead(void *arg)
+static int SDLCALL iostrm_testFileRead(void *arg)
 {
     SDL_IOStream *rw;
     int result;
@@ -383,12 +593,12 @@ static int iostrm_testFileRead(void *arg)
     }
 
     /* Run generic tests */
-    testGenericIOStreamValidations(rw, SDL_FALSE);
+    testGenericIOStreamValidations(rw, false);
 
     /* Close handle */
     result = SDL_CloseIO(rw);
     SDLTest_AssertPass("Call to SDL_CloseIO() succeeded");
-    SDLTest_AssertCheck(result == 0, "Verify result value is 0; got: %d", result);
+    SDLTest_AssertCheck(result == true, "Verify result value is true; got: %d", result);
 
     return TEST_COMPLETED;
 }
@@ -399,15 +609,15 @@ static int iostrm_testFileRead(void *arg)
  * \sa SDL_IOFromFile
  * \sa SDL_CloseIO
  */
-static int iostrm_testFileWrite(void *arg)
+static int SDLCALL iostrm_testFileWrite(void *arg)
 {
     SDL_IOStream *rw;
     int result;
 
     /* Write test. */
-    rw = SDL_IOFromFile(IOStreamWriteTestFilename, "w+");
-    SDLTest_AssertPass("Call to SDL_IOFromFile(..,\"w+\") succeeded");
-    SDLTest_AssertCheck(rw != NULL, "Verify opening file with SDL_IOFromFile in write mode does not return NULL");
+    rw = SDL_IOFromFile(IOStreamWriteTestFilename, "w+x");
+    SDLTest_AssertPass("Call to SDL_IOFromFile(..,\"w+x\") succeeded");
+    SDLTest_AssertCheck(rw != NULL, "Verify opening file with SDL_IOFromFile in exclusive write mode does not return NULL");
 
     /* Bail out if NULL */
     if (rw == NULL) {
@@ -415,12 +625,17 @@ static int iostrm_testFileWrite(void *arg)
     }
 
     /* Run generic tests */
-    testGenericIOStreamValidations(rw, SDL_TRUE);
+    testGenericIOStreamValidations(rw, true);
 
     /* Close handle */
     result = SDL_CloseIO(rw);
     SDLTest_AssertPass("Call to SDL_CloseIO() succeeded");
-    SDLTest_AssertCheck(result == 0, "Verify result value is 0; got: %d", result);
+    SDLTest_AssertCheck(result == true, "Verify result value is true; got: %d", result);
+
+    /* Exclusively opening an existing file should fail. */
+    rw = SDL_IOFromFile(IOStreamWriteTestFilename, "wx");
+    SDLTest_AssertPass("Call to SDL_IOFromFile(..,\"wx\") succeeded");
+    SDLTest_AssertCheck(rw == NULL, "Verify opening existing file with SDL_IOFromFile in exclusive write mode returns NULL");
 
     return TEST_COMPLETED;
 }
@@ -431,13 +646,13 @@ static int iostrm_testFileWrite(void *arg)
  * \sa SDL_OpenIO
  * \sa SDL_CloseIO
  */
-static int iostrm_testAllocFree(void *arg)
+static int SDLCALL iostrm_testAllocFree(void *arg)
 {
     /* Allocate context */
     SDL_IOStreamInterface iface;
     SDL_IOStream *rw;
 
-    SDL_zero(iface);
+    SDL_INIT_INTERFACE(&iface);
     rw = SDL_OpenIO(&iface, NULL);
     SDLTest_AssertPass("Call to SDL_OpenIO() succeeded");
     SDLTest_AssertCheck(rw != NULL, "Validate result from SDL_OpenIO() is not NULL");
@@ -458,7 +673,7 @@ static int iostrm_testAllocFree(void *arg)
  * \sa SDL_IOFromMem
  * \sa SDL_IOFromFile
  */
-static int iostrm_testCompareRWFromMemWithRWFromFile(void *arg)
+static int SDLCALL iostrm_testCompareRWFromMemWithRWFromFile(void *arg)
 {
     int slen = 26;
     char buffer_file[27];
@@ -486,7 +701,7 @@ static int iostrm_testCompareRWFromMemWithRWFromFile(void *arg)
         SDLTest_AssertPass("Call to SDL_SeekIO(mem,SEEK_END)");
         result = SDL_CloseIO(iostrm_mem);
         SDLTest_AssertPass("Call to SDL_CloseIO(mem)");
-        SDLTest_AssertCheck(result == 0, "Verify result value is 0; got: %d", result);
+        SDLTest_AssertCheck(result == true, "Verify result value is true; got: %d", result);
 
         /* Read/see from file */
         iostrm_file = SDL_IOFromFile(IOStreamAlphabetFilename, "r");
@@ -497,7 +712,7 @@ static int iostrm_testCompareRWFromMemWithRWFromFile(void *arg)
         SDLTest_AssertPass("Call to SDL_SeekIO(file,SEEK_END)");
         result = SDL_CloseIO(iostrm_file);
         SDLTest_AssertPass("Call to SDL_CloseIO(file)");
-        SDLTest_AssertCheck(result == 0, "Verify result value is 0; got: %d", result);
+        SDLTest_AssertCheck(result == true, "Verify result value is true; got: %d", result);
 
         /* Compare */
         SDLTest_AssertCheck(rv_mem == rv_file, "Verify returned read blocks matches for mem and file reads; got: rv_mem=%d rv_file=%d", (int)rv_mem, (int)rv_file);
@@ -523,7 +738,7 @@ static int iostrm_testCompareRWFromMemWithRWFromFile(void *arg)
  * \sa SDL_ReadU16BE
  * \sa SDL_WriteU16BE
  */
-static int iostrm_testFileWriteReadEndian(void *arg)
+static int SDLCALL iostrm_testFileWriteReadEndian(void *arg)
 {
     SDL_IOStream *rw;
     Sint64 result;
@@ -540,7 +755,7 @@ static int iostrm_testFileWriteReadEndian(void *arg)
     Uint16 LE16test;
     Uint32 LE32test;
     Uint64 LE64test;
-    SDL_bool bresult;
+    bool bresult;
     int cresult;
 
     for (mode = 0; mode < 3; mode++) {
@@ -590,22 +805,22 @@ static int iostrm_testFileWriteReadEndian(void *arg)
         /* Write test data */
         bresult = SDL_WriteU16BE(rw, BE16value);
         SDLTest_AssertPass("Call to SDL_WriteU16BE()");
-        SDLTest_AssertCheck(bresult == SDL_TRUE, "Validate object written, expected: SDL_TRUE, got: SDL_FALSE");
+        SDLTest_AssertCheck(bresult == true, "Validate object written, expected: true, got: false");
         bresult = SDL_WriteU32BE(rw, BE32value);
         SDLTest_AssertPass("Call to SDL_WriteU32BE()");
-        SDLTest_AssertCheck(bresult == SDL_TRUE, "Validate object written, expected: SDL_TRUE, got: SDL_FALSE");
+        SDLTest_AssertCheck(bresult == true, "Validate object written, expected: true, got: false");
         bresult = SDL_WriteU64BE(rw, BE64value);
         SDLTest_AssertPass("Call to SDL_WriteU64BE()");
-        SDLTest_AssertCheck(bresult == SDL_TRUE, "Validate object written, expected: SDL_TRUE, got: SDL_FALSE");
+        SDLTest_AssertCheck(bresult == true, "Validate object written, expected: true, got: false");
         bresult = SDL_WriteU16LE(rw, LE16value);
         SDLTest_AssertPass("Call to SDL_WriteU16LE()");
-        SDLTest_AssertCheck(bresult == SDL_TRUE, "Validate object written, expected: SDL_TRUE, got: SDL_FALSE");
+        SDLTest_AssertCheck(bresult == true, "Validate object written, expected: true, got: false");
         bresult = SDL_WriteU32LE(rw, LE32value);
         SDLTest_AssertPass("Call to SDL_WriteU32LE()");
-        SDLTest_AssertCheck(bresult == SDL_TRUE, "Validate object written, expected: SDL_TRUE, got: SDL_FALSE");
+        SDLTest_AssertCheck(bresult == true, "Validate object written, expected: true, got: false");
         bresult = SDL_WriteU64LE(rw, LE64value);
         SDLTest_AssertPass("Call to SDL_WriteU64LE()");
-        SDLTest_AssertCheck(bresult == SDL_TRUE, "Validate object written, expected: SDL_TRUE, got: SDL_FALSE");
+        SDLTest_AssertCheck(bresult == true, "Validate object written, expected: true, got: false");
 
         /* Test seek to start */
         result = SDL_SeekIO(rw, 0, SDL_IO_SEEK_SET);
@@ -615,33 +830,33 @@ static int iostrm_testFileWriteReadEndian(void *arg)
         /* Read test data */
         bresult = SDL_ReadU16BE(rw, &BE16test);
         SDLTest_AssertPass("Call to SDL_ReadU16BE()");
-        SDLTest_AssertCheck(bresult == SDL_TRUE, "Validate object read, expected: SDL_TRUE, got: SDL_FALSE");
+        SDLTest_AssertCheck(bresult == true, "Validate object read, expected: true, got: false");
         SDLTest_AssertCheck(BE16test == BE16value, "Validate object read from SDL_ReadU16BE, expected: %hu, got: %hu", BE16value, BE16test);
         bresult = SDL_ReadU32BE(rw, &BE32test);
         SDLTest_AssertPass("Call to SDL_ReadU32BE()");
-        SDLTest_AssertCheck(bresult == SDL_TRUE, "Validate object read, expected: SDL_TRUE, got: SDL_FALSE");
+        SDLTest_AssertCheck(bresult == true, "Validate object read, expected: true, got: false");
         SDLTest_AssertCheck(BE32test == BE32value, "Validate object read from SDL_ReadU32BE, expected: %" SDL_PRIu32 ", got: %" SDL_PRIu32, BE32value, BE32test);
         bresult = SDL_ReadU64BE(rw, &BE64test);
         SDLTest_AssertPass("Call to SDL_ReadU64BE()");
-        SDLTest_AssertCheck(bresult == SDL_TRUE, "Validate object read, expected: SDL_TRUE, got: SDL_FALSE");
+        SDLTest_AssertCheck(bresult == true, "Validate object read, expected: true, got: false");
         SDLTest_AssertCheck(BE64test == BE64value, "Validate object read from SDL_ReadU64BE, expected: %" SDL_PRIu64 ", got: %" SDL_PRIu64, BE64value, BE64test);
         bresult = SDL_ReadU16LE(rw, &LE16test);
         SDLTest_AssertPass("Call to SDL_ReadU16LE()");
-        SDLTest_AssertCheck(bresult == SDL_TRUE, "Validate object read, expected: SDL_TRUE, got: SDL_FALSE");
+        SDLTest_AssertCheck(bresult == true, "Validate object read, expected: true, got: false");
         SDLTest_AssertCheck(LE16test == LE16value, "Validate object read from SDL_ReadU16LE, expected: %hu, got: %hu", LE16value, LE16test);
         bresult = SDL_ReadU32LE(rw, &LE32test);
         SDLTest_AssertPass("Call to SDL_ReadU32LE()");
-        SDLTest_AssertCheck(bresult == SDL_TRUE, "Validate object read, expected: SDL_TRUE, got: SDL_FALSE");
+        SDLTest_AssertCheck(bresult == true, "Validate object read, expected: true, got: false");
         SDLTest_AssertCheck(LE32test == LE32value, "Validate object read from SDL_ReadU32LE, expected: %" SDL_PRIu32 ", got: %" SDL_PRIu32, LE32value, LE32test);
         bresult = SDL_ReadU64LE(rw, &LE64test);
         SDLTest_AssertPass("Call to SDL_ReadU64LE()");
-        SDLTest_AssertCheck(bresult == SDL_TRUE, "Validate object read, expected: SDL_TRUE, got: SDL_FALSE");
+        SDLTest_AssertCheck(bresult == true, "Validate object read, expected: true, got: false");
         SDLTest_AssertCheck(LE64test == LE64value, "Validate object read from SDL_ReadU64LE, expected: %" SDL_PRIu64 ", got: %" SDL_PRIu64, LE64value, LE64test);
 
         /* Close handle */
         cresult = SDL_CloseIO(rw);
         SDLTest_AssertPass("Call to SDL_CloseIO() succeeded");
-        SDLTest_AssertCheck(cresult == 0, "Verify result value is 0; got: %d", cresult);
+        SDLTest_AssertCheck(cresult == true, "Verify result value is true; got: %d", cresult);
     }
 
     return TEST_COMPLETED;
@@ -651,45 +866,57 @@ static int iostrm_testFileWriteReadEndian(void *arg)
 
 /* IOStream test cases */
 static const SDLTest_TestCaseReference iostrmTest1 = {
-    (SDLTest_TestCaseFp)iostrm_testParamNegative, "iostrm_testParamNegative", "Negative test for SDL_IOFromFile parameters", TEST_ENABLED
+    iostrm_testParamNegative, "iostrm_testParamNegative", "Negative test for SDL_IOFromFile parameters", TEST_ENABLED
 };
 
 static const SDLTest_TestCaseReference iostrmTest2 = {
-    (SDLTest_TestCaseFp)iostrm_testMem, "iostrm_testMem", "Tests opening from memory", TEST_ENABLED
+    iostrm_testMem, "iostrm_testMem", "Tests opening from memory", TEST_ENABLED
 };
 
 static const SDLTest_TestCaseReference iostrmTest3 = {
-    (SDLTest_TestCaseFp)iostrm_testConstMem, "iostrm_testConstMem", "Tests opening from (const) memory", TEST_ENABLED
+    iostrm_testConstMem, "iostrm_testConstMem", "Tests opening from (const) memory", TEST_ENABLED
 };
 
 static const SDLTest_TestCaseReference iostrmTest4 = {
-    (SDLTest_TestCaseFp)iostrm_testDynamicMem, "iostrm_testDynamicMem", "Tests opening dynamic memory", TEST_ENABLED
+    iostrm_testDynamicMem, "iostrm_testDynamicMem", "Tests opening dynamic memory", TEST_ENABLED
 };
 
 static const SDLTest_TestCaseReference iostrmTest5 = {
-    (SDLTest_TestCaseFp)iostrm_testFileRead, "iostrm_testFileRead", "Tests reading from a file", TEST_ENABLED
+    iostrm_testFileRead, "iostrm_testFileRead", "Tests reading from a file", TEST_ENABLED
 };
 
 static const SDLTest_TestCaseReference iostrmTest6 = {
-    (SDLTest_TestCaseFp)iostrm_testFileWrite, "iostrm_testFileWrite", "Test writing to a file", TEST_ENABLED
+    iostrm_testFileWrite, "iostrm_testFileWrite", "Test writing to a file", TEST_ENABLED
 };
 
 static const SDLTest_TestCaseReference iostrmTest7 = {
-    (SDLTest_TestCaseFp)iostrm_testAllocFree, "iostrm_testAllocFree", "Test alloc and free of RW context", TEST_ENABLED
+    iostrm_testAllocFree, "iostrm_testAllocFree", "Test alloc and free of RW context", TEST_ENABLED
 };
 
 static const SDLTest_TestCaseReference iostrmTest8 = {
-    (SDLTest_TestCaseFp)iostrm_testFileWriteReadEndian, "iostrm_testFileWriteReadEndian", "Test writing and reading via the Endian aware functions", TEST_ENABLED
+    iostrm_testFileWriteReadEndian, "iostrm_testFileWriteReadEndian", "Test writing and reading via the Endian aware functions", TEST_ENABLED
 };
 
 static const SDLTest_TestCaseReference iostrmTest9 = {
-    (SDLTest_TestCaseFp)iostrm_testCompareRWFromMemWithRWFromFile, "iostrm_testCompareRWFromMemWithRWFromFile", "Compare RWFromMem and RWFromFile IOStream for read and seek", TEST_ENABLED
+    iostrm_testCompareRWFromMemWithRWFromFile, "iostrm_testCompareRWFromMemWithRWFromFile", "Compare RWFromMem and RWFromFile IOStream for read and seek", TEST_ENABLED
+};
+
+static const SDLTest_TestCaseReference iostrmTest10 = {
+    iostrm_testMemWithFree, "iostrm_testMemWithFree", "Tests opening from memory with free on close", TEST_ENABLED
+};
+
+static const SDLTest_TestCaseReference iostrmTest11 = {
+    iostrm_testMemEmpty, "iostrm_testMemEmpty", "Tests opening empty memory stream", TEST_ENABLED
+};
+
+static const SDLTest_TestCaseReference iostrmTest12 = {
+    iostrm_testConstMemEmpty, "iostrm_testConstMemEmpty", "Tests opening empty (const) memory stream", TEST_ENABLED
 };
 
 /* Sequence of IOStream test cases */
 static const SDLTest_TestCaseReference *iostrmTests[] = {
     &iostrmTest1, &iostrmTest2, &iostrmTest3, &iostrmTest4, &iostrmTest5, &iostrmTest6,
-    &iostrmTest7, &iostrmTest8, &iostrmTest9, NULL
+    &iostrmTest7, &iostrmTest8, &iostrmTest9, &iostrmTest10, &iostrmTest11, &iostrmTest12, NULL
 };
 
 /* IOStream test suite (global) */

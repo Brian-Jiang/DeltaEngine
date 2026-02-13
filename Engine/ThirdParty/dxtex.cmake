@@ -1,3 +1,5 @@
+message(STATUS "====== Delta Engine ====== Configuring DirectXTex ======")
+
 set(BUILD_SHARED_LIBS ON)
 set(BUILD_TOOLS OFF)
 set(BUILD_SAMPLE OFF)

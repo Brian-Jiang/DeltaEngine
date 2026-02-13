@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2024 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -24,6 +24,7 @@
 #define SDL_x11video_h_
 
 #include "../SDL_sysvideo.h"
+#include "../../events/SDL_keymap_c.h"
 
 #include "../../core/linux/SDL_dbus.h"
 #include "../../core/linux/SDL_ime.h"
@@ -36,10 +37,11 @@
 #include "SDL_x11modes.h"
 #include "SDL_x11mouse.h"
 #include "SDL_x11opengl.h"
+#include "SDL_x11settings.h"
 #include "SDL_x11window.h"
 #include "SDL_x11vulkan.h"
 
-/* Private display data */
+// Private display data
 
 struct SDL_VideoData
 {
@@ -57,84 +59,141 @@ struct SDL_VideoData
     SDLX11_ClipboardData primary_selection;
 #ifdef SDL_VIDEO_DRIVER_X11_XFIXES
     SDL_Window *active_cursor_confined_window;
-#endif /* SDL_VIDEO_DRIVER_X11_XFIXES */
+#endif // SDL_VIDEO_DRIVER_X11_XFIXES
+    Window xsettings_window;
+    SDLX11_SettingsData xsettings_data;
 
-    /* This is true for ICCCM2.0-compliant window managers */
-    SDL_bool net_wm;
+    // This is true for ICCCM2.0-compliant window managers
+    bool net_wm;
 
-    /* Useful atoms */
-    Atom WM_PROTOCOLS;
-    Atom WM_DELETE_WINDOW;
-    Atom WM_TAKE_FOCUS;
-    Atom WM_NAME;
-    Atom _NET_WM_STATE;
-    Atom _NET_WM_STATE_HIDDEN;
-    Atom _NET_WM_STATE_FOCUSED;
-    Atom _NET_WM_STATE_MAXIMIZED_VERT;
-    Atom _NET_WM_STATE_MAXIMIZED_HORZ;
-    Atom _NET_WM_STATE_FULLSCREEN;
-    Atom _NET_WM_STATE_ABOVE;
-    Atom _NET_WM_STATE_SKIP_TASKBAR;
-    Atom _NET_WM_STATE_SKIP_PAGER;
-    Atom _NET_WM_ALLOWED_ACTIONS;
-    Atom _NET_WM_ACTION_FULLSCREEN;
-    Atom _NET_WM_NAME;
-    Atom _NET_WM_ICON_NAME;
-    Atom _NET_WM_ICON;
-    Atom _NET_WM_PING;
-    Atom _NET_WM_WINDOW_OPACITY;
-    Atom _NET_WM_USER_TIME;
-    Atom _NET_ACTIVE_WINDOW;
-    Atom _NET_FRAME_EXTENTS;
-    Atom _SDL_WAKEUP;
-    Atom UTF8_STRING;
-    Atom PRIMARY;
-    Atom XdndEnter;
-    Atom XdndPosition;
-    Atom XdndStatus;
-    Atom XdndTypeList;
-    Atom XdndActionCopy;
-    Atom XdndDrop;
-    Atom XdndFinished;
-    Atom XdndSelection;
-    Atom XKLAVIER_STATE;
+    // Useful atoms
+    struct {
+        Atom WM_PROTOCOLS;
+        Atom WM_DELETE_WINDOW;
+        Atom WM_TAKE_FOCUS;
+        Atom WM_NAME;
+        Atom WM_TRANSIENT_FOR;
+        Atom _NET_WM_STATE;
+        Atom _NET_WM_STATE_HIDDEN;
+        Atom _NET_WM_STATE_FOCUSED;
+        Atom _NET_WM_STATE_MAXIMIZED_VERT;
+        Atom _NET_WM_STATE_MAXIMIZED_HORZ;
+        Atom _NET_WM_STATE_FULLSCREEN;
+        Atom _NET_WM_STATE_ABOVE;
+        Atom _NET_WM_STATE_SKIP_TASKBAR;
+        Atom _NET_WM_STATE_SKIP_PAGER;
+        Atom _NET_WM_STATE_MODAL;
+        Atom _NET_WM_MOVERESIZE;
+        Atom _NET_WM_ALLOWED_ACTIONS;
+        Atom _NET_WM_ACTION_FULLSCREEN;
+        Atom _NET_WM_NAME;
+        Atom _NET_WM_ICON_NAME;
+        Atom _NET_WM_ICON;
+        Atom _NET_WM_PING;
+        Atom _NET_WM_SYNC_REQUEST;
+        Atom _NET_WM_SYNC_REQUEST_COUNTER;
+        Atom _NET_WM_WINDOW_OPACITY;
+        Atom _NET_WM_USER_TIME;
+        Atom _NET_ACTIVE_WINDOW;
+        Atom _NET_FRAME_EXTENTS;
+        Atom _SDL_WAKEUP;
+        Atom UTF8_STRING;
+        Atom PRIMARY;
+        Atom CLIPBOARD;
+        Atom INCR;
+        Atom SDL_SELECTION;
+        Atom TARGETS;
+        Atom SDL_FORMATS;
+        Atom RESOURCE_MANAGER;
+        Atom XdndAware;
+        Atom XdndEnter;
+        Atom XdndLeave;
+        Atom XdndPosition;
+        Atom XdndStatus;
+        Atom XdndTypeList;
+        Atom XdndActionCopy;
+        Atom XdndDrop;
+        Atom XdndFinished;
+        Atom XdndSelection;
+        Atom XKLAVIER_STATE;
 
-    SDL_Scancode key_layout[256];
-    SDL_bool selection_waiting;
+        // Pen atoms (these have names that don't map well to C symbols)
+        Atom pen_atom_device_product_id;
+        Atom pen_atom_abs_pressure;
+        Atom pen_atom_abs_tilt_x;
+        Atom pen_atom_abs_tilt_y;
+        Atom pen_atom_wacom_serial_ids;
+        Atom pen_atom_wacom_tool_type;
+    } atoms;
 
-    SDL_bool broken_pointer_grab; /* true if XGrabPointer seems unreliable. */
+    bool selection_waiting;
+    bool selection_incr_waiting;
+
+    bool broken_pointer_grab; // true if XGrabPointer seems unreliable.
 
     Uint64 last_mode_change_deadline;
 
-    SDL_bool global_mouse_changed;
+    bool global_mouse_changed;
     SDL_Point global_mouse_position;
     Uint32 global_mouse_buttons;
 
     SDL_XInput2DeviceInfo *mouse_device_info;
-    SDL_bool xinput_hierarchy_changed;
+    int xinput_master_pointer_device;
+    bool xinput_hierarchy_changed;
 
     int xrandr_event_base;
+    struct
+    {
+        bool xkb_enabled;
+        SDL_Scancode key_layout[256];
 
-#ifdef SDL_VIDEO_DRIVER_X11_HAS_XKBKEYCODETOKEYSYM
-    XkbDescPtr xkb;
+        union
+        {
+#ifdef SDL_VIDEO_DRIVER_X11_HAS_XKBLIB
+            struct
+            {
+                XkbDescPtr desc_ptr;
+                SDL_Keymap *keymaps[XkbNumKbdGroups];
+                unsigned long last_map_serial;
+                int event;
+                Uint32 current_group;
+            } xkb; // Modern XKB keyboard handling
 #endif
-    int xkb_event;
+            struct
+            {
+                KeySym *keysym_map;
+                int keysyms_per_key;
+                int min_keycode;
+                int max_keycode;
+            } core; // Legacy core keyboard handling
+        };
+        Uint32 pressed_modifiers;
+        Uint32 locked_modifiers;
+        SDL_Keymod sdl_pressed_modifiers;
+        SDL_Keymod sdl_physically_pressed_modifiers;
+        SDL_Keymod sdl_locked_modifiers;
 
-    KeyCode filter_code;
-    Time filter_time;
+        // Virtual modifiers looked up by name.
+        Uint32 alt_mask;
+        Uint32 gui_mask;
+        Uint32 level3_mask;
+        Uint32 level5_mask;
+        Uint32 numlock_mask;
+        Uint32 scrolllock_mask;
+    } keyboard;
 
 #ifdef SDL_VIDEO_VULKAN
-    /* Vulkan variables only valid if _this->vulkan_config.loader_handle is not NULL */
-    void *vulkan_xlib_xcb_library;
+    // Vulkan variables only valid if _this->vulkan_config.loader_handle is not NULL
+    SDL_SharedObject *vulkan_xlib_xcb_library;
     PFN_XGetXCBConnection vulkan_XGetXCBConnection;
 #endif
 
-    /* Used to interact with the on-screen keyboard */
-    SDL_bool is_steam_deck;
-    SDL_bool steam_keyboard_open;
+    // Used to interact with the on-screen keyboard
+    bool is_steam_deck;
 
+    bool is_xwayland;
 };
 
-extern SDL_bool X11_UseDirectColorVisuals(void);
+extern bool X11_UseDirectColorVisuals(void);
 
-#endif /* SDL_x11video_h_ */
+#endif // SDL_x11video_h_

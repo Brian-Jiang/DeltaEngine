@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2024 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -107,10 +107,10 @@ static const char *sldevaudioplayerstr   = "SLES Audio Player";
 
 #define SLES_DEV_AUDIO_RECORDER sldevaudiorecorderstr
 #define SLES_DEV_AUDIO_PLAYER   sldevaudioplayerstr
-static void OPENSLES_DetectDevices( int iscapture )
+static void OPENSLES_DetectDevices( int recording )
 {
     LOGI( "openSLES_DetectDevices()" );
-    if ( iscapture )
+    if ( recording )
             addfn( SLES_DEV_AUDIO_RECORDER );
     else
             addfn( SLES_DEV_AUDIO_PLAYER );
@@ -135,7 +135,7 @@ static void OPENSLES_DestroyEngine(void)
     }
 }
 
-static int OPENSLES_CreateEngine(void)
+static bool OPENSLES_CreateEngine(void)
 {
     const SLInterfaceID ids[1] = { SL_IID_VOLUME };
     const SLboolean req[1] = { SL_BOOLEAN_FALSE };
@@ -181,11 +181,11 @@ static int OPENSLES_CreateEngine(void)
         LOGE("RealizeOutputMix failed: %d", result);
         goto error;
     }
-    return 1;
+    return true;
 
 error:
     OPENSLES_DestroyEngine();
-    return 0;
+    return false;
 }
 
 // this callback handler is called every time a buffer finishes recording
@@ -194,7 +194,7 @@ static void bqRecorderCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
     struct SDL_PrivateAudioData *audiodata = (struct SDL_PrivateAudioData *)context;
 
     LOGV("SLES: Recording Callback");
-    SDL_PostSemaphore(audiodata->playsem);
+    SDL_SignalSemaphore(audiodata->playsem);
 }
 
 static void OPENSLES_DestroyPCMRecorder(SDL_AudioDevice *device)
@@ -223,18 +223,16 @@ static void OPENSLES_DestroyPCMRecorder(SDL_AudioDevice *device)
         audiodata->playsem = NULL;
     }
 
-    if (audiodata->mixbuff) {
-        SDL_free(audiodata->mixbuff);
-    }
+    SDL_free(audiodata->mixbuff);
 }
 
 // !!! FIXME: make this non-blocking!
-static void SDLCALL AndroidRequestPermissionBlockingCallback(void *userdata, const char *permission, SDL_bool granted)
+static void SDLCALL RequestAndroidPermissionBlockingCallback(void *userdata, const char *permission, bool granted)
 {
-    SDL_AtomicSet((SDL_AtomicInt *) userdata, granted ? 1 : -1);
+    SDL_SetAtomicInt((SDL_AtomicInt *) userdata, granted ? 1 : -1);
 }
 
-static int OPENSLES_CreatePCMRecorder(SDL_AudioDevice *device)
+static bool OPENSLES_CreatePCMRecorder(SDL_AudioDevice *device)
 {
     struct SDL_PrivateAudioData *audiodata = device->hidden;
     SLDataFormat_PCM format_pcm;
@@ -250,16 +248,16 @@ static int OPENSLES_CreatePCMRecorder(SDL_AudioDevice *device)
     // !!! FIXME: make this non-blocking!
     {
         SDL_AtomicInt permission_response;
-        SDL_AtomicSet(&permission_response, 0);
-        if (SDL_AndroidRequestPermission("android.permission.RECORD_AUDIO", AndroidRequestPermissionBlockingCallback, &permission_response) == -1) {
-            return -1;
+        SDL_SetAtomicInt(&permission_response, 0);
+        if (!SDL_RequestAndroidPermission("android.permission.RECORD_AUDIO", RequestAndroidPermissionBlockingCallback, &permission_response)) {
+            return false;
         }
 
-        while (SDL_AtomicGet(&permission_response) == 0) {
+        while (SDL_GetAtomicInt(&permission_response) == 0) {
             SDL_Delay(10);
         }
 
-        if (SDL_AtomicGet(&permission_response) < 0) {
+        if (SDL_GetAtomicInt(&permission_response) < 0) {
             LOGE("This app doesn't have RECORD_AUDIO permission");
             return SDL_SetError("This app doesn't have RECORD_AUDIO permission");
         }
@@ -273,7 +271,7 @@ static int OPENSLES_CreatePCMRecorder(SDL_AudioDevice *device)
     // Update the fragment size as size in bytes
     SDL_UpdatedAudioDeviceFormat(device);
 
-    LOGI("Try to open %u hz %u bit chan %u %s samples %u",
+    LOGI("Try to open %u hz %u bit %u channels %s samples %u",
          device->spec.freq, SDL_AUDIO_BITSIZE(device->spec.format),
          device->spec.channels, (device->spec.format & 0x1000) ? "BE" : "LE", device->sample_frames);
 
@@ -378,7 +376,7 @@ static int OPENSLES_CreatePCMRecorder(SDL_AudioDevice *device)
         goto failed;
     }
 
-    return 0;
+    return true;
 
 failed:
     return SDL_SetError("Open device failed!");
@@ -390,7 +388,7 @@ static void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
     struct SDL_PrivateAudioData *audiodata = (struct SDL_PrivateAudioData *)context;
 
     LOGV("SLES: Playback Callback");
-    SDL_PostSemaphore(audiodata->playsem);
+    SDL_SignalSemaphore(audiodata->playsem);
 }
 
 static void OPENSLES_DestroyPCMPlayer(SDL_AudioDevice *device)
@@ -419,41 +417,44 @@ static void OPENSLES_DestroyPCMPlayer(SDL_AudioDevice *device)
         audiodata->playsem = NULL;
     }
 
-    if (audiodata->mixbuff) {
-        SDL_free(audiodata->mixbuff);
-    }
+    SDL_free(audiodata->mixbuff);
 }
 
-static int OPENSLES_CreatePCMPlayer(SDL_AudioDevice *device)
+static bool OPENSLES_CreatePCMPlayer(SDL_AudioDevice *device)
 {
-    /* If we want to add floating point audio support (requires API level 21)
-       it can be done as described here:
-        https://developer.android.com/ndk/guides/audio/opensl/android-extensions.html#floating-point
-    */
+    /* according to https://developer.android.com/ndk/guides/audio/opensl/opensl-for-android,
+       Android's OpenSL ES only supports Uint8 and _littleendian_ Sint16.
+       (and float32, with an extension we use, below.) */
     if (SDL_GetAndroidSDKVersion() >= 21) {
         const SDL_AudioFormat *closefmts = SDL_ClosestAudioFormats(device->spec.format);
         SDL_AudioFormat test_format;
         while ((test_format = *(closefmts++)) != 0) {
-            if (SDL_AUDIO_ISSIGNED(test_format)) {
+            switch (test_format) {
+            case SDL_AUDIO_U8:
+            case SDL_AUDIO_S16LE:
+            case SDL_AUDIO_F32:
                 break;
+            default:
+                continue;
             }
+            break;
         }
 
         if (!test_format) {
             // Didn't find a compatible format :
-            LOGI("No compatible audio format, using signed 16-bit audio");
-            test_format = SDL_AUDIO_S16;
+            LOGI("No compatible audio format, using signed 16-bit LE audio");
+            test_format = SDL_AUDIO_S16LE;
         }
         device->spec.format = test_format;
     } else {
         // Just go with signed 16-bit audio as it's the most compatible
-        device->spec.format = SDL_AUDIO_S16;
+        device->spec.format = SDL_AUDIO_S16LE;
     }
 
     // Update the fragment size as size in bytes
     SDL_UpdatedAudioDeviceFormat(device);
 
-    LOGI("Try to open %u hz %s %u bit chan %u %s samples %u",
+    LOGI("Try to open %u hz %s %u bit %u channels %s samples %u",
          device->spec.freq, SDL_AUDIO_ISFLOAT(device->spec.format) ? "float" : "pcm", SDL_AUDIO_BITSIZE(device->spec.format),
          device->spec.channels, (device->spec.format & 0x1000) ? "BE" : "LE", device->sample_frames);
 
@@ -609,27 +610,27 @@ static int OPENSLES_CreatePCMPlayer(SDL_AudioDevice *device)
         goto failed;
     }
 
-    return 0;
+    return true;
 
 failed:
-    return -1;
+    return false;
 }
 
-static int OPENSLES_OpenDevice(SDL_AudioDevice *device)
+static bool OPENSLES_OpenDevice(SDL_AudioDevice *device)
 {
     device->hidden = (struct SDL_PrivateAudioData *)SDL_calloc(1, sizeof(*device->hidden));
     if (!device->hidden) {
-        return -1;
+        return false;
     }
 
-    if (device->iscapture) {
-        LOGI("OPENSLES_OpenDevice() for capture");
+    if (device->recording) {
+        LOGI("OPENSLES_OpenDevice() for recording");
         return OPENSLES_CreatePCMRecorder(device);
     } else {
-        int ret;
-        LOGI("OPENSLES_OpenDevice() for playing");
+        bool ret;
+        LOGI("OPENSLES_OpenDevice() for playback");
         ret = OPENSLES_CreatePCMPlayer(device);
-        if (ret < 0) {
+        if (!ret) {
             // Another attempt to open the device with a lower frequency
             if (device->spec.freq > 48000) {
                 OPENSLES_DestroyPCMPlayer(device);
@@ -638,25 +639,31 @@ static int OPENSLES_OpenDevice(SDL_AudioDevice *device)
             }
         }
 
-        if (ret != 0) {
+        if (!ret) {
             return SDL_SetError("Open device failed!");
         }
     }
 
-    return 0;
+    return true;
 }
 
-static int OPENSLES_WaitDevice(SDL_AudioDevice *device)
+static bool OPENSLES_WaitDevice(SDL_AudioDevice *device)
 {
     struct SDL_PrivateAudioData *audiodata = device->hidden;
 
     LOGV("OPENSLES_WaitDevice()");
 
-    // Wait for an audio chunk to finish
-    return SDL_WaitSemaphore(audiodata->playsem);
+    while (!SDL_GetAtomicInt(&device->shutdown)) {
+        // this semaphore won't fire when the app is in the background (OPENSLES_PauseDevices was called).
+        if (SDL_WaitSemaphoreTimeout(audiodata->playsem, 100)) {
+            return true;  // semaphore was signaled, let's go!
+        }
+        // Still waiting on the semaphore (or the system), check other things then wait again.
+    }
+    return true;
 }
 
-static int OPENSLES_PlayDevice(SDL_AudioDevice *device, const Uint8 *buffer, int buflen)
+static bool OPENSLES_PlayDevice(SDL_AudioDevice *device, const Uint8 *buffer, int buflen)
 {
     struct SDL_PrivateAudioData *audiodata = device->hidden;
 
@@ -673,10 +680,10 @@ static int OPENSLES_PlayDevice(SDL_AudioDevice *device, const Uint8 *buffer, int
     // If Enqueue fails, callback won't be called.
     // Post the semaphore, not to run out of buffer
     if (SL_RESULT_SUCCESS != result) {
-        SDL_PostSemaphore(audiodata->playsem);
+        SDL_SignalSemaphore(audiodata->playsem);
     }
 
-    return 0;
+    return true;
 }
 
 ///           n   playn sem
@@ -699,7 +706,7 @@ static Uint8 *OPENSLES_GetDeviceBuf(SDL_AudioDevice *device, int *bufsize)
     return audiodata->pmixbuff[audiodata->next_buffer];
 }
 
-static int OPENSLES_CaptureFromDevice(SDL_AudioDevice *device, void *buffer, int buflen)
+static int OPENSLES_RecordDevice(SDL_AudioDevice *device, void *buffer, int buflen)
 {
     struct SDL_PrivateAudioData *audiodata = device->hidden;
 
@@ -726,8 +733,8 @@ static void OPENSLES_CloseDevice(SDL_AudioDevice *device)
 {
     // struct SDL_PrivateAudioData *audiodata = device->hidden;
     if (device->hidden) {
-        if (device->iscapture) {
-            LOGI("OPENSLES_CloseDevice() for capture");
+        if (device->recording) {
+            LOGI("OPENSLES_CloseDevice() for recording");
             OPENSLES_DestroyPCMRecorder(device);
         } else {
             LOGI("OPENSLES_CloseDevice() for playing");
@@ -739,12 +746,12 @@ static void OPENSLES_CloseDevice(SDL_AudioDevice *device)
     }
 }
 
-static SDL_bool OPENSLES_Init(SDL_AudioDriverImpl *impl)
+static bool OPENSLES_Init(SDL_AudioDriverImpl *impl)
 {
     LOGI("OPENSLES_Init() called");
 
     if (!OPENSLES_CreateEngine()) {
-        return SDL_FALSE;
+        return false;
     }
 
     LOGI("OPENSLES_Init() - set pointers");
@@ -756,24 +763,24 @@ static SDL_bool OPENSLES_Init(SDL_AudioDriverImpl *impl)
     impl->WaitDevice = OPENSLES_WaitDevice;
     impl->PlayDevice = OPENSLES_PlayDevice;
     impl->GetDeviceBuf = OPENSLES_GetDeviceBuf;
-    impl->WaitCaptureDevice = OPENSLES_WaitDevice;
-    impl->CaptureFromDevice = OPENSLES_CaptureFromDevice;
+    impl->WaitRecordingDevice = OPENSLES_WaitDevice;
+    impl->RecordDevice = OPENSLES_RecordDevice;
     impl->CloseDevice = OPENSLES_CloseDevice;
     impl->Deinitialize = OPENSLES_DestroyEngine;
 
     // and the capabilities
-    impl->HasCaptureSupport = SDL_TRUE;
-    impl->OnlyHasDefaultOutputDevice = SDL_TRUE;
-    impl->OnlyHasDefaultCaptureDevice = SDL_TRUE;
+    impl->HasRecordingSupport = true;
+    impl->OnlyHasDefaultPlaybackDevice = true;
+    impl->OnlyHasDefaultRecordingDevice = true;
 
     LOGI("OPENSLES_Init() - success");
 
     // this audio target is available.
-    return SDL_TRUE;
+    return true;
 }
 
 AudioBootStrap OPENSLES_bootstrap = {
-    "openslES", "OpenSL ES audio driver", OPENSLES_Init, SDL_FALSE
+    "openslES", "OpenSL ES audio driver", OPENSLES_Init, false, false
 };
 
 void OPENSLES_ResumeDevices(void)

@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2024 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -20,7 +20,7 @@
 */
 #include "SDL_internal.h"
 
-#if SDL_VIDEO_RENDER_D3D
+#ifdef SDL_VIDEO_RENDER_D3D
 
 #include "../../core/windows/SDL_windows.h"
 
@@ -28,7 +28,15 @@
 
 #include "SDL_shaders_d3d.h"
 
-/* The shaders here were compiled with compile_shaders.bat */
+// The shaders here were compiled with compile_shaders.bat
+
+#define g_ps20_main D3D9_PixelShader_Palette_Nearest
+#include "D3D9_PixelShader_Palette_Nearest.h"
+#undef g_ps20_main
+
+#define g_ps20_main D3D9_PixelShader_Palette_Linear
+#include "D3D9_PixelShader_Palette_Linear.h"
+#undef g_ps20_main
 
 #define g_ps20_main D3D9_PixelShader_YUV
 #include "D3D9_PixelShader_YUV.h"
@@ -36,6 +44,8 @@
 
 static const BYTE *D3D9_shaders[] = {
     NULL,
+    D3D9_PixelShader_Palette_Nearest,
+    D3D9_PixelShader_Palette_Linear,
     D3D9_PixelShader_YUV
 };
 SDL_COMPILE_TIME_ASSERT(D3D9_shaders, SDL_arraysize(D3D9_shaders) == NUM_SHADERS);
@@ -45,4 +55,4 @@ HRESULT D3D9_CreatePixelShader(IDirect3DDevice9 *d3dDevice, D3D9_Shader shader, 
     return IDirect3DDevice9_CreatePixelShader(d3dDevice, (const DWORD *)D3D9_shaders[shader], pixelShader);
 }
 
-#endif /* SDL_VIDEO_RENDER_D3D */
+#endif // SDL_VIDEO_RENDER_D3D

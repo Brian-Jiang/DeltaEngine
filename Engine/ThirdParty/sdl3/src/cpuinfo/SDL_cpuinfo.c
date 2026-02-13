@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2024 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -21,13 +21,19 @@
 
 #include "SDL_internal.h"
 
-#if defined(SDL_PLATFORM_WIN32) || defined(SDL_PLATFORM_WINRT) || defined(SDL_PLATFORM_GDK)
+#include "SDL_cpuinfo_c.h"
+
+#if defined(SDL_PLATFORM_WINDOWS)
 #include "../core/windows/SDL_windows.h"
 #endif
 
-/* CPU feature detection for SDL */
+// CPU feature detection for SDL
 
-#ifdef HAVE_SYSCONF
+#if defined(HAVE_GETPAGESIZE) && !defined(SDL_PLATFORM_WINDOWS)
+#define USE_GETPAGESIZE
+#endif
+
+#if defined(HAVE_SYSCONF) || defined(USE_GETPAGESIZE)
 #include <unistd.h>
 #endif
 #ifdef HAVE_SYSCTLBYNAME
@@ -35,14 +41,13 @@
 #include <sys/sysctl.h>
 #endif
 #if defined(SDL_PLATFORM_MACOS) && (defined(__ppc__) || defined(__ppc64__))
-#include <sys/sysctl.h> /* For AltiVec check */
-#elif defined(SDL_PLATFORM_OPENBSD) && defined(__powerpc__)
+#include <sys/sysctl.h> // For AltiVec check
+#elif defined(SDL_PLATFORM_OPENBSD) && defined(__powerpc__) && !defined(HAVE_ELF_AUX_INFO)
 #include <sys/types.h>
-#include <sys/sysctl.h> /* For AltiVec check */
+#include <sys/sysctl.h> // For AltiVec check
 #include <machine/cpu.h>
-#elif defined(SDL_PLATFORM_FREEBSD) && defined(__powerpc__)
+#elif defined(SDL_PLATFORM_FREEBSD) && defined(__powerpc__) && defined(HAVE_ELF_AUX_INFO)
 #include <machine/cpu.h>
-#include <sys/auxv.h>
 #elif defined(SDL_ALTIVEC_BLITTERS) && defined(HAVE_SETJMP)
 #include <signal.h>
 #include <setjmp.h>
@@ -55,7 +60,7 @@
 #include <fcntl.h>
 #include <elf.h>
 
-/*#include <asm/hwcap.h>*/
+// #include <asm/hwcap.h>
 #ifndef AT_HWCAP
 #define AT_HWCAP 16
 #endif
@@ -67,11 +72,11 @@
 #endif
 #endif
 
-#if defined(SDL_PLATFORM_ANDROID) && defined(__arm__) && !defined(HAVE_GETAUXVAL)
-#include <cpu-features.h>
+#if defined (SDL_PLATFORM_FREEBSD)
+#include <sys/param.h>
 #endif
 
-#if defined(HAVE_GETAUXVAL) || defined(HAVE_ELF_AUX_INFO)
+#if defined(HAVE_GETAUXVAL) || defined(HAVE_ELF_AUX_INFO) || defined(SDL_PLATFORM_ANDROID)
 #include <sys/auxv.h>
 #endif
 
@@ -79,7 +84,9 @@
 #include <kernel.h>
 #include <swis.h>
 #endif
-
+#ifdef SDL_PLATFORM_3DS
+#include <3ds.h>
+#endif
 #ifdef SDL_PLATFORM_PS2
 #include <kernel.h>
 #endif
@@ -107,7 +114,11 @@
 #define CPU_CFG2_LSX  (1 << 6)
 #define CPU_CFG2_LASX (1 << 7)
 
-#if defined(SDL_ALTIVEC_BLITTERS) && defined(HAVE_SETJMP) && !defined(SDL_PLATFORM_MACOS) && !defined(SDL_PLATFORM_OPENBSD) && !defined(SDL_PLATFORM_FREEBSD)
+#if !defined(SDL_CPUINFO_DISABLED) && \
+    !((defined(SDL_PLATFORM_MACOS) && (defined(__ppc__) || defined(__ppc64__))) || (defined(SDL_PLATFORM_OPENBSD) && defined(__powerpc__))) && \
+    !(defined(SDL_PLATFORM_FREEBSD) && defined(__powerpc__)) && \
+    !(defined(SDL_PLATFORM_LINUX) && defined(__powerpc__) && defined(HAVE_GETAUXVAL)) && \
+    defined(SDL_ALTIVEC_BLITTERS) && defined(HAVE_SETJMP)
 /* This is the brute force way of detecting instruction sets...
    the idea is borrowed from the libmpeg2 library - thanks!
  */
@@ -116,13 +127,13 @@ static void illegal_instruction(int sig)
 {
     longjmp(jmpbuf, 1);
 }
-#endif /* HAVE_SETJMP */
+#endif // HAVE_SETJMP
 
 static int CPU_haveCPUID(void)
 {
     int has_CPUID = 0;
 
-/* *INDENT-OFF* */ /* clang-format off */
+/* *INDENT-OFF* */ // clang-format off
 #ifndef SDL_PLATFORM_EMSCRIPTEN
 #if (defined(__GNUC__) || defined(__llvm__)) && defined(__i386__)
     __asm__ (
@@ -162,7 +173,7 @@ static int CPU_haveCPUID(void)
     :
     : "%rax", "%rcx"
     );
-#elif (defined(_MSC_VER) && defined(_M_IX86)) || defined(__WATCOMC__)
+#elif defined(_MSC_VER) && defined(_M_IX86)
     __asm {
         pushfd                      ; Get original EFLAGS
         pop     eax
@@ -210,8 +221,8 @@ done:
 "1:                            \n"
     );
 #endif
-#endif /* !SDL_PLATFORM_EMSCRIPTEN */
-/* *INDENT-ON* */ /* clang-format on */
+#endif // !SDL_PLATFORM_EMSCRIPTEN
+/* *INDENT-ON* */ // clang-format on
     return has_CPUID;
 }
 
@@ -235,7 +246,7 @@ done:
         "        popq %%rbx         \n"      \
         : "=a"(a), "=S"(b), "=c"(c), "=d"(d) \
         : "a"(func))
-#elif (defined(_MSC_VER) && defined(_M_IX86)) || defined(__WATCOMC__)
+#elif defined(_MSC_VER) && defined(_M_IX86)
 #define cpuid(func, a, b, c, d) \
     __asm { \
         __asm mov eax, func \
@@ -247,7 +258,7 @@ done:
         __asm mov d, edx                   \
     }
 #elif (defined(_MSC_VER) && defined(_M_X64))
-/* Use __cpuidex instead of __cpuid because ICL does not clear ecx register */
+// Use __cpuidex instead of __cpuid because ICL does not clear ecx register
 #define cpuid(func, a, b, c, d)      \
     {                                \
         int CPUInfo[4];              \
@@ -270,14 +281,14 @@ done:
 
 static int CPU_CPUIDFeatures[4];
 static int CPU_CPUIDMaxFunction = 0;
-static SDL_bool CPU_OSSavesYMM = SDL_FALSE;
-static SDL_bool CPU_OSSavesZMM = SDL_FALSE;
+static bool CPU_OSSavesYMM = false;
+static bool CPU_OSSavesZMM = false;
 
 static void CPU_calcCPUIDFeatures(void)
 {
-    static SDL_bool checked = SDL_FALSE;
+    static bool checked = false;
     if (!checked) {
-        checked = SDL_TRUE;
+        checked = true;
         if (CPU_haveCPUID()) {
             int a, b, c, d;
             cpuid(0, a, b, c, d);
@@ -289,17 +300,17 @@ static void CPU_calcCPUIDFeatures(void)
                 CPU_CPUIDFeatures[2] = c;
                 CPU_CPUIDFeatures[3] = d;
 
-                /* Check to make sure we can call xgetbv */
+                // Check to make sure we can call xgetbv
                 if (c & 0x08000000) {
-                    /* Call xgetbv to see if YMM (etc) register state is saved */
+                    // Call xgetbv to see if YMM (etc) register state is saved
 #if (defined(__GNUC__) || defined(__llvm__)) && (defined(__i386__) || defined(__x86_64__))
                     __asm__(".byte 0x0f, 0x01, 0xd0"
                             : "=a"(a)
                             : "c"(0)
                             : "%edx");
-#elif defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64)) && (_MSC_FULL_VER >= 160040219) /* VS2010 SP1 */
+#elif defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64)) && (_MSC_FULL_VER >= 160040219) // VS2010 SP1
                     a = (int)_xgetbv(0);
-#elif (defined(_MSC_VER) && defined(_M_IX86)) || defined(__WATCOMC__)
+#elif defined(_MSC_VER) && defined(_M_IX86)
                     __asm
                         {
                         xor ecx, ecx
@@ -307,8 +318,8 @@ static void CPU_calcCPUIDFeatures(void)
                         mov a, eax
                         }
 #endif
-                    CPU_OSSavesYMM = ((a & 6) == 6) ? SDL_TRUE : SDL_FALSE;
-                    CPU_OSSavesZMM = (CPU_OSSavesYMM && ((a & 0xe0) == 0xe0)) ? SDL_TRUE : SDL_FALSE;
+                    CPU_OSSavesYMM = ((a & 6) == 6) ? true : false;
+                    CPU_OSSavesZMM = (CPU_OSSavesYMM && ((a & 0xe0) == 0xe0)) ? true : false;
                 }
             }
         }
@@ -319,7 +330,12 @@ static int CPU_haveAltiVec(void)
 {
     volatile int altivec = 0;
 #ifndef SDL_CPUINFO_DISABLED
-#if (defined(SDL_PLATFORM_MACOS) && (defined(__ppc__) || defined(__ppc64__))) || (defined(SDL_PLATFORM_OPENBSD) && defined(__powerpc__))
+#if (defined(SDL_PLATFORM_FREEBSD) || defined(SDL_PLATFORM_OPENBSD)) && defined(__powerpc__) && defined(HAVE_ELF_AUX_INFO)
+    unsigned long cpufeatures = 0;
+    elf_aux_info(AT_HWCAP, &cpufeatures, sizeof(cpufeatures));
+    altivec = cpufeatures & PPC_FEATURE_HAS_ALTIVEC;
+    return altivec;
+#elif (defined(SDL_PLATFORM_MACOS) && (defined(__ppc__) || defined(__ppc64__))) || (defined(SDL_PLATFORM_OPENBSD) && defined(__powerpc__))
 #ifdef SDL_PLATFORM_OPENBSD
     int selectors[2] = { CTL_MACHDEP, CPU_ALTIVEC };
 #else
@@ -331,11 +347,8 @@ static int CPU_haveAltiVec(void)
     if (0 == error) {
         altivec = (hasVectorUnit != 0);
     }
-#elif defined(SDL_PLATFORM_FREEBSD) && defined(__powerpc__)
-    unsigned long cpufeatures = 0;
-    elf_aux_info(AT_HWCAP, &cpufeatures, sizeof(cpufeatures));
-    altivec = cpufeatures & PPC_FEATURE_HAS_ALTIVEC;
-    return altivec;
+#elif defined(SDL_PLATFORM_LINUX) && defined(__powerpc__) && defined(HAVE_GETAUXVAL)
+    altivec = getauxval(AT_HWCAP) & PPC_FEATURE_HAS_ALTIVEC;
 #elif defined(SDL_ALTIVEC_BLITTERS) && defined(HAVE_SETJMP)
     void (*handler)(int sig);
     handler = signal(SIGILL, illegal_instruction);
@@ -407,6 +420,12 @@ static int CPU_haveARMSIMD(void)
     return regs.r[0];
 }
 
+#elif defined(SDL_PLATFORM_NGAGE)
+static int CPU_haveARMSIMD(void)
+{
+    // The RM920T is based on the ARMv4T architecture and doesn't have SIMD.
+    return 0;
+}
 #else
 static int CPU_haveARMSIMD(void)
 {
@@ -441,52 +460,40 @@ static int CPU_haveNEON(void)
 /* The way you detect NEON is a privileged instruction on ARM, so you have
    query the OS kernel in a platform-specific way. :/ */
 #if defined(SDL_PLATFORM_WINDOWS) && (defined(_M_ARM) || defined(_M_ARM64))
-/* Visual Studio, for ARM, doesn't define __ARM_ARCH. Handle this first. */
-/* Seems to have been removed */
+// Visual Studio, for ARM, doesn't define __ARM_ARCH. Handle this first.
+// Seems to have been removed
 #ifndef PF_ARM_NEON_INSTRUCTIONS_AVAILABLE
 #define PF_ARM_NEON_INSTRUCTIONS_AVAILABLE 19
 #endif
-    /* All WinRT ARM devices are required to support NEON, but just in case. */
+    // All WinRT ARM devices are required to support NEON, but just in case.
     return IsProcessorFeaturePresent(PF_ARM_NEON_INSTRUCTIONS_AVAILABLE) != 0;
 #elif (defined(__ARM_ARCH) && (__ARM_ARCH >= 8)) || defined(__aarch64__)
-    return 1; /* ARMv8 always has non-optional NEON support. */
+    return 1; // ARMv8 always has non-optional NEON support.
 #elif defined(SDL_PLATFORM_VITA)
     return 1;
 #elif defined(SDL_PLATFORM_3DS)
     return 0;
+#elif defined(SDL_PLATFORM_NGAGE)
+    return 0; // The ARM920T is based on the ARMv4T architecture and doesn't have NEON.
 #elif defined(SDL_PLATFORM_APPLE) && defined(__ARM_ARCH) && (__ARM_ARCH >= 7)
-    /* (note that sysctlbyname("hw.optional.neon") doesn't work!) */
-    return 1; /* all Apple ARMv7 chips and later have NEON. */
+    // (note that sysctlbyname("hw.optional.neon") doesn't work!)
+    return 1; // all Apple ARMv7 chips and later have NEON.
 #elif defined(SDL_PLATFORM_APPLE)
-    return 0; /* assume anything else from Apple doesn't have NEON. */
+    return 0; // assume anything else from Apple doesn't have NEON.
 #elif !defined(__arm__)
-    return 0; /* not an ARM CPU at all. */
-#elif defined(SDL_PLATFORM_OPENBSD)
-    return 1; /* OpenBSD only supports ARMv7 CPUs that have NEON. */
+    return 0; // not an ARM CPU at all.
 #elif defined(HAVE_ELF_AUX_INFO)
     unsigned long hasneon = 0;
     if (elf_aux_info(AT_HWCAP, (void *)&hasneon, (int)sizeof(hasneon)) != 0) {
         return 0;
     }
     return (hasneon & HWCAP_NEON) == HWCAP_NEON;
-#elif (defined(SDL_PLATFORM_LINUX) || defined(SDL_PLATFORM_ANDROID)) && defined(HAVE_GETAUXVAL)
+#elif (defined(SDL_PLATFORM_LINUX) && defined(HAVE_GETAUXVAL)) || defined(SDL_PLATFORM_ANDROID)
     return (getauxval(AT_HWCAP) & HWCAP_NEON) == HWCAP_NEON;
 #elif defined(SDL_PLATFORM_LINUX)
     return readProcAuxvForNeon();
-#elif defined(SDL_PLATFORM_ANDROID)
-    /* Use NDK cpufeatures to read either /proc/self/auxv or /proc/cpuinfo */
-    {
-        AndroidCpuFamily cpu_family = android_getCpuFamily();
-        if (cpu_family == ANDROID_CPU_FAMILY_ARM) {
-            uint64_t cpu_features = android_getCpuFeatures();
-            if (cpu_features & ANDROID_CPU_ARM_FEATURE_NEON) {
-                return 1;
-            }
-        }
-        return 0;
-    }
 #elif defined(SDL_PLATFORM_RISCOS)
-    /* Use the VFPSupport_Features SWI to access the MVFR registers */
+    // Use the VFPSupport_Features SWI to access the MVFR registers
     {
         _kernel_swi_regs regs;
         regs.r[0] = 0;
@@ -497,6 +504,8 @@ static int CPU_haveNEON(void)
         }
         return 0;
     }
+#elif defined(SDL_PLATFORM_OPENBSD)
+    return 1; // OpenBSD only supports ARMv7 CPUs that have NEON.
 #elif defined(SDL_PLATFORM_EMSCRIPTEN)
     return 0;
 #else
@@ -584,7 +593,7 @@ static int CPU_haveAVX2(void)
         (void)a;
         (void)b;
         (void)c;
-        (void)d; /* compiler warnings... */
+        (void)d; // compiler warnings...
         cpuid(7, a, b, c, d);
         return b & 0x00000020;
     }
@@ -606,7 +615,7 @@ static int CPU_haveAVX512F(void)
         (void)a;
         (void)b;
         (void)c;
-        (void)d; /* compiler warnings... */
+        (void)d; // compiler warnings...
         cpuid(7, a, b, c, d);
         return b & 0x00010000;
     }
@@ -614,35 +623,44 @@ static int CPU_haveAVX512F(void)
 }
 #endif
 
-static int SDL_CPUCount = 0;
+static int SDL_NumLogicalCPUCores = 0;
 
-int SDL_GetCPUCount(void)
+int SDL_GetNumLogicalCPUCores(void)
 {
-    if (!SDL_CPUCount) {
+    if (!SDL_NumLogicalCPUCores) {
 #if defined(HAVE_SYSCONF) && defined(_SC_NPROCESSORS_ONLN)
-        if (SDL_CPUCount <= 0) {
-            SDL_CPUCount = (int)sysconf(_SC_NPROCESSORS_ONLN);
+        if (SDL_NumLogicalCPUCores <= 0) {
+            SDL_NumLogicalCPUCores = (int)sysconf(_SC_NPROCESSORS_ONLN);
         }
 #endif
 #ifdef HAVE_SYSCTLBYNAME
-        if (SDL_CPUCount <= 0) {
-            size_t size = sizeof(SDL_CPUCount);
-            sysctlbyname("hw.ncpu", &SDL_CPUCount, &size, NULL, 0);
+        if (SDL_NumLogicalCPUCores <= 0) {
+            size_t size = sizeof(SDL_NumLogicalCPUCores);
+            sysctlbyname("hw.ncpu", &SDL_NumLogicalCPUCores, &size, NULL, 0);
         }
 #endif
-#if defined(SDL_PLATFORM_WIN32) || defined(SDL_PLATFORM_GDK)
-        if (SDL_CPUCount <= 0) {
+#if defined(SDL_PLATFORM_WINDOWS)
+        if (SDL_NumLogicalCPUCores <= 0) {
             SYSTEM_INFO info;
             GetSystemInfo(&info);
-            SDL_CPUCount = info.dwNumberOfProcessors;
+            SDL_NumLogicalCPUCores = info.dwNumberOfProcessors;
         }
 #endif
-        /* There has to be at least 1, right? :) */
-        if (SDL_CPUCount <= 0) {
-            SDL_CPUCount = 1;
+#ifdef SDL_PLATFORM_3DS
+        if (SDL_NumLogicalCPUCores <= 0) {
+            bool isNew3DS = false;
+            APT_CheckNew3DS(&isNew3DS);
+            // 1 core is always dedicated to the OS
+            // Meaning that the New3DS has 3 available core, and the Old3DS only one.
+            SDL_NumLogicalCPUCores = isNew3DS ? 4 : 2;
+        }
+#endif
+        // There has to be at least 1, right? :)
+        if (SDL_NumLogicalCPUCores <= 0) {
+            SDL_NumLogicalCPUCores = 1;
         }
     }
-    return SDL_CPUCount;
+    return SDL_NumLogicalCPUCores;
 }
 
 #ifdef __e2k__
@@ -656,7 +674,7 @@ SDL_GetCPUType(void)
     return SDL_CPUType;
 }
 #else
-/* Oh, such a sweet sweet trick, just not very useful. :) */
+// Oh, such a sweet sweet trick, just not very useful. :)
 static const char *SDL_GetCPUType(void)
 {
     static char SDL_CPUType[13];
@@ -665,7 +683,7 @@ static const char *SDL_GetCPUType(void)
         int i = 0;
 
         CPU_calcCPUIDFeatures();
-        if (CPU_CPUIDMaxFunction > 0) { /* do we have CPUID at all? */
+        if (CPU_CPUIDMaxFunction > 0) { // do we have CPUID at all?
             int a, b, c, d;
             cpuid(0x00000000, a, b, c, d);
             (void)a;
@@ -723,7 +741,7 @@ static const char *SDL_GetCPUName(void)
         int a, b, c, d;
 
         CPU_calcCPUIDFeatures();
-        if (CPU_CPUIDMaxFunction > 0) { /* do we have CPUID at all? */
+        if (CPU_CPUIDMaxFunction > 0) { // do we have CPUID at all?
             cpuid(0x80000000, a, b, c, d);
             if (a >= 0x80000004) {
                 cpuid(0x80000002, a, b, c, d);
@@ -839,6 +857,7 @@ static const char *SDL_GetCPUName(void)
 int SDL_GetCPUCacheLineSize(void)
 {
     const char *cpuType = SDL_GetCPUType();
+    int cacheline_size = SDL_CACHELINE_SIZE; // initial guess
     int a, b, c, d;
     (void)a;
     (void)b;
@@ -846,14 +865,34 @@ int SDL_GetCPUCacheLineSize(void)
     (void)d;
     if (SDL_strcmp(cpuType, "GenuineIntel") == 0 || SDL_strcmp(cpuType, "CentaurHauls") == 0 || SDL_strcmp(cpuType, "  Shanghai  ") == 0) {
         cpuid(0x00000001, a, b, c, d);
-        return ((b >> 8) & 0xff) * 8;
+        cacheline_size = ((b >> 8) & 0xff) * 8;
     } else if (SDL_strcmp(cpuType, "AuthenticAMD") == 0 || SDL_strcmp(cpuType, "HygonGenuine") == 0) {
         cpuid(0x80000005, a, b, c, d);
-        return c & 0xff;
+        cacheline_size = c & 0xff;
     } else {
-        /* Just make a guess here... */
-        return SDL_CACHELINE_SIZE;
+#if defined(HAVE_SYSCONF) && defined(_SC_LEVEL1_DCACHE_LINESIZE)
+        if ((cacheline_size = (int)sysconf(_SC_LEVEL1_DCACHE_LINESIZE)) > 0) {
+            return cacheline_size;
+        } else {
+            cacheline_size = SDL_CACHELINE_SIZE;
+        }
+#endif
+#if defined(SDL_PLATFORM_LINUX)
+        {
+            FILE *f = fopen("/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size", "r");
+            if (f) {
+                int size;
+                if (fscanf(f, "%d", &size) == 1) {
+                    cacheline_size = size;
+                }
+                fclose(f);
+            }
+        }
+#elif defined(__FREEBSD__) && defined(CACHE_LINE_SIZE)
+        cacheline_size = CACHE_LINE_SIZE;
+#endif
     }
+    return cacheline_size;
 }
 
 #define SDL_CPUFEATURES_RESET_VALUE 0xFFFFFFFF
@@ -861,7 +900,7 @@ int SDL_GetCPUCacheLineSize(void)
 static Uint32 SDL_CPUFeatures = SDL_CPUFEATURES_RESET_VALUE;
 static Uint32 SDL_SIMDAlignment = 0xFFFFFFFF;
 
-static SDL_bool ref_string_equals(const char *ref, const char *test, const char *end_test) {
+static bool ref_string_equals(const char *ref, const char *test, const char *end_test) {
     size_t len_test = end_test - test;
     return SDL_strncmp(ref, test, len_test) == 0 && ref[len_test] == '\0' && (test[len_test] == '\0' || test[len_test] == ',');
 }
@@ -876,7 +915,7 @@ static Uint32 SDLCALL SDL_CPUFeatureMaskFromHint(void)
         for (const char *spot = hint, *next; *spot; spot = next) {
             const char *end = SDL_strchr(spot, ',');
             Uint32 spot_mask;
-            SDL_bool add_spot_mask = SDL_TRUE;
+            bool add_spot_mask = true;
             if (end) {
                 next = end + 1;
             } else {
@@ -885,10 +924,10 @@ static Uint32 SDLCALL SDL_CPUFeatureMaskFromHint(void)
                 next = end;
             }
             if (spot[0] == '+') {
-                add_spot_mask = SDL_TRUE;
+                add_spot_mask = true;
                 spot += 1;
             } else if (spot[0] == '-') {
-                add_spot_mask = SDL_FALSE;
+                add_spot_mask = false;
                 spot += 1;
             }
             if (ref_string_equals("all", spot, end)) {
@@ -922,7 +961,7 @@ static Uint32 SDLCALL SDL_CPUFeatureMaskFromHint(void)
             } else if (ref_string_equals("lasx", spot, end)) {
                 spot_mask = CPU_HAS_LASX;
             } else {
-                /* Ignore unknown/incorrect cpu feature(s) */
+                // Ignore unknown/incorrect cpu feature(s)
                 continue;
             }
             if (add_spot_mask) {
@@ -940,7 +979,7 @@ static Uint32 SDL_GetCPUFeatures(void)
     if (SDL_CPUFeatures == SDL_CPUFEATURES_RESET_VALUE) {
         CPU_calcCPUIDFeatures();
         SDL_CPUFeatures = 0;
-        SDL_SIMDAlignment = sizeof(void *); /* a good safe base value */
+        SDL_SIMDAlignment = sizeof(void *); // a good safe base value
         if (CPU_haveAltiVec()) {
             SDL_CPUFeatures |= CPU_HAS_ALTIVEC;
             SDL_SIMDAlignment = SDL_max(SDL_SIMDAlignment, 16);
@@ -1006,74 +1045,74 @@ void SDL_QuitCPUInfo(void) {
     SDL_CPUFeatures = SDL_CPUFEATURES_RESET_VALUE;
 }
 
-#define CPU_FEATURE_AVAILABLE(f) ((SDL_GetCPUFeatures() & (f)) ? SDL_TRUE : SDL_FALSE)
+#define CPU_FEATURE_AVAILABLE(f) ((SDL_GetCPUFeatures() & (f)) ? true : false)
 
-SDL_bool SDL_HasAltiVec(void)
+bool SDL_HasAltiVec(void)
 {
     return CPU_FEATURE_AVAILABLE(CPU_HAS_ALTIVEC);
 }
 
-SDL_bool SDL_HasMMX(void)
+bool SDL_HasMMX(void)
 {
     return CPU_FEATURE_AVAILABLE(CPU_HAS_MMX);
 }
 
-SDL_bool SDL_HasSSE(void)
+bool SDL_HasSSE(void)
 {
     return CPU_FEATURE_AVAILABLE(CPU_HAS_SSE);
 }
 
-SDL_bool SDL_HasSSE2(void)
+bool SDL_HasSSE2(void)
 {
     return CPU_FEATURE_AVAILABLE(CPU_HAS_SSE2);
 }
 
-SDL_bool SDL_HasSSE3(void)
+bool SDL_HasSSE3(void)
 {
     return CPU_FEATURE_AVAILABLE(CPU_HAS_SSE3);
 }
 
-SDL_bool SDL_HasSSE41(void)
+bool SDL_HasSSE41(void)
 {
     return CPU_FEATURE_AVAILABLE(CPU_HAS_SSE41);
 }
 
-SDL_bool SDL_HasSSE42(void)
+bool SDL_HasSSE42(void)
 {
     return CPU_FEATURE_AVAILABLE(CPU_HAS_SSE42);
 }
 
-SDL_bool SDL_HasAVX(void)
+bool SDL_HasAVX(void)
 {
     return CPU_FEATURE_AVAILABLE(CPU_HAS_AVX);
 }
 
-SDL_bool SDL_HasAVX2(void)
+bool SDL_HasAVX2(void)
 {
     return CPU_FEATURE_AVAILABLE(CPU_HAS_AVX2);
 }
 
-SDL_bool SDL_HasAVX512F(void)
+bool SDL_HasAVX512F(void)
 {
     return CPU_FEATURE_AVAILABLE(CPU_HAS_AVX512F);
 }
 
-SDL_bool SDL_HasARMSIMD(void)
+bool SDL_HasARMSIMD(void)
 {
     return CPU_FEATURE_AVAILABLE(CPU_HAS_ARM_SIMD);
 }
 
-SDL_bool SDL_HasNEON(void)
+bool SDL_HasNEON(void)
 {
     return CPU_FEATURE_AVAILABLE(CPU_HAS_NEON);
 }
 
-SDL_bool SDL_HasLSX(void)
+bool SDL_HasLSX(void)
 {
     return CPU_FEATURE_AVAILABLE(CPU_HAS_LSX);
 }
 
-SDL_bool SDL_HasLASX(void)
+bool SDL_HasLASX(void)
 {
     return CPU_FEATURE_AVAILABLE(CPU_HAS_LASX);
 }
@@ -1091,18 +1130,18 @@ int SDL_GetSystemRAM(void)
 #ifdef HAVE_SYSCTLBYNAME
         if (SDL_SystemRAM <= 0) {
 #ifdef HW_PHYSMEM64
-            /* (64-bit): NetBSD since 2003, OpenBSD */
+            // (64-bit): NetBSD since 2003, OpenBSD
             int mib[2] = { CTL_HW, HW_PHYSMEM64 };
 #elif defined(HW_REALMEM)
-            /* (64-bit): FreeBSD since 2005, DragonFly */
+            // (64-bit): FreeBSD since 2005, DragonFly
             int mib[2] = { CTL_HW, HW_REALMEM };
 #elif defined(HW_MEMSIZE)
-            /* (64-bit): Darwin */
+            // (64-bit): Darwin
             int mib[2] = { CTL_HW, HW_MEMSIZE };
 #else
-            /* (32-bit): very old BSD, might only report up to 2 GiB */
+            // (32-bit): very old BSD, might only report up to 2 GiB
             int mib[2] = { CTL_HW, HW_PHYSMEM };
-#endif /* HW_PHYSMEM64 */
+#endif // HW_PHYSMEM64
             Uint64 memsize = 0;
             size_t len = sizeof(memsize);
 
@@ -1111,7 +1150,7 @@ int SDL_GetSystemRAM(void)
             }
         }
 #endif
-#if defined(SDL_PLATFORM_WIN32) || defined(SDL_PLATFORM_GDK)
+#if defined(SDL_PLATFORM_WINDOWS)
         if (SDL_SystemRAM <= 0) {
             MEMORYSTATUSEX stat;
             stat.dwLength = sizeof(stat);
@@ -1129,6 +1168,12 @@ int SDL_GetSystemRAM(void)
             }
         }
 #endif
+#ifdef SDL_PLATFORM_3DS
+        if (SDL_SystemRAM <= 0) {
+            // The New3DS has 255MiB, the Old3DS 127MiB
+            SDL_SystemRAM = (int)(osGetMemRegionSize(MEMREGION_ALL) / (1024 * 1024));
+        }
+#endif
 #ifdef SDL_PLATFORM_VITA
         if (SDL_SystemRAM <= 0) {
             /* Vita has 512MiB on SoC, that's split into 256MiB(+109MiB in extended memory mode) for app
@@ -1138,7 +1183,7 @@ int SDL_GetSystemRAM(void)
 #endif
 #ifdef SDL_PLATFORM_PS2
         if (SDL_SystemRAM <= 0) {
-            /* PlayStation 2 has 32MiB however there are some special models with 64 and 128 */
+            // PlayStation 2 has 32MiB however there are some special models with 64 and 128
             SDL_SystemRAM = GetMemorySize();
         }
 #endif
@@ -1156,10 +1201,69 @@ int SDL_GetSystemRAM(void)
     return SDL_SystemRAM;
 }
 
-size_t SDL_SIMDGetAlignment(void)
+
+static int SDL_SystemPageSize = -1;
+
+int SDL_GetSystemPageSize(void)
+{
+    if (SDL_SystemPageSize == -1) {
+#ifdef SDL_PLATFORM_SYSTEM_PAGE_SIZE_PRIVATE  // consoles will define this in a platform-specific internal header.
+        SDL_SystemPageSize = SDL_PLATFORM_SYSTEM_PAGE_SIZE_PRIVATE;
+#endif
+#ifdef SDL_PLATFORM_3DS
+        SDL_SystemPageSize = 4096;  // It's an ARM11 CPU; I assume this is 4K.
+#endif
+#ifdef SDL_PLATFORM_VITA
+        SDL_SystemPageSize = 4096;  // It's an ARMv7 CPU; I assume this is 4K.
+#endif
+#ifdef SDL_PLATFORM_PS2
+        SDL_SystemPageSize = 4096;  // It's a MIPS R5900 CPU; I assume this is 4K.
+#endif
+#if defined(HAVE_SYSCONF) && (defined(_SC_PAGESIZE) || defined(_SC_PAGE_SIZE))
+        if (SDL_SystemPageSize <= 0) {
+            #if defined(_SC_PAGE_SIZE)
+            SDL_SystemPageSize = (int)sysconf(_SC_PAGE_SIZE);
+            #else
+            SDL_SystemPageSize = (int)sysconf(_SC_PAGESIZE);
+            #endif
+        }
+#endif
+#if defined(HAVE_SYSCTLBYNAME) && defined(HW_PAGESIZE)
+        if (SDL_SystemPageSize <= 0) {
+            // NetBSD, OpenBSD, FreeBSD, Darwin...everything agrees to use HW_PAGESIZE.
+            int mib[2] = { CTL_HW, HW_PAGESIZE };
+            int pagesize = 0;
+            size_t len = sizeof(pagesize);
+
+            if (sysctl(mib, 2, &pagesize, &len, NULL, 0) == 0) {
+                SDL_SystemPageSize = pagesize;
+            }
+        }
+#endif
+#ifdef USE_GETPAGESIZE
+        if (SDL_SystemPageSize <= 0) {
+            SDL_SystemPageSize = getpagesize();
+        }
+#endif
+#if defined(SDL_PLATFORM_WINDOWS)
+        if (SDL_SystemPageSize <= 0) {
+            SYSTEM_INFO sysinfo;
+            GetSystemInfo(&sysinfo);
+            SDL_SystemPageSize = (int) sysinfo.dwPageSize;
+        }
+#endif
+        if (SDL_SystemPageSize < 0) {  // in case we got a weird result somewhere, or no better information, force it to 0.
+            SDL_SystemPageSize = 0;  // unknown page size, sorry.
+        }
+    }
+    return SDL_SystemPageSize;
+}
+
+
+size_t SDL_GetSIMDAlignment(void)
 {
     if (SDL_SIMDAlignment == 0xFFFFFFFF) {
-        SDL_GetCPUFeatures(); /* make sure this has been calculated */
+        SDL_GetCPUFeatures(); // make sure this has been calculated
     }
     SDL_assert(SDL_SIMDAlignment != 0);
     return SDL_SIMDAlignment;

@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2024 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -20,7 +20,7 @@
 */
 #include "SDL_internal.h"
 
-#if defined(SDL_PLATFORM_WIN32) || defined(SDL_PLATFORM_WINRT) || defined(SDL_PLATFORM_GDK)
+#if defined(SDL_PLATFORM_WINDOWS)
 #include "../core/windows/SDL_windows.h"
 #endif
 
@@ -44,20 +44,8 @@
 #include <libkern/OSAtomic.h>
 #endif
 
-/* *INDENT-OFF* */ /* clang-format off */
-#if defined(__WATCOMC__) && defined(__386__)
-SDL_COMPILE_TIME_ASSERT(locksize, 4==sizeof(SDL_SpinLock));
-extern __inline int _SDL_xchg_watcom(volatile int *a, int v);
-#pragma aux _SDL_xchg_watcom = \
-  "lock xchg [ecx], eax" \
-  parm [ecx] [eax] \
-  value [eax] \
-  modify exact [eax];
-#endif /* __WATCOMC__ && __386__ */
-/* *INDENT-ON* */ /* clang-format on */
-
-/* This function is where all the magic happens... */
-SDL_bool SDL_TryLockSpinlock(SDL_SpinLock *lock)
+// This function is where all the magic happens...
+bool SDL_TryLockSpinlock(SDL_SpinLock *lock)
 {
 #if defined(HAVE_GCC_ATOMICS) || defined(HAVE_GCC_SYNC_LOCK_TEST_AND_SET)
     return __sync_lock_test_and_set(lock, 1) == 0;
@@ -68,9 +56,6 @@ SDL_bool SDL_TryLockSpinlock(SDL_SpinLock *lock)
 #elif defined(_MSC_VER)
     SDL_COMPILE_TIME_ASSERT(locksize, sizeof(*lock) == sizeof(long));
     return InterlockedExchange((long *)lock, 1) == 0;
-
-#elif defined(__WATCOMC__) && defined(__386__)
-    return _SDL_xchg_watcom(lock, 1) == 0;
 
 #elif defined(__GNUC__) && defined(__arm__) &&               \
     (defined(__ARM_ARCH_3__) || defined(__ARM_ARCH_3M__) ||  \
@@ -106,7 +91,7 @@ SDL_bool SDL_TryLockSpinlock(SDL_SpinLock *lock)
         : "cc", "memory");
     return result == 0;
 
-#elif defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
+#elif (defined(__GNUC__) || defined(__TINYC__)) && (defined(__i386__) || defined(__x86_64__))
     int result;
     __asm__ __volatile__(
         "lock ; xchgl %0, (%1)\n"
@@ -116,47 +101,47 @@ SDL_bool SDL_TryLockSpinlock(SDL_SpinLock *lock)
     return result == 0;
 
 #elif defined(SDL_PLATFORM_MACOS) || defined(SDL_PLATFORM_IOS) || defined(SDL_PLATFORM_TVOS)
-    /* Maybe used for PowerPC, but the Intel asm or gcc atomics are favored. */
+    // Maybe used for PowerPC, but the Intel asm or gcc atomics are favored.
     return OSAtomicCompareAndSwap32Barrier(0, 1, lock);
 
 #elif defined(SDL_PLATFORM_SOLARIS) && defined(_LP64)
-    /* Used for Solaris with non-gcc compilers. */
+    // Used for Solaris with non-gcc compilers.
     return ((int)atomic_cas_64((volatile uint64_t *)lock, 0, 1) == 0);
 
 #elif defined(SDL_PLATFORM_SOLARIS) && !defined(_LP64)
-    /* Used for Solaris with non-gcc compilers. */
+    // Used for Solaris with non-gcc compilers.
     return ((int)atomic_cas_32((volatile uint32_t *)lock, 0, 1) == 0);
 #elif defined(PS2)
     uint32_t oldintr;
-    SDL_bool res = SDL_FALSE;
-    // disable interuption
+    bool res = false;
+    // disable interruption
     oldintr = DIntr();
 
     if (*lock == 0) {
         *lock = 1;
-        res = SDL_TRUE;
+        res = true;
     }
-    // enable interuption
+    // enable interruption
     if (oldintr) {
         EIntr();
     }
     return res;
 #else
-    /* Terrible terrible damage */
+    // Terrible terrible damage
     static SDL_Mutex *_spinlock_mutex;
 
     if (!_spinlock_mutex) {
-        /* Race condition on first lock... */
+        // Race condition on first lock...
         _spinlock_mutex = SDL_CreateMutex();
     }
     SDL_LockMutex(_spinlock_mutex);
     if (*lock == 0) {
         *lock = 1;
         SDL_UnlockMutex(_spinlock_mutex);
-        return SDL_TRUE;
+        return true;
     } else {
         SDL_UnlockMutex(_spinlock_mutex);
-        return SDL_FALSE;
+        return false;
     }
 #endif
 }
@@ -164,13 +149,13 @@ SDL_bool SDL_TryLockSpinlock(SDL_SpinLock *lock)
 void SDL_LockSpinlock(SDL_SpinLock *lock)
 {
     int iterations = 0;
-    /* FIXME: Should we have an eventual timeout? */
+    // FIXME: Should we have an eventual timeout?
     while (!SDL_TryLockSpinlock(lock)) {
         if (iterations < 32) {
             iterations++;
             SDL_CPUPauseInstruction();
         } else {
-            /* !!! FIXME: this doesn't definitely give up the current timeslice, it does different things on various platforms. */
+            // !!! FIXME: this doesn't definitely give up the current timeslice, it does different things on various platforms.
             SDL_Delay(0);
         }
     }
@@ -188,12 +173,8 @@ void SDL_UnlockSpinlock(SDL_SpinLock *lock)
     _ReadWriteBarrier();
     *lock = 0;
 
-#elif defined(__WATCOMC__) && defined(__386__)
-    SDL_CompilerBarrier();
-    *lock = 0;
-
 #elif defined(SDL_PLATFORM_SOLARIS)
-    /* Used for Solaris when not using gcc. */
+    // Used for Solaris when not using gcc.
     *lock = 0;
     membar_producer();
 

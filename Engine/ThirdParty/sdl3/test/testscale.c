@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 1997-2024 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -68,8 +68,8 @@ static void Draw(DrawState *s)
             s->scale_direction = 1;
         }
     }
-    s->sprite_rect.x = (float)((viewport.w - s->sprite_rect.w) / 2);
-    s->sprite_rect.y = (float)((viewport.h - s->sprite_rect.h) / 2);
+    s->sprite_rect.x = (viewport.w - s->sprite_rect.w) / 2;
+    s->sprite_rect.y = (viewport.h - s->sprite_rect.h) / 2;
 
     SDL_RenderTexture(s->renderer, s->sprite, NULL, &s->sprite_rect);
 
@@ -104,6 +104,7 @@ int main(int argc, char *argv[])
     int i;
     int frames;
     Uint64 then, now;
+    SDL_ScaleMode scale_mode = SDL_SCALEMODE_PIXELART;
 
     /* Initialize test framework */
     state = SDLTest_CommonCreateState(argv, SDL_INIT_VIDEO);
@@ -111,12 +112,35 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    /* Enable standard application logging */
-    SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO);
-
     /* Parse commandline */
-    if (!SDLTest_CommonDefaultArgs(state, argc, argv)) {
-        return 1;
+    for (i = 1; i < argc;) {
+        int consumed;
+
+        consumed = SDLTest_CommonArg(state, i);
+        if (consumed == 0) {
+            consumed = -1;
+            if (SDL_strcasecmp(argv[i], "--nearest") == 0) {
+                scale_mode = SDL_SCALEMODE_NEAREST;
+                consumed = 1;
+            } else if (SDL_strcasecmp(argv[i], "--linear") == 0) {
+                scale_mode = SDL_SCALEMODE_LINEAR;
+                consumed = 1;
+            } else if (SDL_strcasecmp(argv[i], "--pixelart") == 0) {
+                scale_mode = SDL_SCALEMODE_PIXELART;
+                consumed = 1;
+            }
+        }
+        if (consumed < 0) {
+            static const char *options[] = {
+                "[--nearest]",
+                "[--linear]",
+                "[--pixelart]",
+                NULL
+            };
+            SDLTest_CommonLogUsage(state, argv[0], options);
+            return 1;
+        }
+        i += consumed;
     }
 
     if (!SDLTest_CommonInit(state)) {
@@ -126,18 +150,17 @@ int main(int argc, char *argv[])
     drawstates = SDL_stack_alloc(DrawState, state->num_windows);
     for (i = 0; i < state->num_windows; ++i) {
         DrawState *drawstate = &drawstates[i];
-        int w, h;
 
         drawstate->window = state->windows[i];
         drawstate->renderer = state->renderers[i];
-        drawstate->sprite = LoadTexture(drawstate->renderer, "icon.bmp", SDL_TRUE, NULL, NULL);
-        drawstate->background = LoadTexture(drawstate->renderer, "sample.bmp", SDL_FALSE, NULL, NULL);
+        drawstate->sprite = LoadTexture(drawstate->renderer, "icon.png", true);
+        drawstate->background = LoadTexture(drawstate->renderer, "sample.png", false);
         if (!drawstate->sprite || !drawstate->background) {
             quit(2);
         }
-        SDL_QueryTexture(drawstate->sprite, NULL, NULL, &w, &h);
-        drawstate->sprite_rect.w = (float)w;
-        drawstate->sprite_rect.h = (float)h;
+        SDL_GetTextureSize(drawstate->sprite, &drawstate->sprite_rect.w, &drawstate->sprite_rect.h);
+        SDL_SetTextureScaleMode(drawstate->background, scale_mode);
+        SDL_SetTextureScaleMode(drawstate->sprite, scale_mode);
         drawstate->scale_direction = 1;
     }
 
@@ -159,7 +182,7 @@ int main(int argc, char *argv[])
     now = SDL_GetTicks();
     if (now > then) {
         double fps = ((double)frames * 1000) / (now - then);
-        SDL_Log("%2.2f frames per second\n", fps);
+        SDL_Log("%2.2f frames per second", fps);
     }
 
     SDL_stack_free(drawstates);

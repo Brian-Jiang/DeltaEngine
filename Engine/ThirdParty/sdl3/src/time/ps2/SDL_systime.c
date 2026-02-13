@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2024 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -24,31 +24,32 @@
 
 #include "../SDL_time_c.h"
 
-/* PS2 epoch is Jan 1 2000 JST (UTC +9) */
+// PS2 epoch is Jan 1 2000 JST (UTC +9)
 #define UNIX_EPOCH_OFFSET_SEC 946717200
 
-/* TODO: Implement this... */
-void SDL_GetSystemTimeLocalePreferences(SDL_DATE_FORMAT *df, SDL_TIME_FORMAT *tf)
+// TODO: Implement this...
+void SDL_GetSystemTimeLocalePreferences(SDL_DateFormat *df, SDL_TimeFormat *tf)
 {
 }
 
-int SDL_GetCurrentTime(SDL_Time *ticks)
+bool SDL_GetCurrentTime(SDL_Time *ticks)
 {
-    if (!ticks) {
+    CHECK_PARAM(!ticks) {
         return SDL_InvalidParamError("ticks");
     }
 
     *ticks = 0;
 
-    return 0;
+    return true;
 }
 
-int SDL_TimeToDateTime(SDL_Time ticks, SDL_DateTime *dt, SDL_bool localTime)
+bool SDL_TimeToDateTime(SDL_Time ticks, SDL_DateTime *dt, bool localTime)
 {
-    if (!dt) {
+    CHECK_PARAM(!dt) {
         return SDL_InvalidParamError("dt");
     }
 
+    // FIXME: Need implementation
     dt->year = 1970;
     dt->month = 1;
     dt->day = 1;
@@ -59,7 +60,7 @@ int SDL_TimeToDateTime(SDL_Time ticks, SDL_DateTime *dt, SDL_bool localTime)
     dt->day_of_week = 4;
     dt->utc_offset = 0;
 
-    return 0;
+    return true;
 }
 
-#endif /* SDL_TIME_PS2 */
+#endif // SDL_TIME_PS2

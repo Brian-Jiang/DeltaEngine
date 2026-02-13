@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2024 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -20,11 +20,11 @@
 */
 #include "SDL_internal.h"
 
-/* This file contains SDL replacements for functions in the C library */
+// This file contains SDL replacements for functions in the C library
 
 #if !defined(HAVE_LIBC) && !defined(SDL_STATIC_LIB)
 
-/* These are some C runtime intrinsics that need to be defined */
+// These are some C runtime intrinsics that need to be defined
 
 #ifdef _MSC_VER
 
@@ -35,7 +35,7 @@ __declspec(selectany) int _fltused = 1;
 
 #ifdef _M_IX86
 
-/* Float to long */
+// Float to long
 void __declspec(naked) _ftol()
 {
     /* *INDENT-OFF* */
@@ -95,7 +95,40 @@ void _ftol2()
     _ftol();
 }
 
-/* 64-bit math operators for 32-bit systems */
+void __declspec(naked) _ftoul2_legacy()
+{
+    static const Uint64 LLONG_MAX_PLUS_ONE = 0x43e0000000000000ULL;
+    /* *INDENT-OFF* */
+    __asm {
+        fld qword ptr [LLONG_MAX_PLUS_ONE]
+        fcom
+        fnstsw ax
+        test ah, 41h
+        jnp greater_than_int64
+
+        fstp st(0)
+        jmp _ftol
+
+greater_than_int64:
+        fsub st(1), st(0)
+        fcomp
+        fnstsw ax
+        test ah, 41h
+        jnz greater_than_uint64
+
+        call _ftol
+        add edx, 80000000h
+        ret
+
+greater_than_uint64:
+        xor eax, eax
+        mov edx, 80000000h
+        ret
+    }
+    /* *INDENT-ON* */
+}
+
+// 64-bit math operators for 32-bit systems
 void __declspec(naked) _allmul()
 {
     /* *INDENT-OFF* */
@@ -726,17 +759,9 @@ void __declspec(naked) _alloca_probe_16(void)
     /* *INDENT-ON* */
 }
 
-#endif /* _M_IX86 */
+#endif // _M_IX86
 
-#ifdef _M_ARM64
-
-void __chkstk(void);
-void __chkstk() {
-}
-
-#endif
-
-#endif /* MSC_VER */
+#endif // MSC_VER
 
 #ifdef __ICL
 /* The classic Intel compiler generates calls to _intel_fast_memcpy
@@ -751,4 +776,4 @@ void *_intel_fast_memset(void *dst, int c, size_t len)
 }
 #endif
 
-#endif /* !HAVE_LIBC && !SDL_STATIC_LIB */
+#endif // !HAVE_LIBC && !SDL_STATIC_LIB

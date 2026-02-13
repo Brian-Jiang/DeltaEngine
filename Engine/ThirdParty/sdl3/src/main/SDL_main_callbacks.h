@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2024 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -22,11 +22,12 @@
 #ifndef SDL_main_callbacks_h_
 #define SDL_main_callbacks_h_
 
-SDL_bool SDL_HasMainCallbacks(void);
-int SDL_InitMainCallbacks(int argc, char *argv[], SDL_AppInit_func appinit, SDL_AppIterate_func _appiter, SDL_AppEvent_func _appevent, SDL_AppQuit_func _appquit);
-int SDL_IterateMainCallbacks(SDL_bool pump_events);
-void SDL_QuitMainCallbacks(void);
+bool SDL_HasMainCallbacks(void);
+SDL_AppResult SDL_InitMainCallbacks(int argc, char *argv[], SDL_AppInit_func appinit, SDL_AppIterate_func _appiter, SDL_AppEvent_func _appevent, SDL_AppQuit_func _appquit);
+SDL_AppResult SDL_IterateMainCallbacks(bool pump_events);
+void SDL_QuitMainCallbacks(SDL_AppResult result);
+
+// Check args and call the main function
+extern int SDL_CallMainFunction(int argc, char *argv[], SDL_main_func mainFunction);
 
 #endif // SDL_main_callbacks_h_
-
-

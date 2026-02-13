@@ -1,5 +1,5 @@
 /*
-Copyright (C) 1997-2024 Sam Lantinga <slouken@libsdl.org>
+Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
 
 This software is provided 'as-is', without any express or implied
 warranty.  In no event will the authors be held liable for any damages
@@ -20,7 +20,6 @@ freely.
 #endif
 
 #include <stdlib.h>
-#include <time.h>
 
 #define MENU_WIDTH  120
 #define MENU_HEIGHT 300
@@ -50,12 +49,16 @@ struct PopupWindow
 static struct PopupWindow *menus;
 static struct PopupWindow tooltip;
 
+static bool no_constraints;
+static bool no_grab;
+
 /* Call this instead of exit(), so we can clean up SDL: atexit() is evil. */
 static void quit(int rc)
 {
     SDL_free(menus);
     menus = NULL;
 
+    SDLTest_CleanupTextDrawing();
     SDLTest_CommonQuit(state);
     /* Let 'main()' return normally */
     if (rc != 0) {
@@ -75,19 +78,19 @@ static int get_menu_index_by_window(SDL_Window *window)
     return -1;
 }
 
-static SDL_bool window_is_root(SDL_Window *window)
+static bool window_is_root(SDL_Window *window)
 {
     int i;
     for (i = 0; i < state->num_windows; ++i) {
         if (window == state->windows[i]) {
-            return SDL_TRUE;
+            return true;
         }
     }
 
-    return SDL_FALSE;
+    return false;
 }
 
-static SDL_bool create_popup(struct PopupWindow *new_popup, SDL_bool is_menu)
+static bool create_popup(struct PopupWindow *new_popup, bool is_menu)
 {
     SDL_Window *focus;
     SDL_Window *new_win;
@@ -95,27 +98,40 @@ static SDL_bool create_popup(struct PopupWindow *new_popup, SDL_bool is_menu)
     const int w = is_menu ? MENU_WIDTH : TOOLTIP_WIDTH;
     const int h = is_menu ? MENU_HEIGHT : TOOLTIP_HEIGHT;
     const int v_off = is_menu ? 0 : 32;
-    const SDL_WindowFlags flags = is_menu ? SDL_WINDOW_POPUP_MENU : SDL_WINDOW_TOOLTIP;
     float x, y;
 
     focus = SDL_GetMouseFocus();
 
     SDL_GetMouseState(&x, &y);
-    new_win = SDL_CreatePopupWindow(focus,
-                                    (int)x, (int)y + v_off, w, h, flags);
+
+    SDL_PropertiesID props = SDL_CreateProperties();
+    SDL_SetPointerProperty(props, SDL_PROP_WINDOW_CREATE_PARENT_POINTER, focus);
+    SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_CONSTRAIN_POPUP_BOOLEAN, !no_constraints);
+    SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_FOCUSABLE_BOOLEAN, !no_grab);
+    if (is_menu) {
+        SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_MENU_BOOLEAN, true);
+    } else {
+        SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_TOOLTIP_BOOLEAN, true);
+    }
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, w);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, h);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, (int)x);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, (int)y + v_off);
+    new_win = SDL_CreateWindowWithProperties(props);
+    SDL_DestroyProperties(props);
 
     if (new_win) {
-        new_renderer = SDL_CreateRenderer(new_win, state->renderdriver, state->render_flags);
+        new_renderer = SDL_CreateRenderer(new_win, state->renderdriver);
 
         new_popup->win = new_win;
         new_popup->renderer = new_renderer;
         new_popup->parent = focus;
 
-        return SDL_TRUE;
+        return true;
     }
 
     SDL_zerop(new_popup);
-    return SDL_FALSE;
+    return false;
 }
 
 static void close_popups(void)
@@ -167,12 +183,12 @@ static void loop(void)
             } else if (event.button.button == SDL_BUTTON_RIGHT) {
                 /* Create a new popup menu */
                 menus = SDL_realloc(menus, sizeof(struct PopupWindow) * (num_menus + 1));
-                if (create_popup(&menus[num_menus], SDL_TRUE)) {
+                if (create_popup(&menus[num_menus], true)) {
                     ++num_menus;
                 }
             }
         } else if (event.type == SDL_EVENT_KEY_DOWN) {
-            if (event.key.keysym.sym == SDLK_SPACE) {
+            if (event.key.key == SDLK_SPACE) {
                 for (i = 0; i < num_menus; ++i) {
                     if (SDL_GetWindowFlags(menus[i].win) & SDL_WINDOW_HIDDEN) {
                         SDL_ShowWindow(menus[i].win);
@@ -195,7 +211,7 @@ static void loop(void)
     /* Show the tooltip if the delay period has elapsed */
     if (SDL_GetTicks() > tooltip_timer) {
         if (!tooltip.win) {
-            create_popup(&tooltip, SDL_FALSE);
+            create_popup(&tooltip, false);
         }
     }
 
@@ -248,12 +264,31 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    /* Enable standard application logging */
-    SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO);
-
     /* Parse commandline */
-    if (!SDLTest_CommonDefaultArgs(state, argc, argv)) {
-        return 1;
+    for (i = 1; i < argc;) {
+        int consumed;
+
+        consumed = SDLTest_CommonArg(state, i);
+        if (consumed == 0) {
+            consumed = -1;
+            if (SDL_strcasecmp(argv[i], "--no-constraints") == 0) {
+                no_constraints = true;
+                consumed = 1;
+            } else if (SDL_strcasecmp(argv[i], "--no-grab") == 0) {
+                no_grab = true;
+                consumed = 1;
+            }
+        }
+        if (consumed < 0) {
+            static const char *options[] = {
+                "[--no-constraints]",
+                "[--no-grab]",
+                NULL
+            };
+            SDLTest_CommonLogUsage(state, argv[0], options);
+            return 1;
+        }
+        i += consumed;
     }
 
     if (!SDLTest_CommonInit(state)) {

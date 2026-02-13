@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 1997-2024 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -12,6 +12,8 @@
 
 /* Simple program:  draw a RGB triangle, with texture  */
 
+#include <stdlib.h>
+
 #include "testutils.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
@@ -21,17 +23,14 @@
 #include <emscripten/emscripten.h>
 #endif
 
-#include <stdlib.h>
-#include <time.h>
-
 static SDLTest_CommonState *state;
-static SDL_bool use_texture = SDL_FALSE;
+static bool use_texture = false;
 static SDL_Texture **sprites;
 static SDL_BlendMode blendMode = SDL_BLENDMODE_NONE;
 static float angle = 0.0f;
-static int sprite_w, sprite_h;
 static int translate_cx = 0;
 static int translate_cy = 0;
+static float pinch_scale = 1.0f;
 
 static int done;
 
@@ -52,13 +51,13 @@ static int LoadSprite(const char *file)
     int i;
 
     for (i = 0; i < state->num_windows; ++i) {
-        /* This does the SDL_LoadBMP step repeatedly, but that's OK for test code. */
-        sprites[i] = LoadTexture(state->renderers[i], file, SDL_TRUE, &sprite_w, &sprite_h);
+        /* This does the SDL_LoadPNG step repeatedly, but that's OK for test code. */
+        sprites[i] = LoadTexture(state->renderers[i], file, true);
         if (!sprites[i]) {
             return -1;
         }
-        if (SDL_SetTextureBlendMode(sprites[i], blendMode) < 0) {
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't set blend mode: %s\n", SDL_GetError());
+        if (!SDL_SetTextureBlendMode(sprites[i], blendMode)) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't set blend mode: %s", SDL_GetError());
             SDL_DestroyTexture(sprites[i]);
             return -1;
         }
@@ -96,20 +95,23 @@ static void loop(void)
                 }
             }
         } else if (event.type == SDL_EVENT_KEY_DOWN) {
-            if (event.key.keysym.sym == SDLK_LEFT) {
+            if (event.key.key == SDLK_LEFT) {
                 translate_cx -= 1;
-            } else if (event.key.keysym.sym == SDLK_RIGHT) {
+            } else if (event.key.key == SDLK_RIGHT) {
                 translate_cx += 1;
-            } else if (event.key.keysym.sym == SDLK_UP) {
+            } else if (event.key.key == SDLK_UP) {
                 translate_cy -= 1;
-            } else if (event.key.keysym.sym == SDLK_DOWN) {
+            } else if (event.key.key == SDLK_DOWN) {
                 translate_cy += 1;
             } else {
-                SDLTest_CommonEvent(state, &event, &done);
+
             }
-        } else {
-            SDLTest_CommonEvent(state, &event, &done);
+        } else if (event.type == SDL_EVENT_PINCH_BEGIN) {
+        } else if (event.type == SDL_EVENT_PINCH_UPDATE) {
+            pinch_scale *= event.pinch.scale;
+        } else if (event.type == SDL_EVENT_PINCH_END) {
         }
+        SDLTest_CommonEvent(state, &event, &done);
     }
 
     for (i = 0; i < state->num_windows; ++i) {
@@ -138,24 +140,24 @@ static void loop(void)
             cy += translate_cy;
 
             a = (angle * SDL_PI_F) / 180.0f;
-            verts[0].position.x = cx + d * SDL_cosf(a);
-            verts[0].position.y = cy + d * SDL_sinf(a);
+            verts[0].position.x = cx + (d * SDL_cosf(a)) * pinch_scale;
+            verts[0].position.y = cy + (d * SDL_sinf(a)) * pinch_scale;
             verts[0].color.r = 1.0f;
             verts[0].color.g = 0;
             verts[0].color.b = 0;
             verts[0].color.a = 1.0f;
 
             a = ((angle + 120) * SDL_PI_F) / 180.0f;
-            verts[1].position.x = cx + d * SDL_cosf(a);
-            verts[1].position.y = cy + d * SDL_sinf(a);
+            verts[1].position.x = cx + (d * SDL_cosf(a)) * pinch_scale;
+            verts[1].position.y = cy + (d * SDL_sinf(a)) * pinch_scale;
             verts[1].color.r = 0;
             verts[1].color.g = 1.0f;
             verts[1].color.b = 0;
             verts[1].color.a = 1.0f;
 
             a = ((angle + 240) * SDL_PI_F) / 180.0f;
-            verts[2].position.x = cx + d * SDL_cosf(a);
-            verts[2].position.y = cy + d * SDL_sinf(a);
+            verts[2].position.x = cx + (d * SDL_cosf(a)) * pinch_scale;
+            verts[2].position.y = cy + (d * SDL_sinf(a)) * pinch_scale;
             verts[2].color.r = 0;
             verts[2].color.g = 0;
             verts[2].color.b = 1.0f;
@@ -185,7 +187,7 @@ static void loop(void)
 int main(int argc, char *argv[])
 {
     int i;
-    const char *icon = "icon.bmp";
+    const char *icon = "icon.png";
     Uint64 then, now;
     Uint32 frames;
 
@@ -194,9 +196,6 @@ int main(int argc, char *argv[])
     if (!state) {
         return 1;
     }
-
-    /* Enable standard application logging */
-    SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO);
 
     for (i = 1; i < argc;) {
         int consumed;
@@ -224,7 +223,7 @@ int main(int argc, char *argv[])
                     }
                 }
             } else if (SDL_strcasecmp(argv[i], "--use-texture") == 0) {
-                use_texture = SDL_TRUE;
+                use_texture = true;
                 consumed = 1;
             }
         }
@@ -243,7 +242,7 @@ int main(int argc, char *argv[])
     sprites =
         (SDL_Texture **)SDL_malloc(state->num_windows * sizeof(*sprites));
     if (!sprites) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Out of memory!\n");
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Out of memory!");
         quit(2);
     }
     /* Create the windows and initialize the renderers */
@@ -259,8 +258,6 @@ int main(int argc, char *argv[])
             quit(2);
         }
     }
-
-    srand((unsigned int)time(NULL));
 
     /* Main render loop */
     frames = 0;
@@ -280,7 +277,7 @@ int main(int argc, char *argv[])
     now = SDL_GetTicks();
     if (now > then) {
         double fps = ((double)frames * 1000) / (now - then);
-        SDL_Log("%2.2f frames per second\n", fps);
+        SDL_Log("%2.2f frames per second", fps);
     }
 
     quit(0);

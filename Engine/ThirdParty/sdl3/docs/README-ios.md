@@ -1,10 +1,10 @@
 iOS
 ======
 
-Building the Simple DirectMedia Layer for iOS 9.0+
+Building the Simple DirectMedia Layer for iOS 11.0+
 ==============================================================================
 
-Requirements: macOS 10.9 or later and the iOS 9.0 or newer SDK.
+Please note that building SDL requires at least Xcode 12.2 and the iOS 14.2 SDK.
 
 Instructions:
 
@@ -12,8 +12,43 @@ Instructions:
 2. Select your desired target, and hit build.
 
 
-Using the Simple DirectMedia Layer for iOS
+Using the Simple DirectMedia Layer for iOS with the SDL3 xcFramework
 ==============================================================================
+
+The recommended way to use SDL for iOS is by including the SDL3.xcframework which is now a build target of the SDL.xcodeproj file. An xcframework is a new (Xcode 11) uber-framework which can handle any combination of processor type and target OS platform.
+You can either build the SDL3.xcframework yourself or download the latest release disk image asset (*.dmg).
+
+In the past, iOS devices were always an ARM variant processor, and the simulator was always i386 or x86_64, and thus libraries could be combined into a single framework for both simulator and device. With the introduction of the Apple Silicon ARM-based machines, regular frameworks would collide as CPU type was no longer sufficient to differentiate the platform. So Apple created the new xcframework library package.
+
+The xcframework target builds into a Products directory alongside the SDL.xcodeproj file, as SDL3.xcframework. This can be brought in to any iOS project and will function properly for both simulator and device, no matter their CPUs. Note that Intel Macs cannot cross-compile for Apple Silicon Macs. If you need AS compatibility, perform this build on an Apple Silicon Mac.
+
+This target requires Xcode 11 or later. The target will simply fail to build if attempted on older Xcodes.
+
+In addition, on Apple platforms, main() cannot be in a dynamically loaded library.
+However, unlike in SDL2, in SDL3 SDL_main is implemented inline in SDL_main.h, so you don't need to link against a static libSDL3main.lib, and you don't need to copy a .c file from the SDL3 source either.
+This means that iOS apps which used the statically-linked libSDL3.lib and now link with the xcframwork can just `#include <SDL3/SDL_main.h>` in the source file that contains their standard `int main(int argc, char *argv[])` function to get a header-only SDL_main implementation that calls the `SDL_RunApp()` with your standard main function.
+
+To use the SDL3.xcframework follow these steps:
+
+1. Run Xcode and create a new project using the iOS Game template, selecting the Objective C language and Metal game technology.
+2. In the main view, delete all files except for Assets and LaunchScreen
+3. Select the project in the main view, go to the "General" tab, scroll down to "Frameworks, Libraries, and Embedded Content", and drag and drop the SDL3.xcframework
+4. Still in "Frameworks, Libraries, and Embedded Content", select "Embed & Sign" for the SDL3.xcframework.
+5. Add the source files that you would normally have for an SDL program, making sure to have #include <SDL3/SDL_main.h> at the top of the file containing your main() function.
+6. Add any assets that your application needs.
+7. Enjoy!
+
+Using an xcFramework is similar to using a regular framework. However, issues have been seen with the build system not seeing the headers in the xcFramework. To remedy this, add the path to the xcFramework in your app's target ==> Build Settings ==> Framework Search Paths and mark it recursive (this is critical). Also critical is to remove "*.framework" from Build Settings ==> Sub-Directories to Exclude in Recursive Searches. Clean the build folder, and on your next build the build system should be able to see any of these in your code, as expected:
+
+#include "SDL3/SDL_main.h"
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>
+
+
+Using the Simple DirectMedia Layer for iOS by adding the SDL3 Xcode project
+==============================================================================
+
+To maintain compatibility with older Xcode versions than version 11 you can add the SDL3 Xcode project file to your project:
 
 1. Run Xcode and create a new project using the iOS Game template, selecting the Objective C language and Metal game technology.
 2. In the main view, delete all files except for Assets and LaunchScreen
@@ -22,10 +57,22 @@ Using the Simple DirectMedia Layer for iOS
 5. Select the project in the main view, go to the "Build Settings" tab, select "All", and edit "Header Search Path" and drag over the SDL "Public Headers" folder from the left
 6. Select the project in the main view, go to the "Build Phases" tab, select "Link Binary With Libraries", and add SDL3.framework from "Framework-iOS"
 7. Select the project in the main view, go to the "General" tab, scroll down to "Frameworks, Libraries, and Embedded Content", and select "Embed & Sign" for the SDL library.
-8. Add the source files that you would normally have for an SDL program, making sure to have #include "SDL.h" at the top of the file containing your main() function.
+8. Add the source files that you would normally have for an SDL program, making sure to have #include <SDL3/SDL_main.h> at the top of the file containing your main() function.
 9. Add any assets that your application needs.
 10. Enjoy!
 
+Notes for distributing your iOS app on the AppStore when using the embedded SDL3 Xcode project:
+Embedding the SDL3 Xcode project makes SDL3.framework a target of your app, so it will be included in the archive created during the "Archive" step required for App Store submission. As this prevents successful distribution, remove the framework via a script in the Build Phase after the "Embed & Sign" step.
+
+1. Select the project in the main view, go to the "Build Phases" tab, click on the big '+' in this tab and click "New Run Script Phase".
+2. Scroll down to "Run Script" (after the "Embed SDL3 Framework") and enter the following script:
+```
+    if [ -d "$INSTALL_ROOT/Library" ]; then
+        echo "Removing SDL3.framework from INSTALL_ROOT for archiving"
+        rm -rf "$INSTALL_ROOT/Library"
+    fi
+```
+3. Below the script entry uncheck the "Run Script:" options "For install builds only" and "Based on dependency analysis"
 
 TODO: Add information regarding App Store requirements such as icons, etc.
 
@@ -65,7 +112,7 @@ not give you any processing time after the events are delivered.
 
 e.g.
 
-    int HandleAppEvents(void *userdata, SDL_Event *event)
+    bool HandleAppEvents(void *userdata, SDL_Event *event)
     {
         switch (event->type)
         {
@@ -73,37 +120,37 @@ e.g.
             /* Terminate the app.
                Shut everything down before returning from this function.
             */
-            return 0;
+            return false;
         case SDL_EVENT_LOW_MEMORY:
             /* You will get this when your app is paused and iOS wants more memory.
                Release as much memory as possible.
             */
-            return 0;
+            return false;
         case SDL_EVENT_WILL_ENTER_BACKGROUND:
             /* Prepare your app to go into the background.  Stop loops, etc.
                This gets called when the user hits the home button, or gets a call.
             */
-            return 0;
+            return false;
         case SDL_EVENT_DID_ENTER_BACKGROUND:
             /* This will get called if the user accepted whatever sent your app to the background.
                If the user got a phone call and canceled it, you'll instead get an SDL_EVENT_DID_ENTER_FOREGROUND event and restart your loops.
                When you get this, you have 5 seconds to save all your state or the app will be terminated.
                Your app is NOT active at this point.
             */
-            return 0;
+            return false;
         case SDL_EVENT_WILL_ENTER_FOREGROUND:
             /* This call happens when your app is coming back to the foreground.
                Restore all your state here.
             */
-            return 0;
+            return false;
         case SDL_EVENT_DID_ENTER_FOREGROUND:
             /* Restart your loops here.
                Your app is interactive and getting CPU again.
             */
-            return 0;
+            return false;
         default:
             /* No special processing, add it to the event queue */
-            return 1;
+            return true;
         }
     }
 
@@ -117,12 +164,7 @@ e.g.
     }
 
 
-Notes -- Accelerometer as Joystick
-==============================================================================
-
-SDL for iPhone supports polling the built in accelerometer as a joystick device.  For an example on how to do this, see the accelerometer.c in the demos directory.
-
-The main thing to note when using the accelerometer with SDL is that while the iPhone natively reports accelerometer as floating point values in units of g-force, SDL_GetJoystickAxis() reports joystick values as signed integers.  Hence, in order to convert between the two, some clamping and scaling is necessary on the part of the iPhone SDL joystick driver.  To convert SDL_GetJoystickAxis() reported values BACK to units of g-force, simply multiply the values by SDL_IPHONE_MAX_GFORCE / 0x7FFF.
+Note that if you are using main callbacks instead of a standard C main() function, your SDL_AppEvent() callback will run as these events arrive and you do not need to use SDL_SetEventFilter.
 
 
 Notes -- Keyboard
@@ -136,7 +178,7 @@ void SDL_StartTextInput()
 void SDL_StopTextInput()
 	-- disables text events and hides the onscreen keyboard.
 
-SDL_bool SDL_TextInputActive()
+bool SDL_TextInputActive()
 	-- returns whether or not text events are enabled (and the onscreen keyboard is visible)
 
 
@@ -145,47 +187,21 @@ Notes -- Mouse
 
 iOS now supports Bluetooth mice on iPad, but by default will provide the mouse input as touch. In order for SDL to see the real mouse events, you should set the key UIApplicationSupportsIndirectInputEvents to true in your Info.plist
 
+From iOS 17 onward, the key now defaults to true.
+
 
 Notes -- Reading and Writing files
 ==============================================================================
 
-Each application installed on iPhone resides in a sandbox which includes its own Application Home directory.  Your application may not access files outside this directory.
+Each application installed on iPhone resides in a sandbox which includes its own application home directory. Your application may not access files outside this directory.
 
-Once your application is installed its directory tree looks like:
-
-    MySDLApp Home/
-        MySDLApp.app
-        Documents/
-        Library/
-            Preferences/
-        tmp/
-
-When your SDL based iPhone application starts up, it sets the working directory to the main bundle (MySDLApp Home/MySDLApp.app), where your application resources are stored.  You cannot write to this directory.  Instead, I advise you to write document files to "../Documents/" and preferences to "../Library/Preferences".
+When your SDL based iPhone application starts up, it sets the working directory to the main bundle, where your application resources are stored. You cannot write to this directory. Instead, you should write document files to the directory returned by SDL_GetUserFolder(SDL_FOLDER_DOCUMENTS) and preferences to the directory returned by SDL_GetPrefPath().
 
 More information on this subject is available here:
 http://developer.apple.com/library/ios/#documentation/iPhone/Conceptual/iPhoneOSProgrammingGuide/Introduction/Introduction.html
 
 
-Notes -- xcFramework
-==============================================================================
 
-The SDL.xcodeproj file now includes a target to build SDL3.xcframework. An xcframework is a new (Xcode 11) uber-framework which can handle any combination of processor type and target OS platform.
-
-In the past, iOS devices were always an ARM variant processor, and the simulator was always i386 or x86_64, and thus libraries could be combined into a single framework for both simulator and device. With the introduction of the Apple Silicon ARM-based machines, regular frameworks would collide as CPU type was no longer sufficient to differentiate the platform. So Apple created the new xcframework library package.
-
-The xcframework target builds into a Products directory alongside the SDL.xcodeproj file, as SDL3.xcframework. This can be brought in to any iOS project and will function properly for both simulator and device, no matter their CPUs. Note that Intel Macs cannot cross-compile for Apple Silicon Macs. If you need AS compatibility, perform this build on an Apple Silicon Mac.
-
-This target requires Xcode 11 or later. The target will simply fail to build if attempted on older Xcodes.
-
-In addition, on Apple platforms, main() cannot be in a dynamically loaded library.
-However, unlike in SDL2, in SDL3 SDL_main is implemented inline in SDL_main.h, so you don't need to link against a static libSDL3main.lib, and you don't need to copy a .c file from the SDL3 source either.
-This means that iOS apps which used the statically-linked libSDL3.lib and now link with the xcframwork can just `#include <SDL3/SDL_main.h>` in the source file that contains their standard `int main(int argc; char *argv[])` function to get a header-only SDL_main implementation that calls the `SDL_RunApp()` with your standard main function.
-
-Using an xcFramework is similar to using a regular framework. However, issues have been seen with the build system not seeing the headers in the xcFramework. To remedy this, add the path to the xcFramework in your app's target ==> Build Settings ==> Framework Search Paths and mark it recursive (this is critical). Also critical is to remove "*.framework" from Build Settings ==> Sub-Directories to Exclude in Recursive Searches. Clean the build folder, and on your next build the build system should be able to see any of these in your code, as expected:
-
-#include "SDL_main.h"
-#include <SDL.h>
-#include <SDL_main.h>
 
 
 Notes -- iPhone SDL limitations
@@ -196,9 +212,6 @@ Windows:
 
 Textures:
 	The optimal texture formats on iOS are SDL_PIXELFORMAT_ABGR8888, SDL_PIXELFORMAT_ABGR8888, SDL_PIXELFORMAT_XBGR8888, and SDL_PIXELFORMAT_RGB24 pixel formats.
-
-Loading Shared Objects:
-	This is disabled by default since it seems to break the terms of the iOS SDK agreement for iOS versions prior to iOS 8. It can be re-enabled in SDL_config_ios.h.
 
 
 Notes -- CoreBluetooth.framework
@@ -222,7 +235,7 @@ Game Center
 
 Game Center integration might require that you break up your main loop in order to yield control back to the system. In other words, instead of running an endless main loop, you run each frame in a callback function, using:
 
-    int SDL_iPhoneSetAnimationCallback(SDL_Window * window, int interval, void (*callback)(void*), void *callbackParam);
+    bool SDL_SetiOSAnimationCallback(SDL_Window * window, int interval, SDL_iOSAnimationCallback callback, void *callbackParam);
 
 This will set up the given function to be called back on the animation callback, and then you have to return from main() to let the Cocoa event loop run.
 
@@ -244,7 +257,7 @@ e.g.
 
         // Set up the game to run in the window animation callback on iOS
         // so that Game Center and so forth works correctly.
-        SDL_iPhoneSetAnimationCallback(window, 1, ShowFrame, NULL);
+        SDL_SetiOSAnimationCallback(window, 1, ShowFrame, NULL);
     #else
         while ( running ) {
             ShowFrame(0);
@@ -255,10 +268,13 @@ e.g.
     }
 
 
+Note that if you are using main callbacks instead of a standard C main() function, your SDL_AppIterate() callback is already doing this and you don't need to use SDL_SetiOSAnimationCallback.
+
+
 Deploying to older versions of iOS
 ==============================================================================
 
-SDL supports deploying to older versions of iOS than are supported by the latest version of Xcode, all the way back to iOS 8.0
+SDL supports deploying to older versions of iOS than are supported by the latest version of Xcode, all the way back to iOS 11.0
 
 In order to do that you need to download an older version of Xcode:
 https://developer.apple.com/download/more/?name=Xcode

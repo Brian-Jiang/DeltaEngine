@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 1997-2024 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -35,8 +35,8 @@ extern "C" {
 static SDLTest_CommonState *state;
 static int num_sprites;
 static SDL_Texture **sprites;
-static SDL_bool cycle_color;
-static SDL_bool cycle_alpha;
+static bool cycle_color;
+static bool cycle_alpha;
 static int cycle_direction = 1;
 static int current_alpha = 0;
 static int current_color = 0;
@@ -56,8 +56,7 @@ static struct
 static SDL_AudioStream *stream;
 
 /* Call this instead of exit(), so we can clean up SDL: atexit() is evil. */
-static void
-quit(int rc)
+static void quit(int rc)
 {
     SDL_free(sprites);
     SDL_DestroyAudioStream(stream);
@@ -80,8 +79,7 @@ static int fillerup(void)
     return 0;
 }
 
-void
-UserLoggedIn(XUserHandle user)
+static void UserLoggedIn(XUserHandle user)
 {
     HRESULT hr;
     char gamertag[128];
@@ -96,8 +94,7 @@ UserLoggedIn(XUserHandle user)
     XUserCloseHandle(user);
 }
 
-void
-AddUserUICallback(XAsyncBlock *asyncBlock)
+static void AddUserUICallback(XAsyncBlock *asyncBlock)
 {
     HRESULT hr;
     XUserHandle user = NULL;
@@ -123,8 +120,7 @@ AddUserUICallback(XAsyncBlock *asyncBlock)
     delete asyncBlock;
 }
 
-void
-AddUserUI()
+static void AddUserUI()
 {
     HRESULT hr;
     XAsyncBlock *asyncBlock = new XAsyncBlock;
@@ -141,8 +137,7 @@ AddUserUI()
     }
 }
 
-void
-AddUserSilentCallback(XAsyncBlock *asyncBlock)
+static void AddUserSilentCallback(XAsyncBlock *asyncBlock)
 {
     HRESULT hr;
     XUserHandle user = NULL;
@@ -168,8 +163,7 @@ AddUserSilentCallback(XAsyncBlock *asyncBlock)
     delete asyncBlock;
 }
 
-void
-AddUserSilent()
+static void AddUserSilent()
 {
     HRESULT hr;
     XAsyncBlock *asyncBlock = new XAsyncBlock;
@@ -186,30 +180,27 @@ AddUserSilent()
     }
 }
 
-int
-LoadSprite(const char *file)
+static bool LoadSprite(const char *file)
 {
     int i;
 
     for (i = 0; i < state->num_windows; ++i) {
         /* This does the SDL_LoadBMP step repeatedly, but that's OK for test code. */
-        sprites[i] = LoadTexture(state->renderers[i], file, SDL_TRUE, &sprite_w, &sprite_h);
+        sprites[i] = LoadTexture(state->renderers[i], file, true);
         if (!sprites[i]) {
-            return -1;
+            return false;
         }
-        if (SDL_SetTextureBlendMode(sprites[i], blendMode) < 0) {
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't set blend mode: %s\n", SDL_GetError());
-            SDL_DestroyTexture(sprites[i]);
-            return -1;
-        }
+        sprite_w = sprites[i]->w;
+        sprite_h = sprites[i]->h;
+
+        SDL_SetTextureBlendMode(sprites[i], blendMode);
     }
 
     /* We're ready to roll. :) */
-    return 0;
+    return true;
 }
 
-void
-DrawSprites(SDL_Renderer * renderer, SDL_Texture * sprite)
+static void DrawSprites(SDL_Renderer * renderer, SDL_Texture * sprite)
 {
     SDL_Rect viewport;
     SDL_FRect temp;
@@ -300,8 +291,7 @@ DrawSprites(SDL_Renderer * renderer, SDL_Texture * sprite)
     SDL_RenderPresent(renderer);
 }
 
-void
-loop()
+static void loop()
 {
     int i;
     SDL_Event event;
@@ -309,7 +299,7 @@ loop()
     /* Check for events */
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) {
-            SDL_Log("Initial SDL_EVENT_KEY_DOWN: %s", SDL_GetScancodeName(event.key.keysym.scancode));
+            SDL_Log("Initial SDL_EVENT_KEY_DOWN: %s", SDL_GetScancodeName(event.key.scancode));
         }
 #if defined(SDL_PLATFORM_XBOXONE) || defined(SDL_PLATFORM_XBOXSERIES)
         /* On Xbox, ignore the keydown event because the features aren't supported */
@@ -329,8 +319,7 @@ loop()
     fillerup();
 }
 
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
     int i;
     const char *icon = "icon.bmp";
@@ -371,10 +360,10 @@ main(int argc, char *argv[])
                     }
                 }
             } else if (SDL_strcasecmp(argv[i], "--cyclecolor") == 0) {
-                cycle_color = SDL_TRUE;
+                cycle_color = true;
                 consumed = 1;
             } else if (SDL_strcasecmp(argv[i], "--cyclealpha") == 0) {
-                cycle_alpha = SDL_TRUE;
+                cycle_alpha = true;
                 consumed = 1;
             } else if (SDL_isdigit(*argv[i])) {
                 num_sprites = SDL_atoi(argv[i]);
@@ -405,7 +394,7 @@ main(int argc, char *argv[])
     sprites =
         (SDL_Texture **) SDL_malloc(state->num_windows * sizeof(*sprites));
     if (!sprites) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Out of memory!\n");
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Out of memory!");
         quit(2);
     }
     for (i = 0; i < state->num_windows; ++i) {
@@ -413,20 +402,20 @@ main(int argc, char *argv[])
         SDL_SetRenderDrawColor(renderer, 0xA0, 0xA0, 0xA0, 0xFF);
         SDL_RenderClear(renderer);
     }
-    if (LoadSprite(icon) < 0) {
+    if (!LoadSprite(icon)) {
         quit(2);
     }
 
     soundname = GetResourceFilename(argc > 1 ? argv[1] : NULL, "sample.wav");
 
     if (!soundname) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s\n", SDL_GetError());
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s", SDL_GetError());
         quit(1);
     }
 
     /* Load the wave file into memory */
-    if (SDL_LoadWAV(soundname, &wave.spec, &wave.sound, &wave.soundlen) == -1) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't load %s: %s\n", soundname, SDL_GetError());
+    if (!SDL_LoadWAV(soundname, &wave.spec, &wave.sound, &wave.soundlen)) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't load %s: %s", soundname, SDL_GetError());
         quit(1);
     }
 
@@ -436,11 +425,11 @@ main(int argc, char *argv[])
         SDL_Log("%i: %s", i, SDL_GetAudioDriver(i));
     }
 
-    SDL_Log("Using audio driver: %s\n", SDL_GetCurrentAudioDriver());
+    SDL_Log("Using audio driver: %s", SDL_GetCurrentAudioDriver());
 
-    stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_OUTPUT, &wave.spec, NULL, NULL);
+    stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &wave.spec, NULL, NULL);
     if (!stream) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create audio stream: %s\n", SDL_GetError());
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create audio stream: %s", SDL_GetError());
         return -1;
     }
     SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(stream));

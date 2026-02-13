@@ -1,11 +1,14 @@
-set(DSDL_SHARED OFF)
-set(DSDL_STATIC ON)
-set(DSDL_TEST_LIBRARY OFF)
-set(DSDL_TESTS OFF)
-set(DSDL_DISABLE_INSTALL ON)
-set(DSDL_DISABLE_INSTALL_DOCS ON)
-set(DSDL_INSTALL_TESTS ON)
+message(STATUS "====== Delta Engine ====== Configuring SDL3 ======")
 
-add_subdirectory(sdl3)
+set(BUILD_SHARED_LIBS ON)
+set(SDL_SHARED ON)
+set(SDL_STATIC OFF)
+set(SDL_TEST_LIBRARY OFF)
+set(SDL_TESTS OFF)
+set(SDL_DISABLE_INSTALL ON)
+set(SDL_DISABLE_INSTALL_DOCS ON)
+set(SDL_INSTALL_TESTS OFF)
 
-set_target_properties(SDL3-static PROPERTIES FOLDER ${third_party_folder})
+add_subdirectory(SDL3 EXCLUDE_FROM_ALL)
+
+set_target_properties(SDL3-shared PROPERTIES FOLDER ${third_party_folder})
