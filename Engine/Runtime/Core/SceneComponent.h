@@ -23,7 +23,7 @@ public:
     DirectX::SimpleMath::Vector3 GetLocalPosition() const;
     DirectX::SimpleMath::Vector3 GetWorldPosition() const;
     /// World transform matrix for rendering (model matrix). Updated when hierarchy changes.
-    DirectX::XMMATRIX GetWorldTransform() const { return m_worldTransform; }
+    inline DirectX::XMMATRIX GetWorldTransform() const { return m_worldTransform; }
     void SetLocalPosition(DirectX::SimpleMath::Vector3 position);
     void SetLocalPosition(DirectX::XMVECTOR position);
     void SetLocalPosition(float x, float y, float z);

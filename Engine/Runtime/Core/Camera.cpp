@@ -1,25 +1,47 @@
 #include "Core/Camera.h"
 
+#include "Core/CameraRenderProxy.h"
+
 using namespace DirectX;
 using namespace DeltaEngine;
 
 Camera::Camera()
-    : m_fov(45.0f), m_near(0.1f), m_far(1000.0f), m_aspectRatio(1.0f), m_viewMatrix(XMMatrixIdentity()), m_projectionMatrix(XMMatrixIdentity())
+    : m_fov(45.0f), m_near(0.1f), m_far(1000.0f), m_aspectRatio(1.0f)
 {
-    RecalculateViewProjectionMatrix();
+    m_renderProxy = std::make_shared<CameraRenderProxy>(m_fov, m_aspectRatio, m_near, m_far);
 }
 
-void DeltaEngine::Camera::OnTransformChanged() {
+DeltaEngine::Camera::~Camera()
+{
+}
+
+void DeltaEngine::Camera::UpdateParameters(float fov, float aspectRatio, float nearPlane, float farPlane)
+{
+    m_fov = fov;
+    m_aspectRatio = aspectRatio;
+    m_near = nearPlane;
+    m_far = farPlane;
+    m_renderProxy->UpdateParameters(fov, aspectRatio, nearPlane, farPlane);
+}
+
+void Camera::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext)
+{
+    m_renderProxy->PreGatherDrawCalls(renderContext);
+}
+
+void DeltaEngine::Camera::OnTransformChanged()
+{
     SceneComponent::OnTransformChanged();
 
-    RecalculateViewProjectionMatrix();
+    m_renderProxy->UpdateTransform(GetWorldTransform());
 }
 
-void DeltaEngine::Camera::RecalculateViewProjectionMatrix() {
-    // Recalculate the view projection matrix.
-    XMVECTOR forward = GetForward();
-    XMVECTOR up = GetUp();
-    m_viewMatrix = XMMatrixLookToLH(GetWorldPosition(), forward, up);
-
-    m_projectionMatrix = XMMatrixPerspectiveFovLH(m_fov, m_aspectRatio, m_near, m_far);
-}
+//void DeltaEngine::Camera::RecalculateViewProjectionMatrix()
+//{
+//    // Recalculate the view projection matrix.
+//    //XMVECTOR forward = GetForward();
+//    //XMVECTOR up = GetUp();
+//    //m_viewMatrix = XMMatrixLookToLH(GetWorldPosition(), forward, up);
+//
+//    //m_projectionMatrix = XMMatrixPerspectiveFovLH(m_fov, m_aspectRatio, m_near, m_far);
+//}

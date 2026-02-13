@@ -90,7 +90,7 @@ float4 PSMain(PSInput input) : SV_TARGET
     textureColor = float4(1.0, 0.0, 1.0, 1.0);
     
     float3 left = normalize(LightCB.position.xyz - input.worldPosition);
-    float3 right = reflect(left, input.normal);
+    float3 right = reflect(-left, input.normal);
     float3 view = normalize(CameraCB.position.xyz - input.worldPosition);
     float lightDistance = length(LightCB.position.xyz - input.worldPosition);
     float falloff = 1.0f / (lightDistance * lightDistance);

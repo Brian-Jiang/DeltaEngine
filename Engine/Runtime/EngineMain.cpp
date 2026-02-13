@@ -9,6 +9,7 @@
 #include "Runtime/Core/GameObject.h"
 #include "Core/DShader.h"
 #include "Core/DMaterial.h"
+#include "Core/Camera.h"
 
 #define SCREEN_WIDTH   1280
 #define SCREEN_HEIGHT  720
@@ -56,6 +57,8 @@ void EngineMain::Initialize()
 
     // ---- Build the scene world and add renderers ----
     m_world = std::make_shared<DWorld>();
+
+    // ---------- game object: mesh renderer
     std::shared_ptr<GameObject> go = m_world->CreateGameObject();
     std::shared_ptr<MeshRenderer> meshRenderer = go->AddSceneComponent<MeshRenderer>();
     std::shared_ptr<DShader> shader = std::make_shared<DShader>(
@@ -63,20 +66,6 @@ void EngineMain::Initialize()
         L"VSMain", L"PSMain",
         L"vs_6_0", L"ps_6_0"
     );
-
-    //D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
-    //    { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-    //    { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-    //    { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-    //    { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-
-    //    // Instance data (per-instance, unique to each instance)
-    //    { "INSTANCE_WORLD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
-    //    { "INSTANCE_WORLD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 16, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
-    //    { "INSTANCE_WORLD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 32, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
-    //    { "INSTANCE_WORLD", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 48, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
-    //    { "INSTANCE_COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 64, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
-    //};
 
     shader->SetInputLayout({
         { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
@@ -88,7 +77,27 @@ void EngineMain::Initialize()
     std::shared_ptr<DMesh> mesh = std::make_shared<DMesh>(std::wstring(L"Star.obj"), material);
     meshRenderer->SetMesh(mesh);
 
-    // todo shaders, materials
+    // ---------- game object: camera
+    std::shared_ptr<GameObject> cameraGo = m_world->CreateGameObject();
+    m_cameraGameObject = cameraGo;
+    std::shared_ptr<Camera> camera = cameraGo->AddSceneComponent<Camera>();
+    camera->SetLocalPosition(0.0f, 5.0f, -25.0f);
+    camera->UpdateParameters(DirectX::XM_PIDIV4, static_cast<float>(SCREEN_WIDTH) / SCREEN_HEIGHT, 0.1f, 1000.0f);
+
+    // D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
+    //     { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    //     { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    //     { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    //     { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+
+    //    // Instance data (per-instance, unique to each instance)
+    //    { "INSTANCE_WORLD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+    //    { "INSTANCE_WORLD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 16, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+    //    { "INSTANCE_WORLD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 32, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+    //    { "INSTANCE_WORLD", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 48, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+    //    { "INSTANCE_COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 64, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+    //};
+
 
     //auto spriteRenderer = go->AddSceneComponent<SpriteRenderer>();
     //spriteRenderer->Start(2.0f, 2.0f, "Assets/logo.png");
@@ -144,6 +153,8 @@ void EngineMain::StartMainLoop()
         printf("Error");
         exitCode = 1;
     }
+
+    m_cameraGameObject.reset();
 
     m_world->Clear();
     m_world.reset();
@@ -244,7 +255,7 @@ void EngineMain::Draw()
 
     // Gather draw calls from all renderers in the world.
 
-
+    m_world->PreGatherDrawCalls(context);
 
     m_world->GatherDrawCalls(context);
 

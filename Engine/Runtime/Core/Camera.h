@@ -11,6 +11,9 @@
 
 DELTA_ENGINE_NS_BEGIN
 
+class CameraRenderProxy;
+struct DXGraphicsContext;
+
 class Camera : public SceneComponent
 {
 public:
@@ -18,8 +21,10 @@ public:
     Camera();
     ~Camera();
 
-    void Start(DirectX::XMFLOAT3 forward, DirectX::XMFLOAT3 up, float fov, float aspectRatio, float nearPlane, float farPlane);
-    void Tick();
+    void UpdateParameters(float fov, float aspectRatio, float nearPlane, float farPlane);
+    //void Tick();
+
+    void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext);
 
     //inline DirectX::XMMATRIX GetViewMatrix() const { return m_viewMatrix; }
     //inline DirectX::XMMATRIX GetProjectionMatrix() const { return m_projectionMatrix; }
@@ -32,10 +37,11 @@ private:
     float m_far;
     float m_fov;
     float m_aspectRatio;
-    DirectX::XMMATRIX m_viewMatrix;
-    DirectX::XMMATRIX m_projectionMatrix;
+    //DirectX::XMMATRIX m_viewMatrix;
+    //DirectX::XMMATRIX m_projectionMatrix;
+    std::shared_ptr<CameraRenderProxy> m_renderProxy;
 
-    void RecalculateViewProjectionMatrix();
+    //void RecalculateViewProjectionMatrix();
 };
 
 DELTA_ENGINE_NS_END

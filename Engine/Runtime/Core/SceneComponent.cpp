@@ -185,14 +185,18 @@ void DeltaEngine::SceneComponent::SetParent(std::shared_ptr<SceneComponent> pare
     SetTransformDirty();
 }
 
-void DeltaEngine::SceneComponent::UpdateTransformHierarchy(DirectX::XMMATRIX worldTransform) {
+void DeltaEngine::SceneComponent::UpdateTransformHierarchy(DirectX::XMMATRIX worldTransform)
+{
     m_worldTransform = m_localTransform * worldTransform;
-    for (auto& child : m_children) {
+    OnTransformChanged();
+
+    for (std::shared_ptr<SceneComponent> child : m_children) {
         child->UpdateTransformHierarchy(m_worldTransform);
     }
 }
 
-void DeltaEngine::SceneComponent::UpdateTransform() {
+void DeltaEngine::SceneComponent::UpdateTransform()
+{
     if (auto parent = m_parent.lock()) {
         XMMATRIX parentTransform = parent->m_worldTransform;
         UpdateTransformHierarchy(parentTransform);
@@ -202,6 +206,7 @@ void DeltaEngine::SceneComponent::UpdateTransform() {
     }
 }
 
-void DeltaEngine::SceneComponent::SetTransformDirty() {
+void DeltaEngine::SceneComponent::SetTransformDirty()
+{
     UpdateTransform();
 }

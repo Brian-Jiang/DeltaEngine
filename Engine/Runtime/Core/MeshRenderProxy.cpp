@@ -119,13 +119,13 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
 
     //commandList->SetGraphicsRootSignature(m_rootSignature);
 
-    Camera cameraData = {};
-    auto viewMatrix = DirectX::XMMatrixTranslation(0.0f, -5.0f, 25.0f);
-    auto projectionMatrix = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV4, renderContext->renderManager->GetAspectRatio(), 0.1f, 1000.0f);
-    cameraData.viewMatrix = viewMatrix;
-    cameraData.projectionMatrix = projectionMatrix;
-    cameraData.position = DirectX::XMVectorSet(0.0f, -5.0f, 25.0f, 1.0f);
-    commandList->SetGraphicsDynamicConstantBuffer(0, cameraData);
+    //Camera cameraData = {};
+    //auto viewMatrix = DirectX::XMMatrixTranslation(0.0f, -5.0f, 25.0f);
+    //auto projectionMatrix = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV4, renderContext->renderManager->GetAspectRatio(), 0.1f, 1000.0f);
+    //cameraData.viewMatrix = viewMatrix;
+    //cameraData.projectionMatrix = projectionMatrix;
+    //cameraData.position = DirectX::XMVectorSet(0.0f, -5.0f, 25.0f, 1.0f);
+    //commandList->SetGraphicsDynamicConstantBuffer(0, cameraData);
 
 
     struct ObjectData

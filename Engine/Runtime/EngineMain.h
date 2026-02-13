@@ -62,6 +62,7 @@ public:
 
 private:
     std::shared_ptr<DWorld> m_world;
+    std::shared_ptr<GameObject> m_cameraGameObject;
 
 };
 
