@@ -61,6 +61,7 @@ void EngineMain::Initialize()
     // ---------- game object: mesh renderer
     std::shared_ptr<GameObject> go = m_world->CreateGameObject();
     std::shared_ptr<MeshRenderer> meshRenderer = go->AddSceneComponent<MeshRenderer>();
+    meshRenderer->SetLocalPosition(2.0f, 0.0f, 5.0f);
     std::shared_ptr<DShader> shader = std::make_shared<DShader>(
         L"Shaders.hlsl",
         L"VSMain", L"PSMain",

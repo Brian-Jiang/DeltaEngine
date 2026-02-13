@@ -27,6 +27,7 @@ public:
     ~MeshRenderProxy();
 
     void SetMesh(std::shared_ptr<DMesh> mesh);
+    void UpdateWorldTransform(DirectX::XMMATRIX worldMatrix);
     
     void BuildPipelineStateObject(std::shared_ptr<DXGraphicsContext> renderContext);
     void GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext);
@@ -52,6 +53,7 @@ private:
     std::shared_ptr<IndexBuffer> m_IndexBuffer;
     D3D12_PRIMITIVE_TOPOLOGY m_PrimitiveTopology;
     DirectX::BoundingBox m_AABB;
+    DirectX::XMMATRIX m_worldMatrix;
 
     // todo: use a pso manager to manage PSOs and avoid creating a PSO for each mesh render proxy.
     // maybe similar to srp batcher, we can have a pso batcher that batches mesh render proxies with the same settings and creates a PSO for each batch.

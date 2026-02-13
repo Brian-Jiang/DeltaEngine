@@ -41,6 +41,11 @@ void DeltaEngine::MeshRenderProxy::SetMesh(std::shared_ptr<DMesh> mesh)
     m_meshDirty = true;
 }
 
+void DeltaEngine::MeshRenderProxy::UpdateWorldTransform(DirectX::XMMATRIX worldMatrix)
+{
+    m_worldMatrix = worldMatrix;
+}
+
 void DeltaEngine::MeshRenderProxy::BuildPipelineStateObject(std::shared_ptr<DXGraphicsContext> renderContext)
 {
     std::shared_ptr<Device> device = renderContext->device;
@@ -117,30 +122,20 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
         m_meshDirty = false;
     }
 
-    //commandList->SetGraphicsRootSignature(m_rootSignature);
-
-    //Camera cameraData = {};
-    //auto viewMatrix = DirectX::XMMatrixTranslation(0.0f, -5.0f, 25.0f);
-    //auto projectionMatrix = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV4, renderContext->renderManager->GetAspectRatio(), 0.1f, 1000.0f);
-    //cameraData.viewMatrix = viewMatrix;
-    //cameraData.projectionMatrix = projectionMatrix;
-    //cameraData.position = DirectX::XMVectorSet(0.0f, -5.0f, 25.0f, 1.0f);
-    //commandList->SetGraphicsDynamicConstantBuffer(0, cameraData);
-
-
+    // todo where to set object cb?
     struct ObjectData
     {
         DirectX::XMMATRIX worldMatrix;
         DirectX::XMFLOAT4 color;
         uint32_t useInstanceMatrix;
     } obj;
-    DirectX::XMMATRIX rendererWorld = DirectX::XMMatrixTranslation(0.0f, 0.0f, 0.0f);
-    //DirectX::XMMATRIX model = DirectX::XMMatrixMultiply(rendererWorld, meshTransforms[i]);
-    obj.worldMatrix = rendererWorld;
+
+    obj.worldMatrix = m_worldMatrix;
     obj.color = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
     obj.useInstanceMatrix = 0;
 
     commandList->SetGraphicsDynamicConstantBuffer(2, obj);
+
 
     Light lightData = {};
     lightData.position = DirectX::XMVectorSet(0.0f, 2.0f, 0.0f, 1.0f);

@@ -39,6 +39,7 @@ void MeshRenderer::InitGraphicState(std::shared_ptr<DXGraphicsContext> context)
     if (m_meshRenderProxy)
     {
         m_meshRenderProxy->BuildPipelineStateObject(context);
+        m_meshRenderProxy->UpdateWorldTransform(GetWorldTransform());
     }
 
     //auto d3d12Device = context.device->GetD3D12Device();
@@ -166,4 +167,12 @@ void DeltaEngine::MeshRenderer::GatherDrawCalls(std::shared_ptr<DXGraphicsContex
 
     //    commandList->DrawIndexed(static_cast<uint32_t>(meshes[i]->indices.size()), 1, 0, 0, 0);
     //}
+}
+
+void DeltaEngine::MeshRenderer::OnTransformChanged()
+{
+    if (m_meshRenderProxy)
+    {
+        m_meshRenderProxy->UpdateWorldTransform(GetWorldTransform());
+    }
 }

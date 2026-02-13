@@ -32,6 +32,7 @@ public:
 protected:
     void InitGraphicState(std::shared_ptr<DXGraphicsContext> context) override;
     void GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) override;
+    void OnTransformChanged() override;
 
 private:
     //void LoadTexture(const std::shared_ptr<DTexture>& texture, DXGraphicsContext& context);
