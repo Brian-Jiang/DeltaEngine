@@ -45,7 +45,12 @@
 #pragma warning(disable : 4244 4996)
 #include <ImfRgbaFile.h>
 #include <ImfIO.h>
+
+// https://openexr.com/en/latest/PortingGuide.html
+#include <OpenEXRConfig.h>
 #pragma warning(pop)
+
+#define COMBINED_OPENEXR_VERSION ((10000*OPENEXR_VERSION_MAJOR) + (100*OPENEXR_VERSION_MINOR) +  OPENEXR_VERSION_PATCH)
 
 #ifdef __clang__
 #pragma clang diagnostic pop
@@ -148,6 +153,13 @@ namespace
             SetLastError(0);
         }
 
+    #if COMBINED_OPENEXR_VERSION >= 30300
+        int64_t read(void *buf, uint64_t sz, uint64_t offset) override
+        {
+            return Imf::IStream::read(buf, sz, offset);
+        }
+    #endif
+
     private:
         HANDLE m_hFile;
         LONGLONG m_EOF;
@@ -157,7 +169,8 @@ namespace
     {
     public:
         OutputStream(HANDLE hFile, const char fileName[]) :
-            OStream(fileName), m_hFile(hFile) {}
+            OStream(fileName), m_hFile(hFile)
+        {}
 
         OutputStream(const OutputStream&) = delete;
         OutputStream& operator = (const OutputStream&) = delete;
@@ -220,7 +233,7 @@ HRESULT DirectX::GetMetadataFromEXRFile(const wchar_t* szFile, TexMetadata& meta
     const int nameLength = WideCharToMultiByte(CP_UTF8, 0, szFile, -1, nullptr, 0, nullptr, nullptr);
     if (nameLength > 0)
     {
-        fileName.resize(nameLength);
+        fileName.resize(static_cast<size_t>(nameLength));
         const int result = WideCharToMultiByte(CP_UTF8, 0, szFile, -1, fileName.data(), nameLength, nullptr, nullptr);
         if (result <= 0)
         {
@@ -228,19 +241,10 @@ HRESULT DirectX::GetMetadataFromEXRFile(const wchar_t* szFile, TexMetadata& meta
         }
     }
 
-#if (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
     ScopedHandle hFile(safe_handle(CreateFile2(
         szFile,
         GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING,
         nullptr)));
-#else
-    ScopedHandle hFile(safe_handle(CreateFileW(
-        szFile,
-        GENERIC_READ, FILE_SHARE_READ,
-        nullptr,
-        OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN,
-        nullptr)));
-#endif
     if (!hFile)
     {
         return HRESULT_FROM_WIN32(GetLastError());
@@ -256,32 +260,43 @@ HRESULT DirectX::GetMetadataFromEXRFile(const wchar_t* szFile, TexMetadata& meta
 
     try
     {
-#ifdef _WIN32
+    #ifdef _WIN32
         Imf::RgbaInputFile file(stream);
-#else
+    #else
         Imf::RgbaInputFile file(fileName.c_str());
-#endif
+    #endif
 
         const auto dw = file.dataWindow();
 
         const int width = dw.max.x - dw.min.x + 1;
-        const int height = dw.max.y - dw.min.y + 1;
+        int height = dw.max.y - dw.min.y + 1;
+        size_t arraySize = 1;
 
         if (width < 1 || height < 1)
             return E_FAIL;
 
+        if (file.header().find("envmap") != file.header().end())
+        {
+            if (width == height / 6)
+            {
+                height = width;
+                arraySize = 6;
+            }
+        }
+
         metadata.width = static_cast<size_t>(width);
         metadata.height = static_cast<size_t>(height);
-        metadata.depth = metadata.arraySize = metadata.mipLevels = 1;
+        metadata.depth = metadata.mipLevels = 1;
+        metadata.arraySize = arraySize;
         metadata.format = DXGI_FORMAT_R16G16B16A16_FLOAT;
         metadata.dimension = TEX_DIMENSION_TEXTURE2D;
     }
 #ifdef _WIN32
     catch (const com_exception& exc)
     {
-#ifdef _DEBUG
+    #ifdef _DEBUG
         OutputDebugStringA(exc.what());
-#endif
+    #endif
         hr = exc.get_result();
     }
 #endif
@@ -327,7 +342,7 @@ HRESULT DirectX::LoadFromEXRFile(const wchar_t* szFile, TexMetadata* metadata, S
     const int nameLength = WideCharToMultiByte(CP_UTF8, 0, szFile, -1, nullptr, 0, nullptr, nullptr);
     if (nameLength > 0)
     {
-        fileName.resize(nameLength);
+        fileName.resize(static_cast<size_t>(nameLength));
         const int result = WideCharToMultiByte(CP_UTF8, 0, szFile, -1, fileName.data(), nameLength, nullptr, nullptr);
         if (result <= 0)
         {
@@ -335,19 +350,10 @@ HRESULT DirectX::LoadFromEXRFile(const wchar_t* szFile, TexMetadata* metadata, S
         }
     }
 
-#if (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
     ScopedHandle hFile(safe_handle(CreateFile2(
         szFile,
         GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING,
         nullptr)));
-#else
-    ScopedHandle hFile(safe_handle(CreateFileW(
-        szFile,
-        GENERIC_READ, FILE_SHARE_READ,
-        nullptr,
-        OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN,
-        nullptr)));
-#endif
     if (!hFile)
     {
         return HRESULT_FROM_WIN32(GetLastError());
@@ -363,31 +369,43 @@ HRESULT DirectX::LoadFromEXRFile(const wchar_t* szFile, TexMetadata* metadata, S
 
     try
     {
-#ifdef _WIN32
+    #ifdef _WIN32
         Imf::RgbaInputFile file(stream);
-#else
+    #else
         Imf::RgbaInputFile file(fileName.c_str());
-#endif
+    #endif
 
-        auto const dw = file.dataWindow();
+        const auto dw = file.dataWindow();
 
         const int width = dw.max.x - dw.min.x + 1;
-        const int height = dw.max.y - dw.min.y + 1;
+        int height = dw.max.y - dw.min.y + 1;
+        size_t arraySize = 1;
 
         if (width < 1 || height < 1)
             return E_FAIL;
+
+        if (file.header().find("envmap") != file.header().end())
+        {
+            if (width == height / 6)
+            {
+                height = width;
+                arraySize = 6;
+            }
+        }
 
         if (metadata)
         {
             metadata->width = static_cast<size_t>(width);
             metadata->height = static_cast<size_t>(height);
-            metadata->depth = metadata->arraySize = metadata->mipLevels = 1;
+            metadata->depth = metadata->mipLevels = 1;
+            metadata->arraySize = arraySize;
             metadata->format = DXGI_FORMAT_R16G16B16A16_FLOAT;
             metadata->dimension = TEX_DIMENSION_TEXTURE2D;
         }
 
         hr = image.Initialize2D(DXGI_FORMAT_R16G16B16A16_FLOAT,
-            static_cast<size_t>(width), static_cast<size_t>(height), 1u, 1u);
+            static_cast<size_t>(width), static_cast<size_t>(height), arraySize, 1u);
+
         if (FAILED(hr))
             return hr;
 
@@ -397,9 +415,9 @@ HRESULT DirectX::LoadFromEXRFile(const wchar_t* szFile, TexMetadata* metadata, S
 #ifdef _WIN32
     catch (const com_exception& exc)
     {
-#ifdef _DEBUG
+    #ifdef _DEBUG
         OutputDebugStringA(exc.what());
-#endif
+    #endif
         hr = exc.get_result();
     }
 #endif
@@ -464,7 +482,7 @@ HRESULT DirectX::SaveToEXRFile(const Image& image, const wchar_t* szFile)
     const int nameLength = WideCharToMultiByte(CP_UTF8, 0, szFile, -1, nullptr, 0, nullptr, nullptr);
     if (nameLength > 0)
     {
-        fileName.resize(nameLength);
+        fileName.resize(static_cast<size_t>(nameLength));
         const int result = WideCharToMultiByte(CP_UTF8, 0, szFile, -1, fileName.data(), nameLength, nullptr, nullptr);
         if (result <= 0)
         {
@@ -473,19 +491,10 @@ HRESULT DirectX::SaveToEXRFile(const Image& image, const wchar_t* szFile)
     }
 
     // Create file and write header
-#if (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
     ScopedHandle hFile(safe_handle(CreateFile2(
         szFile,
         GENERIC_WRITE, 0, CREATE_ALWAYS,
         nullptr)));
-#else
-    ScopedHandle hFile(safe_handle(CreateFileW(
-        szFile,
-        GENERIC_WRITE, 0,
-        nullptr,
-        CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL,
-        nullptr)));
-#endif
     if (!hFile)
     {
         return HRESULT_FROM_WIN32(GetLastError());
@@ -503,14 +512,14 @@ HRESULT DirectX::SaveToEXRFile(const Image& image, const wchar_t* szFile)
 
     try
     {
-        const int width = static_cast<int>(image.width);
-        const int height = static_cast<int>(image.height);
+        const auto width = static_cast<int>(image.width);
+        const auto height = static_cast<int>(image.height);
 
-#ifdef _WIN32
+    #ifdef _WIN32
         Imf::RgbaOutputFile file(stream, Imf::Header(width, height), Imf::WRITE_RGBA);
-#else
+    #else
         Imf::RgbaOutputFile file(fileName.c_str(), Imf::Header(width, height), Imf::WRITE_RGBA);
-#endif
+    #endif
 
         if (image.format == DXGI_FORMAT_R16G16B16A16_FLOAT)
         {
@@ -519,9 +528,9 @@ HRESULT DirectX::SaveToEXRFile(const Image& image, const wchar_t* szFile)
         }
         else
         {
-            const uint64_t bytes = image.width * image.height;
+            const auto bytes = static_cast<uint64_t>(image.width) * static_cast<uint64_t>(image.height);
 
-            if (bytes > UINT32_MAX)
+            if (bytes > static_cast<uint64_t>(UINT32_MAX))
             {
                 return /* HRESULT_FROM_WIN32(ERROR_ARITHMETIC_OVERFLOW) */ static_cast<HRESULT>(0x80070216L);
             }
@@ -578,9 +587,9 @@ HRESULT DirectX::SaveToEXRFile(const Image& image, const wchar_t* szFile)
 #ifdef _WIN32
     catch (const com_exception& exc)
     {
-#ifdef _DEBUG
+    #ifdef _DEBUG
         OutputDebugStringA(exc.what());
-#endif
+    #endif
         hr = exc.get_result();
     }
 #endif

@@ -1,11 +1,11 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-cmake_minimum_required (VERSION 3.20)
+cmake_minimum_required (VERSION 3.21)
 
-set(DIRECTXTEX_VERSION 2.0.4)
+set(DIRECTXTEX_VERSION 2.0.9)
 
-if(WINDOWS_STORE OR (DEFINED XBOX_CONSOLE_TARGET))
+if(XBOX_CONSOLE_TARGET STREQUAL "durango")
   set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
 endif()
 
@@ -15,7 +15,13 @@ project (DirectXTex
   HOMEPAGE_URL "https://go.microsoft.com/fwlink/?LinkId=248926"
   LANGUAGES CXX)
 
+if(DEFINED XBOX_CONSOLE_TARGET)
+  set(CMAKE_CXX_STANDARD_LIBRARIES "")
+endif()
+
 option(BUILD_TOOLS "Build tex command-line tools" ON)
+
+option(BUILD_SHARED_LIBS "Build DirectXTex as a shared library" OFF)
 
 option(BUILD_SAMPLE "Build DDSView sample (requires fxc.exe)" ON)
 
@@ -38,6 +44,10 @@ option(ENABLE_SPECTRE_MITIGATION "Build using /Qspectre for MSVC" OFF)
 option(DISABLE_MSVC_ITERATOR_DEBUGGING "Disable iterator debugging in Debug configurations with the MSVC CRT" OFF)
 
 option(ENABLE_CODE_ANALYSIS "Use Static Code Analysis on build" OFF)
+
+option(ENABLE_CODE_COVERAGE "Build with code-coverage" OFF)
+
+option(ENABLE_CODE_PROFILING "Build for profiling" OFF)
 
 option(USE_PREBUILT_SHADERS "Use externally built HLSL shaders" OFF)
 
@@ -73,6 +83,12 @@ if((DEFINED XBOX_CONSOLE_TARGET) AND (NOT (XBOX_CONSOLE_TARGET STREQUAL "durango
 endif()
 
 include(GNUInstallDirs)
+include(build/CompilerAndLinker.cmake)
+
+if((DEFINED DIRECTX_ARCH) AND (${DIRECTX_ARCH} STREQUAL "arm64ec"))
+  # OpenEXR doesn't support ARM64EC
+  set(ENABLE_OPENEXR_SUPPORT OFF)
+endif()
 
 #--- Library
 set(LIBRARY_HEADERS
@@ -126,7 +142,9 @@ if(DEFINED XBOX_CONSOLE_TARGET)
     endif()
 
 elseif((BUILD_XBOX_EXTS_XBOXONE OR BUILD_XBOX_EXTS_SCARLETT) AND WIN32)
-    if(DEFINED ENV{GameDKLatest})
+    if(DEFINED ENV{GameDKXboxLatest})
+        cmake_path(SET GameDK_DIR "$ENV{GameDKXboxLatest}")
+    elseif(DEFINED ENV{GameDKLatest})
         cmake_path(SET GameDK_DIR "$ENV{GameDKLatest}")
     endif()
     if(DEFINED ENV{XboxOneXDKLatest})
@@ -142,23 +160,23 @@ elseif((BUILD_XBOX_EXTS_XBOXONE OR BUILD_XBOX_EXTS_SCARLETT) AND WIN32)
        Auxiliary/DirectXTexXboxTile.cpp)
 endif()
 
-set(SHADER_SOURCES
-    DirectXTex/Shaders/BC6HEncode.hlsl
-    DirectXTex/Shaders/BC7Encode.hlsl)
+if(BUILD_DX11 AND WIN32 AND (NOT (XBOX_CONSOLE_TARGET STREQUAL "durango")))
+    set(SHADER_SOURCES
+        DirectXTex/Shaders/BC6HEncode.hlsl
+        DirectXTex/Shaders/BC7Encode.hlsl)
 
-if(BUILD_DX11 AND WIN32)
-   list(APPEND LIBRARY_SOURCES
-       DirectXTex/BCDirectCompute.h
-       DirectXTex/BCDirectCompute.cpp
-       DirectXTex/DirectXTexCompressGPU.cpp
-       DirectXTex/DirectXTexD3D11.cpp)
+    list(APPEND LIBRARY_SOURCES
+        DirectXTex/BCDirectCompute.h
+        DirectXTex/BCDirectCompute.cpp
+        DirectXTex/DirectXTexCompressGPU.cpp
+        DirectXTex/DirectXTexD3D11.cpp)
 endif()
 
 if(BUILD_DX12)
    list(APPEND LIBRARY_SOURCES DirectXTex/DirectXTexD3D12.cpp)
 
    if(NOT (DEFINED XBOX_CONSOLE_TARGET))
-       list(APPEND LIBRARY_SOURCES DirectXTex/d3dx12.h)
+       list(APPEND LIBRARY_SOURCES Common/d3dx12.h)
    endif()
 endif()
 
@@ -183,7 +201,7 @@ if(ENABLE_LIBPNG_SUPPORT)
     list(APPEND LIBRARY_SOURCES Auxiliary/DirectXTexPNG.cpp)
 endif()
 
-if(BUILD_DX11 AND WIN32)
+if(BUILD_DX11 AND WIN32 AND (NOT (XBOX_CONSOLE_TARGET STREQUAL "durango")))
     if(NOT COMPILED_SHADERS)
         if(USE_PREBUILT_SHADERS)
             message(FATAL_ERROR "ERROR: Using prebuilt shaders requires the COMPILED_SHADERS variable is set")
@@ -197,18 +215,43 @@ if(BUILD_DX11 AND WIN32)
     list(APPEND LIBRARY_SOURCES ${COMPILED_SHADERS}/BC6HEncode_EncodeBlockCS.inc)
 
     if(NOT USE_PREBUILT_SHADERS)
+        find_program(DIRECTX_FXC_TOOL FXC.EXE
+          HINTS "C:/Program Files (x86)/Windows Kits/10/bin/${CMAKE_SYSTEM_VERSION}/${DIRECTX_HOST_ARCH}"
+                "C:/Program Files (x86)/Windows Kits/10/bin/${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}/${DIRECTX_HOST_ARCH}")
+        message(STATUS "Using LegacyShaderCompiler found in ${DIRECTX_FXC_TOOL}")
         add_custom_command(
             OUTPUT "${COMPILED_SHADERS}/BC6HEncode_EncodeBlockCS.inc"
             MAIN_DEPENDENCY "${PROJECT_SOURCE_DIR}/DirectXTex/Shaders/CompileShaders.cmd"
             DEPENDS ${SHADER_SOURCES}
             COMMENT "Generating HLSL shaders..."
-            COMMAND ${CMAKE_COMMAND} -E env CompileShadersOutput="${COMPILED_SHADERS}" CompileShaders.cmd > "${COMPILED_SHADERS}/compileshaders.log"
+            COMMAND ${CMAKE_COMMAND} -E env CompileShadersOutput="${COMPILED_SHADERS}" $<$<BOOL:${DIRECTX_FXC_TOOL}>:LegacyShaderCompiler=${DIRECTX_FXC_TOOL}> CompileShaders.cmd > "${COMPILED_SHADERS}/compileshaders.log"
             WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/DirectXTex/Shaders"
             USES_TERMINAL)
     endif()
 endif()
 
-add_library(${PROJECT_NAME} STATIC ${LIBRARY_SOURCES} ${LIBRARY_HEADERS})
+if(WIN32 AND BUILD_SHARED_LIBS)
+  message(STATUS "Build library as a DLL")
+
+  configure_file(
+      "${CMAKE_CURRENT_SOURCE_DIR}/build/DirectXTex.rc.in"
+      "${CMAKE_CURRENT_BINARY_DIR}/DirectXTex.rc" @ONLY)
+
+  add_library(${PROJECT_NAME} SHARED ${LIBRARY_SOURCES} ${LIBRARY_HEADERS} "${CMAKE_CURRENT_BINARY_DIR}/DirectXTex.rc")
+
+  target_compile_definitions(${PROJECT_NAME} PRIVATE DIRECTX_TEX_EXPORT)
+  target_compile_definitions(${PROJECT_NAME} INTERFACE DIRECTX_TEX_IMPORT)
+
+  if(XBOX_CONSOLE_TARGET MATCHES "scarlett")
+    target_link_libraries(${PROJECT_NAME} PRIVATE xgameplatform.lib xg_xs.lib xmem.lib)
+  elseif(XBOX_CONSOLE_TARGET MATCHES "xboxone")
+    target_link_libraries(${PROJECT_NAME} PRIVATE xgameplatform.lib xg_x.lib xmem.lib)
+  elseif(XBOX_CONSOLE_TARGET MATCHES "durango")
+    target_link_libraries(${PROJECT_NAME} PRIVATE kernelx.lib xg_x.lib combase.lib)
+  endif()
+else()
+  add_library(${PROJECT_NAME} ${LIBRARY_SOURCES} ${LIBRARY_HEADERS})
+endif()
 
 if(BUILD_DX11 AND WIN32)
    target_include_directories(${PROJECT_NAME} PRIVATE ${COMPILED_SHADERS})
@@ -237,8 +280,22 @@ if(ENABLE_OPENEXR_SUPPORT)
 endif()
 
 if(BUILD_XBOX_EXTS_SCARLETT AND WIN32)
-    if(EXISTS "${GameDK_DIR}/GXDK/toolKit/include/gxdk.h")
+    if(EXISTS "${GameDK_DIR}/xbox/include/devpctools/gxdk.h")
         message(STATUS "Building Xbox extensions for Xbox Series X|S")
+
+        add_library(Xbox::GDKX SHARED IMPORTED)
+        set_target_properties(Xbox::GDKX PROPERTIES
+            IMPORTED_LOCATION "${GameDK_DIR}/xbox/bin/devpctools/gen9/xg_xs.dll"
+            IMPORTED_IMPLIB "${GameDK_DIR}/xbox/lib/devpctools/gen9/xg_xs.lib"
+            MAP_IMPORTED_CONFIG_MINSIZEREL ""
+            MAP_IMPORTED_CONFIG_RELWITHDEBINFO ""
+            INTERFACE_COMPILE_DEFINITIONS "_USE_GXDK;_USE_SCARLETT"
+            INTERFACE_INCLUDE_DIRECTORIES "${GameDK_DIR}/xbox/include/devpctools;${GameDK_DIR}/xbox/include/devpctools/gen9")
+
+        target_compile_definitions(${PROJECT_NAME} PRIVATE USE_XBOX_EXTS)
+        target_link_libraries(${PROJECT_NAME} PUBLIC Xbox::GDKX)
+    elseif(EXISTS "${GameDK_DIR}/GXDK/toolKit/include/gxdk.h")
+        message(STATUS "Building Xbox extensions for Xbox Series X|S (old layouts)")
 
         add_library(Xbox::GDKX SHARED IMPORTED)
         set_target_properties(Xbox::GDKX PROPERTIES
@@ -252,11 +309,25 @@ if(BUILD_XBOX_EXTS_SCARLETT AND WIN32)
         target_compile_definitions(${PROJECT_NAME} PRIVATE USE_XBOX_EXTS)
         target_link_libraries(${PROJECT_NAME} PUBLIC Xbox::GDKX)
     else()
-        message(FATAL_ERROR "Building Xbox extensions requires GameDKLatest")
+        message(FATAL_ERROR "Building Xbox extensions requires GameDKXboxLatest or GameDKLatest")
     endif()
 elseif(BUILD_XBOX_EXTS_XBOXONE AND WIN32)
-    if(EXISTS "${GameDK_DIR}/GXDK/toolKit/include/gxdk.h")
+    if(EXISTS "${GameDK_DIR}/xbox/include/devpctools/gxdk.h")
         message(STATUS "Building Xbox extensions for XboxOne using the Microsoft GDK")
+
+        add_library(Xbox::GDKX SHARED IMPORTED)
+        set_target_properties(Xbox::GDKX PROPERTIES
+            IMPORTED_LOCATION "${GameDK_DIR}/xbox/bin/devpctools/gen8/xg.dll"
+            IMPORTED_IMPLIB "${GameDK_DIR}/xbox/lib/devpctools/gen8/xg.lib"
+            MAP_IMPORTED_CONFIG_MINSIZEREL ""
+            MAP_IMPORTED_CONFIG_RELWITHDEBINFO ""
+            INTERFACE_COMPILE_DEFINITIONS "_USE_GXDK"
+            INTERFACE_INCLUDE_DIRECTORIES "${GameDK_DIR}/xbox/include/devpctools;${GameDK_DIR}/xbox/include/devpctools/gen8")
+
+        target_compile_definitions(${PROJECT_NAME} PRIVATE USE_XBOX_EXTS)
+        target_link_libraries(${PROJECT_NAME} PUBLIC Xbox::GDKX)
+    elseif(EXISTS "${GameDK_DIR}/GXDK/toolKit/include/gxdk.h")
+        message(STATUS "Building Xbox extensions for XboxOne using the Microsoft GDK (old layouts)")
 
         add_library(Xbox::GDKX SHARED IMPORTED)
         set_target_properties(Xbox::GDKX PROPERTIES
@@ -269,7 +340,6 @@ elseif(BUILD_XBOX_EXTS_XBOXONE AND WIN32)
 
         target_compile_definitions(${PROJECT_NAME} PRIVATE USE_XBOX_EXTS)
         target_link_libraries(${PROJECT_NAME} PUBLIC Xbox::GDKX)
-
     elseif(EXISTS "${XboxOneXDK_DIR}/PC/include/xdk.h")
         message(STATUS "Building Xbox extensions for XboxOne using the Xbox One XDK")
 
@@ -284,7 +354,7 @@ elseif(BUILD_XBOX_EXTS_XBOXONE AND WIN32)
         target_compile_definitions(${PROJECT_NAME} PRIVATE USE_XBOX_EXTS)
         target_link_libraries(${PROJECT_NAME} PUBLIC Xbox::XDK)
     else()
-        message(FATAL_ERROR "Building Xbox extensions requires GameDKLatest or XboxOneXDKLatest")
+        message(FATAL_ERROR "Building Xbox extensions requires GameDKXboxLatest, GameDKLatest, or XboxOneXDKLatest")
     endif()
 endif()
 
@@ -304,7 +374,11 @@ endif()
 
 if(MINGW OR (NOT WIN32))
     find_package(directxmath CONFIG REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PUBLIC Microsoft::DirectXMath)
+
     find_package(directx-headers CONFIG REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PUBLIC Microsoft::DirectX-Headers)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC USING_DIRECTX_HEADERS)
 else()
     find_package(directxmath CONFIG QUIET)
     find_package(directx-headers CONFIG QUIET)
@@ -312,13 +386,14 @@ endif()
 
 if(directxmath_FOUND)
     message(STATUS "Using DirectXMath package")
-    target_link_libraries(${PROJECT_NAME} PUBLIC Microsoft::DirectXMath)
+    target_link_libraries(${PROJECT_NAME} PRIVATE Microsoft::DirectXMath)
 endif()
 
 if(directx-headers_FOUND)
     message(STATUS "Using DirectX-Headers package")
-    target_link_libraries(${PROJECT_NAME} PUBLIC Microsoft::DirectX-Headers)
-    target_compile_definitions(${PROJECT_NAME} PUBLIC USING_DIRECTX_HEADERS)
+    target_link_libraries(${PROJECT_NAME} PRIVATE Microsoft::DirectX-Headers)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USING_DIRECTX_HEADERS)
+    target_compile_options(${PROJECT_NAME} PRIVATE $<$<CXX_COMPILER_ID:MSVC,Intel>:/wd4062> $<$<CXX_COMPILER_ID:Clang,IntelLLVM>:-Wno-switch-enum>)
 endif()
 
 #--- Package
@@ -397,7 +472,8 @@ if(BUILD_TOOLS AND WIN32)
   add_executable(texassemble
     Texassemble/texassemble.cpp
     Texassemble/texassemble.rc
-    Texassemble/settings.manifest
+    Common/CmdLineHelpers.h
+    Common/settings.manifest
     Texassemble/AnimatedGif.cpp)
   target_compile_features(texassemble PRIVATE cxx_std_17)
   target_link_libraries(texassemble PRIVATE ${PROJECT_NAME} ole32.lib version.lib)
@@ -409,7 +485,8 @@ if(BUILD_TOOLS AND BUILD_DX11 AND WIN32)
   add_executable(texconv
     Texconv/texconv.cpp
     Texconv/texconv.rc
-    Texconv/settings.manifest
+    Common/CmdLineHelpers.h
+    Common/settings.manifest
     Texconv/ExtendedBMP.cpp
     Texconv/PortablePixMap.cpp)
   target_compile_features(texconv PRIVATE cxx_std_17)
@@ -422,12 +499,17 @@ if(BUILD_TOOLS AND WIN32)
   add_executable(texdiag
     Texdiag/texdiag.cpp
     Texdiag/texdiag.rc
-    Texdiag/settings.manifest)
+    Common/CmdLineHelpers.h
+    Common/settings.manifest)
   target_compile_features(texdiag PRIVATE cxx_std_17)
   target_link_libraries(texdiag PRIVATE ${PROJECT_NAME} ole32.lib version.lib)
   source_group(texdiag REGULAR_EXPRESSION Texdiag/*.*)
   list(APPEND TOOL_EXES texdiag)
 endif()
+
+foreach(t IN LISTS TOOL_EXES ITEMS ${PROJECT_NAME})
+  target_include_directories(${t} PRIVATE Common)
+endforeach()
 
 if(BUILD_TOOLS AND WIN32)
   if(ENABLE_OPENEXR_SUPPORT)
@@ -456,13 +538,11 @@ if(BUILD_TOOLS AND WIN32)
     target_compile_definitions(texconv PRIVATE USE_XBOX_EXTS)
     target_link_libraries(texconv PUBLIC $<TARGET_NAME_IF_EXISTS:Xbox::GDKX> $<TARGET_NAME_IF_EXISTS:Xbox::XDK>)
 
-    if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.21")
-      add_custom_command(TARGET texconv POST_BUILD
-          COMMAND ${CMAKE_COMMAND} -E copy
-          $<TARGET_RUNTIME_DLLS:texconv> $<TARGET_FILE_DIR:texconv>
-          COMMAND_EXPAND_LISTS
-          )
-    endif()
+    add_custom_command(TARGET texconv POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+        $<TARGET_RUNTIME_DLLS:texconv> $<TARGET_FILE_DIR:texconv>
+        COMMAND_EXPAND_LISTS
+        )
   endif()
 endif()
 
@@ -470,32 +550,22 @@ endif()
 if(BUILD_SAMPLE AND BUILD_DX11 AND WIN32)
   list(APPEND TOOL_EXES ddsview)
 
-  if(NOT COMPILED_DDSVIEW_SHADERS)
-      if(USE_PREBUILT_SHADERS)
-          message(FATAL_ERROR "ERROR: Using prebuilt shaders requires the COMPILED_DDSVIEW_SHADERS variable is set")
-      endif()
-      set(COMPILED_DDSVIEW_SHADERS ${CMAKE_CURRENT_BINARY_DIR}/Shaders/Compiled)
-      file(MAKE_DIRECTORY ${COMPILED_DDSVIEW_SHADERS})
-  else()
-      file(TO_CMAKE_PATH ${COMPILED_DDSVIEW_SHADERS} COMPILED_DDSVIEW_SHADERS)
-  endif()
-
   add_executable(ddsview WIN32
     DDSView/ddsview.cpp
     DDSView/ddsview.rc
-    ${COMPILED_DDSVIEW_SHADERS}/ddsview_ps1D.inc)
+    ${COMPILED_SHADERS}/ddsview_ps1D.inc)
   target_link_libraries(ddsview PRIVATE ${PROJECT_NAME} d3d11.lib ole32.lib)
   source_group(ddsview REGULAR_EXPRESSION DDSView/*.*)
 
-  target_include_directories(ddsview PRIVATE ${COMPILED_DDSVIEW_SHADERS})
+  target_include_directories(ddsview PRIVATE ${COMPILED_SHADERS})
 
   if(NOT USE_PREBUILT_SHADERS)
       add_custom_command(
-            OUTPUT "${COMPILED_DDSVIEW_SHADERS}/ddsview_ps1D.inc"
+            OUTPUT "${COMPILED_SHADERS}/ddsview_ps1D.inc"
             MAIN_DEPENDENCY "${PROJECT_SOURCE_DIR}/DDSView/hlsl.cmd"
-            DEPENDS "${PROJECT_SOURCE_DIR}/DDSView/ddsview.fx"
+            DEPENDS "DDSView/ddsview.hlsl"
             COMMENT "Generating HLSL shaders for DDSView..."
-            COMMAND COMMAND ${CMAKE_COMMAND} -E env CompileShadersOutput="${COMPILED_DDSVIEW_SHADERS}" hlsl.cmd > "${COMPILED_DDSVIEW_SHADERS}/hlsl.log"
+            COMMAND ${CMAKE_COMMAND} -E env CompileShadersOutput="${COMPILED_SHADERS}" $<$<BOOL:${DIRECTX_FXC_TOOL}>:LegacyShaderCompiler=${DIRECTX_FXC_TOOL}> hlsl.cmd > "${COMPILED_SHADERS}/hlsl_ddsview.log"
             WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/DDSView"
             USES_TERMINAL)
   endif()
@@ -505,6 +575,10 @@ if(directxmath_FOUND)
   foreach(t IN LISTS TOOL_EXES)
     target_link_libraries(${t} PRIVATE Microsoft::DirectXMath)
   endforeach()
+endif()
+
+if(TOOL_EXES)
+  message(STATUS "Building tools: ${TOOL_EXES}")
 endif()
 
 if(MSVC)
@@ -520,19 +594,11 @@ if(MSVC)
     endif()
 endif()
 
-include(build/CompilerAndLinker.cmake)
-
 foreach(t IN LISTS TOOL_EXES ITEMS ${PROJECT_NAME})
   target_compile_definitions(${t} PRIVATE ${COMPILER_DEFINES})
   target_compile_options(${t} PRIVATE ${COMPILER_SWITCHES})
   target_link_options(${t} PRIVATE ${LINKER_SWITCHES})
 endforeach()
-
-if(MINGW)
-    foreach(t IN LISTS TOOL_EXES)
-      target_link_options(${t} PRIVATE -municode)
-    endforeach()
-endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|IntelLLVM")
     set(WarningsLib -Wall -Wpedantic -Wextra)
@@ -556,6 +622,10 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|IntelLLVM")
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     foreach(t IN LISTS TOOL_EXES ITEMS ${PROJECT_NAME})
       target_compile_options(${t} PRIVATE "-Wno-ignored-attributes" "-Walloc-size-larger-than=4GB")
+
+      if(BUILD_SHARED_LIBS)
+        target_compile_options(${t} PRIVATE "-Wno-attributes")
+      endif()
     endforeach()
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
     set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 14)
@@ -563,14 +633,22 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 
     if((CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.37)
        AND (NOT (${DIRECTX_ARCH} MATCHES "^arm"))
-       AND ((${DIRECTX_ARCH} MATCHES "x64") OR (CMAKE_SIZEOF_VOID_P EQUAL 8)))
+       AND ((${DIRECTX_ARCH} STREQUAL "x64") OR (CMAKE_SIZEOF_VOID_P EQUAL 8)))
        # Enable since DirectXTex library has a lot of large switch statements
       target_compile_options(${PROJECT_NAME} PRIVATE /jumptablerdata)
     endif()
 
     if(ENABLE_CODE_ANALYSIS)
+      message(STATUS "Building with Code Analysis (PREFIX)")
       foreach(t IN LISTS TOOL_EXES ITEMS ${PROJECT_NAME})
         target_compile_options(${t} PRIVATE /analyze /WX)
+      endforeach()
+    endif()
+
+    if(ENABLE_CODE_PROFILING)
+      message(STATUS "Building with /PROFILE")
+      foreach(t IN LISTS TOOL_EXES ITEMS ${PROJECT_NAME})
+        target_link_options(${t} PRIVATE /profile)
       endforeach()
     endif()
 
@@ -591,21 +669,27 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
         endforeach()
     endif()
 
-    set(WarningsEXE "/wd4061" "/wd4062" "/wd4365" "/wd4514" "/wd4625" "/wd4626" "/wd4627" "/wd4668" "/wd4710" "/wd4711" "/wd4751" "/wd4820" "/wd5026" "/wd5027" "/wd5039" "/wd5045" "/wd5219")
+    set(WarningsEXE /wd4061 /wd4062 /wd4365 /wd4514 /wd4571 /wd4625 /wd4626 /wd4627 /wd4668 /wd4710 /wd4711 /wd4751 /wd4774 /wd4820 /wd5026 /wd5027 /wd5039 /wd5045 /wd5219)
     if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.34)
-      list(APPEND WarningsEXE "/wd5262" "/wd5264")
+      list(APPEND WarningsEXE /wd5262 /wd5264)
+    endif()
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.50)
+      list(APPEND WarningsEXE /wd4865)
     endif()
     foreach(t IN LISTS TOOL_EXES)
       target_compile_options(${t} PRIVATE ${WarningsEXE})
     endforeach()
 
-    if(BUILD_FUZZING
-       AND (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.32)
-       AND (NOT WINDOWS_STORE))
-          foreach(t IN LISTS TOOL_EXES ITEMS ${PROJECT_NAME})
-            target_compile_options(${t} PRIVATE ${ASAN_SWITCHES})
-            target_link_libraries(${t} PRIVATE ${ASAN_LIBS})
-          endforeach()
+    if(BUILD_FUZZING AND (NOT WINDOWS_STORE))
+      string(REPLACE "/DNDEBUG" "" CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE})
+      string(REPLACE "/DNDEBUG" "" CMAKE_CXX_FLAGS_RELWITHDEBINFO ${CMAKE_CXX_FLAGS_RELWITHDEBINFO})
+
+      if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.32)
+        foreach(t IN LISTS TOOL_EXES ITEMS ${PROJECT_NAME})
+          target_compile_options(${t} PRIVATE ${ASAN_SWITCHES})
+          target_link_libraries(${t} PRIVATE ${ASAN_LIBS})
+        endforeach()
+      endif()
     endif()
 endif()
 
@@ -618,9 +702,8 @@ if(WIN32)
     elseif(${DIRECTX_ARCH} MATCHES "^arm")
         set(WINVER 0x0602)
     else()
-        message(STATUS "Building with Windows 7 compatibility")
-        set(WINVER 0x0601)
-        target_compile_definitions(${PROJECT_NAME} PRIVATE _WIN7_PLATFORM_UPDATE)
+        message(STATUS "Building with Windows 8.1 compatibility")
+        set(WINVER 0x0603)
     endif()
 
     foreach(t IN LISTS TOOL_EXES ITEMS ${PROJECT_NAME})
@@ -650,6 +733,10 @@ if(WIN32 AND (NOT WINDOWS_STORE) AND (NOT (DEFINED XBOX_CONSOLE_TARGET)))
     if(BUILD_TESTING AND (EXISTS "${CMAKE_CURRENT_LIST_DIR}/Tests/CMakeLists.txt"))
         enable_testing()
         add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/Tests)
+
+        if(ENABLE_CODE_COVERAGE AND (DEFINED COV_COMPILER_SWITCHES))
+          target_compile_options(${PROJECT_NAME} PRIVATE ${COV_COMPILER_SWITCHES})
+        endif()
     elseif(BUILD_FUZZING AND (EXISTS "${CMAKE_CURRENT_LIST_DIR}/Tests/fuzzloaders/CMakeLists.txt"))
         message(STATUS "Building for fuzzing")
         add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/Tests/fuzzloaders)
