@@ -1,0 +1,35 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "x64-debug",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/Build/x64-Debug",
+      "installDir": "${sourceDir}/Install/x64-Debug",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "ASSIMP_BUILD_TESTS": "OFF",
+        "SDL_TEST_LIBRARY": "OFF",
+        "BUILD_TESTING": "OFF",
+        "SDL_DISABLE_UNINSTALL": "ON",
+        "ASSIMP_INSTALL": "OFF"
+      },
+      "vendor": {
+        "microsoft.com/VisualStudioSettings/CMake/1.0": {
+          "hostOS": [ "Windows" ],
+          "intelliSenseMode": "windows-msvc-x64"
+        }
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "x64-debug",
+      "configurePreset": "x64-debug"
+    }
+  ]
+}

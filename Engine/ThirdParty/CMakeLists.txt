@@ -4,7 +4,6 @@ set(DELTA_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 
 include(sdl3.cmake)
 include(imgui.cmake)
-# include(sail.cmake)
 include(dxtk12.cmake)
 include(assimp.cmake)
 
