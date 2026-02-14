@@ -15,6 +15,11 @@ endif()
 
 project("DeltaEngine" VERSION 0.1.0)
 
+# Enable multithreaded compilation for MSVC
+if(MSVC)
+    add_compile_options(/MP)
+endif()
+
 set(BUILD_SHARED_LIBS OFF)
 
 set(DELTA_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -23,7 +28,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT DeltaEditor)
-set(VS_GLOBAL_NewItemLocation ${CMAKE_CURRENT_SOURCE_DIR})
+set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT DeltaEditor.exe)
 
 add_subdirectory(Engine)
