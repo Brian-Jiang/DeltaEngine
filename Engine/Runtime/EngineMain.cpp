@@ -8,6 +8,8 @@
 #include "Core/DMesh.h"
 #include "Graphics/Structures/Vertex.h"
 #include "Graphics/Light/DirectionalLight.h"
+#include "Graphics/Light/PointLight.h"
+#include "Graphics/Light/SpotLight.h"
 #include "Runtime/Core/GameObject.h"
 #include "Core/DShader.h"
 #include "Core/DMaterial.h"
@@ -79,9 +81,24 @@ void EngineMain::Initialize()
     camera->UpdateParameters(DirectX::XM_PIDIV4, static_cast<float>(SCREEN_WIDTH) / SCREEN_HEIGHT, 0.1f, 1000.0f);
 
 
-    // ---------- game object: light
+    // ---------- game object: directional light (sun)
     std::shared_ptr<GameObject> directionalLightGo = m_world->CreateGameObject();
     std::shared_ptr<DirectionalLight> directionalLight = directionalLightGo->AddSceneComponent<DirectionalLight>();
+    directionalLight->SetLocalRotation(DirectX::SimpleMath::Quaternion::CreateFromAxisAngle(DirectX::SimpleMath::Vector3::UnitX, XM_PIDIV2));
+    directionalLight->UpdateParameters(XMVectorSet(0, -1, 0, 0), XMVectorSet(1.0f, 1.0f, 0.95f, 1.0f), 1.0f);
+
+    // ---------- game object: point light
+    std::shared_ptr<GameObject> pointLightGo = m_world->CreateGameObject();
+    std::shared_ptr<PointLight> pointLight = pointLightGo->AddSceneComponent<PointLight>();
+    pointLight->SetLocalPosition(0.0f, 3.0f, 2.0f);
+    pointLight->UpdateParameters(XMVectorSet(1.0f, 0.4f, 0.2f, 1.0f), 2.0f, 15.0f);
+
+    // ---------- game object: spot light
+    std::shared_ptr<GameObject> spotLightGo = m_world->CreateGameObject();
+    std::shared_ptr<SpotLight> spotLight = spotLightGo->AddSceneComponent<SpotLight>();
+    spotLight->SetLocalPosition(-3.0f, 4.0f, 2.0f);
+    spotLight->SetLocalRotation(DirectX::SimpleMath::Quaternion::CreateFromAxisAngle(DirectX::SimpleMath::Vector3::UnitX, -XM_PIDIV4));
+    spotLight->UpdateParameters(XMVectorSet(0.2f, 0.8f, 1.0f, 1.0f), 3.0f, 20.0f, XM_PI / 6.0f, XM_PI / 3.0f);
     
 
     // D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {

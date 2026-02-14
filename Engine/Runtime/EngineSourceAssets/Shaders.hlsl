@@ -122,9 +122,59 @@ LightResult DoDirectionalLight(DirectionalLight light, float3 V, float3 P, float
 
     float3 L = normalize(-light.direction.xyz);
 
-    result.Diffuse = light.color * DoDiffuse(N, L);
-    result.Specular = light.color * DoSpecular(V, N, L, specularPower);
-    result.Ambient = light.color * light.intensity;
+    result.Diffuse = light.color * light.intensity * DoDiffuse(N, L);
+    result.Specular = light.color * light.intensity * DoSpecular(V, N, L, specularPower);
+    result.Ambient = light.color * light.intensity * 0.1;  // Small ambient fill
+
+    return result;
+}
+
+LightResult DoPointLight(PointLight light, float3 V, float3 P, float3 N, float specularPower)
+{
+    LightResult result = (LightResult)0;
+
+    float3 toLight = light.position.xyz - P;
+    float distance = length(toLight);
+    if (distance > light.range)
+        return result;
+
+    float3 L = normalize(toLight);
+
+    // Smooth attenuation: 1 at center, 0 at range
+    float falloff = saturate(1.0 - (distance / light.range) * (distance / light.range));
+    falloff *= light.intensity;
+
+    result.Diffuse = light.color * falloff * DoDiffuse(N, L);
+    result.Specular = light.color * falloff * DoSpecular(V, N, L, specularPower);
+    result.Ambient = float4(0, 0, 0, 0);
+
+    return result;
+}
+
+LightResult DoSpotLight(SpotLight light, float3 V, float3 P, float3 N, float specularPower)
+{
+    LightResult result = (LightResult)0;
+
+    float3 toLight = light.position.xyz - P;
+    float distance = length(toLight);
+    if (distance > light.range)
+        return result;
+
+    float3 L = normalize(toLight);
+
+    // Spot cone attenuation: direction points where light shines
+    float theta = dot(-L, normalize(light.direction.xyz));
+    float spotFactor = smoothstep(cos(light.outerConeAngle), cos(light.innerConeAngle), theta);
+    if (spotFactor <= 0)
+        return result;
+
+    // Distance attenuation
+    float distFalloff = saturate(1.0 - (distance / light.range) * (distance / light.range));
+    float falloff = spotFactor * distFalloff * light.intensity;
+
+    result.Diffuse = light.color * falloff * DoDiffuse(N, L);
+    result.Specular = light.color * falloff * DoSpecular(V, N, L, specularPower);
+    result.Ambient = float4(0, 0, 0, 0);
 
     return result;
 }
@@ -158,40 +208,41 @@ PSInput VSMain(VSInput input)
 float4 PSMain(PSInput input) : SV_TARGET
 {
     float4 textureColor = g_texture.Sample(g_sampler, input.uv);
-    textureColor = float4(1.0, 0.0, 1.0, 1.0);
-    
-    //float3 left = normalize(LightCB.position.xyz - input.worldPosition);
-    //float3 right = reflect(-left, input.normal);
-    //float3 view = normalize(CameraCB.position.xyz - input.worldPosition);
-    //float lightDistance = length(LightCB.position.xyz - input.worldPosition);
-    //float falloff = 1.0f / (lightDistance * lightDistance);
-    ////falloff = 1.0f;
-    ////return float4(left, 1.0f);
-    
-    //float4 lightColor = LightCB.color;
-    //float4 ambient = float4(0.1f, 0.1f, 0.1f, 1.0f) * input.color * textureColor;
-    //float4 diffuse = max(dot(input.normal, left), 0.0) * LightCB.intensity * falloff * input.color * textureColor * lightColor;
-    //float4 specular = pow(max(dot(right, view), 0.0), 32) * LightCB.intensity * falloff * lightColor;
-    
+    textureColor = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    float4 objectColor = input.color * textureColor;
+
     float3 V = normalize(CameraCB.position.xyz - input.worldPosition);
     float3 P = input.worldPosition;
-    float3 N = input.normal;
+    float3 N = normalize(input.normal);
     float specularPower = 32.0f;
-    
-    LightResult totalResult = (LightResult) 0;
-    
-    //[unroll]
+
+    LightResult totalResult = (LightResult)0;
+
     for (uint i = 0; i < LightCB.numDirectionalLights; ++i)
     {
         LightResult result = DoDirectionalLight(DirectionalLights[i], V, P, N, specularPower);
-
         totalResult.Diffuse += result.Diffuse;
         totalResult.Specular += result.Specular;
         totalResult.Ambient += result.Ambient;
     }
-    
-    float4 color = totalResult.Ambient + totalResult.Diffuse + totalResult.Specular;
-    return color;
+
+    for (uint j = 0; j < LightCB.numPointLights; ++j)
+    {
+        LightResult result = DoPointLight(PointLights[j], V, P, N, specularPower);
+        totalResult.Diffuse += result.Diffuse;
+        totalResult.Specular += result.Specular;
+    }
+
+    for (uint k = 0; k < LightCB.numSpotLights; ++k)
+    {
+        LightResult result = DoSpotLight(SpotLights[k], V, P, N, specularPower);
+        totalResult.Diffuse += result.Diffuse;
+        totalResult.Specular += result.Specular;
+    }
+
+    // Apply object color to diffuse/ambient; add specular (typically white highlight)
+    float4 color = (totalResult.Ambient + totalResult.Diffuse) * objectColor + totalResult.Specular;
+    return saturate(color);
     
     
     //return float4(input.uv, 0, 1); // Debugging (show UVs as colors)

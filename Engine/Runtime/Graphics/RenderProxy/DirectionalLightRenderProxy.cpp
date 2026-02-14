@@ -5,6 +5,13 @@
 
 using namespace DeltaEngine;
 
+void DirectionalLightRenderProxy::UpdateParameters(DirectX::XMVECTOR direction, DirectX::XMVECTOR color, float intensity)
+{
+    m_direction = direction;
+    m_color = color;
+    m_intensity = intensity;
+}
+
 void DirectionalLightRenderProxy::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext)
 {
     DirectionalLightBuffer lightData = {};

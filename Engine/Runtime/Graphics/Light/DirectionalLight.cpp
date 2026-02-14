@@ -1,5 +1,8 @@
 #include "DirectionalLight.h"
 
+#include "Graphics/DXGraphicsContext.h"
+#include "Graphics/RenderProxy/DirectionalLightRenderProxy.h"
+
 using namespace DeltaEngine;
 
 DirectionalLight::DirectionalLight()
@@ -7,6 +10,7 @@ DirectionalLight::DirectionalLight()
     , m_color(1.0f, 1.0f, 1.0f, 1.0f)
     , m_intensity(1.0f)
 {
+    m_renderProxy = std::make_shared<DirectionalLightRenderProxy>();
 }
 
 DirectionalLight::~DirectionalLight()
@@ -22,4 +26,7 @@ void DirectionalLight::UpdateParameters(DirectX::XMVECTOR direction, DirectX::XM
 
 void DirectionalLight::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context)
 {
+    DirectX::XMVECTOR direction = DirectX::XMVector4Normalize(DirectX::XMVectorSetW(GetForward(), 0.0f));
+    m_renderProxy->UpdateParameters(direction, m_color, m_intensity);
+    m_renderProxy->PreGatherDrawCalls(context);
 }
