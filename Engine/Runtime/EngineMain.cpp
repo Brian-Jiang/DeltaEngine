@@ -10,14 +10,16 @@
 #include "Graphics/Light/DirectionalLight.h"
 #include "Graphics/Light/PointLight.h"
 #include "Graphics/Light/SpotLight.h"
+#include "Graphics/DirectX/CommandList.h"
+#include "Graphics/DirectX/ImGuiSrvDescriptorAllocator.h"
 #include "Runtime/Core/GameObject.h"
 #include "Core/DShader.h"
 #include "Core/DMaterial.h"
 #include "Core/Camera.h"
 
-//#include "imgui.h"
-//#include "backends/imgui_impl_sdl3.h"
-//#include "backends/imgui_impl_dx12.h"
+#include "imgui.h"
+#include "backends/imgui_impl_sdl3.h"
+#include "backends/imgui_impl_dx12.h"
 
 #define SCREEN_WIDTH   1280
 #define SCREEN_HEIGHT  720
@@ -189,8 +191,6 @@ void EngineMain::StartMainLoop()
 
     dxRenderManager->OnDestroy();
     dxRenderManager.reset();
-
-    Device::ReportLiveObjects();
     
     SDL_Quit();
 }
@@ -239,12 +239,30 @@ void EngineMain::HandleInput()
 
 void EngineMain::Draw()
 {
+    ImGui_ImplDX12_NewFrame();
+    ImGui_ImplSDL3_NewFrame();
+    ImGui::NewFrame();
+
     dxRenderManager->PrepareFrame();
 
+    static bool show_demo_window = true;
+    ImGui::ShowDemoWindow(&show_demo_window);
+    
+
     std::shared_ptr<DXGraphicsContext> context = dxRenderManager->GetGraphicsContext();
-    m_world->PreGatherDrawCalls(context);
-    context->ApplyLightBuffersToCommandList();
-    m_world->GatherDrawCalls(context);
+    //m_world->PreGatherDrawCalls(context);
+    //context->ApplyLightBuffersToCommandList();
+    //m_world->GatherDrawCalls(context);
+
+    //ImGui_ImplDX12_GetBackendData()
+    // get the descriptor heap from the editor main
+    ImGuiSrvDescriptorAllocator* allocator = dxRenderManager->m_cbvSrvUavDescriptorAllocator;
+
+    context->commandList->SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, allocator->GetHeap());
+
+    ImGui::Render();
+    ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), context->commandList->GetD3D12CommandList().Get());
+    
 
     dxRenderManager->RenderFrame();
 }

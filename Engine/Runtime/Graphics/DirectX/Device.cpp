@@ -356,6 +356,18 @@ void Device::ReleaseStaleDescriptors()
     }
 }
 
+Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> Device::CreateShaderVisibleSrvHeap(uint32_t numDescriptors)
+{
+    D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+    desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+    desc.NumDescriptors = numDescriptors;
+    desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+
+    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> heap;
+    ThrowIfFailed(m_d3d12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&heap)));
+    return heap;
+}
+
 std::shared_ptr<SwapChain> Device::CreateSwapChain(HWND hWnd, DXGI_FORMAT backBufferFormat)
 {
     auto swapChain = std::make_shared<MakeSwapChain>(*this, hWnd, backBufferFormat);

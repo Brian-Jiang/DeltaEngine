@@ -180,6 +180,12 @@ public:
     void ReleaseStaleDescriptors();
 
     /**
+     * Create a shader-visible CBV_SRV_UAV descriptor heap for external use (e.g., ImGui).
+     * Returns both CPU and GPU descriptor handles.
+     */
+    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CreateShaderVisibleSrvHeap(uint32_t numDescriptors = 64);
+
+    /**
      * Get the adapter that was used to create this device.
      */
     inline std::shared_ptr<Adapter> GetAdapter() const

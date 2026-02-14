@@ -26,6 +26,7 @@ class RootSignature;
 class SwapChain;
 class RenderTarget;
 class DWorld;
+class ImGuiSrvDescriptorAllocator;
 
 class DXRenderManager : public std::enable_shared_from_this<DXRenderManager>
 {
@@ -60,6 +61,8 @@ public:
 	inline std::shared_ptr<RootSignature> GetRootSignature() const { return m_rootSignature; }
     inline std::shared_ptr<Device> GetDevice() const { return m_device; }
 
+	ImGuiSrvDescriptorAllocator* m_cbvSrvUavDescriptorAllocator;
+
 private:
 	HWND hwnd;
 
@@ -88,6 +91,8 @@ private:
     UINT m_width;
     UINT m_height;
     float m_aspectRatio;
+
+	
 
 	//DirectX::XMFLOAT4X4 m_viewMatrix;
 	//DirectX::XMFLOAT4X4 m_projectionMatrix;
