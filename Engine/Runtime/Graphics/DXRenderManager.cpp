@@ -16,6 +16,7 @@
 #include "Runtime/Graphics/DirectX/RenderTarget.h"
 #include "Runtime/Graphics/DirectX/DirectX12Texture.h"
 #include "Runtime/Graphics/DirectX/Adapter.h"
+#include "Runtime/Graphics/Structures/RootParameterType.h"
 #include "Runtime/Core/DWorld.h"
 
 using namespace Microsoft::WRL;
@@ -54,30 +55,41 @@ void DXRenderManager::LoadAssets()
 {
     // todo root signature should bind to pass?
     // ---- Root signature (shared across all renderers) ----
-
     D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
         D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
         D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
         D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
         D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 
-    CD3DX12_DESCRIPTOR_RANGE1 ranges[1] {};
-    ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
+    
 
-    CD3DX12_ROOT_PARAMETER1 rootParameters[4] {};
-    // Camera
-    rootParameters[0].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
-    // Texture
-    rootParameters[1].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
-    // Object
-    rootParameters[2].InitAsConstantBufferView(1);
-    // Light
-    rootParameters[3].InitAsConstantBufferView(2);
+    CD3DX12_ROOT_PARAMETER1 rootParameters[static_cast<UINT>(RootParameterType::NumRootParameterTypes)] {};
+
+    // ==== CBV (b) ====
+    // Camera (b0)
+    rootParameters[static_cast<UINT>(RootParameterType::CameraCB)].InitAsConstantBufferView(0);
+    // Object (b1)
+    rootParameters[static_cast<UINT>(RootParameterType::ObjectCB)].InitAsConstantBufferView(1);
+    // Light (b2)
+    rootParameters[static_cast<UINT>(RootParameterType::LightCB)].InitAsConstantBufferView(2);
+
+
+    // ==== SRV (t) ====
+    // Lights (t0, t1, t2)
+    rootParameters[static_cast<UINT>(RootParameterType::PointLights)].InitAsShaderResourceView(0);
+    rootParameters[static_cast<UINT>(RootParameterType::SpotLights)].InitAsShaderResourceView(1);
+    rootParameters[static_cast<UINT>(RootParameterType::DirectionalLights)].InitAsShaderResourceView(2);
+
+    // Textures (t0+, space1)
+    CD3DX12_DESCRIPTOR_RANGE1 ranges[1] {};
+    ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 1, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
+    rootParameters[static_cast<UINT>(RootParameterType::Texture)].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
+    
 
     CD3DX12_STATIC_SAMPLER_DESC anisotropicSampler(0, D3D12_FILTER_ANISOTROPIC);
 
     CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
-    rootSignatureDescription.Init_1_1(4, rootParameters, 1, &anisotropicSampler, rootSignatureFlags);
+    rootSignatureDescription.Init_1_1(static_cast<UINT>(RootParameterType::NumRootParameterTypes), rootParameters, 1, &anisotropicSampler, rootSignatureFlags);
 
     m_rootSignature = m_device->CreateRootSignature(rootSignatureDescription.Desc_1_1);
 }

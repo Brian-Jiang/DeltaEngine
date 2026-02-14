@@ -1,4 +1,4 @@
-#include "Core/MeshRenderProxy.h"
+#include "Runtime/Graphics/RenderProxy/MeshRenderProxy.h"
 
 #include <d3dx12.h>
 #include <dxcapi.h>
@@ -13,6 +13,7 @@
 #include "Graphics/Structures/Camera.h"
 #include "Graphics/Structures/Light.h"
 #include "Graphics/DXRenderManager.h"
+#include "Graphics/Structures/RootParameterType.h"
 #include "Core/DMesh.h"
 #include "Core/DMaterial.h"
 #include "Core/DShader.h"
@@ -134,15 +135,15 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
     obj.color = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
     obj.useInstanceMatrix = 0;
 
-    commandList->SetGraphicsDynamicConstantBuffer(2, obj);
+    commandList->SetGraphicsDynamicConstantBuffer(static_cast<UINT>(RootParameterType::ObjectCB), obj);
 
 
-    Light lightData = {};
-    lightData.position = DirectX::XMVectorSet(0.0f, 2.0f, 0.0f, 1.0f);
-    lightData.intensity = 5.0f;
-    lightData.color = DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 1.0f);
+    //Light lightData = {};
+    //lightData.position = DirectX::XMVectorSet(0.0f, 2.0f, 0.0f, 1.0f);
+    //lightData.intensity = 5.0f;
+    //lightData.color = DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 1.0f);
 
-    commandList->SetGraphicsDynamicConstantBuffer(3, lightData);
+    //commandList->SetGraphicsDynamicConstantBuffer(static_cast<UINT>(RootParameterType::LightCB), lightData);
 
 
     commandList->SetPipelineState(m_pipelineStateObject);

@@ -7,6 +7,7 @@
 //#include "Importers/ModelImporter.h"
 #include "Core/DMesh.h"
 #include "Graphics/Structures/Vertex.h"
+#include "Graphics/Light/DirectionalLight.h"
 #include "Runtime/Core/GameObject.h"
 #include "Core/DShader.h"
 #include "Core/DMaterial.h"
@@ -22,14 +23,14 @@
 using namespace DeltaEngine;
 using namespace DirectX;
 
-EngineMain* EngineMain::instance = nullptr;
+//EngineMain* EngineMain::instance = nullptr;
 
 EngineMain::EngineMain() 
     : exitCode(0), renderer(nullptr), window(nullptr), 
     gameState(GameState::PLAY), time(nullptr)
     //, m_instancedDrawer(nullptr),
 {
-    EngineMain::instance = this;
+    //EngineMain::instance = this;
     time = new Time();
 }
 
@@ -79,6 +80,8 @@ void EngineMain::Initialize()
 
 
     // ---------- game object: light
+    std::shared_ptr<GameObject> directionalLightGo = m_world->CreateGameObject();
+    std::shared_ptr<DirectionalLight> directionalLight = directionalLightGo->AddSceneComponent<DirectionalLight>();
     
 
     // D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
@@ -223,6 +226,7 @@ void EngineMain::Draw()
 
     std::shared_ptr<DXGraphicsContext> context = dxRenderManager->GetGraphicsContext();
     m_world->PreGatherDrawCalls(context);
+    context->ApplyLightBuffersToCommandList();
     m_world->GatherDrawCalls(context);
 
     dxRenderManager->RenderFrame();

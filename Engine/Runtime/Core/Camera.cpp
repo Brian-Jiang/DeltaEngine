@@ -1,6 +1,6 @@
 #include "Core/Camera.h"
 
-#include "Core/CameraRenderProxy.h"
+#include "Graphics/RenderProxy/CameraRenderProxy.h"
 
 using namespace DirectX;
 using namespace DeltaEngine;

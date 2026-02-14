@@ -34,7 +34,8 @@ public:
 
 	std::shared_ptr<DXRenderManager> dxRenderManager;
 
-	static EngineMain* instance;
+	// todo use g_engine global variable
+	//static EngineMain* instance;
 
 private:
 	void InitSDL();

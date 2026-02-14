@@ -1,4 +1,4 @@
-#include "Core/CameraRenderProxy.h"
+#include "Graphics/RenderProxy/CameraRenderProxy.h"
 
 #include "Graphics/Structures/Camera.h"
 #include "Graphics/DXGraphicsContext.h"

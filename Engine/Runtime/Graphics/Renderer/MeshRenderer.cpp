@@ -11,7 +11,7 @@
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/DirectX/CommandList.h"
 #include "Runtime/Graphics/DirectX/RootSignature.h"
-#include "Runtime/Core/MeshRenderProxy.h"
+#include "Runtime/Graphics/RenderProxy/MeshRenderProxy.h"
 
 using namespace DirectX;
 using namespace Microsoft::WRL;
