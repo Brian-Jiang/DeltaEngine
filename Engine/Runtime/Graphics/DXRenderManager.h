@@ -58,6 +58,7 @@ public:
     inline float GetAspectRatio() const { return m_aspectRatio; }
 
 	inline std::shared_ptr<RootSignature> GetRootSignature() const { return m_rootSignature; }
+    inline std::shared_ptr<Device> GetDevice() const { return m_device; }
 
 private:
 	HWND hwnd;

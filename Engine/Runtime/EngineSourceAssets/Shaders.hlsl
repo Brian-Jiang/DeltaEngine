@@ -89,9 +89,13 @@ struct DirectionalLight
 StructuredBuffer<DirectionalLight> DirectionalLights : register(t2);
 
 // ==== SRV for Textures ====
-// Basic texture (t0)
+// Basic texture (t0, space1)
 Texture2D g_texture : register(t0, space1);
 //Texture2D g_texture1 : register(t1);
+
+
+// ==== Sampler ====
+// Basic anisotropic sampler (s0)
 SamplerState g_sampler : register(s0);
 
 

@@ -34,6 +34,11 @@ public:
 
 	std::shared_ptr<DXRenderManager> dxRenderManager;
 
+	inline std::shared_ptr<DXRenderManager> GetRenderManager() const { return dxRenderManager; }
+    inline std::shared_ptr<DWorld> GetWorld() const { return m_world; }
+
+	inline SDL_Window* GetWindow() const { return window; }
+
 	// todo use g_engine global variable
 	//static EngineMain* instance;
 
