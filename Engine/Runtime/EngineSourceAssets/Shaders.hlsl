@@ -51,6 +51,7 @@ struct Light
 
 ConstantBuffer<Light> LightCB : register(b2);
 
+
 // ==== SRV for Lights ====
 // Point Lights (t0)
 struct PointLight
@@ -76,7 +77,6 @@ struct SpotLight
 };
 
 StructuredBuffer<SpotLight> SpotLights : register(t1);
-
 
 // Directional Lights (t2)
 struct DirectionalLight

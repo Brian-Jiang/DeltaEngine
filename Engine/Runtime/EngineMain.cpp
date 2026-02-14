@@ -96,8 +96,8 @@ void EngineMain::Initialize()
     // ---------- game object: spot light
     std::shared_ptr<GameObject> spotLightGo = m_world->CreateGameObject();
     std::shared_ptr<SpotLight> spotLight = spotLightGo->AddSceneComponent<SpotLight>();
-    spotLight->SetLocalPosition(-3.0f, 4.0f, 2.0f);
-    spotLight->SetLocalRotation(DirectX::SimpleMath::Quaternion::CreateFromAxisAngle(DirectX::SimpleMath::Vector3::UnitX, -XM_PIDIV4));
+    spotLight->SetLocalPosition(-2.0f, 4.0f, 0.0f);
+    spotLight->SetLocalRotation(DirectX::SimpleMath::Quaternion::CreateFromAxisAngle(DirectX::SimpleMath::Vector3::UnitZ, -XM_PIDIV4));
     spotLight->UpdateParameters(XMVectorSet(0.2f, 0.8f, 1.0f, 1.0f), 3.0f, 20.0f, XM_PI / 6.0f, XM_PI / 3.0f);
     
 

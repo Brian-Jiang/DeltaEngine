@@ -138,14 +138,6 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
     commandList->SetGraphicsDynamicConstantBuffer(static_cast<UINT>(RootParameterType::ObjectCB), obj);
 
 
-    //Light lightData = {};
-    //lightData.position = DirectX::XMVectorSet(0.0f, 2.0f, 0.0f, 1.0f);
-    //lightData.intensity = 5.0f;
-    //lightData.color = DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 1.0f);
-
-    //commandList->SetGraphicsDynamicConstantBuffer(static_cast<UINT>(RootParameterType::LightCB), lightData);
-
-
     commandList->SetPipelineState(m_pipelineStateObject);
     commandList->SetPrimitiveTopology(m_PrimitiveTopology);
 
