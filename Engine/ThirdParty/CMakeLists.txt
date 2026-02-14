@@ -4,6 +4,7 @@ set(DELTA_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 
 include(sdl3.cmake)
 include(imgui.cmake)
+include(dxheaders.cmake)
 include(dxtk12.cmake)
 include(dxtex.cmake)
 include(assimp.cmake)
@@ -16,7 +17,3 @@ add_custom_target(CopyDxcBin ALL
 )
 
 set_target_properties(CopyDxcBin PROPERTIES FOLDER ${utility_folder})
-
-# set_target_properties(SDL3-static PROPERTIES FOLDER ${third_party_folder})
-
-
