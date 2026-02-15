@@ -68,6 +68,8 @@ void EditorRenderManager::RenderFrame(EngineMain* engine)
     ImGui_ImplDX12_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
+    //ImGui::DockSpaceOverViewport();
+    ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_AutoHideTabBar);
 
     m_sceneRenderer->PrepareFrame();
     engine->RecordSceneDraws(m_sceneRenderer->GetGraphicsContext());

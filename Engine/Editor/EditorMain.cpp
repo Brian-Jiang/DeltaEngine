@@ -54,6 +54,10 @@ EditorMain::EditorMain()
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
     ImGui_ImplSDL3_InitForD3D(m_window);
 
     // todo get from sdl3 window
@@ -62,7 +66,6 @@ EditorMain::EditorMain()
     ImGuiStyle& style = ImGui::GetStyle();
     style.ScaleAllSizes(main_scale); // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
     style.FontScaleDpi = main_scale; // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
-
 
     ImGui_ImplDX12_InitInfo imguiInit = {};
     imguiInit.Device = m_renderManager->GetDevice()->GetD3D12Device().Get();
@@ -84,6 +87,7 @@ EditorMain::~EditorMain()
 
 int EditorMain::Run()
 {
+    // todo cap fps, check if needs redraw
     while (m_running)
     {
         ProcessEvents();
