@@ -63,6 +63,7 @@ CommandQueue::CommandQueue(Device& device, D3D12_COMMAND_LIST_TYPE type)
 CommandQueue::~CommandQueue()
 {
     m_bProcessInFlightCommandLists = false;
+    m_NotifyProcessInFlightCommandListsThreadCV.notify_one();
     m_ProcessInFlightCommandListsThread.join();
 }
 
@@ -177,6 +178,8 @@ uint64_t CommandQueue::ExecuteCommandLists(const std::vector<std::shared_ptr<Com
         m_InFlightCommandLists.Push({ fenceValue, commandList });
     }
 
+    m_NotifyProcessInFlightCommandListsThreadCV.notify_one();
+
     // If there are any command lists that generate mips then execute those
     // after the initial resource command lists have finished.
     if (generateMipsCommandLists.size() > 0)
@@ -204,6 +207,11 @@ void CommandQueue::ProccessInFlightCommandLists() {
         CommandListEntry commandListEntry;
 
         lock.lock();
+
+        m_NotifyProcessInFlightCommandListsThreadCV.wait(lock, [this] {
+            return !m_InFlightCommandLists.Empty() || !m_bProcessInFlightCommandLists;
+        });
+
         while (m_InFlightCommandLists.TryPop(commandListEntry)) {
             auto fenceValue = std::get<0>(commandListEntry);
             auto commandList = std::get<1>(commandListEntry);
@@ -218,6 +226,8 @@ void CommandQueue::ProccessInFlightCommandLists() {
         m_ProcessInFlightCommandListsThreadCV.notify_one();
 
         // std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
-        std::this_thread::yield();
+        //std::this_thread::yield();
+
+        m_NotifyProcessInFlightCommandListsThreadCV.notify_one();
     }
 }

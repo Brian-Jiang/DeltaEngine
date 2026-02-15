@@ -68,6 +68,7 @@ private:
     std::atomic_bool        m_bProcessInFlightCommandLists;
     std::mutex              m_ProcessInFlightCommandListsThreadMutex;
     std::condition_variable m_ProcessInFlightCommandListsThreadCV;
+    std::condition_variable m_NotifyProcessInFlightCommandListsThreadCV;
 };
 
 DELTA_ENGINE_NS_END
