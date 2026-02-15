@@ -12,7 +12,6 @@
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/DirectX/CommandList.h"
 #include "Runtime/Graphics/DirectX/RootSignature.h"
-#include "Runtime/Graphics/DirectX/SwapChain.h"
 #include "Runtime/Graphics/DirectX/RenderTarget.h"
 #include "Runtime/Graphics/DirectX/DirectX12Texture.h"
 #include "Runtime/Graphics/DirectX/Adapter.h"
@@ -23,22 +22,11 @@ using namespace Microsoft::WRL;
 using namespace DeltaEngine;
 using namespace DirectX;
 
-DXRenderManager::DXRenderManager(HWND hwnd, UINT width, UINT height)
-    : hwnd(hwnd), m_width(width), m_height(height), g_Fullscreen(false),
+DXRenderManager::DXRenderManager(std::shared_ptr<Device> device, std::shared_ptr<RenderTarget> renderTarget, UINT width, UINT height)
+    : m_device(std::move(device)), m_renderTarget(std::move(renderTarget)), m_width(width), m_height(height),
     m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
     m_scissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX))
 {
-#if _DEBUG
-    Device::EnableDebugLayer();
-#endif
-
-    // Check for DirectX Math library support.
-    if (!DirectX::XMVerifyCPUSupport())
-    {
-        MessageBoxA(NULL, "Failed to verify DirectX Math library support.", "Error", MB_OK | MB_ICONERROR);
-    }
-
-    //m_useWarpDevice = false;
     m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
     LoadPipeline();
     LoadAssets();
@@ -46,9 +34,7 @@ DXRenderManager::DXRenderManager(HWND hwnd, UINT width, UINT height)
 
 void DXRenderManager::LoadPipeline()
 {
-    m_device = Device::Create();
-    m_swapChain = m_device->CreateSwapChain(hwnd, DXGI_FORMAT_R8G8B8A8_UNORM);
-    m_renderTarget = std::make_shared<RenderTarget>();
+    // Device and RenderTarget are provided by the caller (Editor/Game)
 }
 
 void DXRenderManager::LoadAssets()
@@ -158,64 +144,18 @@ void DXRenderManager::PrepareFrame()
 
 void DXRenderManager::RenderFrame()
 {
-    auto swapChainBackBuffer = m_swapChain->GetRenderTarget().GetTexture(AttachmentPoint::Color0);
-    auto msaaRenderTarget = m_renderTarget->GetTexture(AttachmentPoint::Color0);
-    m_currentCommandList->ResolveSubresource(swapChainBackBuffer, msaaRenderTarget);
-
     CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
-
     directCommandQueue.ExecuteCommandList(m_currentCommandList);
     m_currentCommandList = nullptr;
-    m_swapChain->Present();
 }
 
 void DXRenderManager::Resize(UINT width, UINT height)
 {
     m_width = std::max(1u, width);
     m_height = std::max(1u, height);
-
     m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
     m_viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, static_cast<float>(m_width), static_cast<float>(m_height));
     m_renderTarget->Resize(m_width, m_height);
-
-    m_swapChain->Resize(width, height);
-}
-
-void DXRenderManager::SetFullscreen(bool fullscreen)
-{
-    if (g_Fullscreen != fullscreen)
-    {
-        g_Fullscreen = fullscreen;
-        if (g_Fullscreen)
-        {
-            ::GetWindowRect(hwnd, &g_WindowRect);
-
-            LONG windowStyle = WS_OVERLAPPEDWINDOW & ~(WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
-            ::SetWindowLongW(hwnd, GWL_STYLE, windowStyle);
-
-            HMONITOR hMonitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
-            MONITORINFOEX monitorInfo = {};
-            monitorInfo.cbSize = sizeof(MONITORINFOEX);
-            GetMonitorInfo(hMonitor, &monitorInfo);
-
-            SetWindowPos(hwnd, HWND_TOP, monitorInfo.rcMonitor.left, monitorInfo.rcMonitor.top, monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left, monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top, SWP_FRAMECHANGED | SWP_NOACTIVATE);
-
-            ShowWindow(hwnd, SW_MAXIMIZE);
-        }
-        else
-        {
-            ::SetWindowLong(hwnd, GWL_STYLE, WS_OVERLAPPEDWINDOW);
- 
-            ::SetWindowPos(hwnd, HWND_NOTOPMOST,
-                g_WindowRect.left,
-                g_WindowRect.top,
-                g_WindowRect.right - g_WindowRect.left,
-                g_WindowRect.bottom - g_WindowRect.top,
-                SWP_FRAMECHANGED | SWP_NOACTIVATE);
- 
-            ::ShowWindow(hwnd, SW_NORMAL);
-        }
-    }
 }
 
 void DXRenderManager::OnDestroy()

@@ -16,22 +16,22 @@
 #include "Structures/Camera.h"
 #include "Runtime/Graphics/DXGraphicsContext.h"
 #include "Runtime/Graphics/DirectX/Device.h"
-#include "Runtime/Graphics/DirectX/SwapChain.h"
+#include "Runtime/Graphics/DirectX/RenderTarget.h"
 
 DELTA_ENGINE_NS_BEGIN
 
 class Device;
 class CommandList;
 class RootSignature;
-class SwapChain;
 class RenderTarget;
 class DWorld;
-class ImGuiSrvDescriptorAllocator;
 
+/// Renders the scene to an offscreen render target. Does not own swap chain or window.
+/// Device and RenderTarget are provided externally (e.g. by Editor or game launcher).
 class DXRenderManager : public std::enable_shared_from_this<DXRenderManager>
 {
 public:
-	DXRenderManager(HWND hwnd, UINT width, UINT height);
+	DXRenderManager(std::shared_ptr<Device> device, std::shared_ptr<RenderTarget> renderTarget, UINT width, UINT height);
 	void LoadPipeline();
     void LoadAssets();
 
@@ -39,20 +39,16 @@ public:
     /// executes the command list, and waits for the GPU.
     void InitWorldRenderers(DWorld& world);
 
+    /// Prepares the command list and renders the scene to m_renderTarget.
+    /// Caller is responsible for executing the command list and presenting.
     void PrepareFrame();
     void RenderFrame();
 
 	void Resize(UINT width, UINT height);
-	void SetFullscreen(bool fullscreen);
     void OnDestroy();
 
 	/// Returns a context that renderers use for InitGraphicState / GatherDrawCalls.
     std::shared_ptr<DXGraphicsContext> GetGraphicsContext();
-
-	void ToggleVSync(bool enableVSync) { m_swapChain->SetVSync(enableVSync); }
-
-	bool IsFullscreen() { return g_Fullscreen; }
-	bool IsVSync() { return m_swapChain->GetVSync(); }
 
 	inline UINT GetWidth() const { return m_width; }
     inline UINT GetHeight() const { return m_height; }
@@ -60,43 +56,21 @@ public:
 
 	inline std::shared_ptr<RootSignature> GetRootSignature() const { return m_rootSignature; }
     inline std::shared_ptr<Device> GetDevice() const { return m_device; }
-
-	ImGuiSrvDescriptorAllocator* m_cbvSrvUavDescriptorAllocator;
+    inline std::shared_ptr<RenderTarget> GetRenderTarget() const { return m_renderTarget; }
+    inline std::shared_ptr<CommandList> GetCurrentCommandList() const { return m_currentCommandList; }
 
 private:
-	HWND hwnd;
-
-	// Window rectangle (used to toggle fullscreen state).
-	RECT g_WindowRect;
-
-	// By default, use windowed mode.
-	// Can be toggled with the Alt+Enter or F11
-	bool g_Fullscreen = false;
-
-    //bool m_useWarpDevice;
-
 	D3D12_RECT m_scissorRect;
 	CD3DX12_VIEWPORT m_viewport;
 
-    std::shared_ptr<SwapChain> m_swapChain;
 	std::shared_ptr<Device> m_device;
     std::shared_ptr<RenderTarget> m_renderTarget;
-
     std::shared_ptr<RootSignature> m_rootSignature;
-
-	/// The command list for the current frame, obtained in PrepareFrame
-	/// and executed in RenderFrame.
 	std::shared_ptr<CommandList> m_currentCommandList;
 
     UINT m_width;
     UINT m_height;
     float m_aspectRatio;
-
-	
-
-	//DirectX::XMFLOAT4X4 m_viewMatrix;
-	//DirectX::XMFLOAT4X4 m_projectionMatrix;
-	//DirectX::XMFLOAT4 m_cameraPosition;
 };
 
 DELTA_ENGINE_NS_END

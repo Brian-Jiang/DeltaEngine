@@ -4,22 +4,16 @@
 #include <memory>
 
 #include "Graphics/DXUtils.h"
-//#include "Importers/ModelImporter.h"
 #include "Core/DMesh.h"
 #include "Graphics/Structures/Vertex.h"
 #include "Graphics/Light/DirectionalLight.h"
 #include "Graphics/Light/PointLight.h"
 #include "Graphics/Light/SpotLight.h"
 #include "Graphics/DirectX/CommandList.h"
-#include "Graphics/DirectX/ImGuiSrvDescriptorAllocator.h"
 #include "Runtime/Core/GameObject.h"
 #include "Core/DShader.h"
 #include "Core/DMaterial.h"
 #include "Core/Camera.h"
-
-#include "imgui.h"
-#include "backends/imgui_impl_sdl3.h"
-#include "backends/imgui_impl_dx12.h"
 
 #define SCREEN_WIDTH   1280
 #define SCREEN_HEIGHT  720
@@ -27,28 +21,17 @@
 using namespace DeltaEngine;
 using namespace DirectX;
 
-//EngineMain* EngineMain::instance = nullptr;
-
-EngineMain::EngineMain() 
-    : exitCode(0), renderer(nullptr), window(nullptr), 
+EngineMain::EngineMain()
+    : exitCode(0), renderer(nullptr), window(nullptr),
     gameState(GameState::PLAY), time(nullptr)
-    //, m_instancedDrawer(nullptr),
 {
-    //EngineMain::instance = this;
     time = new Time();
 }
 
-void EngineMain::Initialize()
+void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, SDL_Window* window)
 {
-    SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-
-    InitSDL();
-
-    //IMGUI_CHECKVERSION();
-    //ImGui::CreateContext();
-    //ImGui::ShowDemoWindow();
-    //ImGui_ImplSDL3_InitForD3D(window);
-    //ImGui_ImplDX12_Init(g_pd3dDevice, g_pd3dDeviceContext);
+    dxRenderManager = std::move(sceneRenderer);
+    this->window = window;
 
     // ---- Build the scene world and add renderers ----
     m_world = std::make_shared<DWorld>();
@@ -146,123 +129,55 @@ void EngineMain::Initialize()
     //atexit(&Device::ReportLiveObjects);
 }
 
-void EngineMain::InitSDL()
+void EngineMain::Tick()
 {
-    SDL_WindowFlags windowFlags = SDL_WINDOW_RESIZABLE;
-
-    if (SDL_Init(SDL_INIT_VIDEO) < 0)
-    {
-        printf("Couldn't initialize SDL: %s\n", SDL_GetError());
-        gameState = GameState::Error;
-    }
-
-    window = SDL_CreateWindow("Delta Editor", SCREEN_WIDTH, SCREEN_HEIGHT, windowFlags);
-
-    if (!window)
-    {
-        printf("Failed to open %d x %d window: %s\n", SCREEN_WIDTH, SCREEN_HEIGHT, SDL_GetError());
-        gameState = GameState::Error;
-    }
-
-    auto hwnd = static_cast<HWND>(SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr));
-    dxRenderManager = std::make_shared<DXRenderManager>(hwnd, SCREEN_WIDTH, SCREEN_HEIGHT);
+    time->TickTime();
 }
 
-void EngineMain::StartMainLoop()
+void EngineMain::ProcessEvent(const SDL_Event& event)
 {
-    while (gameState == GameState::PLAY)
+    if (event.type == SDL_EVENT_KEY_DOWN && m_cameraGameObject)
     {
-        time->TickTime();
-        
-        HandleInput();
-        Draw();
+        SDL_Keycode key = event.key.key;
+        if (key == SDLK_DOWN || key == SDLK_S)
+            m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() - XMFLOAT3(0, 0, 1.f));
+        else if (key == SDLK_UP || key == SDLK_W)
+            m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() + XMFLOAT3(0, 0, 1.f));
+        else if (key == SDLK_LEFT || key == SDLK_A)
+            m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() - XMFLOAT3(1.f, 0, 0));
+        else if (key == SDLK_RIGHT || key == SDLK_D)
+            m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() + XMFLOAT3(1.f, 0, 0));
+        else if (key == SDLK_Q)
+            m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() - XMFLOAT3(0, 1.f, 0));
+        else if (key == SDLK_E)
+            m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() + XMFLOAT3(0, 1.f, 0));
     }
+}
 
-    if (gameState == GameState::Error)
-    {
-        printf("Error");
-        exitCode = 1;
-    }
+void EngineMain::OnWindowResized(UINT width, UINT height)
+{
+    if (m_cameraGameObject)
+        m_cameraGameObject->GetRootSceneComponent<Camera>()->UpdateAspectRatio(static_cast<float>(width) / height);
+}
 
+void EngineMain::RecordSceneDraws(std::shared_ptr<DXGraphicsContext> context)
+{
+    m_world->PreGatherDrawCalls(context);
+    context->ApplyLightBuffersToCommandList();
+    m_world->GatherDrawCalls(context);
+}
+
+void EngineMain::Cleanup()
+{
     m_cameraGameObject.reset();
-
-    m_world->Clear();
-    m_world.reset();
-
-    dxRenderManager->OnDestroy();
-    dxRenderManager.reset();
-    
-    SDL_Quit();
-}
-
-void EngineMain::HandleInput()
-{
-    SDL_Event event;
-    while (SDL_PollEvent(&event))
+    if (m_world)
     {
-        switch (event.type)
-        {
-            case SDL_EVENT_WINDOW_RESIZED:
-                dxRenderManager->Resize(event.window.data1, event.window.data2);
-                m_cameraGameObject->GetRootSceneComponent<Camera>()->UpdateAspectRatio(static_cast<float>(event.window.data1) / event.window.data2);
-                break;
-            case SDL_EVENT_KEY_DOWN:
-            {
-                SDL_Keycode key = event.key.key;
-                if (key == SDLK_F11) {
-                    dxRenderManager->SetFullscreen(!dxRenderManager->IsFullscreen());
-                } else if (key == SDLK_V) {
-                    dxRenderManager->ToggleVSync(!dxRenderManager->IsVSync());
-                } else if (key == SDLK_DOWN || key == SDLK_S) {
-                    m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() - XMFLOAT3(0, 0, 1.f));
-                } else if (key == SDLK_UP || key == SDLK_W) {
-                    m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() + XMFLOAT3(0, 0, 1.f));
-                } else if (key == SDLK_LEFT || key == SDLK_A) {
-                    m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() - XMFLOAT3(1.f, 0, 0));
-                } else if (key == SDLK_RIGHT || key == SDLK_D) {
-                    m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() + XMFLOAT3(1.f, 0, 0));
-                } else if (key == SDLK_Q) {
-                    m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() - XMFLOAT3(0, 1.f, 0));
-                } else if (key == SDLK_E) {
-                    m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() + XMFLOAT3(0, 1.f, 0));
-                }
-                break;
-            }
-            case SDL_EVENT_QUIT:
-                gameState = GameState::EXIT;
-                break;
-            default:
-                break;
-        }
+        m_world->Clear();
+        m_world.reset();
     }
-}
-
-void EngineMain::Draw()
-{
-    ImGui_ImplDX12_NewFrame();
-    ImGui_ImplSDL3_NewFrame();
-    ImGui::NewFrame();
-
-    dxRenderManager->PrepareFrame();
-
-    static bool show_demo_window = true;
-    ImGui::ShowDemoWindow(&show_demo_window);
-    
-
-    std::shared_ptr<DXGraphicsContext> context = dxRenderManager->GetGraphicsContext();
-    //m_world->PreGatherDrawCalls(context);
-    //context->ApplyLightBuffersToCommandList();
-    //m_world->GatherDrawCalls(context);
-
-    //ImGui_ImplDX12_GetBackendData()
-    // get the descriptor heap from the editor main
-    ImGuiSrvDescriptorAllocator* allocator = dxRenderManager->m_cbvSrvUavDescriptorAllocator;
-
-    context->commandList->SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, allocator->GetHeap());
-
-    ImGui::Render();
-    ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), context->commandList->GetD3D12CommandList().Get());
-    
-
-    dxRenderManager->RenderFrame();
+    if (dxRenderManager)
+    {
+        dxRenderManager->OnDestroy();
+        dxRenderManager.reset();
+    }
 }

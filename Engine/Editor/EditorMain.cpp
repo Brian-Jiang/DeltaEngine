@@ -1,0 +1,147 @@
+#include "EditorMain.h"
+
+#include "Runtime/Graphics/DXRenderManager.h"
+#include "Runtime/Graphics/DirectX/SwapChain.h"
+
+#include "imgui.h"
+#include "backends/imgui_impl_sdl3.h"
+#include "backends/imgui_impl_dx12.h"
+
+#include <SDL3/SDL.h>
+#include <stdio.h>
+
+using namespace DeltaEngine;
+
+static void ImGuiDescriptorAllocate(ImGui_ImplDX12_InitInfo* info, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu)
+{
+    auto* allocator = static_cast<ImGuiSrvDescriptorAllocator*>(info->UserData);
+    allocator->Alloc(out_cpu, out_gpu);
+}
+
+static void ImGuiDescriptorFree(ImGui_ImplDX12_InitInfo* info, D3D12_CPU_DESCRIPTOR_HANDLE cpu, D3D12_GPU_DESCRIPTOR_HANDLE gpu)
+{
+    auto* allocator = static_cast<ImGuiSrvDescriptorAllocator*>(info->UserData);
+    allocator->Free(cpu, gpu);
+}
+
+EditorMain::EditorMain()
+{
+    SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+
+    if (SDL_Init(SDL_INIT_VIDEO) < 0)
+    {
+        printf("Couldn't initialize SDL: %s\n", SDL_GetError());
+        m_exitCode = 1;
+        m_running = false;
+        return;
+    }
+
+    m_window = SDL_CreateWindow("Delta Editor", DEFAULT_WIDTH, DEFAULT_HEIGHT, SDL_WINDOW_RESIZABLE);
+    if (!m_window)
+    {
+        printf("Failed to create window: %s\n", SDL_GetError());
+        m_exitCode = 1;
+        m_running = false;
+        return;
+    }
+
+    auto hwnd = static_cast<HWND>(SDL_GetPointerProperty(SDL_GetWindowProperties(m_window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr));
+    m_renderManager = std::make_unique<EditorRenderManager>(hwnd, DEFAULT_WIDTH, DEFAULT_HEIGHT);
+
+    m_engine = std::make_unique<EngineMain>();
+    m_engine->Initialize(m_renderManager->GetSceneRenderer(), m_window);
+
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui_ImplSDL3_InitForD3D(m_window);
+
+    ImGui_ImplDX12_InitInfo imguiInit = {};
+    imguiInit.Device = m_renderManager->GetDevice()->GetD3D12Device().Get();
+    imguiInit.CommandQueue = m_renderManager->GetDevice()->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT).GetD3D12CommandQueue().Get();
+    imguiInit.NumFramesInFlight = SwapChain::BufferCount;
+    imguiInit.RTVFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+    imguiInit.DSVFormat = DXGI_FORMAT_UNKNOWN;
+    imguiInit.SrvDescriptorHeap = m_renderManager->GetImGuiSrvAllocator()->GetHeap();
+    imguiInit.UserData = m_renderManager->GetImGuiSrvAllocator();
+    imguiInit.SrvDescriptorAllocFn = ImGuiDescriptorAllocate;
+    imguiInit.SrvDescriptorFreeFn = ImGuiDescriptorFree;
+    ImGui_ImplDX12_Init(&imguiInit);
+}
+
+EditorMain::~EditorMain()
+{
+    Shutdown();
+}
+
+int EditorMain::Run()
+{
+    while (m_running)
+    {
+        ProcessEvents();
+        if (!m_running)
+            break;
+
+        m_engine->Tick();
+        m_renderManager->RenderFrame(m_engine.get());
+    }
+
+    m_engine->Cleanup();
+
+    return m_engine->exitCode;
+}
+
+void EditorMain::ProcessEvents()
+{
+    SDL_Event event;
+    while (SDL_PollEvent(&event))
+    {
+        ImGui_ImplSDL3_ProcessEvent(&event);
+
+        switch (event.type)
+        {
+            case SDL_EVENT_QUIT:
+                m_running = false;
+                m_engine->gameState = GameState::EXIT;
+                break;
+            case SDL_EVENT_WINDOW_RESIZED:
+                m_renderManager->Resize(event.window.data1, event.window.data2);
+                m_engine->OnWindowResized(event.window.data1, event.window.data2);
+                break;
+            case SDL_EVENT_KEY_DOWN:
+            {
+                SDL_Keycode key = event.key.key;
+                if (key == SDLK_F11)
+                    m_renderManager->SetFullscreen(!m_renderManager->IsFullscreen());
+                else if (key == SDLK_V)
+                    m_renderManager->ToggleVSync(!m_renderManager->IsVSync());
+                else
+                    m_engine->ProcessEvent(event);
+                break;
+            }
+            default:
+                m_engine->ProcessEvent(event);
+                break;
+        }
+    }
+}
+
+void EditorMain::Shutdown()
+{
+    if (m_engine && m_renderManager)
+        m_renderManager->OnDestroy();
+
+    ImGui_ImplDX12_Shutdown();
+    ImGui_ImplSDL3_Shutdown();
+    ImGui::DestroyContext();
+
+    m_renderManager.reset();
+    m_engine.reset();
+
+    if (m_window)
+    {
+        SDL_DestroyWindow(m_window);
+        m_window = nullptr;
+    }
+
+    SDL_Quit();
+}
