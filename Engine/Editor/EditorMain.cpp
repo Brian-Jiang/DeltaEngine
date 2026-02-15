@@ -47,6 +47,7 @@ EditorMain::EditorMain()
 
     auto hwnd = static_cast<HWND>(SDL_GetPointerProperty(SDL_GetWindowProperties(m_window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr));
     m_renderManager = std::make_unique<EditorRenderManager>(hwnd, DEFAULT_WIDTH, DEFAULT_HEIGHT);
+    m_renderManager->ToggleVSync(false);
 
     m_engine = std::make_unique<EngineMain>();
     m_engine->Initialize(m_renderManager->GetSceneRenderer(), m_window);
@@ -120,8 +121,8 @@ void EditorMain::ProcessEvents()
                 SDL_Keycode key = event.key.key;
                 if (key == SDLK_F11)
                     m_renderManager->SetFullscreen(!m_renderManager->IsFullscreen());
-                else if (key == SDLK_V)
-                    m_renderManager->ToggleVSync(!m_renderManager->IsVSync());
+                //else if (key == SDLK_V)
+                //    m_renderManager->ToggleVSync(!m_renderManager->IsVSync());
                 else
                     m_engine->ProcessEvent(event);
                 break;
@@ -152,4 +153,6 @@ void EditorMain::Shutdown()
     }
 
     SDL_Quit();
+
+    Device::ReportLiveObjects();
 }
