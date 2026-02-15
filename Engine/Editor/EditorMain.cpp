@@ -55,6 +55,14 @@ EditorMain::EditorMain()
     ImGui::CreateContext();
     ImGui_ImplSDL3_InitForD3D(m_window);
 
+    // todo get from sdl3 window
+    float main_scale = 2.0f;
+    // Setup scaling
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.ScaleAllSizes(main_scale); // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
+    style.FontScaleDpi = main_scale; // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
+
+
     ImGui_ImplDX12_InitInfo imguiInit = {};
     imguiInit.Device = m_renderManager->GetDevice()->GetD3D12Device().Get();
     imguiInit.CommandQueue = m_renderManager->GetDevice()->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT).GetD3D12CommandQueue().Get();
