@@ -21,6 +21,7 @@ std::shared_ptr<GameObject> DWorld::CreateGameObject(const std::string& name)
     std::shared_ptr<GameObject> gameObject = std::make_shared<GameObject>(name);
     gameObject->m_currentWorld = shared_from_this();
     m_gameObjects.push_back(gameObject);
+    m_gameObjectsChanged = true;
     return gameObject;
 }
 
@@ -105,6 +106,11 @@ void DeltaEngine::DWorld::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> con
             stack.push(child);
         }
     }
+}
+
+void DeltaEngine::DWorld::PreTick(float deltaTime)
+{
+    m_gameObjectsChanged = false;
 }
 
 void DeltaEngine::DWorld::Clear()

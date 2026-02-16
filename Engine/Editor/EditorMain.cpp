@@ -121,6 +121,7 @@ int EditorMain::Run()
         if (!m_running)
             break;
 
+        m_engine->PreTick();
         m_engine->Tick();
         m_renderManager->RenderFrame(m_engine.get());
     }

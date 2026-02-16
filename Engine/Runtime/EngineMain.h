@@ -32,6 +32,8 @@ public:
 	/// and passes the scene renderer (DXRenderManager) that renders to that RT.
     void Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std::shared_ptr<SDL_Window>);
 
+	void PreTick();
+
 	/// Called each frame by the host (Editor/Game). Updates time.
 	void Tick();
 

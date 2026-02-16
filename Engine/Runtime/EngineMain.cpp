@@ -129,6 +129,11 @@ void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std:
     //atexit(&Device::ReportLiveObjects);
 }
 
+void DeltaEngine::EngineMain::PreTick()
+{
+    m_world->PreTick(Time::deltaTime);
+}
+
 void EngineMain::Tick()
 {
     time->TickTime();

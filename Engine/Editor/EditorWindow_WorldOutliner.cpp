@@ -88,30 +88,28 @@ void EditorWindow_WorldOutliner::Render()
         ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableHeadersRow();
 
-        std::vector<int> sortedIndices;
-        sortedIndices.reserve(gameObjects.size());
-        for (size_t i = 0; i < gameObjects.size(); i++)
-            sortedIndices.push_back(static_cast<int>(i));
+        if (!m_init || world->IsGameObjectsChanged())
+        {
+            RefreshSortedIndices(gameObjects);
+            m_init = true;
+        }
 
         if (ImGuiTableSortSpecs* sortSpecs = ImGui::TableGetSortSpecs())
         {
             if (sortSpecs->SpecsDirty)
             {
-                std::sort(sortedIndices.begin(), sortedIndices.end(),
-                    [&sortSpecs, &gameObjects](int a, int b) {
-                        return CompareGameObjects(sortSpecs, gameObjects[a], gameObjects[b], a, b) < 0;
-                    });
+                RefreshSortedIndices(gameObjects);
                 sortSpecs->SpecsDirty = false;
             }
         }
 
         ImGuiListClipper clipper;
-        clipper.Begin(static_cast<int>(sortedIndices.size()));
+        clipper.Begin(static_cast<int>(m_sortedIndices.size()));
         while (clipper.Step())
         {
             for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
             {
-                int idx = sortedIndices[row];
+                int idx = m_sortedIndices[row];
                 auto go = gameObjects[idx];
 
                 ImGui::TableNextRow();
@@ -122,7 +120,8 @@ void EditorWindow_WorldOutliner::Render()
 
                 // Column 0: Index
                 ImGui::TableSetColumnIndex(0);
-                if (ImGui::Selectable(std::to_string(idx).c_str(), selected, ImGuiSelectableFlags_SpanAllColumns)) {
+                if (ImGui::Selectable(std::to_string(idx).c_str(), selected, ImGuiSelectableFlags_SpanAllColumns))
+                {
                     m_selectedGameObject = go;
                 }
 
@@ -138,4 +137,27 @@ void EditorWindow_WorldOutliner::Render()
     }
 
     ImGui::End();
+}
+
+void EditorWindow_WorldOutliner::RefreshSortedIndices(const std::vector<std::shared_ptr<GameObject>>& gameObjects)
+{
+    m_sortedIndices.clear();
+    m_sortedIndices.reserve(gameObjects.size());
+    for (size_t i = 0; i < gameObjects.size(); i++)
+    {
+        m_sortedIndices.push_back(static_cast<int>(i));
+    }
+
+    if (ImGuiTableSortSpecs* sortSpecs = ImGui::TableGetSortSpecs())
+    {
+        //if (sortSpecs->SpecsDirty)
+        {
+            std::sort(m_sortedIndices.begin(), m_sortedIndices.end(),
+                [&sortSpecs, &gameObjects](int a, int b)
+                      {
+                          return CompareGameObjects(sortSpecs, gameObjects[a], gameObjects[b], a, b) < 0;
+                      });
+            sortSpecs->SpecsDirty = false;
+        }
+    }
 }
