@@ -20,5 +20,14 @@ void EditorWindow_WorldOutliner::Render()
         return;
     }
 
+    if (ImGui::BeginTable("WorldOutlinerTable", 1, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInner))
+    {
+        ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_None, 0.0f, 0);
+        ImGui::TableSetupScrollFreeze(0, 1);
+        ImGui::TableHeadersRow();
+
+        ImGui::EndTable();
+    }
+
     ImGui::End();
 }

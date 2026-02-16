@@ -38,7 +38,7 @@ void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std:
 
 
     // ---------- game object: mesh renderer
-    std::shared_ptr<GameObject> go = m_world->CreateGameObject();
+    std::shared_ptr<GameObject> go = m_world->CreateGameObject("MeshRenderer");
     std::shared_ptr<MeshRenderer> meshRenderer = go->AddSceneComponent<MeshRenderer>();
     meshRenderer->SetLocalPosition(2.0f, 0.0f, 5.0f);
     std::shared_ptr<DShader> shader = std::make_shared<DShader>(
@@ -59,7 +59,7 @@ void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std:
 
 
     // ---------- game object: camera
-    std::shared_ptr<GameObject> cameraGo = m_world->CreateGameObject();
+    std::shared_ptr<GameObject> cameraGo = m_world->CreateGameObject("Camera");
     m_cameraGameObject = cameraGo;
     std::shared_ptr<Camera> camera = cameraGo->AddSceneComponent<Camera>();
     camera->SetLocalPosition(0.0f, 5.0f, -25.0f);
@@ -67,19 +67,19 @@ void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std:
 
 
     // ---------- game object: directional light (sun)
-    std::shared_ptr<GameObject> directionalLightGo = m_world->CreateGameObject();
+    std::shared_ptr<GameObject> directionalLightGo = m_world->CreateGameObject("DirectionalLight");
     std::shared_ptr<DirectionalLight> directionalLight = directionalLightGo->AddSceneComponent<DirectionalLight>();
     directionalLight->SetLocalRotation(DirectX::SimpleMath::Quaternion::CreateFromAxisAngle(DirectX::SimpleMath::Vector3::UnitX, XM_PIDIV2));
     directionalLight->UpdateParameters(XMVectorSet(0, -1, 0, 0), XMVectorSet(1.0f, 1.0f, 0.95f, 1.0f), 1.0f);
 
     // ---------- game object: point light
-    std::shared_ptr<GameObject> pointLightGo = m_world->CreateGameObject();
+    std::shared_ptr<GameObject> pointLightGo = m_world->CreateGameObject("PointLight");
     std::shared_ptr<PointLight> pointLight = pointLightGo->AddSceneComponent<PointLight>();
     pointLight->SetLocalPosition(0.0f, 3.0f, 2.0f);
     pointLight->UpdateParameters(XMVectorSet(1.0f, 0.4f, 0.2f, 1.0f), 2.0f, 15.0f);
 
     // ---------- game object: spot light
-    std::shared_ptr<GameObject> spotLightGo = m_world->CreateGameObject();
+    std::shared_ptr<GameObject> spotLightGo = m_world->CreateGameObject("SpotLight");
     std::shared_ptr<SpotLight> spotLight = spotLightGo->AddSceneComponent<SpotLight>();
     spotLight->SetLocalPosition(-2.0f, 4.0f, 0.0f);
     spotLight->SetLocalRotation(DirectX::SimpleMath::Quaternion::CreateFromAxisAngle(DirectX::SimpleMath::Vector3::UnitZ, -XM_PIDIV4));

@@ -4,6 +4,7 @@
 
 #include <memory>
 #include <vector>
+#include <string>
 
 #include "Core/DObject.h"
 #include "Runtime/Graphics/DXGraphicsContext.h"
@@ -19,7 +20,7 @@ class DWorld : public DObject, public std::enable_shared_from_this<DWorld>
 public:
     DWorld();
 
-    std::shared_ptr<GameObject> CreateGameObject();
+    std::shared_ptr<GameObject> CreateGameObject(const std::string& name = "New GameObject");
 
     /// Walk the scene tree and call InitGraphicState on every Renderer.
     void InitRenderers(std::shared_ptr<DXGraphicsContext> context) const;
