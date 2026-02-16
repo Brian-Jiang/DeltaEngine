@@ -30,7 +30,7 @@ public:
 
 	/// Initialize with a scene renderer and window. Editor creates Device, SwapChain, offscreen RT
 	/// and passes the scene renderer (DXRenderManager) that renders to that RT.
-	void Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, SDL_Window* window);
+    void Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std::shared_ptr<SDL_Window>);
 
 	/// Called each frame by the host (Editor/Game). Updates time.
 	void Tick();
@@ -54,13 +54,12 @@ public:
 	/// Cleanup before exit. Call when shutting down.
 	void Cleanup();
     inline std::shared_ptr<DWorld> GetWorld() const { return m_world; }
-	inline SDL_Window* GetWindow() const { return window; }
+	inline std::shared_ptr<SDL_Window> GetWindow() const { return m_window; }
 
 private:
-	SDL_Renderer* renderer;
-	SDL_Window* window;
+	std::shared_ptr<SDL_Window> m_window;
 
-    Time* time;
+    std::unique_ptr<Time> time;
 
     std::shared_ptr<DWorld> m_world;
     std::shared_ptr<GameObject> m_cameraGameObject;

@@ -24,7 +24,7 @@ private:
 
     std::unique_ptr<EditorRenderManager> m_renderManager;
     std::unique_ptr<EngineMain> m_engine;
-    SDL_Window* m_window = nullptr;
+    std::shared_ptr<SDL_Window> m_window;
     bool m_running = true;
     int m_exitCode = 0;
 

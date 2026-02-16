@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <memory>
+#include <string>
 
 #include "Core/DObject.h"
 #include "Core/DComponent.h"
@@ -18,6 +19,7 @@ class GameObject: public DObject
 
 public:
 	GameObject();
+	GameObject(const std::string& name);
 	~GameObject();
 
 	template <typename T> requires IsDComponent<T>
@@ -62,6 +64,7 @@ public:
     }
 
 private:
+    std::string m_name;
     std::weak_ptr<SceneComponent> m_rootSceneComponent;
     std::vector<std::shared_ptr<SceneComponent>> m_sceneComponents;
 	std::vector<std::shared_ptr<DComponent>> m_components;

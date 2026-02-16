@@ -36,7 +36,7 @@ EditorMain::EditorMain()
         return;
     }
 
-    m_window = SDL_CreateWindow("Delta Editor", DEFAULT_WIDTH, DEFAULT_HEIGHT, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+    m_window = std::shared_ptr<SDL_Window>(SDL_CreateWindow("Delta Editor", DEFAULT_WIDTH, DEFAULT_HEIGHT, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY), SDL_DestroyWindow);
     if (!m_window)
     {
         printf("Failed to create window: %s\n", SDL_GetError());
@@ -45,7 +45,7 @@ EditorMain::EditorMain()
         return;
     }
 
-    auto hwnd = static_cast<HWND>(SDL_GetPointerProperty(SDL_GetWindowProperties(m_window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr));
+    auto hwnd = static_cast<HWND>(SDL_GetPointerProperty(SDL_GetWindowProperties(m_window.get()), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr));
     m_renderManager = std::make_unique<EditorRenderManager>(hwnd, DEFAULT_WIDTH, DEFAULT_HEIGHT);
     m_renderManager->ToggleVSync(false);
 
@@ -60,7 +60,7 @@ EditorMain::EditorMain()
     io.ConfigDpiScaleViewports = true; // (Docking branch only) Scale Dear ImGui and Platform Windows when Monitor DPI changes.
     //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
-    ImGui_ImplSDL3_InitForD3D(m_window);
+    ImGui_ImplSDL3_InitForD3D(m_window.get());
 
     // todo get from sdl3 window
     float main_scale = 2.0f;
@@ -174,8 +174,8 @@ void EditorMain::Shutdown()
 
     if (m_window)
     {
-        SDL_DestroyWindow(m_window);
-        m_window = nullptr;
+        SDL_DestroyWindow(m_window.get());
+        m_window.reset();
     }
 
     SDL_Quit();

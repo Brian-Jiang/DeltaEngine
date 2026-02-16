@@ -22,16 +22,16 @@ using namespace DeltaEngine;
 using namespace DirectX;
 
 EngineMain::EngineMain()
-    : exitCode(0), renderer(nullptr), window(nullptr),
-    gameState(GameState::PLAY), time(nullptr)
+    : exitCode(0)
+    , gameState(GameState::PLAY)
 {
-    time = new Time();
+    time = std::make_unique<Time>();
 }
 
-void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, SDL_Window* window)
+void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std::shared_ptr<SDL_Window> window)
 {
     dxRenderManager = std::move(sceneRenderer);
-    this->window = window;
+    m_window = window;
 
     // ---- Build the scene world and add renderers ----
     m_world = std::make_shared<DWorld>();
@@ -175,6 +175,7 @@ void EngineMain::Cleanup()
         m_world->Clear();
         m_world.reset();
     }
+
     if (dxRenderManager)
     {
         dxRenderManager->OnDestroy();

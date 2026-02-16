@@ -5,8 +5,14 @@
 using namespace DeltaEngine;
 
 GameObject::GameObject()
+    : m_name("New GameObject")
 {
 	//AddComponent<Transform>();
+}
+
+DeltaEngine::GameObject::GameObject(const std::string& name)
+    : m_name(name)
+{
 }
 
 GameObject::~GameObject()
