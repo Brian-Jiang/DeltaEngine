@@ -54,6 +54,8 @@ public:
 
     void Destroy();
 
+    const std::string& GetName() const { return m_name; }
+
 	inline std::shared_ptr<DWorld> GetCurrentWorld() const { return m_currentWorld; }
     inline std::shared_ptr<SceneComponent> GetRootSceneComponent() const { return m_rootSceneComponent.lock(); }
 

@@ -35,6 +35,8 @@ public:
     /// Clears all game objects and breaks the circular reference between the world and game objects.
     void Clear();
 
+    const std::vector<std::shared_ptr<GameObject>>& GetGameObjects() const { return m_gameObjects; }
+
     static std::shared_ptr<DWorld> CreateWorld();
 
 private:

@@ -2,7 +2,11 @@
 
 #include "EngineIncludes.h"
 
+#include <memory>
+
 DELTA_ENGINE_NS_BEGIN
+
+class GameObject;
 
 class EditorWindow_WorldOutliner
 {
@@ -14,6 +18,9 @@ public:
 
     const char* m_title = "World Outliner";
     bool* m_open = nullptr;
+
+private:
+    std::shared_ptr<GameObject> m_selectedGameObject;
 };
 
 DELTA_ENGINE_NS_END

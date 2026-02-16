@@ -12,6 +12,9 @@
 
 using namespace DeltaEngine;
 
+EditorMain* DeltaEngine::g_editor = nullptr;
+
+
 static void ImGuiDescriptorAllocate(ImGui_ImplDX12_InitInfo* info, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu)
 {
     auto* allocator = static_cast<ImGuiSrvDescriptorAllocator*>(info->UserData);
@@ -26,6 +29,7 @@ static void ImGuiDescriptorFree(ImGui_ImplDX12_InitInfo* info, D3D12_CPU_DESCRIP
 
 EditorMain::EditorMain()
 {
+    g_editor = this;
     SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -85,6 +89,7 @@ EditorMain::EditorMain()
 
 EditorMain::~EditorMain()
 {
+    g_editor = nullptr;
     Shutdown();
 }
 

@@ -9,6 +9,11 @@
 
 DELTA_ENGINE_NS_BEGIN
 
+class EditorMain;
+
+/// Global editor instance. Set during EditorMain construction, cleared on destruction.
+extern EditorMain* g_editor;
+
 /// Editor application. Owns the main loop, window, and render pipeline.
 class EditorMain
 {
@@ -17,6 +22,8 @@ public:
     ~EditorMain();
 
     int Run();
+
+    EngineMain* GetEngine() { return m_engine.get(); }
 
 private:
     void ProcessEvents();
