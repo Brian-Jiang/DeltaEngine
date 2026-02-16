@@ -11,6 +11,8 @@
 #include "Runtime/Graphics/DirectX/DirectX12Texture.h"
 #include "Runtime/Graphics/DirectX/ImGuiSrvDescriptorAllocator.h"
 
+#include "imgui.h"
+
 DELTA_ENGINE_NS_BEGIN
 
 class DXRenderManager;
@@ -45,6 +47,7 @@ public:
     UINT GetHeight() const { return m_height; }
     bool IsFullscreen() const { return m_fullscreen; }
     bool IsVSync() const { return m_swapChain->GetVSync(); }
+    ImTextureID GetSceneTextureId() const { return m_sceneTextureId; }
 
 private:
     void CopyOffscreenToBackBuffer(CommandList& commandList);
@@ -65,14 +68,12 @@ private:
     std::shared_ptr<DXRenderManager> m_sceneRenderer;
     ImGuiSrvDescriptorAllocator m_imGuiSrvAllocator;
 
-    std::shared_ptr<EditorWindow_WorldOutliner> m_worldOutliner;
-    std::shared_ptr<EditorWindow_Viewport> m_viewport;
-
     /// Texture for blit path when offscreen RT is multisampled. Resolves MSAA RT to this for ImGui display.
     std::shared_ptr<DirectX12Texture> m_viewportDisplayTexture;
 
     D3D12_CPU_DESCRIPTOR_HANDLE m_imguiSrvCpuHandle;
     D3D12_GPU_DESCRIPTOR_HANDLE m_imguiSrvGpuHandle;
+    ImTextureID m_sceneTextureId;
 };
 
 DELTA_ENGINE_NS_END

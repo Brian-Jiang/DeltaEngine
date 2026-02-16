@@ -28,6 +28,6 @@ private:
 };
 
 template<typename T>
-concept IsDComponent = std::is_base_of_v<DComponent, T>;
+concept IsDComponent = std::derived_from<T, DComponent>;
 
 DELTA_ENGINE_NS_END

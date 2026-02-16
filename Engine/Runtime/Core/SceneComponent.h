@@ -65,6 +65,6 @@ private:
 };
 
 template<typename T>
-concept IsSceneComponent = std::is_base_of_v<SceneComponent, T>;
+concept IsSceneComponent = std::derived_from<T, SceneComponent>;
 
 DELTA_ENGINE_NS_END

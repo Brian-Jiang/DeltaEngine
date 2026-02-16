@@ -11,8 +11,8 @@
 #include "Runtime/Graphics/DirectX/DirectX12Texture.h"
 #include "Runtime/Graphics/DirectX/Resource.h"
 #include "Runtime/Graphics/DXUtils.h"
-#include "Editor/EditorWindow_WorldOutliner.h"
-#include "Editor/EditorWindow_Viewport.h"
+#include "Editor/EditorMain.h"
+#include "Editor/EditorWindows/EditorWindow_Viewport.h"
 
 #include "imgui.h"
 #include "backends/imgui_impl_sdl3.h"
@@ -39,14 +39,12 @@ EditorRenderManager::EditorRenderManager(HWND hwnd, UINT width, UINT height)
 
     m_imGuiSrvAllocator.Create(*m_device, m_device->CreateShaderVisibleSrvHeap(64));
 
-    m_worldOutliner = std::make_shared<EditorWindow_WorldOutliner>();
-    m_viewport = std::make_shared<EditorWindow_Viewport>();
-
     D3D12_CPU_DESCRIPTOR_HANDLE out_cpu;
     D3D12_GPU_DESCRIPTOR_HANDLE out_gpu;
     m_imGuiSrvAllocator.Alloc(&out_cpu, &out_gpu);
     m_imguiSrvCpuHandle = out_cpu;
     m_imguiSrvGpuHandle = out_gpu;
+    m_sceneTextureId = (ImTextureID)(intptr_t)m_imguiSrvGpuHandle.ptr;
 }
 
 EditorRenderManager::~EditorRenderManager()
@@ -146,9 +144,7 @@ void EditorRenderManager::RenderFrame(EngineMain* engine)
     static bool show_demo_window = true;
     ImGui::ShowDemoWindow(&show_demo_window);
 
-    m_worldOutliner->Render();
-    ImTextureID sceneTextureId = (ImTextureID)(intptr_t)m_imguiSrvGpuHandle.ptr;
-    m_viewport->Render(commandList, m_offscreenRenderTarget, sceneTextureId);
+    g_editor->RenderEditorWindows();
 
     auto backBufferRTV = m_swapChain->GetRenderTarget();
     commandList->SetRenderTarget(backBufferRTV);

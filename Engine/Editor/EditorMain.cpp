@@ -1,14 +1,16 @@
 #include "EditorMain.h"
 
+#include <SDL3/SDL.h>
+#include <stdio.h>
+
 #include "Runtime/Graphics/DXRenderManager.h"
 #include "Runtime/Graphics/DirectX/SwapChain.h"
+#include "Editor/EditorWindows/EditorWindow_WorldOutliner.h"
+#include "Editor/EditorWindows/EditorWindow_Viewport.h"
 
 #include "imgui.h"
 #include "backends/imgui_impl_sdl3.h"
 #include "backends/imgui_impl_dx12.h"
-
-#include <SDL3/SDL.h>
-#include <stdio.h>
 
 using namespace DeltaEngine;
 
@@ -101,6 +103,9 @@ int EditorMain::Run()
     auto targetFrameTime = duration<double>(1.0 / 60.0); // 60 FPS cap
     auto lastFrame = Clock::now();
 
+    OpenEditorWindow<EditorWindow_WorldOutliner>();
+    OpenEditorWindow<EditorWindow_Viewport>();
+
     // todo check if needs redraw
     while (m_running)
     {
@@ -129,6 +134,14 @@ int EditorMain::Run()
     m_engine->Cleanup();
 
     return m_engine->exitCode;
+}
+
+void DeltaEngine::EditorMain::RenderEditorWindows()
+{
+    for (const auto& window : m_editorWindows)
+    {
+        window->Render();
+    }
 }
 
 void EditorMain::ProcessEvents()

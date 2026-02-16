@@ -3,9 +3,13 @@
 #include "EngineIncludes.h"
 
 #include <memory>
+#include <vector>
 
 #include "EditorRenderManager.h"
 #include "Runtime/EngineMain.h"
+#include "EditorWindows/EditorWindow.h"
+
+#include "imgui.h"
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -23,7 +27,34 @@ public:
 
     int Run();
 
+    template <typename T>
+        requires IsEditorWindow<T>
+    std::shared_ptr<T> OpenEditorWindow()
+    {
+        std::shared_ptr<T> window = std::make_shared<T>();
+        m_editorWindows.push_back(window);
+        return window;
+    }
+
+    template <typename T>
+        requires IsEditorWindow<T>
+    std::shared_ptr<T> GetEditorWindow()
+    {
+        for (const auto& window : m_editorWindows)
+        {
+            if (auto casted = std::dynamic_pointer_cast<T>(window))
+            {
+                return casted;
+            }
+        }
+
+        return nullptr;
+    }
+
+    void RenderEditorWindows();
+
     EngineMain* GetEngine() { return m_engine.get(); }
+    ImTextureID GetSceneTextureId() const { return m_renderManager->GetSceneTextureId(); }
 
 private:
     void ProcessEvents();
@@ -32,6 +63,7 @@ private:
     std::unique_ptr<EditorRenderManager> m_renderManager;
     std::unique_ptr<EngineMain> m_engine;
     std::shared_ptr<SDL_Window> m_window;
+    std::vector<std::shared_ptr<EditorWindow>> m_editorWindows;
     bool m_running = true;
     int m_exitCode = 0;
 

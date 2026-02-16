@@ -1,14 +1,15 @@
-#include "Editor/EditorWindow_WorldOutliner.h"
+#include "Editor/EditorWindows/EditorWindow_WorldOutliner.h"
+
+#include <algorithm>
+#include <cstdio>
+#include <vector>
+
 #include "Editor/EditorMain.h"
 #include "Runtime/EngineMain.h"
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/GameObject.h"
 
 #include "imgui.h"
-
-#include <algorithm>
-#include <cstdio>
-#include <vector>
 
 using namespace DeltaEngine;
 
