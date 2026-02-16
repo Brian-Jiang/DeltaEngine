@@ -2,6 +2,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+#include <d3dx12.h>
 
 #include "Runtime/EngineMain.h"
 #include "Runtime/Graphics/DXRenderManager.h"
@@ -10,6 +11,8 @@
 #include "Runtime/Graphics/DirectX/DirectX12Texture.h"
 #include "Runtime/Graphics/DirectX/Resource.h"
 #include "Runtime/Graphics/DXUtils.h"
+#include "Editor/EditorWindow_WorldOutliner.h"
+#include "Editor/EditorWindow_Viewport.h"
 
 #include "imgui.h"
 #include "backends/imgui_impl_sdl3.h"
@@ -35,6 +38,15 @@ EditorRenderManager::EditorRenderManager(HWND hwnd, UINT width, UINT height)
     m_sceneRenderer = std::make_shared<DXRenderManager>(m_device, m_offscreenRenderTarget, width, height);
 
     m_imGuiSrvAllocator.Create(*m_device, m_device->CreateShaderVisibleSrvHeap(64));
+
+    m_worldOutliner = std::make_shared<EditorWindow_WorldOutliner>();
+    m_viewport = std::make_shared<EditorWindow_Viewport>();
+
+    D3D12_CPU_DESCRIPTOR_HANDLE out_cpu;
+    D3D12_GPU_DESCRIPTOR_HANDLE out_gpu;
+    m_imGuiSrvAllocator.Alloc(&out_cpu, &out_gpu);
+    m_imguiSrvCpuHandle = out_cpu;
+    m_imguiSrvGpuHandle = out_gpu;
 }
 
 EditorRenderManager::~EditorRenderManager()
@@ -63,6 +75,52 @@ void EditorRenderManager::CopyOffscreenToBackBuffer(CommandList& commandList)
         commandList.CopyResource(dstResource, srcResource);
 }
 
+void EditorRenderManager::PrepareViewportSceneTexture(CommandList& commandList)
+{
+    auto offscreenColor = m_offscreenRenderTarget->GetTexture(AttachmentPoint::Color0);
+    if (!offscreenColor)
+        return;
+
+    const UINT sampleCount = offscreenColor->GetD3D12ResourceDesc().SampleDesc.Count;
+    const UINT width = m_offscreenRenderTarget->GetWidth();
+    const UINT height = m_offscreenRenderTarget->GetHeight();
+
+    std::shared_ptr<DirectX12Texture> displayTexture;
+
+    if (sampleCount > 1)
+    {
+        // MSAA path: resolve to non-multisampled texture, then copy descriptor
+        if (!m_viewportDisplayTexture ||
+            m_viewportDisplayTexture->GetD3D12ResourceDesc().Width != width ||
+            m_viewportDisplayTexture->GetD3D12ResourceDesc().Height != height)
+        {
+            DXGI_FORMAT format = offscreenColor->GetD3D12ResourceDesc().Format;
+            auto colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(format, width, height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE);
+            m_viewportDisplayTexture = m_device->CreateTexture(colorDesc, nullptr);
+            m_viewportDisplayTexture->SetName(L"Viewport Display Target");
+        }
+
+        commandList.ResolveSubresource(m_viewportDisplayTexture, offscreenColor);
+        commandList.TransitionBarrier(m_viewportDisplayTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        commandList.FlushResourceBarriers();
+        displayTexture = m_viewportDisplayTexture;
+    }
+    else
+    {
+        // Non-MSAA path: use copy descriptor directly on the offscreen RT
+        commandList.TransitionBarrier(offscreenColor, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        commandList.FlushResourceBarriers();
+        displayTexture = offscreenColor;
+    }
+
+    // Copy descriptor from display texture (on Device heap) to ImGui heap so ImGui can sample it
+    D3D12_CPU_DESCRIPTOR_HANDLE srcSrv = displayTexture->GetShaderResourceView();
+    if (srcSrv.ptr != 0)
+    {
+        m_device->GetD3D12Device()->CopyDescriptorsSimple(1, m_imguiSrvCpuHandle, srcSrv, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    }
+}
+
 void EditorRenderManager::RenderFrame(EngineMain* engine)
 {
     ImGui_ImplDX12_NewFrame();
@@ -74,10 +132,8 @@ void EditorRenderManager::RenderFrame(EngineMain* engine)
     m_sceneRenderer->PrepareFrame();
     engine->RecordSceneDraws(m_sceneRenderer->GetGraphicsContext());
 
-    static bool show_demo_window = true;
-    ImGui::ShowDemoWindow(&show_demo_window);
-
     m_sceneRenderer->RenderFrame();
+    //m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT).Flush();
 
     CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
     auto commandList = directCommandQueue.GetCommandList();
@@ -85,7 +141,14 @@ void EditorRenderManager::RenderFrame(EngineMain* engine)
     const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
     commandList->ClearTexture(m_swapChain->GetRenderTarget().GetTexture(AttachmentPoint::Color0), clearColor);
 
-    CopyOffscreenToBackBuffer(*commandList);
+    PrepareViewportSceneTexture(*commandList);
+
+    static bool show_demo_window = true;
+    ImGui::ShowDemoWindow(&show_demo_window);
+
+    m_worldOutliner->Render();
+    ImTextureID sceneTextureId = (ImTextureID)(intptr_t)m_imguiSrvGpuHandle.ptr;
+    m_viewport->Render(commandList, m_offscreenRenderTarget, sceneTextureId);
 
     auto backBufferRTV = m_swapChain->GetRenderTarget();
     commandList->SetRenderTarget(backBufferRTV);
