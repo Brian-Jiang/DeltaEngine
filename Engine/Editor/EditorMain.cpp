@@ -90,9 +90,28 @@ EditorMain::~EditorMain()
 
 int EditorMain::Run()
 {
-    // todo cap fps, check if needs redraw
+    using Clock = std::chrono::high_resolution_clock;
+    using namespace std::chrono;
+
+    auto targetFrameTime = duration<double>(1.0 / 60.0); // 60 FPS cap
+    auto lastFrame = Clock::now();
+
+    // todo check if needs redraw
     while (m_running)
     {
+        auto now = Clock::now();
+        auto elapsed = now - lastFrame;
+        if (elapsed < targetFrameTime) {
+            // Sleep for most of the remaining time (saves CPU)
+            auto remaining = targetFrameTime - elapsed;
+            if (remaining > 1ms) {
+                std::this_thread::sleep_for(remaining - 1ms); // leave 1ms margin
+            }
+            continue;
+        }
+
+        lastFrame = now;
+
         ProcessEvents();
         if (!m_running)
             break;
