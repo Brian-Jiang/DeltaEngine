@@ -121,7 +121,7 @@ void EditorWindow_WorldOutliner::Render()
                 {
                     for (const auto& selectedGo : selectionState->GetSelectedGameObjects())
                     {
-                        if (selectedGo == go)
+                        if (selectedGo.lock() == go)
                         {
                             selected = true;
                             break;

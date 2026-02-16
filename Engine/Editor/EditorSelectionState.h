@@ -23,8 +23,8 @@ public:
     void AddComponentToSelection(std::shared_ptr<DComponent> component);
     void ClearSelection();
 
-    const std::vector<std::shared_ptr<GameObject>>& GetSelectedGameObjects() const { return m_selectedGameObjects; }
-    const std::vector<std::shared_ptr<DComponent>>& GetSelectedComponents() const { return m_selectedComponents; }
+    const std::vector<std::weak_ptr<GameObject>>& GetSelectedGameObjects() const { return m_selectedGameObjects; }
+    const std::vector<std::weak_ptr<DComponent>>& GetSelectedComponents() const { return m_selectedComponents; }
 
     /// Returns the GameObject to use as context for ComponentsHierarchy.
     /// First selected GameObject, or the owning GameObject of the first selected component.
@@ -33,8 +33,8 @@ public:
     bool HasSelection() const;
 
 private:
-    std::vector<std::shared_ptr<GameObject>> m_selectedGameObjects;
-    std::vector<std::shared_ptr<DComponent>> m_selectedComponents;
+    std::vector<std::weak_ptr<GameObject>> m_selectedGameObjects;
+    std::vector<std::weak_ptr<DComponent>> m_selectedComponents;
 };
 
 DELTA_ENGINE_NS_END

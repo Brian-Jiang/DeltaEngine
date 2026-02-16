@@ -51,11 +51,11 @@ std::shared_ptr<GameObject> EditorSelectionState::GetContextGameObject() const
 {
     if (!m_selectedGameObjects.empty())
     {
-        return m_selectedGameObjects.front();
+        return m_selectedGameObjects.front().lock();
     }
     if (!m_selectedComponents.empty())
     {
-        return m_selectedComponents.front()->GetGameObject();
+        return m_selectedComponents.front().lock()->GetGameObject();
     }
     return nullptr;
 }

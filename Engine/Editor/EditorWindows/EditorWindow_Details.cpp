@@ -47,17 +47,17 @@ void EditorWindow_Details::Render()
 
     for (const auto& gameObject : gameObjects)
     {
-        if (gameObject)
+        if (auto lockedGameObject = gameObject.lock())
         {
-            RenderGameObjectDetails(gameObject);
+            RenderGameObjectDetails(lockedGameObject);
         }
     }
 
     for (const auto& component : components)
     {
-        if (component)
+        if (auto lockedComponent = component.lock())
         {
-            RenderComponentDetails(component);
+            RenderComponentDetails(lockedComponent);
         }
     }
 

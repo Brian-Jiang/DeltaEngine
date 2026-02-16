@@ -88,7 +88,7 @@ void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(std::shared_ptr<
     bool isSelected = false;
     for (const auto& comp : selectionState->GetSelectedComponents())
     {
-        if (comp == sceneComponent)
+        if (comp.lock() == sceneComponent)
         {
             isSelected = true;
             break;
@@ -126,7 +126,7 @@ void EditorWindow_ComponentsHierarchy::RenderRegularComponents(const std::vector
         bool isSelected = false;
         for (const auto& comp : selectionState->GetSelectedComponents())
         {
-            if (comp == component)
+            if (comp.lock() == component)
             {
                 isSelected = true;
                 break;
