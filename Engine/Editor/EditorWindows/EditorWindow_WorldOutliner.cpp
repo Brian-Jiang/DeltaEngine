@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "Editor/EditorMain.h"
+#include "Editor/EditorSelectionState.h"
 #include "Runtime/EngineMain.h"
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/GameObject.h"
@@ -115,7 +116,18 @@ void EditorWindow_WorldOutliner::Render()
 
                 ImGui::TableNextRow();
 
-                bool selected = (m_selectedGameObject.lock() == go);
+                bool selected = false;
+                if (auto selectionState = g_editor->GetSelectionState())
+                {
+                    for (const auto& selectedGo : selectionState->GetSelectedGameObjects())
+                    {
+                        if (selectedGo == go)
+                        {
+                            selected = true;
+                            break;
+                        }
+                    }
+                }
 
                 ImGui::PushID(idx);
 
@@ -123,7 +135,10 @@ void EditorWindow_WorldOutliner::Render()
                 ImGui::TableSetColumnIndex(0);
                 if (ImGui::Selectable(std::to_string(idx).c_str(), selected, ImGuiSelectableFlags_SpanAllColumns))
                 {
-                    m_selectedGameObject = go;
+                    if (auto selectionState = g_editor->GetSelectionState())
+                    {
+                        selectionState->SelectGameObject(go);
+                    }
                 }
 
                 // Column 1: Name

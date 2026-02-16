@@ -7,6 +7,8 @@
 #include "Runtime/Graphics/DirectX/SwapChain.h"
 #include "Editor/EditorWindows/EditorWindow_WorldOutliner.h"
 #include "Editor/EditorWindows/EditorWindow_Viewport.h"
+#include "Editor/EditorWindows/EditorWindow_ComponentsHierarchy.h"
+#include "Editor/EditorWindows/EditorWindow_Details.h"
 
 #include "imgui.h"
 #include "backends/imgui_impl_sdl3.h"
@@ -58,6 +60,8 @@ EditorMain::EditorMain()
     m_engine = std::make_unique<EngineMain>();
     m_engine->Initialize(m_renderManager->GetSceneRenderer(), m_window);
 
+    m_selectionState = std::make_unique<EditorSelectionState>();
+
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
@@ -105,6 +109,8 @@ int EditorMain::Run()
 
     OpenEditorWindow<EditorWindow_WorldOutliner>();
     OpenEditorWindow<EditorWindow_Viewport>();
+    OpenEditorWindow<EditorWindow_ComponentsHierarchy>();
+    OpenEditorWindow<EditorWindow_Details>();
 
     // todo check if needs redraw
     while (m_running)

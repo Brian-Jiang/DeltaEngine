@@ -51,6 +51,7 @@ public:
     DirectX::SimpleMath::Vector3 GetForward() const;
     
     std::shared_ptr<SceneComponent> GetParent() const { return m_parent.lock(); }
+    const std::vector<std::shared_ptr<SceneComponent>>& GetChildren() const { return m_children; }
     void SetParent(std::shared_ptr<SceneComponent> parent);
 
 protected:

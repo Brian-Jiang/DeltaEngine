@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "EditorRenderManager.h"
+#include "EditorSelectionState.h"
 #include "Runtime/EngineMain.h"
 #include "EditorWindows/EditorWindow.h"
 
@@ -55,6 +56,7 @@ public:
 
     EngineMain* GetEngine() { return m_engine.get(); }
     ImTextureID GetSceneTextureId() const { return m_renderManager->GetSceneTextureId(); }
+    EditorSelectionState* GetSelectionState() { return m_selectionState.get(); }
 
 private:
     void ProcessEvents();
@@ -62,6 +64,7 @@ private:
 
     std::unique_ptr<EditorRenderManager> m_renderManager;
     std::unique_ptr<EngineMain> m_engine;
+    std::unique_ptr<EditorSelectionState> m_selectionState;
     std::shared_ptr<SDL_Window> m_window;
     std::vector<std::shared_ptr<EditorWindow>> m_editorWindows;
     bool m_running = true;

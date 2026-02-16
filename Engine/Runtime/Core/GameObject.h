@@ -56,8 +56,10 @@ public:
 
     const std::string& GetName() const { return m_name; }
 
-	inline std::shared_ptr<DWorld> GetCurrentWorld() const { return m_currentWorld; }
+    inline std::shared_ptr<DWorld> GetCurrentWorld() const { return m_currentWorld; }
     inline std::shared_ptr<SceneComponent> GetRootSceneComponent() const { return m_rootSceneComponent.lock(); }
+    inline const std::vector<std::shared_ptr<SceneComponent>>& GetSceneComponents() const { return m_sceneComponents; }
+    inline const std::vector<std::shared_ptr<DComponent>>& GetComponents() const { return m_components; }
 
     template <typename T> requires IsSceneComponent<T>
     inline std::shared_ptr<T> GetRootSceneComponent() const

@@ -26,7 +26,6 @@ private:
     void RefreshSortedIndices(const std::vector<std::shared_ptr<GameObject>>& gameObjects);
 
 private:
-    std::weak_ptr<GameObject> m_selectedGameObject;
     std::vector<int> m_sortedIndices;
     bool m_init = false;
 };
