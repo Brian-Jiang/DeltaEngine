@@ -19,6 +19,8 @@ class Camera : public SceneComponent
 public:
 
     Camera();
+    Camera(std::string name);
+    Camera(std::string name, std::shared_ptr<GameObject> gameObject);
     ~Camera();
 
     void UpdateAspectRatio(float aspectRatio);

@@ -3,6 +3,7 @@
 #include "EngineIncludes.h"
 
 #include <memory>
+#include <string>
 #include <type_traits>
 
 #include "Core/DObject.h"
@@ -16,15 +17,17 @@ class DComponent: public DObject
 
 public:
     DComponent();
-    DComponent(std::shared_ptr<GameObject> gameObject);
-    ~DComponent();
+    DComponent(std::string name);
+    DComponent(std::string name, std::shared_ptr<GameObject> gameObject);
+    virtual ~DComponent();
 
 public:
-    inline std::shared_ptr<GameObject> GetGameObject() const { return m_gameObject; }
+    inline std::shared_ptr<GameObject> GetGameObject() const { return m_gameObject.lock(); }
+    inline const std::string& GetName() const { return m_name; }
 
 private:
-    std::shared_ptr<GameObject> m_gameObject;
-
+    std::weak_ptr<GameObject> m_gameObject;
+    std::string m_name;
 };
 
 template<typename T>

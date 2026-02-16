@@ -8,17 +8,20 @@
 
 #include "SimpleMath.h"
 #include "Runtime/Core/DObject.h"
+#include "Runtime/Core/DComponent.h"
 
 DELTA_ENGINE_NS_BEGIN
 
 class DWorld;
 
-class SceneComponent : public DObject, public std::enable_shared_from_this<SceneComponent>
+class SceneComponent : public DComponent, public std::enable_shared_from_this<SceneComponent>
 {
     friend class DWorld;
 
 public:
     SceneComponent();
+    SceneComponent(std::string name);
+    SceneComponent(std::string name, std::shared_ptr<GameObject> gameObject);
 
     DirectX::SimpleMath::Vector3 GetLocalPosition() const;
     DirectX::SimpleMath::Vector3 GetWorldPosition() const;

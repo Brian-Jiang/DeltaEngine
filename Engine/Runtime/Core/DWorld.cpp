@@ -115,6 +115,11 @@ void DeltaEngine::DWorld::PreTick(float deltaTime)
 
 void DeltaEngine::DWorld::Clear()
 {
+    for (std::shared_ptr<GameObject> gameObject : m_gameObjects)
+    {
+        gameObject->Destroy();
+    }
+
     m_gameObjects.clear();
 }
 

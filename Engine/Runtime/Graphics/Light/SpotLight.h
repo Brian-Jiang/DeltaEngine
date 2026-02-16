@@ -14,6 +14,8 @@ class SpotLight : public LightComponent
 {
 public:
     SpotLight();
+    SpotLight(std::string name);
+    SpotLight(std::string name, std::shared_ptr<GameObject> gameObject);
     ~SpotLight();
 
     void UpdateParameters(DirectX::XMVECTOR color, float intensity, float range,

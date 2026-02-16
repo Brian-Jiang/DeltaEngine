@@ -11,6 +11,18 @@ Camera::Camera()
     m_renderProxy = std::make_shared<CameraRenderProxy>(m_fov, m_aspectRatio, m_near, m_far);
 }
 
+Camera::Camera(std::string name)
+    : SceneComponent(name), m_fov(45.0f), m_near(0.1f), m_far(1000.0f), m_aspectRatio(1.0f)
+{
+    m_renderProxy = std::make_shared<CameraRenderProxy>(m_fov, m_aspectRatio, m_near, m_far);
+}
+
+Camera::Camera(std::string name, std::shared_ptr<GameObject> gameObject)
+    : SceneComponent(name, gameObject), m_fov(45.0f), m_near(0.1f), m_far(1000.0f), m_aspectRatio(1.0f)
+{
+    m_renderProxy = std::make_shared<CameraRenderProxy>(m_fov, m_aspectRatio, m_near, m_far);
+}
+
 Camera::~Camera()
 {
 }

@@ -25,6 +25,8 @@ class MeshRenderer: public Renderer
 {
 public:
     MeshRenderer();
+    MeshRenderer(std::string name);
+    MeshRenderer(std::string name, std::shared_ptr<GameObject> gameObject);
     ~MeshRenderer();
 
     void SetMesh(std::shared_ptr<DMesh> mesh);

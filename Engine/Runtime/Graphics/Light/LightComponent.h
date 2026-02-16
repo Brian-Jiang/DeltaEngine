@@ -15,6 +15,11 @@ class LightComponent : public SceneComponent
 {
     friend class DWorld;
 
+public:
+    LightComponent() = default;
+    LightComponent(std::string name) : SceneComponent(name) {}
+    LightComponent(std::string name, std::shared_ptr<GameObject> gameObject) : SceneComponent(name, gameObject) {}
+
 protected:
     virtual void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) = 0;
 };

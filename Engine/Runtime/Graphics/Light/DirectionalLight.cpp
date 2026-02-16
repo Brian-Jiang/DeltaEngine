@@ -13,6 +13,24 @@ DirectionalLight::DirectionalLight()
     m_renderProxy = std::make_shared<DirectionalLightRenderProxy>();
 }
 
+DirectionalLight::DirectionalLight(std::string name)
+    : LightComponent(name)
+    , m_direction(0.0f, -1.0f, 0.0f, 0.0f)
+    , m_color(1.0f, 1.0f, 1.0f, 1.0f)
+    , m_intensity(1.0f)
+{
+    m_renderProxy = std::make_shared<DirectionalLightRenderProxy>();
+}
+
+DirectionalLight::DirectionalLight(std::string name, std::shared_ptr<GameObject> gameObject)
+    : LightComponent(name, gameObject)
+    , m_direction(0.0f, -1.0f, 0.0f, 0.0f)
+    , m_color(1.0f, 1.0f, 1.0f, 1.0f)
+    , m_intensity(1.0f)
+{
+    m_renderProxy = std::make_shared<DirectionalLightRenderProxy>();
+}
+
 DirectionalLight::~DirectionalLight()
 {
 }

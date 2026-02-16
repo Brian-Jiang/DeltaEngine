@@ -3,10 +3,26 @@
 using namespace DirectX;
 using namespace DeltaEngine;
 
-DeltaEngine::SceneComponent::SceneComponent()
-    : DObject(), m_localTransform(XMMatrixIdentity()), m_worldTransform(XMMatrixIdentity())
+SceneComponent::SceneComponent()
+    : DComponent()
+    , m_localTransform(XMMatrixIdentity())
+    , m_worldTransform(XMMatrixIdentity())
 {
 
+}
+
+SceneComponent::SceneComponent(std::string name)
+    : DComponent(name)
+    , m_localTransform(XMMatrixIdentity())
+    , m_worldTransform(XMMatrixIdentity())
+{
+}
+
+SceneComponent::SceneComponent(std::string name, std::shared_ptr<GameObject> gameObject)
+    : DComponent(name, gameObject)
+    , m_localTransform(XMMatrixIdentity())
+    , m_worldTransform(XMMatrixIdentity())
+{
 }
 
 SimpleMath::Vector3 DeltaEngine::SceneComponent::GetLocalPosition() const {

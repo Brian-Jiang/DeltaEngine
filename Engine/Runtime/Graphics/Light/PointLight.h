@@ -14,6 +14,8 @@ class PointLight : public LightComponent
 {
 public:
     PointLight();
+    PointLight(std::string name);
+    PointLight(std::string name, std::shared_ptr<GameObject> gameObject);
     ~PointLight();
 
     void UpdateParameters(DirectX::XMVECTOR color, float intensity, float range);

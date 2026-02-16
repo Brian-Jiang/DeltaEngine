@@ -13,7 +13,7 @@
 
 DELTA_ENGINE_NS_BEGIN
 
-class GameObject: public DObject
+class GameObject: public DObject, public std::enable_shared_from_this<GameObject>
 {
     friend class DWorld;
 
@@ -23,17 +23,17 @@ public:
 	~GameObject();
 
 	template <typename T> requires IsDComponent<T>
-	std::shared_ptr<T> AddComponent()
+	std::shared_ptr<T> AddComponent(std::string name = "New Component")
     {
-        std::shared_ptr<T> component = std::make_shared<T>();
+        std::shared_ptr<T> component = std::make_shared<T>(name, shared_from_this());
         m_components.push_back(component);
         return component;
     }
 
 	template <typename T> requires IsSceneComponent<T>
-    std::shared_ptr<T> AddSceneComponent()
+    std::shared_ptr<T> AddSceneComponent(std::string name = "New Scene Component")
     {
-        std::shared_ptr<T> sceneComponent = std::make_shared<T>();
+        std::shared_ptr<T> sceneComponent = std::make_shared<T>(name, shared_from_this());
         m_sceneComponents.push_back(sceneComponent);
         if (m_rootSceneComponent.expired())
         {

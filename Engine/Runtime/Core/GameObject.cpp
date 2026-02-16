@@ -17,13 +17,18 @@ DeltaEngine::GameObject::GameObject(const std::string& name)
 
 GameObject::~GameObject()
 {
-	//for (std::shared_ptr<Component> component : m_components)
-	//{
-	//	delete component;
-	//}
+	
 }
 
-void DeltaEngine::GameObject::Destroy()
+void GameObject::Destroy()
 {
+    for (std::shared_ptr<DComponent> component : m_components)
+    {
+        component.reset();
+    }
 
+    for (std::shared_ptr<SceneComponent> sceneComponent : m_sceneComponents)
+    {
+        sceneComponent.reset();
+    }
 }

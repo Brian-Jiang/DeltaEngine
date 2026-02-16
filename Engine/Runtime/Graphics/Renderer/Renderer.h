@@ -15,6 +15,11 @@ class Renderer : public SceneComponent
 {
     friend class DWorld;
 
+public:
+    Renderer();
+    Renderer(std::string name);
+    Renderer(std::string name, std::shared_ptr<GameObject> gameObject);
+
 protected:
     virtual void InitGraphicState(std::shared_ptr<DXGraphicsContext> context) = 0;
     virtual void GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) = 0;
