@@ -36,7 +36,7 @@ EditorMain::EditorMain()
         return;
     }
 
-    m_window = SDL_CreateWindow("Delta Editor", DEFAULT_WIDTH, DEFAULT_HEIGHT, SDL_WINDOW_RESIZABLE);
+    m_window = SDL_CreateWindow("Delta Editor", DEFAULT_WIDTH, DEFAULT_HEIGHT, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     if (!m_window)
     {
         printf("Failed to create window: %s\n", SDL_GetError());
@@ -56,6 +56,8 @@ EditorMain::EditorMain()
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    //io.ConfigDpiScaleFonts = true; // (Docking branch only) Automatically overwrite style.FontScaleDpi in Begin() when Monitor DPI changes. This will scale fonts but _NOT_ scale sizes/padding for now.
+    io.ConfigDpiScaleViewports = true; // (Docking branch only) Scale Dear ImGui and Platform Windows when Monitor DPI changes.
     //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
     ImGui_ImplSDL3_InitForD3D(m_window);
@@ -64,6 +66,7 @@ EditorMain::EditorMain()
     float main_scale = 2.0f;
     // Setup scaling
     ImGuiStyle& style = ImGui::GetStyle();
+    //style.FontSizeBase = 20.0f;
     style.ScaleAllSizes(main_scale); // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
     style.FontScaleDpi = main_scale; // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
 
