@@ -115,7 +115,7 @@ void EditorWindow_WorldOutliner::Render()
 
                 ImGui::TableNextRow();
 
-                bool selected = (m_selectedGameObject == go);
+                bool selected = (m_selectedGameObject.lock() == go);
 
                 ImGui::PushID(idx);
 
