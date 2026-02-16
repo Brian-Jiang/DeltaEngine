@@ -94,7 +94,7 @@ void EditorRenderManager::PrepareViewportSceneTexture(CommandList& commandList)
             m_viewportDisplayTexture->GetD3D12ResourceDesc().Width != width ||
             m_viewportDisplayTexture->GetD3D12ResourceDesc().Height != height)
         {
-            DXGI_FORMAT format = offscreenColor->GetD3D12ResourceDesc().Format;
+            DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;
             auto colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(format, width, height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE);
             m_viewportDisplayTexture = m_device->CreateTexture(colorDesc, nullptr);
             m_viewportDisplayTexture->SetName(L"Viewport Display Target");
