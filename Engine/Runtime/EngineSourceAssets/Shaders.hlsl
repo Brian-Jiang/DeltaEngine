@@ -199,11 +199,13 @@ PSInput VSMain(VSInput input)
     float4 viewPosition = mul(CameraCB.viewMatrix, worldPosition);
     float4 cameraPosition = mul(CameraCB.projectionMatrix, viewPosition);
     
+    float3 worldNormal = mul((float3x3) ObjectCB.worldMatrix, input.normal);
+    
     result.position = cameraPosition;
     result.worldPosition = worldPosition.xyz;
     //result.color = input.color * float4(input.instanceColor, 1.0);
     result.color = input.color * ObjectCB.color;
-    result.normal = input.normal;
+    result.normal = worldNormal;
     result.uv = input.uv;
 
     return result;
