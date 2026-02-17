@@ -47,3 +47,13 @@ void DeltaEngine::DMaterial::AddTexture(std::shared_ptr<DTexture> texture)
 {
     m_textures.push_back(texture);
 }
+
+std::shared_ptr<DTexture> DMaterial::GetTexture(int index) const
+{
+    if (index < 0 || index >= m_textures.size())
+    {
+        return nullptr;
+    }
+
+    return m_textures[index];
+}

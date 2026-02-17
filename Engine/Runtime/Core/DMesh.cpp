@@ -282,3 +282,13 @@ std::vector<std::shared_ptr<DTexture>> DMesh::LoadMaterialTextures(const aiScene
 
     return textures;
 }
+
+std::shared_ptr<DMaterial> DMesh::GetMaterial(int index) const
+{
+    if (index < 0 || index >= m_materials.size())
+    {
+        return nullptr;
+    }
+
+    return m_materials[index];
+}

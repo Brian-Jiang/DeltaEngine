@@ -110,6 +110,16 @@ void DeltaEngine::MeshRenderProxy::BuildPipelineStateObject(std::shared_ptr<DXGr
         pipelineStateStream.SampleDesc = sampleDesc;
 
         m_pipelineStateObjects.push_back(device->CreatePipelineStateObject(pipelineStateStream));
+
+        if (material)
+        {
+            m_textures.insert({ i, std::unordered_map<uint32_t, std::shared_ptr<DirectX12Texture>>() });
+            auto texture = material->GetTexture(0);
+            if (texture)
+            {
+                m_textures[i][0] = renderContext->commandList->LoadTexture(texture);
+            }
+        }
     }
 }
 
@@ -154,6 +164,10 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
     {
         commandList->SetPipelineState(m_pipelineStateObjects[i]);
         commandList->SetPrimitiveTopology(m_PrimitiveTopology);
+
+        
+        commandList->SetShaderResourceView(static_cast<uint32_t>(RootParameterType::Texture), 0, m_textures[i][0],
+            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
         //for (auto vertexBuffer : m_VertexBuffers)
         //{

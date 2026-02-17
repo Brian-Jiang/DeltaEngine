@@ -120,8 +120,15 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
     m_renderTarget->AttachTexture(AttachmentPoint::Color0, colorTexture);
     m_renderTarget->AttachTexture(AttachmentPoint::DepthStencil, depthTexture);
 
+    CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+    auto commandList = directCommandQueue.GetCommandList();
+    m_currentCommandList = commandList;
+
     auto context = GetGraphicsContext();
     world.InitRenderers(context);
+
+    directCommandQueue.ExecuteCommandList(m_currentCommandList);
+    m_currentCommandList = nullptr;
 }
 
 void DXRenderManager::PrepareFrame()

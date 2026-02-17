@@ -26,6 +26,7 @@
 #include "Runtime/Graphics/DirectX/RenderTarget.h"
 #include "Runtime/Graphics/DirectX/CommandQueue.h"
 #include "Runtime/Graphics/DXUtils.h"
+#include "Runtime/Core/DTexture.h"
 #include "Runtime/Math/Common.h"
 
 using namespace DeltaEngine;
@@ -402,6 +403,80 @@ std::shared_ptr<DirectX12Texture> CommandList::LoadTextureFromFile(const std::ws
     }
 
     return texture;
+}
+
+std::shared_ptr<DirectX12Texture> CommandList::LoadTexture(std::shared_ptr<DTexture> texture)
+{
+    std::shared_ptr<DirectX12Texture> dx12texture;
+
+    auto fileName = texture->GetSourcePath();
+    std::lock_guard<std::mutex> lock(ms_TextureCacheMutex);
+    auto iter = ms_TextureCache.find(fileName);
+    if (iter != ms_TextureCache.end()) {
+        dx12texture = m_Device.CreateTexture(iter->second);
+    } else {
+        TexMetadata metadata = *texture->GetMetadata();
+        std::shared_ptr<DirectX::ScratchImage> scratchImage = texture->GetScratchImage();
+
+        D3D12_RESOURCE_DESC textureDesc = {};
+        switch (metadata.dimension) {
+        case TEX_DIMENSION_TEXTURE1D:
+            textureDesc = CD3DX12_RESOURCE_DESC::Tex1D(metadata.format, static_cast<UINT64>(metadata.width),
+                static_cast<UINT16>(metadata.arraySize));
+            break;
+        case TEX_DIMENSION_TEXTURE2D:
+            textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(metadata.format, static_cast<UINT64>(metadata.width),
+                static_cast<UINT>(metadata.height),
+                static_cast<UINT16>(metadata.arraySize));
+            break;
+        case TEX_DIMENSION_TEXTURE3D:
+            textureDesc = CD3DX12_RESOURCE_DESC::Tex3D(metadata.format, static_cast<UINT64>(metadata.width),
+                static_cast<UINT>(metadata.height),
+                static_cast<UINT16>(metadata.depth));
+            break;
+        default:
+            throw std::exception("Invalid texture dimension.");
+            break;
+        }
+
+        auto d3d12Device = m_Device.GetD3D12Device();
+        Microsoft::WRL::ComPtr<ID3D12Resource> textureResource;
+
+        CD3DX12_HEAP_PROPERTIES textureHeapProps(D3D12_HEAP_TYPE_DEFAULT);
+        ThrowIfFailed(d3d12Device->CreateCommittedResource(
+            &textureHeapProps,
+            D3D12_HEAP_FLAG_NONE,
+            &textureDesc,
+            D3D12_RESOURCE_STATE_COMMON,
+            nullptr,
+            IID_PPV_ARGS(&textureResource)));
+
+        dx12texture = m_Device.CreateTexture(textureResource);
+        dx12texture->SetName(fileName);
+
+        // Update the global state tracker.
+        ResourceStateTracker::AddGlobalResourceState(textureResource.Get(), D3D12_RESOURCE_STATE_COMMON);
+
+        std::vector<D3D12_SUBRESOURCE_DATA> subresources(scratchImage->GetImageCount());
+        const Image* pImages = scratchImage->GetImages();
+        for (int i = 0; i < scratchImage->GetImageCount(); ++i) {
+            auto& subresource = subresources[i];
+            subresource.RowPitch = pImages[i].rowPitch;
+            subresource.SlicePitch = pImages[i].slicePitch;
+            subresource.pData = pImages[i].pixels;
+        }
+
+        CopyTextureSubresource(dx12texture, 0, static_cast<uint32_t>(subresources.size()), subresources.data());
+
+        if (subresources.size() < textureResource->GetDesc().MipLevels) {
+            //GenerateMips(dx12texture);
+        }
+
+        // Add the texture resource to the texture cache.
+        ms_TextureCache[fileName] = textureResource.Get();
+    }
+
+    return dx12texture;
 }
 
 void CommandList::GenerateMips(const std::shared_ptr<DirectX12Texture>& texture)

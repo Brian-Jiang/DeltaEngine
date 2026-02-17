@@ -29,6 +29,10 @@ public:
     UINT GetHeight() const;
     DXGI_FORMAT GetFormat() const;
 
+    inline std::shared_ptr<DirectX::TexMetadata> GetMetadata() const { return m_metadata; }
+    inline std::shared_ptr<DirectX::ScratchImage> GetScratchImage() const { return m_scratchImage; }
+    inline std::wstring GetSourcePath() const { return m_sourcePath; }
+
 private:
     void LoadTexture();
     

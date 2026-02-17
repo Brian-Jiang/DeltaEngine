@@ -214,7 +214,7 @@ PSInput VSMain(VSInput input)
 float4 PSMain(PSInput input) : SV_TARGET
 {
     float4 textureColor = g_texture.Sample(g_sampler, input.uv);
-    textureColor = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    //textureColor = float4(1.0f, 1.0f, 1.0f, 1.0f);
     float4 objectColor = input.color * textureColor;
 
     float3 V = normalize(CameraCB.position.xyz - input.worldPosition);

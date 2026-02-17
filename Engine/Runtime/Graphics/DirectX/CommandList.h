@@ -163,6 +163,7 @@ public:
      * Load a texture by a filename.
      */
     std::shared_ptr<DirectX12Texture> LoadTextureFromFile(const std::wstring& fileName, bool sRGB = false);
+    std::shared_ptr<DirectX12Texture> LoadTexture(std::shared_ptr<DTexture> texture);
 
     /**
      * Clear a texture.

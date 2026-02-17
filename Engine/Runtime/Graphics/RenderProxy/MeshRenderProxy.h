@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <map>
+#include <unordered_map>
 #include <string>
 #include <memory>
 #include <d3d12.h>
@@ -18,6 +19,7 @@ class DMesh;
 struct MeshRendererSettings;
 class IndexBuffer;
 class VertexBuffer;
+class DirectX12Texture;
 
 class MeshRenderProxy
 {
@@ -53,6 +55,7 @@ private:
 
     std::vector<std::shared_ptr<VertexBuffer>> m_VertexBuffers;
     std::vector<std::shared_ptr<IndexBuffer>> m_IndexBuffers;
+    std::unordered_map<uint32_t, std::unordered_map<uint32_t, std::shared_ptr<DirectX12Texture>>> m_textures;
     D3D12_PRIMITIVE_TOPOLOGY m_PrimitiveTopology;
     DirectX::BoundingBox m_AABB;
     DirectX::XMMATRIX m_worldMatrix;
