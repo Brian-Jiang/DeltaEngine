@@ -48,16 +48,18 @@ private:
     std::shared_ptr<DMesh> m_mesh;
     std::shared_ptr<MeshRendererSettings> m_settings;
 
-    using BufferMap = std::map<uint32_t, std::shared_ptr<VertexBuffer>>;
-    BufferMap m_VertexBuffers;
-    std::shared_ptr<IndexBuffer> m_IndexBuffer;
+    //using BufferMap = std::map<uint32_t, std::shared_ptr<VertexBuffer>>;
+    //BufferMap m_VertexBuffers;
+
+    std::vector<std::shared_ptr<VertexBuffer>> m_VertexBuffers;
+    std::vector<std::shared_ptr<IndexBuffer>> m_IndexBuffers;
     D3D12_PRIMITIVE_TOPOLOGY m_PrimitiveTopology;
     DirectX::BoundingBox m_AABB;
     DirectX::XMMATRIX m_worldMatrix;
 
     // todo: use a pso manager to manage PSOs and avoid creating a PSO for each mesh render proxy.
     // maybe similar to srp batcher, we can have a pso batcher that batches mesh render proxies with the same settings and creates a PSO for each batch.
-    std::shared_ptr<PipelineStateObject> m_pipelineStateObject;
+    std::vector<std::shared_ptr<PipelineStateObject>> m_pipelineStateObjects;
 
     bool m_meshDirty;
 };

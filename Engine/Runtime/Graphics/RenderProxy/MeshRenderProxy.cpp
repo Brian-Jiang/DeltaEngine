@@ -83,29 +83,34 @@ void DeltaEngine::MeshRenderProxy::BuildPipelineStateObject(std::shared_ptr<DXGr
     //    rasterizerState.CullMode = D3D12_CULL_MODE_NONE;
     //}
 
-    CD3DX12_BLEND_DESC blendDesc = m_mesh->GetMaterial()->GetBlendState();
-    CD3DX12_DEPTH_STENCIL_DESC depthStencilState = m_mesh->GetMaterial()->GetDepthStencilState();
+    m_pipelineStateObjects.clear();
+    for (int i = 0; i < m_mesh->GetSubMeshCount(); ++i)
+    {
+        auto material = m_mesh->GetMaterial(i);
+        CD3DX12_BLEND_DESC blendDesc = material->GetBlendState();
+        CD3DX12_DEPTH_STENCIL_DESC depthStencilState = material->GetDepthStencilState();
 
-    IDxcBlob* vertexShader = m_mesh->GetMaterial()->GetShader()->GetVertexShaderBlob();
-    CD3DX12_SHADER_BYTECODE vertexShaderBytecode { static_cast<UINT8*>(vertexShader->GetBufferPointer()), vertexShader->GetBufferSize() };
+        IDxcBlob* vertexShader = material->GetShader()->GetVertexShaderBlob();
+        CD3DX12_SHADER_BYTECODE vertexShaderBytecode { static_cast<UINT8*>(vertexShader->GetBufferPointer()), vertexShader->GetBufferSize() };
 
-    IDxcBlob* pixelShader = m_mesh->GetMaterial()->GetShader()->GetPixelShaderBlob();
-    CD3DX12_SHADER_BYTECODE pixelShaderBytecode { static_cast<UINT8*>(pixelShader->GetBufferPointer()), pixelShader->GetBufferSize() };
+        IDxcBlob* pixelShader = material->GetShader()->GetPixelShaderBlob();
+        CD3DX12_SHADER_BYTECODE pixelShaderBytecode { static_cast<UINT8*>(pixelShader->GetBufferPointer()), pixelShader->GetBufferSize() };
 
-    std::vector<D3D12_INPUT_ELEMENT_DESC> layout = m_mesh->GetMaterial()->GetShader()->GetInputLayout();
-    pipelineStateStream.InputLayout = { layout.data(), static_cast<UINT>(layout.size()) };
-    pipelineStateStream.pRootSignature = renderContext->renderManager->GetRootSignature()->GetD3D12RootSignature().Get();
-    pipelineStateStream.VS = vertexShaderBytecode;
-    pipelineStateStream.PS = pixelShaderBytecode;
-    pipelineStateStream.RasterizerState = rasterizerState;
-    pipelineStateStream.BlendState = blendDesc;
-    pipelineStateStream.DepthStencilState = depthStencilState;
-    pipelineStateStream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-    pipelineStateStream.DSVFormat = depthBufferFormat;
-    pipelineStateStream.RTVFormats = rtvFormats;
-    pipelineStateStream.SampleDesc = sampleDesc;
+        std::vector<D3D12_INPUT_ELEMENT_DESC> layout = material->GetShader()->GetInputLayout();
+        pipelineStateStream.InputLayout = { layout.data(), static_cast<UINT>(layout.size()) };
+        pipelineStateStream.pRootSignature = renderContext->renderManager->GetRootSignature()->GetD3D12RootSignature().Get();
+        pipelineStateStream.VS = vertexShaderBytecode;
+        pipelineStateStream.PS = pixelShaderBytecode;
+        pipelineStateStream.RasterizerState = rasterizerState;
+        pipelineStateStream.BlendState = blendDesc;
+        pipelineStateStream.DepthStencilState = depthStencilState;
+        pipelineStateStream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+        pipelineStateStream.DSVFormat = depthBufferFormat;
+        pipelineStateStream.RTVFormats = rtvFormats;
+        pipelineStateStream.SampleDesc = sampleDesc;
 
-    m_pipelineStateObject = device->CreatePipelineStateObject(pipelineStateStream);
+        m_pipelineStateObjects.push_back(device->CreatePipelineStateObject(pipelineStateStream));
+    }
 }
 
 void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext)
@@ -114,12 +119,20 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
 
     if (m_meshDirty)
     {
-        std::shared_ptr<VertexBuffer> vertexBuffer = commandList->CopyVertexBuffer(m_mesh->GetVertices());
-        m_VertexBuffers = { {0, vertexBuffer} };
-        m_IndexBuffer = commandList->CopyIndexBuffer(m_mesh->GetIndices());
-        //m_PrimitiveTopology = m_mesh->GetPrimitiveTopology();
-        //m_AABB = m_mesh->GetAABB();
+        int submeshCount = m_mesh->GetSubMeshCount();
+        for (int i = 0; i < submeshCount; ++i)
+        {
+            std::shared_ptr<VertexBuffer> vertexBuffer = commandList->CopyVertexBuffer(m_mesh->GetVertices()[i]);
+            m_VertexBuffers.push_back(vertexBuffer);
+            std::shared_ptr<IndexBuffer> indexBuffer = commandList->CopyIndexBuffer(m_mesh->GetIndices()[i]);
+            m_IndexBuffers.push_back(indexBuffer);
+            
+            // m_PrimitiveTopology = m_mesh->GetPrimitiveTopology();
+            // m_AABB = m_mesh->GetAABB();
+        }
+        
         BuildPipelineStateObject(renderContext);
+
         m_meshDirty = false;
     }
 
@@ -137,34 +150,35 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
 
     commandList->SetGraphicsDynamicConstantBuffer(static_cast<UINT>(RootParameterType::ObjectCB), obj);
 
-
-    commandList->SetPipelineState(m_pipelineStateObject);
-    commandList->SetPrimitiveTopology(m_PrimitiveTopology);
-
-    for (auto vertexBuffer : m_VertexBuffers)
+    for (int i = 0; i < m_pipelineStateObjects.size(); ++i)
     {
-        commandList->SetVertexBuffer(vertexBuffer.first, vertexBuffer.second);
-    }
+        commandList->SetPipelineState(m_pipelineStateObjects[i]);
+        commandList->SetPrimitiveTopology(m_PrimitiveTopology);
 
-    auto indexCount = GetIndexCount();
-    auto vertexCount = GetVertexCount();
+        //for (auto vertexBuffer : m_VertexBuffers)
+        //{
+        //    commandList->SetVertexBuffer(0, vertexBuffer);
+        //}
 
-    if (indexCount > 0)
-    {
-        commandList->SetIndexBuffer(m_IndexBuffer);
-        commandList->DrawIndexed(indexCount, 1u, 0u, 0u, 0u);
-    }
-    else if (vertexCount > 0)
-    {
-        commandList->Draw(vertexCount, 1u, 0u, 0u);
+        commandList->SetVertexBuffer(0, m_VertexBuffers[i]);
+
+        auto indexCount = m_IndexBuffers[i]->GetNumIndices();
+        auto vertexCount = m_VertexBuffers[i]->GetNumVertices();
+
+        if (indexCount > 0) {
+            commandList->SetIndexBuffer(m_IndexBuffers[i]);
+            commandList->DrawIndexed(indexCount, 1u, 0u, 0u, 0u);
+        } else if (vertexCount > 0) {
+            commandList->Draw(vertexCount, 1u, 0u, 0u);
+        }
     }
 }
 
 size_t DeltaEngine::MeshRenderProxy::GetIndexCount() const
 {
     size_t indexCount = 0;
-    if (m_IndexBuffer) {
-        indexCount = m_IndexBuffer->GetNumIndices();
+    if (!m_IndexBuffers.empty()) {
+        indexCount = m_IndexBuffers[0]->GetNumIndices();
     }
 
     return indexCount;
@@ -175,9 +189,8 @@ size_t DeltaEngine::MeshRenderProxy::GetVertexCount() const
     size_t vertexCount = 0;
 
     // To count the number of vertices in the mesh, just take the number of vertices in the first vertex buffer.
-    BufferMap::const_iterator iter = m_VertexBuffers.cbegin();
-    if (iter != m_VertexBuffers.cend()) {
-        vertexCount = iter->second->GetNumVertices();
+    if (!m_VertexBuffers.empty()) {
+        vertexCount = m_VertexBuffers[0]->GetNumVertices();
     }
 
     return vertexCount;

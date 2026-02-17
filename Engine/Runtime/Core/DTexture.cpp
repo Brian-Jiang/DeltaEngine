@@ -15,18 +15,22 @@ DeltaEngine::DTexture::DTexture()
     : m_sourcePath(L"")
     , m_sRGB(false)
 {
+    m_metadata = std::make_shared<TexMetadata>();
+    m_scratchImage = std::make_shared<ScratchImage>();
 }
 
 DTexture::DTexture(const std::wstring& filePath, bool sRGB)
     : m_sourcePath(filePath)
     , m_sRGB(sRGB)
 {
+    m_metadata = std::make_shared<TexMetadata>();
+    m_scratchImage = std::make_shared<ScratchImage>();
     LoadTexture();
 }
 
 DeltaEngine::DTexture::~DTexture()
 {
-    
+    m_scratchImage.reset();
 }
 
 inline UINT DeltaEngine::DTexture::GetWidth() const { return m_metadata->width; }

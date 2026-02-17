@@ -21,23 +21,26 @@ DMesh::DMesh(std::wstring sourcePath)
 
 DMesh::DMesh(std::wstring sourcePath, std::shared_ptr<DMaterial> material)
     : m_sourcePath(sourcePath)
-    , m_material(material)
+    //, m_material(material)
 {
     ImportMesh();
 }
 
-DMesh::DMesh(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices,
-    std::shared_ptr<DMaterial>& material)
-    : m_vertices(vertices)
-    , m_indices(indices)
-    , m_material(material)
-{
-    
-}
+//DMesh::DMesh(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices,
+//    std::shared_ptr<DMaterial>& material)
+//    : m_vertices(vertices)
+//    , m_indices(indices)
+//    , m_material(material)
+//{
+//    
+//}
 
 void DMesh::ImportMesh()
 {
     // Assimp::Importer::SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, true)
+    m_vertices.clear();
+    m_indices.clear();
+    m_textures.clear();
 
     std::wstring fullPath = IOManager::GetEngineSourceAssetFullPath(m_sourcePath);
     std::filesystem::path path(fullPath);
@@ -221,14 +224,16 @@ void DMesh::ProcessMesh(aiMesh* mesh, const aiScene* scene)
         textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
     }
 
-    m_vertices = vertices;
-    m_indices = indices;
+    m_vertices.push_back(vertices);
+    m_indices.push_back(indices);
+    m_textures.insert(m_textures.end(), textures.begin(), textures.end());
     //m_material = std::make_shared<DMaterial>();
     //m_material->AddTexture(textures[0]);
-    for (const auto& texture : textures)
-    {
-        m_material->AddTexture(texture);
-    }
+
+    //for (const auto& texture : textures)
+    //{
+    //    m_material->AddTexture(texture);
+    //}
 
     //return std::make_shared<DMesh>(vertices, indices, textures);
 }
@@ -247,8 +252,8 @@ std::string GetParentDirectory(const std::string& filePath, int levelsUp)
 std::string FindTextureFile(const std::string& directory, const std::string& fileName)
 {
     namespace fs = std::filesystem;
-    auto fullDirectory = IOManager::GetAssetFullPath(directory);
-    for (const auto& entry : fs::recursive_directory_iterator(fullDirectory)) {
+    //auto fullDirectory = IOManager::GetAssetFullPath(directory);
+    for (const auto& entry : fs::recursive_directory_iterator(directory)) {
         if (entry.is_regular_file() && entry.path().filename() == fileName) {
             return entry.path().string();
         }
