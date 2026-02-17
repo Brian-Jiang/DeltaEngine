@@ -35,9 +35,11 @@ public:
     void SetWorldPosition(float x, float y, float z);
 
     DirectX::SimpleMath::Quaternion GetLocalRotation() const;
+    DirectX::SimpleMath::Vector3 GetLocalRotationEulerAngles() const;
     DirectX::SimpleMath::Quaternion GetWorldRotation() const;
     void SetLocalRotation(DirectX::SimpleMath::Quaternion rotation);
     void SetLocalRotation(DirectX::XMVECTOR rotation);
+    void SetLocalRotation(DirectX::SimpleMath::Vector3 eulerAngles);
     void SetWorldRotation(DirectX::SimpleMath::Quaternion rotation);
     void SetWorldRotation(DirectX::XMVECTOR rotation);
 
@@ -62,6 +64,7 @@ private:
     DirectX::XMMATRIX m_worldTransform;
     std::weak_ptr<SceneComponent> m_parent;
     std::vector<std::shared_ptr<SceneComponent>> m_children;
+    DirectX::SimpleMath::Vector3 m_eulerRotationCache;
 
     void UpdateTransformHierarchy(DirectX::XMMATRIX worldTransform);
     void UpdateTransform();

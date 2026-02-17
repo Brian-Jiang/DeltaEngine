@@ -25,63 +25,80 @@ SceneComponent::SceneComponent(std::string name, std::shared_ptr<GameObject> gam
 {
 }
 
-SimpleMath::Vector3 DeltaEngine::SceneComponent::GetLocalPosition() const {
+SimpleMath::Vector3 SceneComponent::GetLocalPosition() const
+{
     return SimpleMath::Vector3(m_localTransform.r[3]);
 }
 
-DirectX::SimpleMath::Vector3 DeltaEngine::SceneComponent::GetWorldPosition() const {
+DirectX::SimpleMath::Vector3 DeltaEngine::SceneComponent::GetWorldPosition() const
+{
     return SimpleMath::Vector3(m_worldTransform.r[3]);
 }
 
-void DeltaEngine::SceneComponent::SetLocalPosition(DirectX::SimpleMath::Vector3 position) {
+void SceneComponent::SetLocalPosition(DirectX::SimpleMath::Vector3 position)
+{
     m_localTransform.r[3] = XMVectorSet(position.x, position.y, position.z, 1.0f);
     SetTransformDirty();
 }
 
-void DeltaEngine::SceneComponent::SetLocalPosition(DirectX::XMVECTOR position) {
+void SceneComponent::SetLocalPosition(DirectX::XMVECTOR position)
+{
     m_localTransform.r[3] = position;
     SetTransformDirty();
 }
 
-void DeltaEngine::SceneComponent::SetLocalPosition(float x, float y, float z) {
+void SceneComponent::SetLocalPosition(float x, float y, float z)
+{
     m_localTransform.r[3] = XMVectorSet(x, y, z, 1.0f);
     SetTransformDirty();
 }
 
-void DeltaEngine::SceneComponent::SetWorldPosition(DirectX::SimpleMath::Vector3 position) {
+void SceneComponent::SetWorldPosition(DirectX::SimpleMath::Vector3 position)
+{
     SetWorldPosition(position.x, position.y, position.z);
 }
 
-void DeltaEngine::SceneComponent::SetWorldPosition(DirectX::XMVECTOR position) {
+void SceneComponent::SetWorldPosition(DirectX::XMVECTOR position)
+{
     SetWorldPosition(XMVectorGetX(position), XMVectorGetY(position), XMVectorGetZ(position));
 }
 
-void DeltaEngine::SceneComponent::SetWorldPosition(float x, float y, float z) {
-    if (auto parent = m_parent.lock()) {
+void SceneComponent::SetWorldPosition(float x, float y, float z)
+{
+    if (auto parent = m_parent.lock())
+    {
         auto position = XMVectorSet(x, y, z, 1.0f);
         XMVECTOR parentPosition = parent->m_worldTransform.r[3];
         auto localPositionParentSpace = position - parentPosition;
         SetLocalPosition(localPositionParentSpace);
     }
-    else {
+    else
+    {
         SetLocalPosition(x, y, z);
     }
 }
 
-DirectX::SimpleMath::Quaternion DeltaEngine::SceneComponent::GetLocalRotation() const {
+DirectX::SimpleMath::Quaternion DeltaEngine::SceneComponent::GetLocalRotation() const
+{
     XMVECTOR translation;
     XMVECTOR currentRotation;
     XMVECTOR scale;
     bool success = XMMatrixDecompose(&scale, &currentRotation, &translation, m_localTransform);
-    if (!success) {
-
+    if (!success)
+    {
         return SimpleMath::Quaternion::Identity;
     }
 
     return SimpleMath::Quaternion(currentRotation);
 }
 
-DirectX::SimpleMath::Quaternion DeltaEngine::SceneComponent::GetWorldRotation() const {
+DirectX::SimpleMath::Vector3 DeltaEngine::SceneComponent::GetLocalRotationEulerAngles() const
+{
+    return m_eulerRotationCache;
+}
+
+DirectX::SimpleMath::Quaternion DeltaEngine::SceneComponent::GetWorldRotation() const
+{
     XMVECTOR translation;
     XMVECTOR currentRotation;
     XMVECTOR scale;
@@ -94,18 +111,21 @@ DirectX::SimpleMath::Quaternion DeltaEngine::SceneComponent::GetWorldRotation() 
     return SimpleMath::Quaternion(currentRotation);
 }
 
-void DeltaEngine::SceneComponent::SetLocalRotation(DirectX::SimpleMath::Quaternion rotation) {
+void SceneComponent::SetLocalRotation(DirectX::SimpleMath::Quaternion rotation)
+{
+    auto eulerRadian = SimpleMath::Quaternion(rotation).ToEuler();
+    m_eulerRotationCache = SimpleMath::Vector3(XMConvertToDegrees(eulerRadian.x), XMConvertToDegrees(eulerRadian.y), XMConvertToDegrees(eulerRadian.z));
     SetLocalRotation((XMVECTOR) rotation);
 }
 
-void DeltaEngine::SceneComponent::SetLocalRotation(DirectX::XMVECTOR rotation) {
-    XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(rotation);
+void SceneComponent::SetLocalRotation(DirectX::XMVECTOR rotation)
+{
     XMVECTOR translation;
     XMVECTOR currentRotation;
     XMVECTOR scale;
     bool success = XMMatrixDecompose(&scale, &currentRotation, &translation, m_localTransform);
-    if (!success) {
-
+    if (!success)
+    {
         return;
     }
 
@@ -113,12 +133,22 @@ void DeltaEngine::SceneComponent::SetLocalRotation(DirectX::XMVECTOR rotation) {
     SetTransformDirty();
 }
 
-void DeltaEngine::SceneComponent::SetWorldRotation(DirectX::SimpleMath::Quaternion rotation) {
+void DeltaEngine::SceneComponent::SetLocalRotation(DirectX::SimpleMath::Vector3 eulerAngles)
+{
+    m_eulerRotationCache = eulerAngles;
+    XMVECTOR rotationQuat = XMQuaternionRotationRollPitchYaw(XMConvertToRadians(eulerAngles.x), XMConvertToRadians(eulerAngles.y), XMConvertToRadians(eulerAngles.z));
+    SetLocalRotation(rotationQuat);
+}
+
+void DeltaEngine::SceneComponent::SetWorldRotation(DirectX::SimpleMath::Quaternion rotation)
+{
     SetWorldRotation((XMVECTOR) rotation);
 }
 
-void DeltaEngine::SceneComponent::SetWorldRotation(DirectX::XMVECTOR rotation) {
-    if (auto parent = m_parent.lock()) {
+void DeltaEngine::SceneComponent::SetWorldRotation(DirectX::XMVECTOR rotation)
+{
+    if (auto parent = m_parent.lock())
+    {
         auto parentWorldTransform = parent->m_worldTransform;
         XMVECTOR translation;
         XMVECTOR parentRotation;
@@ -131,6 +161,8 @@ void DeltaEngine::SceneComponent::SetWorldRotation(DirectX::XMVECTOR rotation) {
 
         XMVECTOR parentInverseRotation = XMQuaternionInverse(parentRotation);
         auto localRotationParentSpace = XMQuaternionMultiply(rotation, parentInverseRotation);
+        auto eulerRadian = SimpleMath::Quaternion(localRotationParentSpace).ToEuler();
+        m_eulerRotationCache = SimpleMath::Vector3(XMConvertToDegrees(eulerRadian.x), XMConvertToDegrees(eulerRadian.y), XMConvertToDegrees(eulerRadian.z));
         SetLocalRotation(localRotationParentSpace);
     }
     else {
@@ -183,19 +215,23 @@ void DeltaEngine::SceneComponent::SetLocalScale(float x, float y, float z) {
     SetTransformDirty();
 }
 
-DirectX::SimpleMath::Vector3 DeltaEngine::SceneComponent::GetRight() const {
+DirectX::SimpleMath::Vector3 DeltaEngine::SceneComponent::GetRight() const
+{
     return m_worldTransform.r[0];
 }
 
-DirectX::SimpleMath::Vector3 DeltaEngine::SceneComponent::GetUp() const {
+DirectX::SimpleMath::Vector3 DeltaEngine::SceneComponent::GetUp() const
+{
     return m_worldTransform.r[1];
 }
 
-DirectX::SimpleMath::Vector3 DeltaEngine::SceneComponent::GetForward() const {
+DirectX::SimpleMath::Vector3 DeltaEngine::SceneComponent::GetForward() const
+{
     return m_worldTransform.r[2];
 }
 
-void DeltaEngine::SceneComponent::SetParent(std::shared_ptr<SceneComponent> parent) {
+void DeltaEngine::SceneComponent::SetParent(std::shared_ptr<SceneComponent> parent)
+{
     m_parent = parent;
     parent->m_children.push_back(shared_from_this());
     SetTransformDirty();

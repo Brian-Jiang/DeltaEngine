@@ -102,12 +102,10 @@ void EditorWindow_Details::RenderSceneComponentTransform(std::shared_ptr<SceneCo
         return;
 
     Vector3 pos = sceneComponent->GetLocalPosition();
-    Quaternion rot = sceneComponent->GetLocalRotation();
+    Vector3 euler = sceneComponent->GetLocalRotationEulerAngles();
     Vector3 scale = sceneComponent->GetLocalScale();
-
-    Vector3 euler = rot.ToEuler();
-    const float radToDeg = 180.0f / 3.14159265f;
-    euler *= radToDeg;
+    //const float radToDeg = 180.0f / DirectX::XM_PI;
+    //euler *= radToDeg;
 
     bool changed = false;
     changed |= ImGui::DragFloat3("Position", &pos.x, 0.1f);
@@ -116,12 +114,9 @@ void EditorWindow_Details::RenderSceneComponentTransform(std::shared_ptr<SceneCo
 
     if (changed)
     {
-        const float degToRad = 3.14159265f / 180.0f;
+        const float degToRad = DirectX::XM_PI / 180.0f;
         sceneComponent->SetLocalPosition(pos);
-        sceneComponent->SetLocalRotation(Quaternion::CreateFromYawPitchRoll(
-            euler.y * degToRad,
-            euler.x * degToRad,
-            euler.z * degToRad));
+        sceneComponent->SetLocalRotation(euler);
         sceneComponent->SetLocalScale(scale);
     }
 }
