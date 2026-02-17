@@ -162,8 +162,20 @@ void EditorRenderManager::Resize(UINT width, UINT height)
 {
     m_width = std::max(1u, width);
     m_height = std::max(1u, height);
-    m_sceneRenderer->Resize(m_width, m_height);
     m_swapChain->Resize(m_width, m_height);
+}
+
+void EditorRenderManager::SetSceneRenderSize(UINT width, UINT height)
+{
+    UINT w = std::max(1u, width);
+    UINT h = std::max(1u, height);
+    m_sceneRenderer->Resize(w, h);
+}
+
+void EditorRenderManager::GetSceneRenderSize(UINT& width, UINT& height) const
+{
+    width = m_sceneRenderer->GetWidth();
+    height = m_sceneRenderer->GetHeight();
 }
 
 void EditorRenderManager::SetFullscreen(bool fullscreen)

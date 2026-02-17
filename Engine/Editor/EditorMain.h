@@ -56,6 +56,10 @@ public:
 
     EngineMain* GetEngine() { return m_engine.get(); }
     ImTextureID GetSceneTextureId() const { return m_renderManager->GetSceneTextureId(); }
+
+    /// Set scene render target size (driven by viewport settings). Syncs to EngineMain camera aspect.
+    void SetSceneRenderSize(UINT width, UINT height);
+    void GetSceneRenderSize(UINT& width, UINT& height) const;
     EditorSelectionState* GetSelectionState() { return m_selectionState.get(); }
 
 private:

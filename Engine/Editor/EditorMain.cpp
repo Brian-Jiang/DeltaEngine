@@ -150,6 +150,17 @@ void DeltaEngine::EditorMain::RenderEditorWindows()
     }
 }
 
+void EditorMain::SetSceneRenderSize(UINT width, UINT height)
+{
+    m_renderManager->SetSceneRenderSize(width, height);
+    m_engine->OnWindowResized(width, height);
+}
+
+void EditorMain::GetSceneRenderSize(UINT& width, UINT& height) const
+{
+    m_renderManager->GetSceneRenderSize(width, height);
+}
+
 void EditorMain::ProcessEvents()
 {
     SDL_Event event;
@@ -165,7 +176,6 @@ void EditorMain::ProcessEvents()
                 break;
             case SDL_EVENT_WINDOW_RESIZED:
                 m_renderManager->Resize(event.window.data1, event.window.data2);
-                m_engine->OnWindowResized(event.window.data1, event.window.data2);
                 break;
             case SDL_EVENT_KEY_DOWN:
             {

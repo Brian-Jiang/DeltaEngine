@@ -29,6 +29,9 @@ public:
     ~EditorRenderManager();
 
     void Resize(UINT width, UINT height);
+    /// Resize only the scene render target (not swap chain). Called by viewport when settings change.
+    void SetSceneRenderSize(UINT width, UINT height);
+    void GetSceneRenderSize(UINT& width, UINT& height) const;
     void SetFullscreen(bool fullscreen);
     void ToggleVSync(bool enable) { m_swapChain->SetVSync(enable); }
     void OnDestroy();

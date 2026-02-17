@@ -13,6 +13,15 @@ class Device;
 class CommandList;
 class RenderTarget;
 
+enum class ViewportResolution
+{
+    FreeAspect,
+    Resolution_1280x720,
+    Resolution_1920x1080,
+    Resolution_3840x2160,
+    Count
+};
+
 class EditorWindow_Viewport : public EditorWindow
 {
 public:
@@ -29,7 +38,13 @@ public:
     bool* m_open = nullptr;
 
 private:
+    void UpdateSceneRenderSize(int renderW, int renderH);
+
     ImTextureID m_sceneTextureId = 0;
+
+    ViewportResolution m_resolution = ViewportResolution::FreeAspect;
+    float m_zoom = 1.0f;
+    ViewportResolution m_lastResolution = ViewportResolution::FreeAspect;
 };
 
 DELTA_ENGINE_NS_END
