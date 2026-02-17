@@ -66,12 +66,10 @@ void EditorWindow_Viewport::Render()
         return;
     }
 
-    // --- Resolution dropdown ---
-    // --- Get available size for the scene image (below the toolbar) ---
-    ImVec2 availSize = ImGui::GetContentRegionAvail();
-
+    // --- Resolution dropdown and Zoom slider ---
     const char* comboPreview = GetResolutionPresetLabel(m_resolution);
     bool resolutionChanged = false;
+    ImGui::PushItemWidth(300);
     if (ImGui::BeginCombo("Resolution", comboPreview, 0))
     {
         for (int i = 0; i < static_cast<int>(ViewportResolution::Count); ++i)
@@ -86,11 +84,10 @@ void EditorWindow_Viewport::Render()
         ImGui::EndCombo();
     }
 
-    availSize = ImGui::GetContentRegionAvail();
-    // Space available for the scene image (after zoom slider)
-    float sliderHeight = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemSpacing.y;
+    // --- Get available size for the scene image (below the toolbar) ---
+    ImVec2 availSize = ImGui::GetContentRegionAvail();
     float imageAreaW = availSize.x;
-    float imageAreaH = std::max(1.0f, availSize.y - sliderHeight);
+    float imageAreaH = std::max(1.0f, availSize.y);
 
     // Determine render size
     int renderW, renderH;
@@ -140,7 +137,10 @@ void EditorWindow_Viewport::Render()
     if (m_zoom > maxZoom)
         m_zoom = maxZoom;
 
+    ImGui::SameLine();
+    ImGui::PushItemWidth(500);
     ImGui::SliderFloat("Zoom", &m_zoom, minZoom, maxZoom, "%.2fx", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::PopItemWidth();
 
     // Display the scene texture
     if (m_sceneTextureId && texW > 0 && texH > 0 && availSize.x > 0 && availSize.y > 0)

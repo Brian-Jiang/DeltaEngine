@@ -44,7 +44,7 @@ EditorMain::EditorMain()
         return;
     }
 
-    m_window = std::shared_ptr<SDL_Window>(SDL_CreateWindow("Delta Editor", DEFAULT_WIDTH, DEFAULT_HEIGHT, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY), SDL_DestroyWindow);
+    m_window = std::shared_ptr<SDL_Window>(SDL_CreateWindow("Delta Editor", DEFAULT_WIDTH, DEFAULT_HEIGHT, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_MAXIMIZED), SDL_DestroyWindow);
     if (!m_window)
     {
         printf("Failed to create window: %s\n", SDL_GetError());
