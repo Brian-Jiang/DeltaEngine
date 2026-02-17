@@ -427,7 +427,7 @@ std::shared_ptr<DirectX12Texture> CommandList::LoadTexture(std::shared_ptr<DText
         case TEX_DIMENSION_TEXTURE2D:
             textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(metadata.format, static_cast<UINT64>(metadata.width),
                 static_cast<UINT>(metadata.height),
-                static_cast<UINT16>(metadata.arraySize));
+                static_cast<UINT16>(metadata.arraySize), 1u); // todo mip levels
             break;
         case TEX_DIMENSION_TEXTURE3D:
             textureDesc = CD3DX12_RESOURCE_DESC::Tex3D(metadata.format, static_cast<UINT64>(metadata.width),
