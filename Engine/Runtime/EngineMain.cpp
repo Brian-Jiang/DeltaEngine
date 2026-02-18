@@ -89,6 +89,7 @@ void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std:
         });
         //std::shared_ptr<DMaterial> material = std::make_shared<DMaterial>(shader);
         std::shared_ptr<DMesh> mesh = std::make_shared<DMesh>(std::wstring(L"home/source/home.fbx"));
+        //std::shared_ptr<DMesh> mesh = std::make_shared<DMesh>(std::wstring(L"car/source/datsun240k.fbx"));
         std::vector<std::shared_ptr<DTexture>> textures = mesh->GetTextures();
         std::vector<std::shared_ptr<DMaterial>> materials;
         for (int i = 0; i < mesh->GetSubMeshCount(); i++)

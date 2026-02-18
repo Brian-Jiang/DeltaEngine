@@ -276,6 +276,12 @@ std::vector<std::shared_ptr<DTexture>> DMesh::LoadMaterialTextures(const aiScene
 
         auto fileName = filePath.substr(filePath.find_last_of("\\/") + 1);
         auto texturePath = FindTextureFile(folderPath, fileName);
+        std::filesystem::path fileSystemPath(texturePath);
+        if (!std::filesystem::exists(fileSystemPath))
+        {
+            continue;
+        }
+
         auto texture = DTexture::LoadFromFile(std::wstring(texturePath.begin(), texturePath.end()), true);
         textures.push_back(texture);
     }
