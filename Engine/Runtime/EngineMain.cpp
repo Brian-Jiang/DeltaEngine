@@ -187,24 +187,16 @@ void EngineMain::Tick()
     time->TickTime();
 }
 
+std::shared_ptr<Camera> EngineMain::GetCamera()
+{
+    if (!m_cameraGameObject)
+        return nullptr;
+    return m_cameraGameObject->GetRootSceneComponent<Camera>();
+}
+
 void EngineMain::ProcessEvent(const SDL_Event& event)
 {
-    if (event.type == SDL_EVENT_KEY_DOWN && m_cameraGameObject)
-    {
-        SDL_Keycode key = event.key.key;
-        if (key == SDLK_DOWN || key == SDLK_S)
-            m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() - XMFLOAT3(0, 0, 1.f));
-        else if (key == SDLK_UP || key == SDLK_W)
-            m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() + XMFLOAT3(0, 0, 1.f));
-        else if (key == SDLK_LEFT || key == SDLK_A)
-            m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() - XMFLOAT3(1.f, 0, 0));
-        else if (key == SDLK_RIGHT || key == SDLK_D)
-            m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() + XMFLOAT3(1.f, 0, 0));
-        else if (key == SDLK_Q)
-            m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() - XMFLOAT3(0, 1.f, 0));
-        else if (key == SDLK_E)
-            m_cameraGameObject->GetRootSceneComponent()->SetLocalPosition(m_cameraGameObject->GetRootSceneComponent()->GetLocalPosition() + XMFLOAT3(0, 1.f, 0));
-    }
+    // Camera movement (WASD, Q/E) is handled by EditorWindow_Viewport when right-dragging on viewport.
 }
 
 void EngineMain::OnWindowResized(UINT width, UINT height)

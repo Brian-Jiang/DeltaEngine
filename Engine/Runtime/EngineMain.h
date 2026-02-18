@@ -14,6 +14,7 @@
 #include "Runtime/Core/DWorld.h"
 #include "SDL3/SDL.h"
 #include "Core/Time.h"
+#include "Core/Camera.h"
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -52,6 +53,9 @@ public:
 	std::shared_ptr<DXRenderManager> dxRenderManager;
 
 	inline std::shared_ptr<DXRenderManager> GetRenderManager() const { return dxRenderManager; }
+
+	/// Returns the main editor camera. May be null if not initialized.
+	std::shared_ptr<Camera> GetCamera();
 
 	/// Cleanup before exit. Call when shutting down.
 	void Cleanup();

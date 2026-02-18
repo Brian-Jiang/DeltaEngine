@@ -1,14 +1,22 @@
 #include "Editor/EditorWindows/EditorWindow_Viewport.h"
 
+#include <algorithm>
 #include <d3dx12.h>
+#include <SDL3/SDL.h>
+#include <DirectXMath.h>
 
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/DirectX/DirectX12Texture.h"
 #include "Runtime/Graphics/DirectX/RenderTarget.h"
 #include "Runtime/Graphics/DirectX/CommandList.h"
+#include "Runtime/EngineMain.h"
+#include "Runtime/Core/Camera.h"
+#include "Runtime/Core/Time.h"
 #include "Editor/EditorMain.h"
+#include "SimpleMath.h"
 
 using namespace DeltaEngine;
+using namespace DirectX;
 
 namespace
 {
@@ -57,6 +65,92 @@ void EditorWindow_Viewport::UpdateSceneRenderSize(int renderW, int renderH)
     {
         g_editor->SetSceneRenderSize(static_cast<UINT>(renderW), static_cast<UINT>(renderH));
     }
+}
+
+void EditorWindow_Viewport::UpdateViewportFlyMode(bool viewportImageHovered)
+{
+    EngineMain* engine = g_editor->GetEngine();
+    if (!engine)
+        return;
+
+    std::shared_ptr<Camera> camera = engine->GetCamera();
+    if (!camera)
+        return;
+
+    std::shared_ptr<SDL_Window> window = engine->GetWindow();
+    if (!window)
+        return;
+
+    const bool rightMouseDown = ImGui::IsMouseDown(ImGuiMouseButton_Right);
+
+    // Enter fly mode: right-click on viewport image
+    if (!m_flyModeActive && viewportImageHovered && rightMouseDown)
+    {
+        m_flyModeActive = true;
+        SDL_SetWindowRelativeMouseMode(window.get(), true);
+        // Flush initial mouse delta to avoid jump when cursor is captured
+        float discardX, discardY;
+        SDL_GetRelativeMouseState(&discardX, &discardY);
+    }
+
+    // Exit fly mode: release right mouse button
+    if (m_flyModeActive && !rightMouseDown)
+    {
+        m_flyModeActive = false;
+        SDL_SetWindowRelativeMouseMode(window.get(), false);
+        return;
+    }
+
+    if (!m_flyModeActive)
+        return;
+
+    // --- Mouse rotation ---
+    float relX = 0.0f, relY = 0.0f;
+    SDL_GetRelativeMouseState(&relX, &relY);
+
+    if (relX != 0.0f || relY != 0.0f)
+    {
+        // Use yaw/pitch only (roll=0) to prevent camera tilting around view axis
+        SimpleMath::Vector3 euler = camera->GetWorldRotation().ToEuler(); // (pitch, yaw, roll) in radians
+        float yawDelta = relX * m_rotationSensitivity * (XM_PI / 180.0f);
+        float pitchDelta = relY * m_rotationSensitivity * (XM_PI / 180.0f);
+
+        float newYaw = euler.y + yawDelta;
+        float newPitch = euler.x + pitchDelta;
+        const float pitchLimit = 89.0f * (XM_PI / 180.0f); // Prevent gimbal lock at poles
+        newPitch = std::clamp(newPitch, -pitchLimit, pitchLimit);
+
+        SimpleMath::Quaternion newRot = SimpleMath::Quaternion::CreateFromYawPitchRoll(newYaw, newPitch, 0.0f);
+        camera->SetWorldRotation(newRot);
+    }
+
+    // --- Keyboard movement (WASD camera space, Q/E world up/down) ---
+    float dt = Time::deltaTime;
+    float move = m_movementSpeed * dt;
+    XMFLOAT3 positionVector = camera->GetWorldPosition();
+    XMFLOAT3 forwardVector = camera->GetForward();
+    XMFLOAT3 rightVector = camera->GetRight();
+    XMVECTOR pos = XMLoadFloat3(&positionVector);
+    XMVECTOR forward = XMVector3Normalize(XMLoadFloat3(&forwardVector));
+    XMVECTOR right = XMVector3Normalize(XMLoadFloat3(&rightVector));
+    XMVECTOR worldUp = XMVectorSet(0, 1, 0, 0);
+
+    if (ImGui::IsKeyDown(ImGuiKey_W))
+        pos = XMVectorAdd(pos, XMVectorScale(forward, move));
+    if (ImGui::IsKeyDown(ImGuiKey_S))
+        pos = XMVectorSubtract(pos, XMVectorScale(forward, move));
+    if (ImGui::IsKeyDown(ImGuiKey_A))
+        pos = XMVectorSubtract(pos, XMVectorScale(right, move));
+    if (ImGui::IsKeyDown(ImGuiKey_D))
+        pos = XMVectorAdd(pos, XMVectorScale(right, move));
+    if (ImGui::IsKeyDown(ImGuiKey_Q))
+        pos = XMVectorSubtract(pos, XMVectorScale(worldUp, move));
+    if (ImGui::IsKeyDown(ImGuiKey_E))
+        pos = XMVectorAdd(pos, XMVectorScale(worldUp, move));
+
+    XMFLOAT3 newPos;
+    XMStoreFloat3(&newPos, pos);
+    camera->SetWorldPosition(SimpleMath::Vector3(newPos.x, newPos.y, newPos.z));
 }
 
 void EditorWindow_Viewport::Render()
@@ -142,12 +236,15 @@ void EditorWindow_Viewport::Render()
     ImGui::SliderFloat("Zoom", &m_zoom, minZoom, maxZoom, "%.2fx", ImGuiSliderFlags_AlwaysClamp);
     ImGui::PopItemWidth();
 
-    // Display the scene texture
+    // Display the scene texture and handle viewport fly mode (Unreal-style)
+    bool viewportImageHovered = false;
     if (m_sceneTextureId && texW > 0 && texH > 0 && availSize.x > 0 && availSize.y > 0)
     {
         ImVec2 displaySize(texW * m_zoom, texH * m_zoom);
         ImGui::Image(m_sceneTextureId, displaySize);
+        viewportImageHovered = ImGui::IsItemHovered();
     }
+    UpdateViewportFlyMode(viewportImageHovered);
 
     ImGui::End();
 }

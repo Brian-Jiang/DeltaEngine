@@ -39,12 +39,18 @@ public:
 
 private:
     void UpdateSceneRenderSize(int renderW, int renderH);
+    void UpdateViewportFlyMode(bool viewportImageHovered);
 
     ImTextureID m_sceneTextureId = 0;
 
     ViewportResolution m_resolution = ViewportResolution::FreeAspect;
     float m_zoom = 1.0f;
     ViewportResolution m_lastResolution = ViewportResolution::FreeAspect;
+
+    // Unreal-style viewport fly mode: right-mouse drag to rotate, WASD to move (camera space), Q/E up/down (world)
+    bool m_flyModeActive = false;
+    float m_rotationSensitivity = 0.15f;
+    float m_movementSpeed = 150.0f;
 };
 
 DELTA_ENGINE_NS_END
