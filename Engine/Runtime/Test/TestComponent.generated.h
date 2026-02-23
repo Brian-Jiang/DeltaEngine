@@ -15,6 +15,14 @@ namespace Reflection
 namespace Private
 {
 
+//void SetField_m_testFloat(void* instance, std::shared_ptr<void> field_value) { static_cast<TestComponent*>(instance)->m_testFloat = *std::static_pointer_cast<float>(field_value); }
+//    void* GetField_m_testFloat(void* instance) { return static_cast<void*>(&(static_cast<TestComponent*>(instance)->m_testFloat)); }
+
+class ReflectionRegister_TestComponent
+{
+
+};
+
 void ReflectionRegister_TestComponent()
 {
     // Register class TestComponent
@@ -40,14 +48,13 @@ void ReflectionRegister_TestComponent()
     //cls->m_classDefaultObject = nullptr; // Default object can be set if needed
 
     //#define _CRT_USE_BUILTIN_OFFSETOF
+    
     // Register properties of TestComponent
-    DProperty* prop_m_testFloat = new DProperty("m_testFloat",
-                                                "float",
-                                                offsetof(TestComponent, m_testFloat),
-                                                sizeof(float),
-                                                &TestComponent::SetField_m_testFloat,
-                                                &TestComponent::GetField_m_testFloat
+    
+    DProperty* prop_m_testFloat = new DFloatProperty("m_testFloat",
+                                                     offsetof(TestComponent, m_testFloat)
     );
+
     //prop_m_testFloat->m_name = "m_testFloat";
     //prop_m_testFloat->m_type = "float";
     //prop_m_testFloat->m_offset = offsetof(TestComponent, m_testFloat);

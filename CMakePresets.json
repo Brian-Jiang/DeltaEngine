@@ -11,11 +11,15 @@
         "strategy": "external"
       },
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "cl",
+        "CMAKE_CXX_COMPILER": "cl"
       },
       "vendor": {
         "microsoft.com/VisualStudioSettings/CMake/1.0": {
-          "hostOS": [ "Windows" ],
+          "hostOS": [
+            "Windows"
+          ],
           "intelliSenseMode": "windows-msvc-x64"
         }
       }

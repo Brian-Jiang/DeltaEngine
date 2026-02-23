@@ -26,29 +26,124 @@ public:
     DProperty(std::string name,
         std::string type,
         uint32_t offset,
-        uint32_t size,
-        void (*setter)(void* instance, std::shared_ptr<void> field_value),
-        void* (*getter)(void* instance)
+        uint32_t size
     );
 
-protected:
     virtual void InitializeValue(void* address) const = 0;
     virtual void DestroyValue(void* address) const = 0;
+    virtual void SetValue(void* instance, const void* field_value) const = 0;
+    virtual void* GetValue(const void* instance) const = 0;
     virtual void CopyValue(void* dest, const void* src) const = 0;
     virtual bool Identical(const void* a, const void* b) const = 0;
     virtual std::string ToString(const void* address) const = 0;
     virtual EPropertyType GetPropertyType() const = 0;
 
-private:
+protected:
     std::string m_name;
     std::string m_type;
     uint32_t m_offset;
     uint32_t m_size;
-    void (*m_setter)(void* instance, std::shared_ptr<void> field_value);
-    void* (*m_getter)(void* instance);
+    DClass* m_declaringClass;
 
     DProperty* m_next;
-    DClass* m_declaringClass;
+};
+
+
+template <typename T>
+concept NumericType = std::is_arithmetic_v<T>;
+
+
+template <typename T>
+    requires NumericType<T>
+class DNumericProperty : public DProperty
+{
+public:
+    DNumericProperty(std::string name,
+                     std::string type,
+                     uint32_t offset)
+        : DProperty(std::move(name), std::move(type), offset, sizeof(T))
+    {
+
+    }
+
+    void SetValue(void* instance, const void* field_value) const override
+    {
+        void* addr = static_cast<uint8_t*>(instance) + m_offset;
+        *static_cast<T*>(addr) = field_value ? *static_cast<const T*>(field_value) : T {};
+    }
+
+    void* GetValue(const void* instance) const override
+    {
+        return static_cast<uint8_t*>(const_cast<void*>(instance)) + m_offset;
+    }
+
+    void InitializeValue(void* address) const override
+    {
+        new (address) T();
+    }
+
+    void DestroyValue(void* address) const override
+    {
+
+    }
+
+    void CopyValue(void* dest, const void* src) const override
+    {
+        new (dest) T(*static_cast<const T*>(src));
+    }
+
+    bool Identical(const void* a, const void* b) const override
+    {
+        return *static_cast<const T*>(a) == *static_cast<const T*>(b);
+    }
+
+    std::string ToString(const void* address) const override
+    {
+        return std::to_string(*static_cast<const T*>(address));
+    }
+};
+
+
+class DFloatProperty : public DNumericProperty<float>
+{
+public:
+    DFloatProperty(std::string name, uint32_t offset);
+
+    EPropertyType GetPropertyType() const override;
+};
+
+
+class DStringProperty : public DProperty
+{
+public:
+    DStringProperty(std::string name,
+        std::string type,
+        uint32_t offset,
+        uint32_t size
+    );
+
+    void InitializeValue(void* address) const override;
+    void DestroyValue(void* address) const override;
+    void CopyValue(void* dest, const void* src) const override;
+    bool Identical(const void* a, const void* b) const override;
+    std::string ToString(const void* address) const override;
+};
+
+
+class DObjectProperty : public DProperty
+{
+public:
+    DObjectProperty(std::string name,
+        std::string type,
+        uint32_t offset,
+        uint32_t size
+    );
+    
+    void InitializeValue(void* address) const override;
+    void DestroyValue(void* address) const override;
+    void CopyValue(void* dest, const void* src) const override;
+    bool Identical(const void* a, const void* b) const override;
+    std::string ToString(const void* address) const override;
 };
 
 DELTA_ENGINE_NS_END

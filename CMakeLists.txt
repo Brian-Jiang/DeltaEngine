@@ -18,6 +18,7 @@ project("DeltaEngine" VERSION 0.1.0)
 # Enable multithreaded compilation for MSVC
 if(MSVC)
     add_compile_options(/MP)
+    # add_compile_definitions(_CRT_USE_BUILTIN_OFFSETOF)
 endif()
 
 set(BUILD_SHARED_LIBS OFF)
