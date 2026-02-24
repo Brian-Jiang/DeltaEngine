@@ -26,9 +26,19 @@ public:
     );
 
     void AddProperty(DProperty* property);
-    DProperty* FindPropertyByName(std::string name) const;
+    DProperty* FindPropertyByName(const std::string& name) const;
     bool IsChildOf(const DClass* other) const;
 
+    const std::string& GetName() const;
+    DClass* GetSuper() const;
+    size_t GetClassSize() const;
+    size_t GetMinAlignment() const;
+    DProperty* GetProperties() const;
+    DProperty* GetOwnProperties() const;
+
+    void ConstructObject(void* address) const;
+    void DestroyObject(void* address) const;
+    void CopyObject(void* dest, const void* src) const;
 
 private:
     std::string m_name;

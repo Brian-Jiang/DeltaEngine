@@ -16,9 +16,11 @@ enum class EPropertyType
     Float,
     Int,
     Bool,
+    Double,
     String,
+    Vector3,
+    Quaternion,
     ObjectPtr,
-    // ...
 };
 
 class DProperty
@@ -32,6 +34,8 @@ public:
         uint32_t size
     );
 
+    virtual ~DProperty() = default;
+
     virtual void InitializeValue(void* address) const = 0;
     virtual void DestroyValue(void* address) const = 0;
     virtual void SetValue(void* instance, const void* field_value) const = 0;
@@ -40,6 +44,13 @@ public:
     virtual bool Identical(const void* a, const void* b) const = 0;
     virtual std::string ToString(const void* address) const = 0;
     virtual EPropertyType GetPropertyType() const = 0;
+
+    const std::string& GetName() const { return m_name; }
+    const std::string& GetType() const { return m_type; }
+    uint32_t GetOffset() const { return m_offset; }
+    uint32_t GetSize() const { return m_size; }
+    DClass* GetDeclaringClass() const { return m_declaringClass; }
+    DProperty* GetNext() const { return m_next; }
 
 protected:
     std::string m_name;
@@ -111,7 +122,30 @@ class DFloatProperty : public DNumericProperty<float>
 {
 public:
     DFloatProperty(std::string name, uint32_t offset);
+    EPropertyType GetPropertyType() const override;
+};
 
+
+class DIntProperty : public DNumericProperty<int32_t>
+{
+public:
+    DIntProperty(std::string name, uint32_t offset);
+    EPropertyType GetPropertyType() const override;
+};
+
+
+class DBoolProperty : public DNumericProperty<bool>
+{
+public:
+    DBoolProperty(std::string name, uint32_t offset);
+    EPropertyType GetPropertyType() const override;
+};
+
+
+class DDoubleProperty : public DNumericProperty<double>
+{
+public:
+    DDoubleProperty(std::string name, uint32_t offset);
     EPropertyType GetPropertyType() const override;
 };
 
@@ -119,17 +153,48 @@ public:
 class DStringProperty : public DProperty
 {
 public:
-    DStringProperty(std::string name,
-        std::string type,
-        uint32_t offset,
-        uint32_t size
-    );
+    DStringProperty(std::string name, uint32_t offset);
 
     void InitializeValue(void* address) const override;
     void DestroyValue(void* address) const override;
+    void SetValue(void* instance, const void* field_value) const override;
+    void* GetValue(const void* instance) const override;
     void CopyValue(void* dest, const void* src) const override;
     bool Identical(const void* a, const void* b) const override;
     std::string ToString(const void* address) const override;
+    EPropertyType GetPropertyType() const override;
+};
+
+
+class DVector3Property : public DProperty
+{
+public:
+    DVector3Property(std::string name, uint32_t offset);
+
+    void InitializeValue(void* address) const override;
+    void DestroyValue(void* address) const override;
+    void SetValue(void* instance, const void* field_value) const override;
+    void* GetValue(const void* instance) const override;
+    void CopyValue(void* dest, const void* src) const override;
+    bool Identical(const void* a, const void* b) const override;
+    std::string ToString(const void* address) const override;
+    EPropertyType GetPropertyType() const override;
+};
+
+
+class DQuaternionProperty : public DProperty
+{
+public:
+    DQuaternionProperty(std::string name, uint32_t offset);
+
+    void InitializeValue(void* address) const override;
+    void DestroyValue(void* address) const override;
+    void SetValue(void* instance, const void* field_value) const override;
+    void* GetValue(const void* instance) const override;
+    void CopyValue(void* dest, const void* src) const override;
+    bool Identical(const void* a, const void* b) const override;
+    std::string ToString(const void* address) const override;
+    EPropertyType GetPropertyType() const override;
 };
 
 
