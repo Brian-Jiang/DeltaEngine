@@ -102,19 +102,19 @@ public:
      * Block the current thread until the swapchain has finished presenting.
      * Doing this at the beginning of the update loop can improve input latency.
      */
-    void WaitForSwapChain();
+    DELTAENGINE_API void WaitForSwapChain();
 
     /**
      * Resize the swapchain's back buffers. This should be called whenever the window is resized.
      */
-    void Resize( uint32_t width, uint32_t height );
+    DELTAENGINE_API void Resize( uint32_t width, uint32_t height );
 
     /**
      * Get the render target of the window. This method should be called every
      * frame since the color attachment point changes depending on the window's
      * current back buffer.
      */
-    const RenderTarget& GetRenderTarget() const;
+    DELTAENGINE_API const RenderTarget& GetRenderTarget() const;
 
     /**
      * Present the swapchain's back buffer to the screen.
@@ -126,7 +126,7 @@ public:
      *
      * @returns The current backbuffer index after the present.
      */
-    UINT Present(const std::shared_ptr<DirectX12Texture>& texture = nullptr);
+    DELTAENGINE_API UINT Present(const std::shared_ptr<DirectX12Texture>& texture = nullptr);
 
     /**
      * Get the format that is used to create the backbuffer.

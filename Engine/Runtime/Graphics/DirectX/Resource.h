@@ -70,7 +70,7 @@ public:
     /**
      * Set the name of the resource. Useful for debugging purposes.
      */
-    void                SetName(const std::wstring& name);
+    DELTAENGINE_API void                SetName(const std::wstring& name);
     const std::wstring& GetName() const {
         return m_ResourceName;
     }
@@ -78,8 +78,8 @@ public:
     /**
      * Check if the resource format supports a specific feature.
      */
-    bool CheckFormatSupport(D3D12_FORMAT_SUPPORT1 formatSupport) const;
-    bool CheckFormatSupport(D3D12_FORMAT_SUPPORT2 formatSupport) const;
+    DELTAENGINE_API bool CheckFormatSupport(D3D12_FORMAT_SUPPORT1 formatSupport) const;
+    DELTAENGINE_API bool CheckFormatSupport(D3D12_FORMAT_SUPPORT2 formatSupport) const;
 
 protected:
     //    friend class CommandList;

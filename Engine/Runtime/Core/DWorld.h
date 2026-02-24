@@ -18,29 +18,29 @@ class DWorld : public DObject, public std::enable_shared_from_this<DWorld>
 {
 
 public:
-    DWorld();
+    DELTAENGINE_API DWorld();
 
-    std::shared_ptr<GameObject> CreateGameObject(const std::string& name = "New GameObject");
+    DELTAENGINE_API std::shared_ptr<GameObject> CreateGameObject(const std::string& name = "New GameObject");
 
     /// Walk the scene tree and call InitGraphicState on every Renderer.
-    void InitRenderers(std::shared_ptr<DXGraphicsContext> context) const;
+    DELTAENGINE_API void InitRenderers(std::shared_ptr<DXGraphicsContext> context) const;
 
-    void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const;
+    DELTAENGINE_API void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const;
 
     /// Walk the scene tree and call GatherDrawCalls on every Renderer.
-    void GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const;
+    DELTAENGINE_API void GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const;
 
-    void PreTick(float deltaTime);
+    DELTAENGINE_API void PreTick(float deltaTime);
 
     std::shared_ptr<SceneComponent> GetRootSceneComponent() const { return m_rootSceneComponent; }
 
     /// Clears all game objects and breaks the circular reference between the world and game objects.
-    void Clear();
+    DELTAENGINE_API void Clear();
 
     const std::vector<std::shared_ptr<GameObject>>& GetGameObjects() const { return m_gameObjects; }
     inline bool IsGameObjectsChanged() const { return m_gameObjectsChanged; }
 
-    static std::shared_ptr<DWorld> CreateWorld();
+    DELTAENGINE_API static std::shared_ptr<DWorld> CreateWorld();
 
 private:
     std::shared_ptr<SceneComponent> m_rootSceneComponent;

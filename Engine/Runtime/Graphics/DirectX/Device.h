@@ -38,7 +38,7 @@ public:
      * Always enable the debug layer before doing anything DX12 related so all possible errors generated while creating
      * DX12 objects are caught by the debug layer.
      */
-    static void EnableDebugLayer();
+    static DELTAENGINE_API void EnableDebugLayer();
 
     static DELTAENGINE_API void ReportLiveObjects();
 
@@ -46,17 +46,17 @@ public:
      * Create a new DX12 device using the provided adapter.
      * If no adapter is specified, then the highest performance adapter will be  chosen.
      */
-    static std::shared_ptr<Device> Create(std::shared_ptr<Adapter> adapter = nullptr);
+    static DELTAENGINE_API std::shared_ptr<Device> Create(std::shared_ptr<Adapter> adapter = nullptr);
 
     /**
      * Get a description of the adapter that was used to create the device.
      */
-    std::wstring GetDescription() const;
+    DELTAENGINE_API std::wstring GetDescription() const;
 
     /**
      * Allocate a number of CPU visible descriptors.
      */
-    DescriptorAllocation AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors = 1);
+    DELTAENGINE_API DescriptorAllocation AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors = 1);
 
     /**
      * Gets the size of the handle increment for the given type of descriptor heap.
@@ -85,16 +85,16 @@ public:
      *
      * @returns A pointer to the created texture.
      */
-    std::shared_ptr<DirectX12Texture> CreateTexture(const D3D12_RESOURCE_DESC& resourceDesc,
+    DELTAENGINE_API std::shared_ptr<DirectX12Texture> CreateTexture(const D3D12_RESOURCE_DESC& resourceDesc,
         const D3D12_CLEAR_VALUE* clearValue = nullptr);
-    std::shared_ptr<DirectX12Texture> CreateTexture(Microsoft::WRL::ComPtr<ID3D12Resource> resource,
+    DELTAENGINE_API std::shared_ptr<DirectX12Texture> CreateTexture(Microsoft::WRL::ComPtr<ID3D12Resource> resource,
         const D3D12_CLEAR_VALUE* clearValue = nullptr);
 
     /**
      * Upload a DTexture (loaded from file) to the GPU. Allocates descriptor and creates SRV internally.
      * Records copy and transition commands on the given command list.
      */
-    void CreateTextureFromFile(class DTexture* dtex, CommandList& commandList);
+    DELTAENGINE_API void CreateTextureFromFile(class DTexture* dtex, CommandList& commandList);
 
 
     // ============================ Swap Chain ============================
@@ -102,7 +102,7 @@ public:
     /**
      * Create a swapchain using the provided OS window handle.
      */
-    std::shared_ptr<SwapChain> CreateSwapChain(HWND hWnd, DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R10G10B10A2_UNORM);
+    DELTAENGINE_API std::shared_ptr<SwapChain> CreateSwapChain(HWND hWnd, DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R10G10B10A2_UNORM);
 
 
     // ============================ Constant Buffer ============================
@@ -110,7 +110,7 @@ public:
     /**
      * Create a ConstantBuffer from a given ID3D12Resoure.
      */
-    std::shared_ptr<ConstantBuffer> CreateConstantBuffer(Microsoft::WRL::ComPtr<ID3D12Resource> resource);
+    DELTAENGINE_API std::shared_ptr<ConstantBuffer> CreateConstantBuffer(Microsoft::WRL::ComPtr<ID3D12Resource> resource);
 
 
     // ============================ Byte Address Buffer ============================
@@ -119,34 +119,34 @@ public:
      *
      * @param resDesc A description of the resource.
      */
-    std::shared_ptr<ByteAddressBuffer> CreateByteAddressBuffer(size_t bufferSize);
-    std::shared_ptr<ByteAddressBuffer> CreateByteAddressBuffer(Microsoft::WRL::ComPtr<ID3D12Resource> resource);
+    DELTAENGINE_API std::shared_ptr<ByteAddressBuffer> CreateByteAddressBuffer(size_t bufferSize);
+    DELTAENGINE_API std::shared_ptr<ByteAddressBuffer> CreateByteAddressBuffer(Microsoft::WRL::ComPtr<ID3D12Resource> resource);
 
 
     // ============================ Structured Buffer ============================
     /**
      * Create a structured buffer resource.
      */
-    std::shared_ptr<StructuredBuffer> CreateStructuredBuffer(size_t numElements, size_t elementSize);
-    std::shared_ptr<StructuredBuffer> CreateStructuredBuffer(Microsoft::WRL::ComPtr<ID3D12Resource> resource,
+    DELTAENGINE_API std::shared_ptr<StructuredBuffer> CreateStructuredBuffer(size_t numElements, size_t elementSize);
+    DELTAENGINE_API std::shared_ptr<StructuredBuffer> CreateStructuredBuffer(Microsoft::WRL::ComPtr<ID3D12Resource> resource,
         size_t numElements, size_t elementSize);
 
 
     // ============================ Index Buffer ============================
 
-    std::shared_ptr<IndexBuffer> CreateIndexBuffer(size_t numIndices, DXGI_FORMAT indexFormat);
-    std::shared_ptr<IndexBuffer> CreateIndexBuffer(Microsoft::WRL::ComPtr<ID3D12Resource> resource, size_t numIndices,
+    DELTAENGINE_API std::shared_ptr<IndexBuffer> CreateIndexBuffer(size_t numIndices, DXGI_FORMAT indexFormat);
+    DELTAENGINE_API std::shared_ptr<IndexBuffer> CreateIndexBuffer(Microsoft::WRL::ComPtr<ID3D12Resource> resource, size_t numIndices,
         DXGI_FORMAT indexFormat);
 
 
     // ============================ Vertex Buffer ============================
 
-    std::shared_ptr<VertexBuffer> CreateVertexBuffer(size_t numVertices, size_t vertexStride);
-    std::shared_ptr<VertexBuffer> CreateVertexBuffer(Microsoft::WRL::ComPtr<ID3D12Resource> resource,
+    DELTAENGINE_API std::shared_ptr<VertexBuffer> CreateVertexBuffer(size_t numVertices, size_t vertexStride);
+    DELTAENGINE_API std::shared_ptr<VertexBuffer> CreateVertexBuffer(Microsoft::WRL::ComPtr<ID3D12Resource> resource,
         size_t numVertices, size_t vertexStride);
 
 
-    std::shared_ptr<RootSignature> CreateRootSignature(const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc);
+    DELTAENGINE_API std::shared_ptr<RootSignature> CreateRootSignature(const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc);
 
     template <class PipelineStateStream>
     std::shared_ptr<PipelineStateObject> CreatePipelineStateObject(PipelineStateStream& pipelineStateStream)
@@ -157,14 +157,14 @@ public:
         return DoCreatePipelineStateObject(pipelineStateStreamDesc);
     }
 
-    std::shared_ptr<ConstantBufferView> CreateConstantBufferView(const std::shared_ptr<ConstantBuffer>& constantBuffer,
+    DELTAENGINE_API std::shared_ptr<ConstantBufferView> CreateConstantBufferView(const std::shared_ptr<ConstantBuffer>& constantBuffer,
         size_t offset = 0);
 
-    std::shared_ptr<ShaderResourceView>
+    DELTAENGINE_API std::shared_ptr<ShaderResourceView>
     CreateShaderResourceView(const std::shared_ptr<Resource>& resource,
         const D3D12_SHADER_RESOURCE_VIEW_DESC* srv = nullptr);
 
-    std::shared_ptr<UnorderedAccessView>
+    DELTAENGINE_API std::shared_ptr<UnorderedAccessView>
     CreateUnorderedAccessView(const std::shared_ptr<Resource>& resource,
         const std::shared_ptr<Resource>& counterResource = nullptr,
         const D3D12_UNORDERED_ACCESS_VIEW_DESC* uav = nullptr);
@@ -172,23 +172,23 @@ public:
     /**
      * Flush all command queues.
      */
-    void Flush();
+    DELTAENGINE_API void Flush();
 
     /**
      * Release stale descriptors. This should only be called with a completed frame counter.
      */
-    void ReleaseStaleDescriptors();
+    DELTAENGINE_API void ReleaseStaleDescriptors();
 
     /**
      * Create a shader-visible CBV_SRV_UAV descriptor heap for external use (e.g., ImGui).
      * Returns both CPU and GPU descriptor handles.
      */
-    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CreateShaderVisibleSrvHeap(uint32_t numDescriptors = 64);
+    DELTAENGINE_API Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CreateShaderVisibleSrvHeap(uint32_t numDescriptors = 64);
 
     /**
      * Get the adapter that was used to create this device.
      */
-    inline std::shared_ptr<Adapter> GetAdapter() const
+    inline DELTAENGINE_API std::shared_ptr<Adapter> GetAdapter() const
     {
         return m_Adapter;
     }
@@ -200,7 +200,7 @@ public:
      * - D3D12_COMMAND_LIST_TYPE_COPY   : Can be used for copy commands.
      * By default, a D3D12_COMMAND_LIST_TYPE_DIRECT queue is returned.
      */
-    CommandQueue& GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT);
+    DELTAENGINE_API CommandQueue& GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT);
 
     inline Microsoft::WRL::ComPtr<ID3D12Device2> GetD3D12Device() const
     {

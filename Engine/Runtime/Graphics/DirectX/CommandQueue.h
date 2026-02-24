@@ -20,22 +20,22 @@ class CommandQueue
 {
 public:
     // Get an available command list from the command queue.
-    std::shared_ptr<CommandList> GetCommandList();
+    DELTAENGINE_API std::shared_ptr<CommandList> GetCommandList();
 
     // Execute a command list.
     // Returns the fence value to wait for for this command list.
-    uint64_t ExecuteCommandList(std::shared_ptr<CommandList> commandList);
-    uint64_t ExecuteCommandLists(const std::vector<std::shared_ptr<CommandList>>& commandLists);
+    DELTAENGINE_API uint64_t ExecuteCommandList(std::shared_ptr<CommandList> commandList);
+    DELTAENGINE_API uint64_t ExecuteCommandLists(const std::vector<std::shared_ptr<CommandList>>& commandLists);
 
-    uint64_t Signal();
-    bool     IsFenceComplete(uint64_t fenceValue);
-    void     WaitForFenceValue(uint64_t fenceValue);
-    void     Flush();
+    DELTAENGINE_API uint64_t Signal();
+    DELTAENGINE_API bool     IsFenceComplete(uint64_t fenceValue);
+    DELTAENGINE_API void     WaitForFenceValue(uint64_t fenceValue);
+    DELTAENGINE_API void     Flush();
 
     // Wait for another command queue to finish.
-    void Wait(const CommandQueue& other);
+    DELTAENGINE_API void Wait(const CommandQueue& other);
 
-    Microsoft::WRL::ComPtr<ID3D12CommandQueue> GetD3D12CommandQueue() const;
+    DELTAENGINE_API Microsoft::WRL::ComPtr<ID3D12CommandQueue> GetD3D12CommandQueue() const;
 
 //protected:
     friend class std::default_delete<CommandQueue>;

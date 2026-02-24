@@ -37,8 +37,8 @@ class CommandList : public std::enable_shared_from_this<CommandList>
 {
 
 public:
-    CommandList(Device& device, D3D12_COMMAND_LIST_TYPE type);
-    ~CommandList();
+    DELTAENGINE_API CommandList(Device& device, D3D12_COMMAND_LIST_TYPE type);
+    DELTAENGINE_API ~CommandList();
 
      /**
      * Transition a resource to a particular state.
@@ -51,9 +51,9 @@ public:
      * @param flushBarriers Force flush any barriers. Resource barriers need to be flushed before a command (draw,
      * dispatch, or copy) that expects the resource to be in a particular state can run.
      */
-    void TransitionBarrier(const std::shared_ptr<Resource>& resource, D3D12_RESOURCE_STATES stateAfter,
+    DELTAENGINE_API void TransitionBarrier(const std::shared_ptr<Resource>& resource, D3D12_RESOURCE_STATES stateAfter,
         UINT subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, bool flushBarriers = false);
-    void TransitionBarrier(Microsoft::WRL::ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES stateAfter,
+    DELTAENGINE_API void TransitionBarrier(Microsoft::WRL::ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES stateAfter,
         UINT subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, bool flushBarriers = false);
 
     /**
@@ -65,8 +65,8 @@ public:
      * flushed before a command (draw, dispatch, or copy) that expects the resource
      * to be in a particular state can run.
      */
-    void UAVBarrier(const std::shared_ptr<Resource>& resource = nullptr, bool flushBarriers = false);
-    void UAVBarrier(Microsoft::WRL::ComPtr<ID3D12Resource> resource, bool flushBarriers = false);
+    DELTAENGINE_API void UAVBarrier(const std::shared_ptr<Resource>& resource = nullptr, bool flushBarriers = false);
+    DELTAENGINE_API void UAVBarrier(Microsoft::WRL::ComPtr<ID3D12Resource> resource, bool flushBarriers = false);
 
     /**
      * Add an aliasing barrier to indicate a transition between usages of two
@@ -75,32 +75,32 @@ public:
      * @param [beforeResource] The resource that currently occupies the heap (can be null).
      * @param [afterResource] The resource that will occupy the space in the heap (can be null).
      */
-    void AliasingBarrier(const std::shared_ptr<Resource>& = nullptr,
+    DELTAENGINE_API void AliasingBarrier(const std::shared_ptr<Resource>& = nullptr,
         const std::shared_ptr<Resource>& afterResource = nullptr, bool flushBarriers = false);
-    void AliasingBarrier(Microsoft::WRL::ComPtr<ID3D12Resource> beforeResource,
+    DELTAENGINE_API void AliasingBarrier(Microsoft::WRL::ComPtr<ID3D12Resource> beforeResource,
         Microsoft::WRL::ComPtr<ID3D12Resource> afterResource, bool flushBarriers = false);
 
     /**
      * Flush any barriers that have been pushed to the command list.
      */
-    void FlushResourceBarriers();
+    DELTAENGINE_API void FlushResourceBarriers();
 
     /**
      * Copy resources.
      */
-    void CopyResource(const std::shared_ptr<Resource>& dstRes, const std::shared_ptr<Resource>& srcRes);
-    void CopyResource(Microsoft::WRL::ComPtr<ID3D12Resource> dstRes, Microsoft::WRL::ComPtr<ID3D12Resource> srcRes);
+    DELTAENGINE_API void CopyResource(const std::shared_ptr<Resource>& dstRes, const std::shared_ptr<Resource>& srcRes);
+    DELTAENGINE_API void CopyResource(Microsoft::WRL::ComPtr<ID3D12Resource> dstRes, Microsoft::WRL::ComPtr<ID3D12Resource> srcRes);
 
     /**
      * Resolve a multisampled resource into a non-multisampled resource.
      */
-    void ResolveSubresource(const std::shared_ptr<Resource>&, const std::shared_ptr<Resource>&,
+    DELTAENGINE_API void ResolveSubresource(const std::shared_ptr<Resource>&, const std::shared_ptr<Resource>&,
         uint32_t dstSubresource = 0, uint32_t srcSubresource = 0);
 
     /**
      * Copy the contents to a vertex buffer in GPU memory.
      */
-    std::shared_ptr<VertexBuffer> CopyVertexBuffer(size_t numVertices, size_t vertexStride,
+    DELTAENGINE_API std::shared_ptr<VertexBuffer> CopyVertexBuffer(size_t numVertices, size_t vertexStride,
         const void* vertexBufferData);
     template <typename T>
     std::shared_ptr<VertexBuffer> CopyVertexBuffer(const std::vector<T>& vertexBufferData)
@@ -111,7 +111,7 @@ public:
     /**
      * Copy the contents to a index buffer in GPU memory.
      */
-    std::shared_ptr<IndexBuffer> CopyIndexBuffer(size_t numIndices, DXGI_FORMAT indexFormat,
+    DELTAENGINE_API std::shared_ptr<IndexBuffer> CopyIndexBuffer(size_t numIndices, DXGI_FORMAT indexFormat,
         const void* indexBufferData);
     template <typename T>
     std::shared_ptr<IndexBuffer> CopyIndexBuffer(const std::vector<T>& indexBufferData)
@@ -125,7 +125,7 @@ public:
     /**
      * Copy the contents to a constant buffer in GPU memory.
      */
-    std::shared_ptr<ConstantBuffer> CopyConstantBuffer(size_t bufferSize, const void* bufferData);
+    DELTAENGINE_API std::shared_ptr<ConstantBuffer> CopyConstantBuffer(size_t bufferSize, const void* bufferData);
 
     template <typename T>
     std::shared_ptr<ConstantBuffer> CopyConstantBuffer(const T& data)
@@ -136,7 +136,7 @@ public:
     /**
      * Copy the contents to a byte address buffer in GPU memory.
      */
-    std::shared_ptr<ByteAddressBuffer> CopyByteAddressBuffer(size_t bufferSize, const void* bufferData);
+    DELTAENGINE_API std::shared_ptr<ByteAddressBuffer> CopyByteAddressBuffer(size_t bufferSize, const void* bufferData);
     template <typename T>
     std::shared_ptr<ByteAddressBuffer> CopyByteAddressBuffer(const T& data)
     {
@@ -146,7 +146,7 @@ public:
     /**
      * Copy the contents to a structured buffer in GPU memory.
      */
-    std::shared_ptr<StructuredBuffer> CopyStructuredBuffer(size_t numElements, size_t elementSize,
+    DELTAENGINE_API std::shared_ptr<StructuredBuffer> CopyStructuredBuffer(size_t numElements, size_t elementSize,
         const void* bufferData);
     template <typename T>
     std::shared_ptr<StructuredBuffer> CopyStructuredBuffer(const std::vector<T>& bufferData)
@@ -157,23 +157,23 @@ public:
     /**
      * Set the current primitive topology for the rendering pipeline.
      */
-    void SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY primitiveTopology);
+    DELTAENGINE_API void SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY primitiveTopology);
 
     /**
      * Load a texture by a filename.
      */
-    std::shared_ptr<DirectX12Texture> LoadTextureFromFile(const std::wstring& fileName, bool sRGB = false);
-    std::shared_ptr<DirectX12Texture> LoadTexture(std::shared_ptr<DTexture> texture);
+    DELTAENGINE_API std::shared_ptr<DirectX12Texture> LoadTextureFromFile(const std::wstring& fileName, bool sRGB = false);
+    DELTAENGINE_API std::shared_ptr<DirectX12Texture> LoadTexture(std::shared_ptr<DTexture> texture);
 
     /**
      * Clear a texture.
      */
-    void ClearTexture(const std::shared_ptr<DirectX12Texture>& texture, const float clearColor[4]);
+    DELTAENGINE_API void ClearTexture(const std::shared_ptr<DirectX12Texture>& texture, const float clearColor[4]);
 
     /**
      * Clear depth/stencil texture.
      */
-    void ClearDepthStencilTexture(const std::shared_ptr<DirectX12Texture>& texture, D3D12_CLEAR_FLAGS clearFlags,
+    DELTAENGINE_API void ClearDepthStencilTexture(const std::shared_ptr<DirectX12Texture>& texture, D3D12_CLEAR_FLAGS clearFlags,
         float depth = 1.0f, uint8_t stencil = 0);
 
     /**
@@ -181,24 +181,24 @@ public:
      * The first subresource is used to generate the mip chain.
      * Mips are automatically generated for textures loaded from files.
      */
-    void GenerateMips(const std::shared_ptr<DirectX12Texture>& texture);
+    DELTAENGINE_API void GenerateMips(const std::shared_ptr<DirectX12Texture>& texture);
 
     /**
      * Generate a cubemap texture from a panoramic (equirectangular) texture.
      */
-    void PanoToCubemap(const std::shared_ptr<DirectX12Texture>& cubemapTexture, const std::shared_ptr<DirectX12Texture>& panoTexture);
+    DELTAENGINE_API void PanoToCubemap(const std::shared_ptr<DirectX12Texture>& cubemapTexture, const std::shared_ptr<DirectX12Texture>& panoTexture);
 
     /**
      * Copy subresource data to a texture.
      */
-    void CopyTextureSubresource(const std::shared_ptr<DirectX12Texture>& texture, uint32_t firstSubresource,
+    DELTAENGINE_API void CopyTextureSubresource(const std::shared_ptr<DirectX12Texture>& texture, uint32_t firstSubresource,
         uint32_t numSubresources, D3D12_SUBRESOURCE_DATA* subresourceData);
 
     /**
      * Set a dynamic constant buffer data to an inline descriptor in the root
      * signature.
      */
-    void SetGraphicsDynamicConstantBuffer(uint32_t rootParameterIndex, size_t sizeInBytes, const void* bufferData);
+    DELTAENGINE_API void SetGraphicsDynamicConstantBuffer(uint32_t rootParameterIndex, size_t sizeInBytes, const void* bufferData);
 
     template<typename T>
     void SetGraphicsDynamicConstantBuffer(uint32_t rootParameterIndex, const T& data)
@@ -209,7 +209,7 @@ public:
     /**
      * Set a set of 32-bit constants on the graphics pipeline.
      */
-    void SetGraphics32BitConstants(uint32_t rootParameterIndex, uint32_t numConstants, const void* constants);
+    DELTAENGINE_API void SetGraphics32BitConstants(uint32_t rootParameterIndex, uint32_t numConstants, const void* constants);
     template <typename T>
     void SetGraphics32BitConstants(uint32_t rootParameterIndex, const T& constants)
     {
@@ -220,7 +220,7 @@ public:
     /**
      * Set a set of 32-bit constants on the compute pipeline.
      */
-    void SetCompute32BitConstants(uint32_t rootParameterIndex, uint32_t numConstants, const void* constants);
+    DELTAENGINE_API void SetCompute32BitConstants(uint32_t rootParameterIndex, uint32_t numConstants, const void* constants);
     template <typename T>
     void SetCompute32BitConstants(uint32_t rootParameterIndex, const T& constants)
     {
@@ -234,13 +234,13 @@ public:
      * @param slot The slot to bind the vertex buffer to.
      * @vertexBuffer The vertex buffer to bind (can be null to remove the vertex buffer from the slot).
      */
-    void SetVertexBuffers(uint32_t startSlot, const std::vector<std::shared_ptr<VertexBuffer>>& vertexBufferViews);
-    void SetVertexBuffer(uint32_t slot, const std::shared_ptr<VertexBuffer>& vertexBufferView);
+    DELTAENGINE_API void SetVertexBuffers(uint32_t startSlot, const std::vector<std::shared_ptr<VertexBuffer>>& vertexBufferViews);
+    DELTAENGINE_API void SetVertexBuffer(uint32_t slot, const std::shared_ptr<VertexBuffer>& vertexBufferView);
 
     /**
      * Set dynamic vertex buffer data to the rendering pipeline.
      */
-    void SetDynamicVertexBuffer(uint32_t slot, size_t numVertices, size_t vertexSize, const void* vertexBufferData);
+    DELTAENGINE_API void SetDynamicVertexBuffer(uint32_t slot, size_t numVertices, size_t vertexSize, const void* vertexBufferData);
     template <typename T>
     void SetDynamicVertexBuffer(uint32_t slot, const std::vector<T>& vertexBufferData)
     {
@@ -252,12 +252,12 @@ public:
      *
      * @param indexBuffer The index buffer to bind to the rendering pipeline.
      */
-    void SetIndexBuffer(const std::shared_ptr<IndexBuffer>& indexBuffer);
+    DELTAENGINE_API void SetIndexBuffer(const std::shared_ptr<IndexBuffer>& indexBuffer);
 
     /**
      * Bind dynamic index buffer data to the rendering pipeline.
      */
-    void SetDynamicIndexBuffer(size_t numIndices, DXGI_FORMAT indexFormat, const void* indexBufferData);
+    DELTAENGINE_API void SetDynamicIndexBuffer(size_t numIndices, DXGI_FORMAT indexFormat, const void* indexBufferData);
     template <typename T>
     void SetDynamicIndexBuffer(const std::vector<T>& indexBufferData)
     {
@@ -270,7 +270,7 @@ public:
     /**
      * Set dynamic structured buffer contents.
      */
-    void SetGraphicsDynamicStructuredBuffer(uint32_t slot, size_t numElements, size_t elementSize,
+    DELTAENGINE_API void SetGraphicsDynamicStructuredBuffer(uint32_t slot, size_t numElements, size_t elementSize,
         const void* bufferData);
     template <typename T>
     void SetGraphicsDynamicStructuredBuffer(uint32_t slot, const std::vector<T>& bufferData)
@@ -281,25 +281,25 @@ public:
     /**
      * Set viewports.
      */
-    void SetViewport(const D3D12_VIEWPORT& viewport);
-    void SetViewports(const std::vector<D3D12_VIEWPORT>& viewports);
+    DELTAENGINE_API void SetViewport(const D3D12_VIEWPORT& viewport);
+    DELTAENGINE_API void SetViewports(const std::vector<D3D12_VIEWPORT>& viewports);
 
     /**
      * Set scissor rects.
      */
-    void SetScissorRect(const D3D12_RECT& scissorRect);
-    void SetScissorRects(const std::vector<D3D12_RECT>& scissorRects);
+    DELTAENGINE_API void SetScissorRect(const D3D12_RECT& scissorRect);
+    DELTAENGINE_API void SetScissorRects(const std::vector<D3D12_RECT>& scissorRects);
 
     /**
      * Set the pipeline state object on the command list.
      */
-    void SetPipelineState(const std::shared_ptr<PipelineStateObject>& pipelineState);
+    DELTAENGINE_API void SetPipelineState(const std::shared_ptr<PipelineStateObject>& pipelineState);
 
     /**
      * Set the current root signature on the command list.
      */
-    void SetGraphicsRootSignature(const std::shared_ptr<RootSignature>& rootSignature);
-    void SetComputeRootSignature(const std::shared_ptr<RootSignature>& rootSignature);
+    DELTAENGINE_API void SetGraphicsRootSignature(const std::shared_ptr<RootSignature>& rootSignature);
+    DELTAENGINE_API void SetComputeRootSignature(const std::shared_ptr<RootSignature>& rootSignature);
 
 
     // ============================ CBV ============================
@@ -308,14 +308,14 @@ public:
      *
      * Note: Only ConstantBuffer's can be used with inline CBV's.
      */
-    void SetConstantBufferView(uint32_t rootParameterIndex, const std::shared_ptr<ConstantBuffer>& buffer,
+    DELTAENGINE_API void SetConstantBufferView(uint32_t rootParameterIndex, const std::shared_ptr<ConstantBuffer>& buffer,
         D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
         size_t                bufferOffset = 0);
 
     /**
      * Set the CBV on the rendering pipeline.
      */
-    void SetConstantBufferView(uint32_t rootParameterIndex, uint32_t descriptorOffset,
+    DELTAENGINE_API void SetConstantBufferView(uint32_t rootParameterIndex, uint32_t descriptorOffset,
         const std::shared_ptr<ConstantBufferView>& cbv,
         D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
@@ -326,14 +326,14 @@ public:
      *
      * Note: Only Buffer resoruces can be used with inline UAV's.
      */
-    void SetUnorderedAccessView(uint32_t rootParameterIndex, const std::shared_ptr<Buffer>& buffer,
+    DELTAENGINE_API void SetUnorderedAccessView(uint32_t rootParameterIndex, const std::shared_ptr<Buffer>& buffer,
         D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
         size_t                bufferOffset = 0);
 
     /**
      * Set the UAV on the graphics pipeline.
      */
-    void SetUnorderedAccessView(uint32_t rootParameterIndex, uint32_t descriptorOffset,
+    DELTAENGINE_API void SetUnorderedAccessView(uint32_t rootParameterIndex, uint32_t descriptorOffset,
         const std::shared_ptr<UnorderedAccessView>& uav,
         D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
         UINT firstSubresource = 0,
@@ -342,7 +342,7 @@ public:
     /**
      * Set the UAV on the graphics pipline using a specific mip of the texture.
      */
-    void SetUnorderedAccessView(uint32_t rootParameterIndex, uint32_t descriptorOffset,
+    DELTAENGINE_API void SetUnorderedAccessView(uint32_t rootParameterIndex, uint32_t descriptorOffset,
         const std::shared_ptr<DirectX12Texture>& texture, UINT mip,
         D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
         UINT firstSubresource = 0,
@@ -355,7 +355,7 @@ public:
      *
      * Note: Only Buffer resources can be used with inline SRV's
      */
-    void SetShaderResourceView(uint32_t rootParameterIndex, const std::shared_ptr<Buffer>& buffer,
+    DELTAENGINE_API void SetShaderResourceView(uint32_t rootParameterIndex, const std::shared_ptr<Buffer>& buffer,
         D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
         size_t bufferOffset = 0);
 
@@ -363,7 +363,7 @@ public:
     /**
      * Set the SRV on the graphics pipeline.
      */
-    void SetShaderResourceView(uint32_t rootParameterIndex, uint32_t descriptorOffset,
+    DELTAENGINE_API void SetShaderResourceView(uint32_t rootParameterIndex, uint32_t descriptorOffset,
         const std::shared_ptr<ShaderResourceView>& srv,
         D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE |
         D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
@@ -373,7 +373,7 @@ public:
     /**
      * Set an SRV on the graphics pipeline using the default SRV for the texture.
      */
-    void SetShaderResourceView(int32_t rootParameterIndex, uint32_t descriptorOffset,
+    DELTAENGINE_API void SetShaderResourceView(int32_t rootParameterIndex, uint32_t descriptorOffset,
         const std::shared_ptr<DirectX12Texture>& texture,
         D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE |
         D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
@@ -393,7 +393,7 @@ public:
     /**
      * Set the render targets for the graphics rendering pipeline.
      */
-    void SetRenderTarget(const RenderTarget& renderTarget);
+    DELTAENGINE_API void SetRenderTarget(const RenderTarget& renderTarget);
 
 
     // ============================ Draw/Dispatch ============================
@@ -401,14 +401,14 @@ public:
     /**
      * Draw geometry.
      */
-    void Draw(uint32_t vertexCount, uint32_t instanceCount = 1, uint32_t startVertex = 0, uint32_t startInstance = 0);
-    void DrawIndexed(uint32_t indexCount, uint32_t instanceCount = 1, uint32_t startIndex = 0, int32_t baseVertex = 0,
+    DELTAENGINE_API void Draw(uint32_t vertexCount, uint32_t instanceCount = 1, uint32_t startVertex = 0, uint32_t startInstance = 0);
+    DELTAENGINE_API void DrawIndexed(uint32_t indexCount, uint32_t instanceCount = 1, uint32_t startIndex = 0, int32_t baseVertex = 0,
         uint32_t startInstance = 0);
 
     /**
      * Dispatch a compute shader.
      */
-    void Dispatch(uint32_t numGroupsX, uint32_t numGroupsY = 1, uint32_t numGroupsZ = 1);
+    DELTAENGINE_API void Dispatch(uint32_t numGroupsX, uint32_t numGroupsY = 1, uint32_t numGroupsZ = 1);
 
 
     // ---- Low-level recording wrappers ----
@@ -455,27 +455,27 @@ public:
      * @return true if there are any pending resource barriers that need to be
      * processed.
      */
-    bool Close(const std::shared_ptr<CommandList>& pendingCommandList);
+    DELTAENGINE_API bool Close(const std::shared_ptr<CommandList>& pendingCommandList);
 
     // Just close the command list. This is useful for pending command lists.
-    void Close();
+    DELTAENGINE_API void Close();
 
     /**
      * Reset the command list. This should only be called by the CommandQueue
      * before the command list is returned from CommandQueue::GetCommandList.
      */
-    void Reset();
+    DELTAENGINE_API void Reset();
 
     /**
      * Release tracked objects. Useful if the swap chain needs to be resized.
      */
-    void ReleaseTrackedObjects();
+    DELTAENGINE_API void ReleaseTrackedObjects();
 
     /**
      * Set the currently bound descriptor heap.
      * Should only be called by the DynamicDescriptorHeap class.
      */
-    void SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, ID3D12DescriptorHeap* heap);
+    DELTAENGINE_API void SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, ID3D12DescriptorHeap* heap);
 
     inline std::shared_ptr<CommandList> GetGenerateMipsCommandList() const
     {

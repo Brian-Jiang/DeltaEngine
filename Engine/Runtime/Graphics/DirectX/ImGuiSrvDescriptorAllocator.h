@@ -17,18 +17,18 @@ class Device;
 class ImGuiSrvDescriptorAllocator
 {
 public:
-    ImGuiSrvDescriptorAllocator() = default;
+    DELTAENGINE_API ImGuiSrvDescriptorAllocator() = default;
 
     /**
      * Initialize with a device and shader-visible CBV_SRV_UAV heap.
      * The heap must be created via Device::CreateShaderVisibleSrvHeap().
      */
-    void Create(Device& device, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> heap);
+    DELTAENGINE_API void Create(Device& device, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> heap);
 
-    void Destroy();
+    DELTAENGINE_API void Destroy();
 
-    void Alloc(D3D12_CPU_DESCRIPTOR_HANDLE* outCpuHandle, D3D12_GPU_DESCRIPTOR_HANDLE* outGpuHandle);
-    void Free(D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle, D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle);
+    DELTAENGINE_API void Alloc(D3D12_CPU_DESCRIPTOR_HANDLE* outCpuHandle, D3D12_GPU_DESCRIPTOR_HANDLE* outGpuHandle);
+    DELTAENGINE_API void Free(D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle, D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle);
 
     ID3D12DescriptorHeap* GetHeap() const { return m_heap.Get(); }
 

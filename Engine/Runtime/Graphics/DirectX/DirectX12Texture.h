@@ -21,39 +21,39 @@ class Device;
 class DirectX12Texture : public Resource
 {
 public:
-    void Resize(uint32_t width, uint32_t height, uint32_t depthOrArraySize = 1);
+    DELTAENGINE_API void Resize(uint32_t width, uint32_t height, uint32_t depthOrArraySize = 1);
 
-    D3D12_CPU_DESCRIPTOR_HANDLE GetRenderTargetView() const;
-    D3D12_CPU_DESCRIPTOR_HANDLE GetDepthStencilView() const;
-    D3D12_CPU_DESCRIPTOR_HANDLE GetShaderResourceView() const;
-    D3D12_CPU_DESCRIPTOR_HANDLE GetUnorderedAccessView(uint32_t mip) const;
+    DELTAENGINE_API D3D12_CPU_DESCRIPTOR_HANDLE GetRenderTargetView() const;
+    DELTAENGINE_API D3D12_CPU_DESCRIPTOR_HANDLE GetDepthStencilView() const;
+    DELTAENGINE_API D3D12_CPU_DESCRIPTOR_HANDLE GetShaderResourceView() const;
+    DELTAENGINE_API D3D12_CPU_DESCRIPTOR_HANDLE GetUnorderedAccessView(uint32_t mip) const;
 
-    bool CheckSRVSupport() const { return CheckFormatSupport(D3D12_FORMAT_SUPPORT1_SHADER_SAMPLE); }
-    bool CheckRTVSupport() const { return CheckFormatSupport(D3D12_FORMAT_SUPPORT1_RENDER_TARGET); }
-    bool CheckUAVSupport() const {
+    DELTAENGINE_API bool CheckSRVSupport() const { return CheckFormatSupport(D3D12_FORMAT_SUPPORT1_SHADER_SAMPLE); }
+    DELTAENGINE_API bool CheckRTVSupport() const { return CheckFormatSupport(D3D12_FORMAT_SUPPORT1_RENDER_TARGET); }
+    DELTAENGINE_API bool CheckUAVSupport() const {
         return CheckFormatSupport(D3D12_FORMAT_SUPPORT1_TYPED_UNORDERED_ACCESS_VIEW) &&
                CheckFormatSupport(D3D12_FORMAT_SUPPORT2_UAV_TYPED_LOAD) &&
                CheckFormatSupport(D3D12_FORMAT_SUPPORT2_UAV_TYPED_STORE);
     }
-    bool CheckDSVSupport() const { return CheckFormatSupport(D3D12_FORMAT_SUPPORT1_DEPTH_STENCIL); }
+    DELTAENGINE_API bool CheckDSVSupport() const { return CheckFormatSupport(D3D12_FORMAT_SUPPORT1_DEPTH_STENCIL); }
 
-    bool HasAlpha() const;
-    size_t BitsPerPixel() const;
+    DELTAENGINE_API bool HasAlpha() const;
+    DELTAENGINE_API size_t BitsPerPixel() const;
 
-    static bool IsUAVCompatibleFormat(DXGI_FORMAT format);
-    static bool IsSRGBFormat(DXGI_FORMAT format);
-    static bool IsBGRFormat(DXGI_FORMAT format);
-    static bool IsDepthFormat(DXGI_FORMAT format);
-    static DXGI_FORMAT GetTypelessFormat(DXGI_FORMAT format);
-    static DXGI_FORMAT GetSRGBFormat(DXGI_FORMAT format);
-    static DXGI_FORMAT GetUAVCompatableFormat(DXGI_FORMAT format);
+    DELTAENGINE_API static bool IsUAVCompatibleFormat(DXGI_FORMAT format);
+    DELTAENGINE_API static bool IsSRGBFormat(DXGI_FORMAT format);
+    DELTAENGINE_API static bool IsBGRFormat(DXGI_FORMAT format);
+    DELTAENGINE_API static bool IsDepthFormat(DXGI_FORMAT format);
+    DELTAENGINE_API static DXGI_FORMAT GetTypelessFormat(DXGI_FORMAT format);
+    DELTAENGINE_API static DXGI_FORMAT GetSRGBFormat(DXGI_FORMAT format);
+    DELTAENGINE_API static DXGI_FORMAT GetUAVCompatableFormat(DXGI_FORMAT format);
 
 public:
-    DirectX12Texture(Device& device, const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* clearValue = nullptr);
-    DirectX12Texture(Device& device, Microsoft::WRL::ComPtr<ID3D12Resource> resource, const D3D12_CLEAR_VALUE* clearValue = nullptr);
-    virtual ~DirectX12Texture();
+    DELTAENGINE_API DirectX12Texture(Device& device, const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* clearValue = nullptr);
+    DELTAENGINE_API DirectX12Texture(Device& device, Microsoft::WRL::ComPtr<ID3D12Resource> resource, const D3D12_CLEAR_VALUE* clearValue = nullptr);
+    DELTAENGINE_API virtual ~DirectX12Texture();
 
-    void CreateViews();
+    DELTAENGINE_API void CreateViews();
 
 private:
     DescriptorAllocation m_RenderTargetView;

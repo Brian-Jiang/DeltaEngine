@@ -10,14 +10,14 @@ DELTA_ENGINE_NS_BEGIN
 class Time
 {
 public:
-    Time();
-    ~Time();
+    DELTAENGINE_API Time();
+    DELTAENGINE_API ~Time();
 
-    void TickTime();
+    DELTAENGINE_API void TickTime();
 
-    static float deltaTime;
-    static float timeSinceStart;
-    static UINT64 frameSinceStart;
+    static DELTAENGINE_API float deltaTime;
+    static DELTAENGINE_API float timeSinceStart;
+    static DELTAENGINE_API UINT64 frameSinceStart;
 
 private:
     std::chrono::high_resolution_clock clock;

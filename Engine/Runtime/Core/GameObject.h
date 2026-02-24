@@ -18,9 +18,9 @@ class GameObject: public DObject, public std::enable_shared_from_this<GameObject
     friend class DWorld;
 
 public:
-	GameObject();
-	GameObject(const std::string& name);
-	~GameObject();
+	DELTAENGINE_API GameObject();
+	DELTAENGINE_API GameObject(const std::string& name);
+	DELTAENGINE_API ~GameObject();
 
 	template <typename T> requires IsDComponent<T>
 	std::shared_ptr<T> AddComponent(std::string name = "New Component")
@@ -52,7 +52,7 @@ public:
         return sceneComponent;
     }
 
-    void Destroy();
+    DELTAENGINE_API void Destroy();
 
     const std::string& GetName() const { return m_name; }
 

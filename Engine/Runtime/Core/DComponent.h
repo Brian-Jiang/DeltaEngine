@@ -16,10 +16,10 @@ class DComponent: public DObject
 {
 
 public:
-    DComponent();
-    DComponent(std::string name);
-    DComponent(std::string name, std::shared_ptr<GameObject> gameObject);
-    virtual ~DComponent();
+    DELTAENGINE_API DComponent();
+    DELTAENGINE_API DComponent(std::string name);
+    DELTAENGINE_API DComponent(std::string name, std::shared_ptr<GameObject> gameObject);
+    DELTAENGINE_API virtual ~DComponent();
 
 public:
     inline std::shared_ptr<GameObject> GetGameObject() const { return m_gameObject.lock(); }

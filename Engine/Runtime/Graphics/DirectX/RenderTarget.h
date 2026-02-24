@@ -66,7 +66,7 @@ class RenderTarget
 {
 public:
     // Create an empty render target.
-    RenderTarget();
+    DELTAENGINE_API RenderTarget();
 
     RenderTarget( const RenderTarget& copy ) = default;
     RenderTarget( RenderTarget&& copy )      = default;
@@ -80,38 +80,38 @@ public:
      * @param attachmentPoint The point to attach the texture to.
      * @param [texture] Optional texture to bind to the render target. Specify nullptr to remove the texture.
      */
-    void AttachTexture(AttachmentPoint attachmentPoint, std::shared_ptr<DirectX12Texture> texture);
-    std::shared_ptr<DirectX12Texture> GetTexture(AttachmentPoint attachmentPoint) const;
+    DELTAENGINE_API void AttachTexture(AttachmentPoint attachmentPoint, std::shared_ptr<DirectX12Texture> texture);
+    DELTAENGINE_API std::shared_ptr<DirectX12Texture> GetTexture(AttachmentPoint attachmentPoint) const;
 
     // Resize all of the textures associated with the render target.
-    void             Resize( DirectX::XMUINT2 size );
-    void             Resize( uint32_t width, uint32_t height );
-    DirectX::XMUINT2 GetSize() const;
-    uint32_t         GetWidth() const;
-    uint32_t         GetHeight() const;
+    DELTAENGINE_API void             Resize( DirectX::XMUINT2 size );
+    DELTAENGINE_API void             Resize( uint32_t width, uint32_t height );
+    DELTAENGINE_API DirectX::XMUINT2 GetSize() const;
+    DELTAENGINE_API uint32_t         GetWidth() const;
+    DELTAENGINE_API uint32_t         GetHeight() const;
 
     // Get a viewport for this render target.
     // The scale and bias parameters can be used to specify a split-screen
     // viewport (the bias parameter is normalized in the range [0...1]).
     // By default, a fullscreen viewport is returned.
-    D3D12_VIEWPORT GetViewport( DirectX::XMFLOAT2 scale = { 1.0f, 1.0f }, DirectX::XMFLOAT2 bias = { 0.0f, 0.0f },
+    DELTAENGINE_API D3D12_VIEWPORT GetViewport( DirectX::XMFLOAT2 scale = { 1.0f, 1.0f }, DirectX::XMFLOAT2 bias = { 0.0f, 0.0f },
                                 float minDepth = 0.0f, float maxDepth = 1.0f ) const;
 
     // Get a list of the textures attached to the render target.
     // This method is primarily used by the CommandList when binding the
     // render target to the output merger stage of the rendering pipeline.
-    const std::vector<std::shared_ptr<DirectX12Texture>>& GetTextures() const;
+    DELTAENGINE_API const std::vector<std::shared_ptr<DirectX12Texture>>& GetTextures() const;
 
     // Get the render target formats of the textures currently
     // attached to this render target object.
     // This is needed to configure the Pipeline state object.
-    D3D12_RT_FORMAT_ARRAY GetRenderTargetFormats() const;
+    DELTAENGINE_API D3D12_RT_FORMAT_ARRAY GetRenderTargetFormats() const;
 
     // Get the format of the attached depth/stencil buffer.
-    DXGI_FORMAT GetDepthStencilFormat() const;
+    DELTAENGINE_API DXGI_FORMAT GetDepthStencilFormat() const;
 
     // Get the sample description of the render target.
-    DXGI_SAMPLE_DESC GetSampleDesc() const;
+    DELTAENGINE_API DXGI_SAMPLE_DESC GetSampleDesc() const;
 
     // Reset all textures
     void Reset()

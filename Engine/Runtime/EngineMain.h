@@ -27,25 +27,25 @@ enum class GameState {
 class EngineMain
 {
 public:
-	EngineMain();
+	DELTAENGINE_API EngineMain();
 
 	/// Initialize with a scene renderer and window. Editor creates Device, SwapChain, offscreen RT
 	/// and passes the scene renderer (DXRenderManager) that renders to that RT.
-    void Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std::shared_ptr<SDL_Window>);
+    DELTAENGINE_API void Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std::shared_ptr<SDL_Window>);
 
-	void PreTick();
+	DELTAENGINE_API void PreTick();
 
 	/// Called each frame by the host (Editor/Game). Updates time.
-	void Tick();
+	DELTAENGINE_API void Tick();
 
 	/// Process an SDL event. Called by Editor for camera movement etc.
-	void ProcessEvent(const SDL_Event& event);
+	DELTAENGINE_API void ProcessEvent(const SDL_Event& event);
 
 	/// Called when window is resized. Updates camera aspect ratio.
-	void OnWindowResized(UINT width, UINT height);
+	DELTAENGINE_API void OnWindowResized(UINT width, UINT height);
 
 	/// Record scene draw calls to the command list. Called by Editor during RenderFrame.
-	void RecordSceneDraws(std::shared_ptr<DXGraphicsContext> context);
+	DELTAENGINE_API void RecordSceneDraws(std::shared_ptr<DXGraphicsContext> context);
 
 	int exitCode;
 	GameState gameState = GameState::PLAY;
@@ -55,10 +55,10 @@ public:
 	inline std::shared_ptr<DXRenderManager> GetRenderManager() const { return dxRenderManager; }
 
 	/// Returns the main editor camera. May be null if not initialized.
-	std::shared_ptr<Camera> GetCamera();
+	DELTAENGINE_API std::shared_ptr<Camera> GetCamera();
 
 	/// Cleanup before exit. Call when shutting down.
-	void Cleanup();
+	DELTAENGINE_API void Cleanup();
     inline std::shared_ptr<DWorld> GetWorld() const { return m_world; }
 	inline std::shared_ptr<SDL_Window> GetWindow() const { return m_window; }
 

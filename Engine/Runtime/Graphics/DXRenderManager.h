@@ -31,24 +31,24 @@ class DWorld;
 class DXRenderManager : public std::enable_shared_from_this<DXRenderManager>
 {
 public:
-	DXRenderManager(std::shared_ptr<Device> device, std::shared_ptr<RenderTarget> renderTarget, UINT width, UINT height);
-	void LoadPipeline();
-    void LoadAssets();
+	DELTAENGINE_API DXRenderManager(std::shared_ptr<Device> device, std::shared_ptr<RenderTarget> renderTarget, UINT width, UINT height);
+	DELTAENGINE_API void LoadPipeline();
+    DELTAENGINE_API void LoadAssets();
 
     /// Creates a command list, initialises every renderer in the world,
     /// executes the command list, and waits for the GPU.
-    void InitWorldRenderers(DWorld& world);
+    DELTAENGINE_API void InitWorldRenderers(DWorld& world);
 
     /// Prepares the command list and renders the scene to m_renderTarget.
     /// Caller is responsible for executing the command list and presenting.
-    void PrepareFrame();
-    void RenderFrame();
+    DELTAENGINE_API void PrepareFrame();
+    DELTAENGINE_API void RenderFrame();
 
-	void Resize(UINT width, UINT height);
-    void OnDestroy();
+	DELTAENGINE_API void Resize(UINT width, UINT height);
+    DELTAENGINE_API void OnDestroy();
 
 	/// Returns a context that renderers use for InitGraphicState / GatherDrawCalls.
-    std::shared_ptr<DXGraphicsContext> GetGraphicsContext();
+    DELTAENGINE_API std::shared_ptr<DXGraphicsContext> GetGraphicsContext();
 
 	inline UINT GetWidth() const { return m_width; }
     inline UINT GetHeight() const { return m_height; }

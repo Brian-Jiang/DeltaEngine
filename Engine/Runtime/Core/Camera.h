@@ -18,16 +18,16 @@ class Camera : public SceneComponent
 {
 public:
 
-    Camera();
-    Camera(std::string name);
-    Camera(std::string name, std::shared_ptr<GameObject> gameObject);
-    ~Camera();
+    DELTAENGINE_API Camera();
+    DELTAENGINE_API Camera(std::string name);
+    DELTAENGINE_API Camera(std::string name, std::shared_ptr<GameObject> gameObject);
+    DELTAENGINE_API ~Camera();
 
-    void UpdateAspectRatio(float aspectRatio);
-    void UpdateParameters(float fov, float aspectRatio, float nearPlane, float farPlane);
+    DELTAENGINE_API void UpdateAspectRatio(float aspectRatio);
+    DELTAENGINE_API void UpdateParameters(float fov, float aspectRatio, float nearPlane, float farPlane);
     //void Tick();
 
-    void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext);
+    DELTAENGINE_API void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext);
 
     //inline DirectX::XMMATRIX GetViewMatrix() const { return m_viewMatrix; }
     //inline DirectX::XMMATRIX GetProjectionMatrix() const { return m_projectionMatrix; }
