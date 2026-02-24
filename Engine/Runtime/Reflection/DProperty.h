@@ -4,10 +4,12 @@
 
 #include <string>
 #include <memory>
+#include <type_traits>
 
 DELTA_ENGINE_NS_BEGIN
 
 class DClass;
+class DObject;
 
 enum class EPropertyType
 {
@@ -15,6 +17,7 @@ enum class EPropertyType
     Int,
     Bool,
     String,
+    ObjectPtr,
     // ...
 };
 
@@ -130,20 +133,34 @@ public:
 };
 
 
-class DObjectProperty : public DProperty
+// Only for raw pointers to DObject-derived types
+template <typename T>
+    //requires std::is_base_of_v<DObject, T>
+class DObjectPtrProperty : public DProperty
 {
 public:
-    DObjectProperty(std::string name,
+    DObjectPtrProperty(std::string name,
         std::string type,
-        uint32_t offset,
-        uint32_t size
-    );
+        uint32_t offset
+    )
+        :DProperty(std::move(name), std::move(type), offset, sizeof(void*))
+    {
+    }
     
-    void InitializeValue(void* address) const override;
+    void InitializeValue(void* address) const override
+    {
+
+    }
     void DestroyValue(void* address) const override;
+    void SetValue(void* instance, const void* field_value) const override;
+    void* GetValue(const void* instance) const override;
     void CopyValue(void* dest, const void* src) const override;
     bool Identical(const void* a, const void* b) const override;
     std::string ToString(const void* address) const override;
+    EPropertyType GetPropertyType() const override
+    {
+        return EPropertyType::ObjectPtr;
+    }
 };
 
 DELTA_ENGINE_NS_END

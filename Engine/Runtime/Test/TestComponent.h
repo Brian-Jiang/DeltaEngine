@@ -11,7 +11,14 @@
 #define DFUNCTION(...)
 #define DPROPERTY(...)
 #define DGENERATED_BODY(ClassName) \
-    friend class Reflection::Private::ReflectionRegister_##ClassName; \
+    friend class DeltaEngine::Reflection::Private::ReflectionRegister_##ClassName; \
+
+//class DeltaEngine::Reflection::Private::ReflectionRegister_TestComponent;
+
+namespace DeltaEngine::Reflection::Private
+{
+    class ReflectionRegister_TestComponent;
+}
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -21,6 +28,7 @@ DCLASS()
 class TestComponent : public DObject
 {
     DGENERATED_BODY(TestComponent)
+    //friend class DeltaEngine::Reflection::Private::ReflectionRegister_TestComponent;
 
     friend class DWorld;
 

@@ -2,6 +2,8 @@
 
 #include "EngineIncludes.h"
 
+//#include <type_traits>
+
 DELTA_ENGINE_NS_BEGIN
 
 class DClass;
@@ -15,5 +17,8 @@ public:
 	~DObject();
 
 };
+
+//template <typename T>
+//concept DObjectDerived = std::is_base_of_v<DObject, T>;
 
 DELTA_ENGINE_NS_END

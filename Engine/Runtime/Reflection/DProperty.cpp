@@ -58,15 +58,41 @@ std::string DStringProperty::ToString(const void* address) const
     return *static_cast<const std::string*>(address);
 }
 
-DObjectProperty::DObjectProperty(std::string name,
-                                 std::string type,
-                                 uint32_t offset,
-                                 uint32_t size)
-    : DProperty(std::move(name), std::move(type), offset, size)
-{
-}
+//DObjectPtrProperty::DObjectPtrProperty(std::string name,
+//                                       std::string type,
+//                                       uint32_t offset)
+//    : DProperty(std::move(name), std::move(type), offset, sizeof(void*))
+//{
+//}
 
-void DObjectProperty::InitializeValue(void* address) const
-{
-    new (address) std::shared_ptr<void>();
-}
+//void DObjectPtrProperty::InitializeValue(void* address) const
+//{
+//    new (address) std::shared_ptr<void>();
+//}
+
+//void DObjectPtrProperty::DestroyValue(void* address) const
+//{
+//
+//}
+//
+//void DObjectPtrProperty::SetValue(void* instance, const void* field_value) const
+//{
+//    void* addr = static_cast<uint8_t*>(instance) + m_offset;
+//    *static_cast<void**>(addr) = field_value ? *static_cast<void* const*>(field_value) : nullptr;
+//}
+//
+//void* DObjectPtrProperty::GetValue(const void* instance) const
+//{
+//    void* addr = static_cast<uint8_t*>(const_cast<void*>(instance)) + m_offset;
+//    return *static_cast<void**>(addr);
+//}
+//
+//void DObjectPtrProperty::CopyValue(void* dest, const void* src) const
+//{
+//
+//}
+//
+//EPropertyType DObjectPtrProperty::GetPropertyType() const
+//{
+//    return EPropertyType::ObjectPtr;
+//}
