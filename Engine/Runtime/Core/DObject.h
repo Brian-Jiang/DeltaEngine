@@ -13,8 +13,8 @@ class DObject
     friend class DClass;
 
 public:
-	DObject();
-	~DObject();
+    DELTAENGINE_API DObject();
+    DELTAENGINE_API ~DObject();
 
 };
 

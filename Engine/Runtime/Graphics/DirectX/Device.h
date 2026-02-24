@@ -40,7 +40,7 @@ public:
      */
     static void EnableDebugLayer();
 
-    static void ReportLiveObjects();
+    static DELTAENGINE_API void ReportLiveObjects();
 
     /**
      * Create a new DX12 device using the provided adapter.

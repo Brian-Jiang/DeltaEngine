@@ -151,12 +151,40 @@ public:
     {
 
     }
-    void DestroyValue(void* address) const override;
-    void SetValue(void* instance, const void* field_value) const override;
-    void* GetValue(const void* instance) const override;
-    void CopyValue(void* dest, const void* src) const override;
-    bool Identical(const void* a, const void* b) const override;
-    std::string ToString(const void* address) const override;
+
+    void DestroyValue(void* address) const override
+    {
+
+    }
+
+    void SetValue(void* instance, const void* field_value) const override
+    {
+
+    }
+
+    void* GetValue(const void* instance) const override
+    {
+        void* addr = static_cast<uint8_t*>(const_cast<void*>(instance)) + m_offset;
+        return *static_cast<void**>(addr);
+    }
+
+    void CopyValue(void* dest, const void* src) const override
+    {
+
+    }
+
+    bool Identical(const void* a, const void* b) const override
+    {
+        void* addr1 = static_cast<uint8_t*>(const_cast<void*>(a)) + m_offset;
+        void* addr2 = static_cast<uint8_t*>(const_cast<void*>(b)) + m_offset;
+        return *static_cast<void**>(addr1) == *static_cast<void**>(addr2);
+    }
+
+    std::string ToString(const void* address) const override
+    {
+        return "ObjectPtr";
+    }
+
     EPropertyType GetPropertyType() const override
     {
         return EPropertyType::ObjectPtr;
