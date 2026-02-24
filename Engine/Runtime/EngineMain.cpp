@@ -14,6 +14,9 @@
 #include "Core/DShader.h"
 #include "Core/DMaterial.h"
 #include "Core/Camera.h"
+#include "Reflection/ReflectionRegistry.h"
+
+#include "Runtime/Test/TestComponent.h"
 
 #define SCREEN_WIDTH   1280
 #define SCREEN_HEIGHT  720
@@ -134,6 +137,10 @@ void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std:
     spotLight->SetLocalRotation(DirectX::SimpleMath::Quaternion::CreateFromAxisAngle(DirectX::SimpleMath::Vector3::UnitZ, -XM_PIDIV4));
     spotLight->UpdateParameters(XMVectorSet(0.2f, 0.8f, 1.0f, 1.0f), 3.0f, 20.0f, XM_PI / 6.0f, XM_PI / 3.0f);
     
+
+    //TestComponent* testComp = GetReflectionRegistry().CreateObject<TestComponent>("TestComponent");
+    TestComponent* testComp = CreateDObject<TestComponent>();
+
 
     // D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
     //     { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },

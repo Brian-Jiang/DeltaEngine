@@ -52,6 +52,14 @@ void Reflection::Private::ReflectionRegister_TestComponent::ReflectionRegisterFn
         "m_texture",
         "DTexture",
         offsetof(TestComponent, m_texture)));
+
+    GetReflectionRegistry().RegisterDClass(cls);
+}
+
+template <>
+TestComponent* DeltaEngine::CreateDObject<TestComponent>()
+{
+    return GetReflectionRegistry().CreateObject<TestComponent>("TestComponent");
 }
 
 static ReflectionRegistration registration_TestComponent(
