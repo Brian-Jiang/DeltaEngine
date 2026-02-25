@@ -200,54 +200,54 @@ public:
 
 // Only for raw pointers to DObject-derived types
 template <typename T>
-    //requires std::is_base_of_v<DObject, T>
+// requires std::is_base_of_v<DObject, T>
 class DObjectPtrProperty : public DProperty
 {
 public:
-    DObjectPtrProperty(std::string name,
-        std::string type,
-        uint32_t offset
-    )
-        :DProperty(std::move(name), std::move(type), offset, sizeof(void*))
+    DObjectPtrProperty(std::string name, std::string type, uint32_t offset)
+        : DProperty(std::move(name), std::move(type), offset, sizeof(T*))
     {
     }
-    
+
     void InitializeValue(void* address) const override
     {
-
+        new (address) T*(nullptr);
     }
 
     void DestroyValue(void* address) const override
     {
-
+        // No-op for raw pointers
     }
 
     void SetValue(void* instance, const void* field_value) const override
     {
-
+        void* addr = static_cast<uint8_t*>(instance) + m_offset;
+        *static_cast<T**>(addr) = field_value ? *static_cast<T* const*>(field_value) : nullptr;
     }
 
     void* GetValue(const void* instance) const override
     {
-        void* addr = static_cast<uint8_t*>(const_cast<void*>(instance)) + m_offset;
-        return *static_cast<void**>(addr);
+        return static_cast<uint8_t*>(const_cast<void*>(instance)) + m_offset;
     }
 
     void CopyValue(void* dest, const void* src) const override
     {
-
+        new (dest) T*(*static_cast<T* const*>(src));
     }
 
     bool Identical(const void* a, const void* b) const override
     {
-        void* addr1 = static_cast<uint8_t*>(const_cast<void*>(a)) + m_offset;
-        void* addr2 = static_cast<uint8_t*>(const_cast<void*>(b)) + m_offset;
-        return *static_cast<void**>(addr1) == *static_cast<void**>(addr2);
+        return *static_cast<T* const*>(a) == *static_cast<T* const*>(b);
     }
 
     std::string ToString(const void* address) const override
     {
-        return "ObjectPtr";
+        T* ptr = *static_cast<T* const*>(address);
+        if (ptr) {
+            return "ObjectPtr(" + m_type + ")";
+        }
+
+        return "nullptr";
     }
 
     EPropertyType GetPropertyType() const override

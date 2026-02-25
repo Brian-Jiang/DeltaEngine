@@ -11,13 +11,6 @@
 #include "Runtime/Test/TestComponent.generated.h"
 
 
-#define DCLASS(...)
-#define DFUNCTION(...)
-#define DPROPERTY(...)
-#define DGENERATED_BODY(ClassName) \
-    friend class DeltaEngine::Reflection::Private::ReflectionRegister_##ClassName;
-
-
 DELTA_ENGINE_NS_BEGIN
 
 class DTexture;
