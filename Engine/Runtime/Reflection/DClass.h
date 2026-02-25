@@ -3,11 +3,13 @@
 #include "EngineIncludes.h"
 
 #include <string>
+#include <unordered_map>
 
 DELTA_ENGINE_NS_BEGIN
 
 class DObject;
 class DProperty;
+class DFunction;
 class ReflectionRegistry;
 
 class DClass
@@ -27,6 +29,10 @@ public:
 
     void AddProperty(DProperty* property);
     DProperty* FindPropertyByName(const std::string& name) const;
+
+    void AddFunction(DFunction* function);
+    DFunction* FindFunctionByName(const std::string& name) const;
+
     bool IsChildOf(const DClass* other) const;
 
     const std::string& GetName() const;
@@ -51,6 +57,8 @@ private:
     void (*m_destructFn)(void* address);
     void (*m_copyFn)(void* dest, const void* src);
     DObject* m_classDefaultObject;
+
+    std::unordered_map<std::string, DFunction*> m_functions;
 };
 
 DELTA_ENGINE_NS_END

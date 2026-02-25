@@ -1,6 +1,7 @@
 #include "Runtime/Reflection/DClass.h"
 
 #include "Runtime/Reflection/DProperty.h"
+#include "Runtime/Reflection/DFunction.h"
 
 using namespace DeltaEngine;
 
@@ -43,6 +44,24 @@ DProperty* DClass::FindPropertyByName(const std::string& name) const
 
     if (m_super)
         return m_super->FindPropertyByName(name);
+
+    return nullptr;
+}
+
+void DClass::AddFunction(DFunction* function)
+{
+    function->m_declaringClass = this;
+    m_functions[function->GetName()] = function;
+}
+
+DFunction* DClass::FindFunctionByName(const std::string& name) const
+{
+    auto it = m_functions.find(name);
+    if (it != m_functions.end())
+        return it->second;
+
+    if (m_super)
+        return m_super->FindFunctionByName(name);
 
     return nullptr;
 }

@@ -15,6 +15,8 @@
 #include "Core/DMaterial.h"
 #include "Core/Camera.h"
 #include "Reflection/ReflectionRegistry.h"
+#include "Reflection/DFunction.h"
+#include "Reflection/DClass.h"
 
 #include "Runtime/Test/TestComponent.h"
 
@@ -138,8 +140,19 @@ void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std:
     spotLight->UpdateParameters(XMVectorSet(0.2f, 0.8f, 1.0f, 1.0f), 3.0f, 20.0f, XM_PI / 6.0f, XM_PI / 3.0f);
     
 
-    //TestComponent* testComp = GetReflectionRegistry().CreateObject<TestComponent>("TestComponent");
     TestComponent* testComp = CreateDObject<TestComponent>();
+
+    DClass* testClass = GetReflectionRegistry().FindClassByName("TestComponent");
+
+    DFunction* addFn = testClass->FindFunctionByName("TestAdd");
+    struct { int a; int b; int retVal; } addParams = { 3, 7, 0 };
+    addFn->Invoke(testComp, &addParams);
+    int addResult = *(int*)((uint8_t*)&addParams + addFn->GetReturnValueOffset());
+
+    DFunction* mulFn = testClass->FindFunctionByName("TestMultiply");
+    struct { float x; bool negate; char _pad[3]; float retVal; } mulParams = { 5.0f, true, {}, 0.0f };
+    mulFn->Invoke(testComp, &mulParams);
+    float mulResult = *(float*)((uint8_t*)&mulParams + mulFn->GetReturnValueOffset());
 
 
     // D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {

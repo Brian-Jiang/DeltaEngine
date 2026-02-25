@@ -24,6 +24,12 @@ public:
     DFUNCTION()
     void TestFunction();
 
+    DFUNCTION()
+    int TestAdd(int a, int b);
+
+    DFUNCTION()
+    float TestMultiply(float x, bool negate);
+
 private:
     DPROPERTY()
     float m_testFloat = 0.0f;
