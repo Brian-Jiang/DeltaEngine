@@ -13,3 +13,7 @@ CMakeUserPresets.json
 out/
 .vs/
 /Build/
+
+__pycache__/
+*.pyc
+*.pyo
