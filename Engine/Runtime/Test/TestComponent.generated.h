@@ -2,15 +2,26 @@
 
 #include "EngineIncludes.h"
 
-#include "Runtime/Reflection/ReflectionRegistry.h"
-#include "Runtime/Core/DObject.h"
-
 DELTA_ENGINE_NS_BEGIN
 
 class TestComponent;
 
 namespace Reflection {
 namespace Private {
+
+struct TestComponent_TestAdd_Params
+{
+    int a;
+    int b;
+    int returnValue;
+};
+
+struct TestComponent_TestMultiply_Params
+{
+    float x;
+    bool neg;
+    float returnValue;
+};
 
 class ReflectionRegister_TestComponent
 {

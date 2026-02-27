@@ -8,6 +8,7 @@
 #include "Runtime/Reflection/ReflectionRegistry.h"
 
 using namespace DeltaEngine;
+using namespace DeltaEngine::Reflection::Private;
 
 // ---- Thunks ----
 
@@ -18,18 +19,20 @@ static void TestFunction_Thunk(DObject* instance, void* params)
 
 static void TestAdd_Thunk(DObject* instance, void* params)
 {
-    int a   = *(int*)((uint8_t*)params + 0);
-    int b   = *(int*)((uint8_t*)params + 4);
+    TestComponent_TestAdd_Params* typedParams = static_cast<TestComponent_TestAdd_Params*>(params);
+    int a = typedParams->a;
+    int b = typedParams->b;
     int ret = static_cast<TestComponent*>(instance)->TestAdd(a, b);
-    *(int*)((uint8_t*)params + 8) = ret;
+    typedParams->returnValue = ret;
 }
 
 static void TestMultiply_Thunk(DObject* instance, void* params)
 {
-    float x   = *(float*)((uint8_t*)params + 0);
-    bool  neg = *(bool*) ((uint8_t*)params + 4);
+    TestComponent_TestMultiply_Params* typedParams = static_cast<TestComponent_TestMultiply_Params*>(params);
+    float x = typedParams->x;
+    bool neg = typedParams->neg;
     float ret = static_cast<TestComponent*>(instance)->TestMultiply(x, neg);
-    *(float*)((uint8_t*)params + 8) = ret;
+    typedParams->returnValue = ret;
 }
 
 void Reflection::Private::ReflectionRegister_TestComponent::ReflectionRegisterFn_TestComponent()
@@ -81,15 +84,17 @@ void Reflection::Private::ReflectionRegister_TestComponent::ReflectionRegisterFn
         DFunction* fn = new DFunction("TestFunction", &TestFunction_Thunk, 0, 0, 0);
         cls->AddFunction(fn);
     }
+
     {
-        DFunction* fn = new DFunction("TestAdd", &TestAdd_Thunk, 2, 12, 8);
+        DFunction* fn = new DFunction("TestAdd", &TestAdd_Thunk, 2, sizeof(TestComponent_TestAdd_Params), offsetof(TestComponent_TestAdd_Params, returnValue));
         fn->AddParam(new DIntProperty("a", 0));
         fn->AddParam(new DIntProperty("b", 4));
         fn->SetReturnProperty(new DIntProperty("ReturnValue", 8));
         cls->AddFunction(fn);
     }
+
     {
-        DFunction* fn = new DFunction("TestMultiply", &TestMultiply_Thunk, 2, 12, 8);
+        DFunction* fn = new DFunction("TestMultiply", &TestMultiply_Thunk, 2, sizeof(TestComponent_TestMultiply_Params), offsetof(TestComponent_TestMultiply_Params, returnValue));
         fn->AddParam(new DFloatProperty("x", 0));
         fn->AddParam(new DBoolProperty("negate", 4));
         fn->SetReturnProperty(new DFloatProperty("ReturnValue", 8));

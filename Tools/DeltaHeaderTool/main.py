@@ -11,6 +11,9 @@ if __name__ == "__main__":
     index = clang.cindex.Index.create()
     
     test_code = """
+    #define DCLASS(...) __attribute__((annotate(#__VA_ARGS__)))
+
+    DCLASS()
     class Foo {
     public:
         int bar(float x, bool flag);
@@ -41,3 +44,6 @@ if __name__ == "__main__":
             walk(child, indent + 1)
     
     walk(tu.cursor)
+
+    for token in tu.cursor.translation_unit.get_tokens(extent=tu.cursor.extent):
+        print(f"{token.kind.name:20} | {token.spelling}")
