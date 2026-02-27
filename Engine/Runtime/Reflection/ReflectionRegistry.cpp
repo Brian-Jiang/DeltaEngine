@@ -2,6 +2,8 @@
 
 #include "Reflection/DClass.h"
 
+#include <iostream>
+
 using namespace DeltaEngine;
 
 void ReflectionRegistry::RegisterDClass(DClass* cls)
@@ -14,6 +16,31 @@ void ReflectionRegistry::RegisterDClass(DClass* cls)
     else
     {
         // Handle duplicate class registration if necessary
+    }
+}
+
+void ReflectionRegistry::FinalizeRegistration()
+{
+    for (auto& pair : m_classMap)
+    {
+        const std::string& name = pair.first;
+        DClass* cls = pair.second;
+        const std::string& superName = cls->GetSuperName();
+        if (superName.empty())
+        {
+            continue;
+        }
+
+        DClass* super = FindClassByName(superName);
+        if (super)
+        {
+            cls->SetSuper(super);
+        }
+        else
+        {
+            std::cerr << "WARNING: Reflection superclass '" << superName
+                      << "' for '" << name << "' not found in ReflectionRegistry.\n";
+        }
     }
 }
 

@@ -18,7 +18,7 @@ class DClass
 
 public:
     DClass(std::string name,
-           DClass* super,
+           std::string superName,
            size_t classSize,
            size_t minAlignment,
            void (*constructFn)(void* address),
@@ -33,9 +33,12 @@ public:
     void AddFunction(DFunction* function);
     DFunction* FindFunctionByName(const std::string& name) const;
 
+    void SetSuper(DClass* super);
+
     bool IsChildOf(const DClass* other) const;
 
     const std::string& GetName() const;
+    const std::string& GetSuperName() const;
     DClass* GetSuper() const;
     size_t GetClassSize() const;
     size_t GetMinAlignment() const;
@@ -48,6 +51,7 @@ public:
 
 private:
     std::string m_name;
+    std::string m_superName;
     DClass* m_super;
     DProperty* m_properties;
     DProperty* m_ownProperties;

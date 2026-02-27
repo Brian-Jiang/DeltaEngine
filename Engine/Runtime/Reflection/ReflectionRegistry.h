@@ -28,6 +28,7 @@ class ReflectionRegistry
 
 public:
     void RegisterDClass(DClass* dclass);
+    void FinalizeRegistration();
     DClass* FindClassByName(const std::string& name) const;
     DObject* CreateObject(const std::string& className) const;
 

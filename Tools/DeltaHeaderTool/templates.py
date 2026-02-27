@@ -101,7 +101,7 @@ DCLASS_REGISTRATION_BEGIN = Template("""\
 void Reflection::Private::ReflectionRegister_${class_name}::ReflectionRegisterFn_${class_name}()
 {
     DClass* cls = new DClass("${class_name}",
-                             nullptr,
+                             "${super_name}",
                              sizeof(${class_name}),
                              alignof(${class_name}),
                              [](void* address) { new (address) ${class_name}(); },

@@ -40,64 +40,53 @@ set(INTERMEDIATE  "${CMAKE_SOURCE_DIR}/Intermediate/DeltaHeaderTool")
 set(GENERATED_DIR "${INTERMEDIATE}/Generated")
 set(MANIFEST      "${INTERMEDIATE}/generated_sources.cmake")
 
+set(HEADER_TOOL_ARGS
+    "${DELTA_PYTHON}" "${HEADER_TOOL}"
+    --input-dir   "${CMAKE_SOURCE_DIR}/Engine/Runtime"
+    --output-dir  "${GENERATED_DIR}"
+    --manifest    "${MANIFEST}"
+    --engine-root "${CMAKE_SOURCE_DIR}"
+    --include-dir "${CMAKE_SOURCE_DIR}/Engine"
+    --include-dir "${CMAKE_CURRENT_SOURCE_DIR}"
+    --include-dir "${CMAKE_SOURCE_DIR}/Engine/ThirdParty/DirectXTK12/Inc"
+    --include-dir "${CMAKE_SOURCE_DIR}/Engine/ThirdParty/DirectX-Headers/include/directx"
+)
+
 file(MAKE_DIRECTORY "${GENERATED_DIR}")
 
+# ── Configure time: consume the manifest from the last build (or empty on
+#    first run). Do NOT execute the header tool here.
 if(NOT EXISTS "${MANIFEST}")
     file(WRITE "${MANIFEST}" "set(DELTA_GENERATED_SOURCES \"\")\n")
 endif()
 
-execute_process(
-    COMMAND "${DELTA_PYTHON}" "${HEADER_TOOL}"
-            --input-dir   "Engine/Runtime"
-            --output-dir  "${GENERATED_DIR}"
-            --manifest    "${MANIFEST}"
-            --engine-root "${CMAKE_SOURCE_DIR}"
-            --include-dir "${CMAKE_SOURCE_DIR}/Engine"
-            --include-dir "${CMAKE_CURRENT_SOURCE_DIR}"
-            --include-dir "${CMAKE_SOURCE_DIR}/Engine/ThirdParty/DirectXTK12/Inc"
-            --include-dir "${CMAKE_SOURCE_DIR}/Engine/ThirdParty/DirectX-Headers/include/directx"
-    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-    RESULT_VARIABLE HEADER_TOOL_RESULT
-    ERROR_VARIABLE  HEADER_TOOL_ERROR
+# If the manifest changes (new .cpp files added/removed by the tool) CMake
+# will automatically reconfigure before the next compile, picking up the
+# new source list.
+set_property(
+    DIRECTORY "${CMAKE_SOURCE_DIR}"
+    APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${MANIFEST}"
 )
-if(NOT HEADER_TOOL_RESULT EQUAL 0)
-    message(FATAL_ERROR "DeltaHeaderTool failed:\n${HEADER_TOOL_ERROR}")
-endif()
 
 include("${MANIFEST}")
 
 target_sources(${TARGET_NAME} PRIVATE ${DELTA_GENERATED_SOURCES})
 target_include_directories(${TARGET_NAME} PRIVATE "${GENERATED_DIR}")
 
-file(GLOB_RECURSE REFLECTED_HEADERS "${CMAKE_SOURCE_DIR}/Engine/Runtime/*.h")
-
+# ── Build time: run the header tool as a PRE_BUILD step on DeltaEngine so
+#    it always executes before any source file in this target is compiled.
+#    On MSVC, PRE_BUILD fires before the compiler is invoked for the target.
 add_custom_command(
-    OUTPUT  "${MANIFEST}"
-    COMMAND "${DELTA_PYTHON}" "${HEADER_TOOL}"
-            --input-dir   "Engine/Runtime"
-            --output-dir  "${GENERATED_DIR}"
-            --manifest    "${MANIFEST}"
-            --engine-root "${CMAKE_SOURCE_DIR}"
-            --include-dir "${CMAKE_SOURCE_DIR}/Engine"
-            --include-dir "${CMAKE_CURRENT_SOURCE_DIR}"
-            --include-dir "${CMAKE_SOURCE_DIR}/Engine/ThirdParty/DirectXTK12/Inc"
-            --include-dir "${CMAKE_SOURCE_DIR}/Engine/ThirdParty/DirectX-Headers/include/directx"
+    TARGET  ${TARGET_NAME}
+    PRE_BUILD
+    COMMAND ${HEADER_TOOL_ARGS}
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-    DEPENDS ${REFLECTED_HEADERS}
-    COMMENT "DeltaHeaderTool: generating reflection code..."
+    COMMENT "DeltaHeaderTool: regenerating reflection code..."
 )
 
+# ── Manual force-regeneration target (optional, for the IDE) ─────────────
 add_custom_target(DeltaHeaderTool
-    COMMAND "${DELTA_PYTHON}" "${HEADER_TOOL}"
-            --input-dir   "Engine/Runtime"
-            --output-dir  "${GENERATED_DIR}"
-            --manifest    "${MANIFEST}"
-            --engine-root "${CMAKE_SOURCE_DIR}"
-            --include-dir "${CMAKE_SOURCE_DIR}/Engine"
-            --include-dir "${CMAKE_CURRENT_SOURCE_DIR}"
-            --include-dir "${CMAKE_SOURCE_DIR}/Engine/ThirdParty/DirectXTK12/Inc"
-            --include-dir "${CMAKE_SOURCE_DIR}/Engine/ThirdParty/DirectX-Headers/include/directx"
-            --force
+    COMMAND ${HEADER_TOOL_ARGS} --force
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
     COMMENT "DeltaHeaderTool: force regenerating all reflection code..."
     SOURCES
@@ -108,7 +97,3 @@ add_custom_target(DeltaHeaderTool
         "${CMAKE_SOURCE_DIR}/Tools/DeltaHeaderTool/templates.py"
 )
 set_target_properties(DeltaHeaderTool PROPERTIES FOLDER "Utility")
-
-add_custom_target(DeltaHeaderTool_PreBuild DEPENDS "${MANIFEST}")
-set_target_properties(DeltaHeaderTool_PreBuild PROPERTIES FOLDER "Utility")
-add_dependencies(${TARGET_NAME} DeltaHeaderTool_PreBuild)

@@ -67,6 +67,7 @@ class ClassInfo:
     name: str
     source_file: Path
     include_path: str
+    base_name: str = ""
     properties: list[PropertyInfo] = field(default_factory=list)
     functions: list[FunctionInfo] = field(default_factory=list)
 
@@ -138,6 +139,10 @@ def _parse_class(tu, class_cursor, source_file, include_path):
     )
 
     for child in class_cursor.get_children():
+        if child.kind == ci.CursorKind.CXX_BASE_SPECIFIER and not info.base_name:
+            info.base_name = child.spelling
+            continue
+
         if child.kind == ci.CursorKind.FIELD_DECL:
             if not _is_annotated(tu, child, "DPROPERTY"):
                 continue

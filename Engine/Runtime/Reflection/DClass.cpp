@@ -6,7 +6,7 @@
 using namespace DeltaEngine;
 
 DClass::DClass(std::string name,
-               DClass* super,
+               std::string superName,
                size_t classSize,
                size_t minAlignment,
                void (*constructFn)(void* address),
@@ -14,7 +14,8 @@ DClass::DClass(std::string name,
                void (*copyFn)(void* dest, const void* src),
                DObject* classDefaultObject)
     : m_name(std::move(name))
-    , m_super(super)
+    , m_superName(std::move(superName))
+    , m_super(nullptr)
     , m_properties(nullptr)
     , m_ownProperties(nullptr)
     , m_classSize(classSize)
@@ -66,6 +67,11 @@ DFunction* DClass::FindFunctionByName(const std::string& name) const
     return nullptr;
 }
 
+void DClass::SetSuper(DClass* super)
+{
+    m_super = super;
+}
+
 bool DClass::IsChildOf(const DClass* other) const
 {
     for (const DClass* cls = this; cls; cls = cls->m_super)
@@ -77,6 +83,7 @@ bool DClass::IsChildOf(const DClass* other) const
 }
 
 const std::string& DClass::GetName() const { return m_name; }
+const std::string& DClass::GetSuperName() const { return m_superName; }
 DClass* DClass::GetSuper() const { return m_super; }
 size_t DClass::GetClassSize() const { return m_classSize; }
 size_t DClass::GetMinAlignment() const { return m_minAlignment; }

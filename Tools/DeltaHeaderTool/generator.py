@@ -141,7 +141,11 @@ def generate_source(cls: ClassInfo) -> str:
     for fn in cls.functions:
         parts.append(_generate_thunk(cls, fn))
 
-    parts.append(DCLASS_REGISTRATION_BEGIN.substitute(class_name=cls.name))
+    super_name = cls.base_name or ""
+    parts.append(DCLASS_REGISTRATION_BEGIN.substitute(
+        class_name=cls.name,
+        super_name=super_name,
+    ))
 
     for prop in cls.properties:
         if prop.is_object_ptr:
