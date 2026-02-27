@@ -73,18 +73,20 @@ include("${MANIFEST}")
 target_sources(${TARGET_NAME} PRIVATE ${DELTA_GENERATED_SOURCES})
 target_include_directories(${TARGET_NAME} PRIVATE "${GENERATED_DIR}")
 
-# ── Build time: run the header tool as a PRE_BUILD step on DeltaEngine so
-#    it always executes before any source file in this target is compiled.
-#    On MSVC, PRE_BUILD fires before the compiler is invoked for the target.
-add_custom_command(
-    TARGET  ${TARGET_NAME}
-    PRE_BUILD
+# ── Build time: run the header tool before DeltaEngine (and thus DeltaEditor)
+#    every time they are built. PRE_BUILD does not run when the target is
+#    up-to-date (e.g. building only DeltaEditor), so we use a dependency
+#    on a custom target with no outputs so the tool always runs when building
+#    this target or any dependent (e.g. DeltaEditor).
+add_custom_target(DeltaHeaderToolRun
     COMMAND ${HEADER_TOOL_ARGS}
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
     COMMENT "DeltaHeaderTool: regenerating reflection code..."
 )
+add_dependencies(${TARGET_NAME} DeltaHeaderToolRun)
+set_target_properties(DeltaHeaderToolRun PROPERTIES FOLDER "Utility")
 
-# ── Manual force-regeneration target (optional, for the IDE) ─────────────
+# ── Manual force-regeneration target (runnable from VS: build this target) ─
 add_custom_target(DeltaHeaderTool
     COMMAND ${HEADER_TOOL_ARGS} --force
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
