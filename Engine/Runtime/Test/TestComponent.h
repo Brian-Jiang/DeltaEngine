@@ -8,7 +8,7 @@
 #include "Runtime/Core/SceneComponent.h"
 #include "Runtime/Graphics/DXGraphicsContext.h"
 
-#include "Runtime/Test/TestComponent.generated.h"
+#include "TestComponent.generated.h"
 
 
 DELTA_ENGINE_NS_BEGIN

@@ -17,3 +17,5 @@ out/
 __pycache__/
 *.pyc
 *.pyo
+
+Intermediate/
