@@ -2,14 +2,16 @@
 
 #include "EngineIncludes.h"
 
-//#include <type_traits>
+#include "DObject.generated.h"
 
 DELTA_ENGINE_NS_BEGIN
 
 class DClass;
 
+DCLASS()
 class DObject
 {
+    DGENERATED_BODY(DObject)
     friend class DClass;
 
 public:

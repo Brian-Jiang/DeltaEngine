@@ -7,12 +7,16 @@
 #include "Runtime/Core/SceneComponent.h"
 #include "Runtime/Graphics/DXGraphicsContext.h"
 
+#include "Renderer.generated.h"
+
 DELTA_ENGINE_NS_BEGIN
 
 class DWorld;
 
+DCLASS()
 class Renderer : public SceneComponent
 {
+    DGENERATED_BODY(Renderer)
     friend class DWorld;
 
 public:

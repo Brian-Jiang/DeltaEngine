@@ -10,12 +10,16 @@
 
 #include "Runtime/Core/DObject.h"
 
+#include "DShader.generated.h"
+
 struct IDxcBlob;
 
 DELTA_ENGINE_NS_BEGIN
 
+DCLASS()
 class DShader : public DObject
 {
+    DGENERATED_BODY(DShader)
 
 public:
     DShader();
@@ -24,28 +28,45 @@ public:
             const std::wstring& pixelShaderTargetProfile);
     ~DShader();
 
+    DFUNCTION()
     void SetSourcePath(const std::wstring& sourcePath);
+    DFUNCTION()
     void SetVertexShaderEntryPoint(const std::wstring& entryPoint);
+    DFUNCTION()
     void SetPixelShaderEntryPoint(const std::wstring& entryPoint);
+    DFUNCTION()
     void SetVertexShaderTargetProfile(const std::wstring& targetProfile);
+    DFUNCTION()
     void SetPixelShaderTargetProfile(const std::wstring& targetProfile);
+    DFUNCTION()
     void SetInputLayout(const std::vector<D3D12_INPUT_ELEMENT_DESC>& inputLayout);
 
+    DFUNCTION()
     inline IDxcBlob* GetVertexShaderBlob() const { return m_vertexShaderBlob.Get(); }
+    DFUNCTION()
     inline IDxcBlob* GetPixelShaderBlob() const { return m_pixelShaderBlob.Get(); }
+    DFUNCTION()
     inline const std::vector<D3D12_INPUT_ELEMENT_DESC>& GetInputLayout() const { return m_inputLayout; }
 
 private:
     void CompileShader();
 
 private:
+    DPROPERTY()
     Microsoft::WRL::ComPtr<IDxcBlob> m_vertexShaderBlob;
+    DPROPERTY()
     Microsoft::WRL::ComPtr<IDxcBlob> m_pixelShaderBlob;
+    DPROPERTY()
     std::wstring m_sourcePath;
+    DPROPERTY()
     std::wstring m_vertexShaderEntryPoint;
+    DPROPERTY()
     std::wstring m_pixelShaderEntryPoint;
+    DPROPERTY()
     std::wstring m_vertexShaderTargetProfile;
+    DPROPERTY()
     std::wstring m_pixelShaderTargetProfile;
+    DPROPERTY()
     std::vector<D3D12_INPUT_ELEMENT_DESC> m_inputLayout;
 };
 

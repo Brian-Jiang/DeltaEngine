@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -13,6 +14,106 @@ TOOLS_DIR = TOOL_DIR.parent
 LIB_PATH = TOOLS_DIR / "Clang"
 
 _configured = False
+
+# Strip #include lines so clang never touches the filesystem for dependencies.
+_INCLUDE_RE = re.compile(r'^\s*#\s*include\s*[<"].*?[>"]', re.MULTILINE)
+
+# Preamble: stubs and forward declarations so stripped headers parse well enough
+# for DCLASS/DPROPERTY/DFUNCTION extraction. We tolerate unresolved-type errors.
+_PREAMBLE = r"""
+// --- primitive typedefs (cstdint-style) ---
+typedef unsigned char      uint8_t;
+typedef unsigned short     uint16_t;
+typedef unsigned int       uint32_t;
+typedef unsigned long long uint64_t;
+typedef signed char        int8_t;
+typedef short              int16_t;
+typedef int                int32_t;
+typedef long long          int64_t;
+
+// --- Windows / D3D12 minimal stubs ---
+typedef unsigned int UINT;
+typedef int DXGI_FORMAT;
+struct IDxcBlob;
+struct D3D12_INPUT_ELEMENT_DESC { unsigned int dummy; };
+struct CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC { int dummy; };
+struct CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL { int dummy; };
+namespace Microsoft { namespace WRL { template<typename T> class ComPtr { T* p; }; }}
+
+// --- DirectX stubs ---
+namespace DirectX {
+namespace SimpleMath {
+struct Vector3 { float x, y, z; };
+struct Quaternion { float x, y, z, w; };
+}
+struct XMMATRIX { float m[4][4]; };
+struct __declspec(align(16)) XMVECTOR { float f[4]; };
+typedef XMVECTOR XMFLOAT2;
+typedef XMVECTOR XMFLOAT3;
+typedef XMVECTOR XMFLOAT4;
+struct TexMetadata {};
+class ScratchImage {};
+}
+
+// --- Assimp stubs ---
+struct aiNode {};
+struct aiScene {};
+struct aiMesh {};
+struct aiMaterial {};
+
+// --- std stubs ---
+namespace std {
+template<typename T> struct char_traits {};
+template<typename C, typename T> class basic_string {};
+typedef basic_string<char, char_traits<char>> string;
+typedef basic_string<wchar_t, char_traits<wchar_t>> wstring;
+template<typename T> class shared_ptr { T* p; };
+template<typename T> class weak_ptr { T* p; };
+template<typename T, typename A = void> class vector {};
+template<typename T> class enable_shared_from_this {};
+}
+
+// --- DeltaEngine forward declarations ---
+namespace DeltaEngine {
+class DObject;
+class DClass;
+class GameObject;
+class DComponent;
+class SceneComponent;
+class DWorld;
+class Camera;
+class Renderer;
+class LightComponent;
+class DirectionalLight;
+class PointLight;
+class SpotLight;
+class DTexture;
+class DMaterial;
+class DMesh;
+class DShader;
+class TestComponent;
+class TestComponent2;
+struct DXGraphicsContext;
+class CameraRenderProxy;
+class DirectionalLightRenderProxy;
+class PointLightRenderProxy;
+class SpotLightRenderProxy;
+class MeshRenderProxy;
+class EngineMain;
+struct MeshRendererSettings {};
+struct Vertex { float x; };
+}
+
+// --- Reflection macros (redefine to annotate form for libclang) ---
+#define DCLASS(...)
+#define DPROPERTY(...)
+#define DFUNCTION(...)
+#define DGENERATED_BODY(ClassName)
+
+#define DELTA_ENGINE_NS_BEGIN  namespace DeltaEngine {
+#define DELTA_ENGINE_NS_END    }
+#define DELTAENGINE_API
+"""
 
 
 def _ensure_configured():
@@ -185,22 +286,30 @@ def parse_header(
     input_dir = input_dir.resolve()
     engine_include_root = input_dir.parent  # e.g. Engine/
 
-    args = ["-std=c++23", "-x", "c++"]
-    args.append(f"-I{input_dir}")
-    args.append(f"-I{engine_include_root}")
-    for d in (extra_include_dirs or []):
-        args.append(f"-I{Path(d).resolve()}")
+    raw = file_path.read_text(encoding="utf-8", errors="replace")
+    stripped_source = _PREAMBLE + _INCLUDE_RE.sub("", raw)
+
+    args = ["-std=c++23", "-x", "c++", "-w", "-ferror-limit=0"]
+    parse_options = (
+        ci.TranslationUnit.PARSE_SKIP_FUNCTION_BODIES
+        | ci.TranslationUnit.PARSE_INCOMPLETE
+    )
 
     index = ci.Index.create()
-    tu = index.parse(str(file_path), args=args)
+    tu = index.parse(
+        str(file_path),
+        args=args,
+        unsaved_files=[(str(file_path), stripped_source)],
+        options=parse_options,
+    )
 
-    errors = [
-        d for d in tu.diagnostics
-        if d.severity >= ci.Diagnostic.Error
-    ]
-    if errors:
-        for e in errors:
-            print(f"  {e}", file=sys.stderr)
+    fatals = [d for d in tu.diagnostics if d.severity == ci.Diagnostic.Fatal]
+    if fatals:
+        for d in fatals:
+            print(f"  {d}", file=sys.stderr)
+        raise RuntimeError(
+            f"Fatal diagnostic(s) parsing {file_path.name}; cannot continue"
+        )
 
     file_str = str(file_path)
 

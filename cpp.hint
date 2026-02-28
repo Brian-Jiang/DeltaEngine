@@ -4,3 +4,7 @@
 
 #define DELTA_ENGINE_NS_BEGIN namespace DeltaEngine {
 #define DELTA_ENGINE_NS_END }
+#define DCLASS(__VA_ARGS__)
+#define DGENERATED_BODY(ClassName) friend class DeltaEngine::Reflection::Private::ReflectionRegister_##ClassName;
+#define DFUNCTION(__VA_ARGS__)
+#define DPROPERTY(__VA_ARGS__)

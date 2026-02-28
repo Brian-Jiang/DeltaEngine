@@ -8,12 +8,16 @@
 
 #include "Core/DObject.h"
 
+#include "DComponent.generated.h"
+
 DELTA_ENGINE_NS_BEGIN
 
 class GameObject;
 
+DCLASS()
 class DComponent: public DObject
 {
+    DGENERATED_BODY(DComponent)
 
 public:
     DELTAENGINE_API DComponent();
@@ -22,11 +26,15 @@ public:
     DELTAENGINE_API virtual ~DComponent();
 
 public:
+    DFUNCTION()
     inline std::shared_ptr<GameObject> GetGameObject() const { return m_gameObject.lock(); }
+    DFUNCTION()
     inline const std::string& GetName() const { return m_name; }
 
 private:
+    DPROPERTY()
     std::weak_ptr<GameObject> m_gameObject;
+    DPROPERTY()
     std::string m_name;
 };
 
