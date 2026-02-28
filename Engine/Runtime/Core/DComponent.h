@@ -28,12 +28,16 @@ public:
 public:
     DFUNCTION()
     inline std::shared_ptr<GameObject> GetGameObject() const { return m_gameObject.lock(); }
+
     DFUNCTION()
     inline const std::string& GetName() const { return m_name; }
 
 private:
-    DPROPERTY()
     std::weak_ptr<GameObject> m_gameObject;
+
+    //DPROPERTY()
+    //GameObject* m_gameObjectRawPtr;
+
     DPROPERTY()
     std::string m_name;
 };

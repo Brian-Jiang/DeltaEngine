@@ -11,7 +11,7 @@
 #include "TestComponent.generated.h"
 
 
-DELTA_ENGINE_NS_BEGINs
+DELTA_ENGINE_NS_BEGIN
 
 class DTexture;
 

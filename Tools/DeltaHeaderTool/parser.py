@@ -18,6 +18,9 @@ _configured = False
 # Strip #include lines so clang never touches the filesystem for dependencies.
 _INCLUDE_RE = re.compile(r'^\s*#\s*include\s*[<"].*?[>"]', re.MULTILINE)
 
+# Capture full #include directives for re-emission (exact line including quote/angle).
+_INCLUDE_CAPTURE_RE = re.compile(r'^\s*#\s*include\s+[<"][^">]+[">]', re.MULTILINE)
+
 # Preamble: stubs and forward declarations so stripped headers parse well enough
 # for DCLASS/DPROPERTY/DFUNCTION extraction. We tolerate unresolved-type errors.
 _PREAMBLE = r"""
@@ -115,6 +118,9 @@ struct Vertex { float x; };
 #define DELTAENGINE_API
 """
 
+# Line count of the preamble; declarations at line <= this are from the preamble, not the source file.
+_PREAMBLE_LINE_COUNT = len(_PREAMBLE.splitlines())
+
 
 def _ensure_configured():
     global _configured
@@ -171,6 +177,72 @@ class ClassInfo:
     base_name: str = ""
     properties: list[PropertyInfo] = field(default_factory=list)
     functions: list[FunctionInfo] = field(default_factory=list)
+
+
+@dataclass
+class ParseResult:
+    """Result of parsing one header: reflected classes plus file-level data."""
+    classes: list[ClassInfo]
+    source_includes: list[str]
+    forward_decls: list[tuple[str, str]]  # (kind, name) with kind in ("class", "struct", "template_class")
+
+
+# ── source includes and forward decls ────────────────────────
+
+
+def _collect_source_includes(raw: str, file_path: Path) -> list[str]:
+    """Collect #include lines from raw source; exclude self .generated.h; dedupe preserving order."""
+    matches = _INCLUDE_CAPTURE_RE.findall(raw)
+    stem = file_path.stem
+    self_generated = f"{stem}.generated.h"
+    result: list[str] = []
+    for m in matches:
+        line = m.strip()
+        inner = re.search(r'#include\s+[<"]([^">]+)[">]', line)
+        if inner:
+            path = inner.group(1)
+            tail = path.replace("\\", "/").split("/")[-1]
+            if tail == self_generated:
+                continue
+        result.append(line)
+    return list(dict.fromkeys(result))
+
+
+def _is_anonymous_or_invalid(spelling: str) -> bool:
+    """Return True if the type spelling should not be forward-declared."""
+    if not spelling or not spelling.strip():
+        return True
+    if spelling.strip().startswith("(anonymous)"):
+        return True
+    return False
+
+
+def _collect_forward_decls(tu, file_str: str, source_line_start: int) -> list[tuple[str, str]]:
+    """Walk AST and collect (kind, name) for every class/struct/class_template declared in the source file.
+    Includes both definitions and forward declarations (e.g. 'class GameObject;').
+    Cursors at line <= source_line_start are from the preamble and are excluded."""
+    decls: list[tuple[str, str]] = []
+    for cursor in tu.cursor.walk_preorder():
+        if cursor.location.file is None:
+            continue
+        if str(Path(cursor.location.file.name).resolve()) != file_str:
+            continue
+        if cursor.location.line <= source_line_start:
+            continue
+        kind = None
+        if cursor.kind == ci.CursorKind.CLASS_DECL:
+            kind = "class"
+        elif cursor.kind == ci.CursorKind.STRUCT_DECL:
+            kind = "struct"
+        elif cursor.kind == ci.CursorKind.CLASS_TEMPLATE:
+            kind = "template_class"
+        if kind is None:
+            continue
+        spelling = cursor.spelling or ""
+        if _is_anonymous_or_invalid(spelling):
+            continue
+        decls.append((kind, spelling))
+    return list(dict.fromkeys(decls))
 
 
 # ── token-based macro detection ──────────────────────────────
@@ -279,7 +351,7 @@ def parse_header(
     file_path: Path,
     input_dir: Path,
     extra_include_dirs: list[Path] | None = None,
-) -> list[ClassInfo]:
+) -> ParseResult:
     _ensure_configured()
 
     file_path = file_path.resolve()
@@ -287,6 +359,7 @@ def parse_header(
     engine_include_root = input_dir.parent  # e.g. Engine/
 
     raw = file_path.read_text(encoding="utf-8", errors="replace")
+    source_includes = _collect_source_includes(raw, file_path)
     stripped_source = _PREAMBLE + _INCLUDE_RE.sub("", raw)
 
     args = ["-std=c++23", "-x", "c++", "-w", "-ferror-limit=0"]
@@ -312,6 +385,7 @@ def parse_header(
         )
 
     file_str = str(file_path)
+    forward_decls = _collect_forward_decls(tu, file_str, _PREAMBLE_LINE_COUNT)
 
     rel = file_path.relative_to(engine_include_root)
     parent_part = rel.parent.as_posix()
@@ -332,4 +406,8 @@ def parse_header(
 
         results.append(_parse_class(tu, cursor, file_path, include_path))
 
-    return results
+    return ParseResult(
+        classes=results,
+        source_includes=source_includes,
+        forward_decls=forward_decls,
+    )

@@ -60,21 +60,24 @@ def _process_one(job):
     stem = header_path.stem
 
     from parser import parse_header
-    from generator import generate_header, generate_source
+    from generator import generate_header_file, generate_source
 
     try:
-        classes = parse_header(header_path, input_dir, include_dirs)
-        if not classes:
+        result = parse_header(header_path, input_dir, include_dirs)
+        if not result.classes:
             return (
                 stem, None, None,
                 f"WARNING: {header_path.name} contains DCLASS( but no "
                 "reflected classes were found by libclang",
             )
 
-        header_text = ""
+        header_text = generate_header_file(
+            result.classes,
+            result.source_includes,
+            result.forward_decls,
+        )
         source_text = ""
-        for cls in classes:
-            header_text += generate_header(cls)
+        for cls in result.classes:
             source_text += generate_source(cls)
 
         return (stem, header_text, source_text, None)

@@ -20,14 +20,17 @@ from templates import (
     GENERATED_HEADER_FILE,
     GENERATED_HEADER_PARAMS_STRUCT,
     GENERATED_HEADER_PARAMS_FIELD,
+    GENERATED_HEADER_CLASS_BLOCK,
+    GENERATED_HEADER_CREATE_OBJECT,
 )
 
 
 # ── header generation ────────────────────────────────────────
 
 
-def generate_header(cls: ClassInfo) -> str:
-    params_structs = ""
+def _params_structs_for_class(cls: ClassInfo) -> str:
+    """Build params struct block for one class."""
+    parts = ""
     for fn in cls.functions:
         if not fn.has_params_struct:
             continue
@@ -40,13 +43,57 @@ def generate_header(cls: ClassInfo) -> str:
             fields += GENERATED_HEADER_PARAMS_FIELD.substitute(
                 type=fn.return_type, name="returnValue",
             )
-        params_structs += GENERATED_HEADER_PARAMS_STRUCT.substitute(
+        parts += GENERATED_HEADER_PARAMS_STRUCT.substitute(
             class_name=cls.name, func_name=fn.name, fields=fields,
         )
+    return parts
+
+
+def _forward_decl_line(kind: str, name: str) -> str:
+    """One forward declaration line."""
+    if kind == "class":
+        return f"class {name};"
+    if kind == "struct":
+        return f"struct {name};"
+    if kind == "template_class":
+        return f"template <typename...> class {name};"
+    return f"class {name};"
+
+
+def generate_header_file(
+    classes: list[ClassInfo],
+    source_includes: list[str],
+    forward_decls: list[tuple[str, str]],
+) -> str:
+    """Build the entire .generated.h for one source file."""
+    forward_decls_block = "\n".join(
+        _forward_decl_line(kind, name) for kind, name in forward_decls
+    )
+    if forward_decls_block:
+        forward_decls_block += "\n"
+
+    source_includes_block = "\n".join(source_includes) if source_includes else ""
+    if source_includes_block:
+        source_includes_block += "\n"
+
+    per_class_content = ""
+    for cls in classes:
+        params_structs = _params_structs_for_class(cls)
+        per_class_content += GENERATED_HEADER_CLASS_BLOCK.substitute(
+            class_name=cls.name,
+            params_structs=params_structs,
+        )
+
+    create_objects_block = "".join(
+        GENERATED_HEADER_CREATE_OBJECT.substitute(class_name=cls.name)
+        for cls in classes
+    )
 
     return GENERATED_HEADER_FILE.substitute(
-        class_name=cls.name,
-        params_structs=params_structs,
+        forward_decls_block=forward_decls_block,
+        source_includes_block=source_includes_block,
+        per_class_content=per_class_content,
+        create_objects_block=create_objects_block,
     )
 
 
