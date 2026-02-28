@@ -34,13 +34,13 @@ public:
     UINT GetWidth() const;
     DFUNCTION()
     UINT GetHeight() const;
-    DFUNCTION()
+    
     DXGI_FORMAT GetFormat() const;
 
-    DFUNCTION()
+    
     inline std::shared_ptr<DirectX::TexMetadata> GetMetadata() const { return m_metadata; }
-    DFUNCTION()
     inline std::shared_ptr<DirectX::ScratchImage> GetScratchImage() const { return m_scratchImage; }
+
     DFUNCTION()
     inline std::wstring GetSourcePath() const { return m_sourcePath; }
 
@@ -49,10 +49,11 @@ private:
     
 
 private:
-    DPROPERTY()
+    
     std::shared_ptr<DirectX::TexMetadata> m_metadata;
-    DPROPERTY()
+    
     std::shared_ptr<DirectX::ScratchImage> m_scratchImage;
+
     DPROPERTY()
     std::wstring m_sourcePath;
     DPROPERTY()
@@ -60,7 +61,6 @@ private:
 
 
 public:
-    DFUNCTION()
     static std::shared_ptr<DTexture> LoadFromFile(const std::wstring& filePath, bool sRGB = false);
 };
 

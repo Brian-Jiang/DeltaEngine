@@ -28,14 +28,11 @@ public:
     DELTAENGINE_API std::shared_ptr<GameObject> CreateGameObject(const std::string& name = "New GameObject");
 
     /// Walk the scene tree and call InitGraphicState on every Renderer.
-    DFUNCTION()
     DELTAENGINE_API void InitRenderers(std::shared_ptr<DXGraphicsContext> context) const;
 
-    DFUNCTION()
     DELTAENGINE_API void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const;
 
     /// Walk the scene tree and call GatherDrawCalls on every Renderer.
-    DFUNCTION()
     DELTAENGINE_API void GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const;
 
     DFUNCTION()

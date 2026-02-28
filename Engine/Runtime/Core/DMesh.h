@@ -31,17 +31,16 @@ public:
     DMesh(std::wstring sourcePath);
     DMesh(std::wstring sourcePath, std::shared_ptr<DMaterial> material);
     //DMesh(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices, std::shared_ptr<DMaterial>& material);
+
     DFUNCTION()
     void SetMaterials(std::vector<std::shared_ptr<DMaterial>>& materials) { m_materials = materials; }
 
-    DFUNCTION()
     void ImportMesh();
-    DFUNCTION()
+
     void ProcessNode(aiNode* node, const aiScene* scene, DirectX::XMMATRIX accTransform);
-    DFUNCTION()
     void ProcessMesh(aiMesh* mesh, const aiScene* scene);
-    DFUNCTION()
     std::vector<std::shared_ptr<DTexture>> LoadMaterialTextures(const aiScene* scene, aiMaterial* mat, aiTextureType type, std::string typeName, const std::string& filePath);
+
     DFUNCTION()
     std::shared_ptr<DMaterial> GetMaterial(int index = 0) const;
 

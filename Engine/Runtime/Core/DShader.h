@@ -38,24 +38,23 @@ public:
     void SetVertexShaderTargetProfile(const std::wstring& targetProfile);
     DFUNCTION()
     void SetPixelShaderTargetProfile(const std::wstring& targetProfile);
-    DFUNCTION()
+    
     void SetInputLayout(const std::vector<D3D12_INPUT_ELEMENT_DESC>& inputLayout);
 
-    DFUNCTION()
+    
     inline IDxcBlob* GetVertexShaderBlob() const { return m_vertexShaderBlob.Get(); }
-    DFUNCTION()
+    
     inline IDxcBlob* GetPixelShaderBlob() const { return m_pixelShaderBlob.Get(); }
-    DFUNCTION()
+
     inline const std::vector<D3D12_INPUT_ELEMENT_DESC>& GetInputLayout() const { return m_inputLayout; }
 
 private:
     void CompileShader();
 
 private:
-    DPROPERTY()
     Microsoft::WRL::ComPtr<IDxcBlob> m_vertexShaderBlob;
-    DPROPERTY()
     Microsoft::WRL::ComPtr<IDxcBlob> m_pixelShaderBlob;
+
     DPROPERTY()
     std::wstring m_sourcePath;
     DPROPERTY()
@@ -66,7 +65,7 @@ private:
     std::wstring m_vertexShaderTargetProfile;
     DPROPERTY()
     std::wstring m_pixelShaderTargetProfile;
-    DPROPERTY()
+    
     std::vector<D3D12_INPUT_ELEMENT_DESC> m_inputLayout;
 };
 

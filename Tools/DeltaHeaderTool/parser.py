@@ -9,6 +9,16 @@ import clang.cindex as ci
 
 from type_resolver import resolve_type
 
+# Use canonical (underlying) type for emission when type is a typedef/using alias
+# so param struct and thunk use e.g. __m128 instead of DirectX::XMVECTOR.
+def _type_spelling_for_emission(clang_type) -> str:
+    """Return type spelling to emit in param struct and thunk; strip typedef/alias."""
+    kind = clang_type.kind
+    if kind == ci.TypeKind.TYPEDEF or kind == ci.TypeKind.ELABORATED:
+        canonical = clang_type.get_canonical()
+        return canonical.spelling
+    return clang_type.spelling
+
 TOOL_DIR = Path(__file__).resolve().parent
 TOOLS_DIR = TOOL_DIR.parent
 LIB_PATH = TOOLS_DIR / "Clang"
@@ -163,6 +173,7 @@ class FunctionInfo:
     return_type: str
     return_property_class: str
     params: list[ParamInfo] = field(default_factory=list)
+    overload_index: int = 1  # 1-based; _2, _3, ... for overloads
 
     @property
     def has_params_struct(self) -> bool:
@@ -274,6 +285,7 @@ def _parse_function(tu, method_cursor, class_name):
     ret_type = method_cursor.result_type
     ret_spelling = ret_type.spelling
     is_void = ret_spelling == "void"
+    ret_emission = _type_spelling_for_emission(ret_type) if not is_void else "void"
 
     ret_prop_class = ""
     if not is_void:
@@ -291,13 +303,13 @@ def _parse_function(tu, method_cursor, class_name):
                 continue
             params.append(ParamInfo(
                 name=child.spelling,
-                cpp_type=child.type.spelling,
+                cpp_type=_type_spelling_for_emission(child.type),
                 property_class=p_resolved[0],
             ))
 
     return FunctionInfo(
         name=method_cursor.spelling,
-        return_type=ret_spelling,
+        return_type=ret_emission if not is_void else "void",
         return_property_class=ret_prop_class,
         params=params,
     )
@@ -337,9 +349,10 @@ def _parse_class(tu, class_cursor, source_file, include_path):
         elif child.kind == ci.CursorKind.CXX_METHOD:
             if not _is_annotated(tu, child, "DFUNCTION"):
                 continue
-            info.functions.append(
-                _parse_function(tu, child, class_name)
-            )
+            fn = _parse_function(tu, child, class_name)
+            same_name_count = sum(1 for f in info.functions if f.name == fn.name)
+            fn.overload_index = same_name_count + 1
+            info.functions.append(fn)
 
     return info
 

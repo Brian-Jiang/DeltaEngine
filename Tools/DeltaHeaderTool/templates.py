@@ -33,9 +33,9 @@ static ReflectionRegistration registration_${class_name}(
 # PARAMS STRUCTS  (top of file, before thunks)
 # ============================================================
 
-# For functions that have params and/or a return value
+# For functions that have params and/or a return value (params_struct_suffix is _2, _3, ... for overloads)
 PARAMS_STRUCT = Template("""\
-struct ${class_name}_${func_name}_Params
+struct ${class_name}_${func_name}_Params${params_struct_suffix}
 {
 ${fields}\
 };
@@ -49,9 +49,9 @@ PARAMS_STRUCT_FIELD = Template("""\
 # THUNKS
 # ============================================================
 
-# no params, no return
+# no params, no return (thunk_suffix is _2, _3, ... for overloads)
 THUNK_VOID_NO_PARAMS = Template("""\
-static void ${func_name}_Thunk(DObject* instance, void* params)
+static void ${func_name}_Thunk${thunk_suffix}(DObject* instance, void* params)
 {
     static_cast<${class_name}*>(instance)->${func_name}();
 }
@@ -59,9 +59,9 @@ static void ${func_name}_Thunk(DObject* instance, void* params)
 
 # no params, with return
 THUNK_NO_PARAMS_WITH_RETURN = Template("""\
-static void ${func_name}_Thunk(DObject* instance, void* params)
+static void ${func_name}_Thunk${thunk_suffix}(DObject* instance, void* params)
 {
-    ${class_name}_${func_name}_Params* typedParams = static_cast<${class_name}_${func_name}_Params*>(params);
+    ${class_name}_${func_name}_Params${params_struct_suffix}* typedParams = static_cast<${class_name}_${func_name}_Params${params_struct_suffix}*>(params);
     ${return_type} ret = static_cast<${class_name}*>(instance)->${func_name}();
     typedParams->returnValue = ret;
 }
@@ -69,9 +69,9 @@ static void ${func_name}_Thunk(DObject* instance, void* params)
 
 # with params, no return
 THUNK_WITH_PARAMS_NO_RETURN = Template("""\
-static void ${func_name}_Thunk(DObject* instance, void* params)
+static void ${func_name}_Thunk${thunk_suffix}(DObject* instance, void* params)
 {
-    ${class_name}_${func_name}_Params* typedParams = static_cast<${class_name}_${func_name}_Params*>(params);
+    ${class_name}_${func_name}_Params${params_struct_suffix}* typedParams = static_cast<${class_name}_${func_name}_Params${params_struct_suffix}*>(params);
 ${param_extractions}\
     static_cast<${class_name}*>(instance)->${func_name}(${args});
 }
@@ -79,9 +79,9 @@ ${param_extractions}\
 
 # with params, with return
 THUNK_WITH_PARAMS_WITH_RETURN = Template("""\
-static void ${func_name}_Thunk(DObject* instance, void* params)
+static void ${func_name}_Thunk${thunk_suffix}(DObject* instance, void* params)
 {
-    ${class_name}_${func_name}_Params* typedParams = static_cast<${class_name}_${func_name}_Params*>(params);
+    ${class_name}_${func_name}_Params${params_struct_suffix}* typedParams = static_cast<${class_name}_${func_name}_Params${params_struct_suffix}*>(params);
 ${param_extractions}\
     ${return_type} ret = static_cast<${class_name}*>(instance)->${func_name}(${args});
     typedParams->returnValue = ret;
@@ -139,10 +139,10 @@ DPROPERTY_OBJECT_PTR = Template("""\
 # DFUNCTION REGISTRATION
 # ============================================================
 
-# No params, no return value
+# No params, no return value (thunk_suffix is _2, _3, ... for overloads)
 DFUNCTION_VOID_NO_PARAMS = Template("""\
     {
-        DFunction* fn = new DFunction("${func_name}", &${func_name}_Thunk, 0, 0, 0);
+        DFunction* fn = new DFunction("${func_name}", &${func_name}_Thunk${thunk_suffix}, 0, 0, 0);
         cls->AddFunction(fn);
     }
 """)
@@ -150,7 +150,7 @@ DFUNCTION_VOID_NO_PARAMS = Template("""\
 # Has params and/or return value
 DFUNCTION_WITH_PARAMS = Template("""\
     {
-        DFunction* fn = new DFunction("${func_name}", &${func_name}_Thunk, ${num_params}, sizeof(${class_name}_${func_name}_Params), offsetof(${class_name}_${func_name}_Params, returnValue));
+        DFunction* fn = new DFunction("${func_name}", &${func_name}_Thunk${thunk_suffix}, ${num_params}, sizeof(${class_name}_${func_name}_Params${params_struct_suffix}), offsetof(${class_name}_${func_name}_Params${params_struct_suffix}, returnValue));
 ${param_registrations}\
 ${return_registration}\
         cls->AddFunction(fn);
@@ -158,11 +158,11 @@ ${return_registration}\
 """)
 
 DFUNCTION_PARAM = Template("""\
-        fn->AddParam(new ${property_type}("${param_name}", offsetof(${class_name}_${func_name}_Params, ${param_name})));
+        fn->AddParam(new ${property_type}("${param_name}", offsetof(${class_name}_${func_name}_Params${params_struct_suffix}, ${param_name})));
 """)
 
 DFUNCTION_RETURN = Template("""\
-        fn->SetReturnProperty(new ${property_type}("ReturnValue", offsetof(${class_name}_${func_name}_Params, returnValue)));
+        fn->SetReturnProperty(new ${property_type}("ReturnValue", offsetof(${class_name}_${func_name}_Params${params_struct_suffix}, returnValue)));
 """)
 
 
@@ -209,9 +209,9 @@ template <>
 ${class_name}* CreateDObject<${class_name}>();
 """)
 
-# Only emitted for functions that have params or a return value
+# Only emitted for functions that have params or a return value (params_struct_suffix is _2, _3, ... for overloads)
 GENERATED_HEADER_PARAMS_STRUCT = Template("""\
-struct ${class_name}_${func_name}_Params
+struct ${class_name}_${func_name}_Params${params_struct_suffix}
 {
 ${fields}\
 };

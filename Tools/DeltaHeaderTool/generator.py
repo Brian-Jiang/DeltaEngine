@@ -28,6 +28,11 @@ from templates import (
 # ── header generation ────────────────────────────────────────
 
 
+def _overload_suffix(overload_index: int) -> str:
+    """Suffix for params struct and thunk when overload_index > 1: _2, _3, ..."""
+    return "" if overload_index <= 1 else f"_{overload_index}"
+
+
 def _params_structs_for_class(cls: ClassInfo) -> str:
     """Build params struct block for one class."""
     parts = ""
@@ -43,8 +48,10 @@ def _params_structs_for_class(cls: ClassInfo) -> str:
             fields += GENERATED_HEADER_PARAMS_FIELD.substitute(
                 type=fn.return_type, name="returnValue",
             )
+        suffix = _overload_suffix(fn.overload_index)
         parts += GENERATED_HEADER_PARAMS_STRUCT.substitute(
             class_name=cls.name, func_name=fn.name, fields=fields,
+            params_struct_suffix=suffix,
         )
     return parts
 
@@ -101,7 +108,14 @@ def generate_header_file(
 
 
 def _generate_thunk(cls: ClassInfo, fn: FunctionInfo) -> str:
-    d = dict(class_name=cls.name, func_name=fn.name)
+    thunk_suffix = _overload_suffix(fn.overload_index)
+    params_struct_suffix = _overload_suffix(fn.overload_index)
+    d = dict(
+        class_name=cls.name,
+        func_name=fn.name,
+        thunk_suffix=thunk_suffix,
+        params_struct_suffix=params_struct_suffix,
+    )
     has_params = bool(fn.params)
     is_void = fn.return_type == "void"
 
@@ -129,12 +143,15 @@ def _generate_thunk(cls: ClassInfo, fn: FunctionInfo) -> str:
 
 
 def _generate_function_registration(cls: ClassInfo, fn: FunctionInfo) -> str:
+    thunk_suffix = _overload_suffix(fn.overload_index)
+    params_struct_suffix = _overload_suffix(fn.overload_index)
     is_void = fn.return_type == "void"
     has_params = bool(fn.params)
 
     if is_void and not has_params:
         return DFUNCTION_VOID_NO_PARAMS.substitute(
             func_name=fn.name,
+            thunk_suffix=thunk_suffix,
         )
 
     param_registrations = ""
@@ -144,15 +161,17 @@ def _generate_function_registration(cls: ClassInfo, fn: FunctionInfo) -> str:
             param_name=p.name,
             class_name=cls.name,
             func_name=fn.name,
+            params_struct_suffix=params_struct_suffix,
         )
 
     if is_void and has_params:
         # DFUNCTION_WITH_PARAMS hardcodes offsetof(..., returnValue) which
         # doesn't exist for void functions.  Build the block directly.
-        struct_name = f"{cls.name}_{fn.name}_Params"
+        struct_name = f"{cls.name}_{fn.name}_Params{params_struct_suffix}"
+        thunk_name = f"{fn.name}_Thunk{thunk_suffix}"
         lines = [
             "    {",
-            f'        DFunction* fn = new DFunction("{fn.name}", &{fn.name}_Thunk, '
+            f'        DFunction* fn = new DFunction("{fn.name}", &{thunk_name}, '
             f'{len(fn.params)}, sizeof({struct_name}), 0);',
         ]
         lines.append(param_registrations.rstrip("\n"))
@@ -166,6 +185,7 @@ def _generate_function_registration(cls: ClassInfo, fn: FunctionInfo) -> str:
             property_type=fn.return_property_class,
             class_name=cls.name,
             func_name=fn.name,
+            params_struct_suffix=params_struct_suffix,
         )
 
     return DFUNCTION_WITH_PARAMS.substitute(
@@ -174,6 +194,8 @@ def _generate_function_registration(cls: ClassInfo, fn: FunctionInfo) -> str:
         num_params=len(fn.params),
         param_registrations=param_registrations,
         return_registration=return_registration,
+        thunk_suffix=thunk_suffix,
+        params_struct_suffix=params_struct_suffix,
     )
 
 

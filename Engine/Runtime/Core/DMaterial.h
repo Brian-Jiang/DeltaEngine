@@ -32,12 +32,14 @@ public:
 
     DFUNCTION()
     void SetShader(std::shared_ptr<DShader> shader);
-    DFUNCTION()
+
     void SetBlendState(const CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC& blendDesc);
-    DFUNCTION()
+    
     void SetDepthStencilState(const CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL& depthStencilState);
+
     DFUNCTION()
     void AddTexture(std::shared_ptr<DTexture> texture);
+
     DFUNCTION()
     std::shared_ptr<DTexture> GetTexture(int index) const;
 
@@ -51,10 +53,11 @@ public:
 private:
     DPROPERTY()
     std::shared_ptr<DShader> m_shader;
-    DPROPERTY()
+
     CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC m_blendDesc;
-    DPROPERTY()
+    
     CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL m_depthStencilState;
+
     DPROPERTY()
     std::vector<std::shared_ptr<DTexture>> m_textures;
 };
