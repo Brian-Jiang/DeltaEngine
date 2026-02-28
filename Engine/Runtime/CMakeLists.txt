@@ -54,8 +54,22 @@ set(HEADER_TOOL_ARGS
 
 file(MAKE_DIRECTORY "${GENERATED_DIR}")
 
-# ── Configure time: consume the manifest from the last build (or empty on
-#    first run). Do NOT execute the header tool here.
+# ── Configure time: consume the manifest from the last build (or create it).
+#    If the manifest does not exist (first configure or clean Intermediate),
+#    run the header tool once so the first build has the full source list and
+#    links successfully. Otherwise CMake would only reconfigure at the *next*
+#    build (CONFIGURE_DEPENDS), so the first build would link with a stale list.
+if(NOT EXISTS "${MANIFEST}")
+    message(STATUS "DeltaHeaderTool: manifest missing, running once to generate sources...")
+    execute_process(
+        COMMAND ${HEADER_TOOL_ARGS}
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        RESULT_VARIABLE _header_tool_result
+    )
+    if(NOT _header_tool_result EQUAL 0)
+        message(FATAL_ERROR "DeltaHeaderTool failed (exit ${_header_tool_result}). Fix errors and reconfigure.")
+    endif()
+endif()
 if(NOT EXISTS "${MANIFEST}")
     file(WRITE "${MANIFEST}" "set(DELTA_GENERATED_SOURCES \"\")\n")
 endif()

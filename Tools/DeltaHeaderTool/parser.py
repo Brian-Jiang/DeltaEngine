@@ -185,7 +185,7 @@ def parse_header(
     input_dir = input_dir.resolve()
     engine_include_root = input_dir.parent  # e.g. Engine/
 
-    args = ["-std=c++20", "-x", "c++"]
+    args = ["-std=c++23", "-x", "c++"]
     args.append(f"-I{input_dir}")
     args.append(f"-I{engine_include_root}")
     for d in (extra_include_dirs or []):

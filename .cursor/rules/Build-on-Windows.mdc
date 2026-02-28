@@ -1,0 +1,5 @@
+---
+alwaysApply: true
+---
+
+cmd /c "call ""C:\Program Files\Microsoft Visual Studio\18\Community\Common7\Tools\VsDevCmd.bat"" -arch=amd64 >nul 2>&1 && cd ${project_root_dir} && cmake --build Build/x64-Debug --target DeltaEngine 2>&1"

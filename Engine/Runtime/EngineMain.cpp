@@ -31,6 +31,7 @@ EngineMain::EngineMain()
     , gameState(GameState::PLAY)
 {
     time = std::make_unique<Time>();
+    GetReflectionRegistry().FinalizeRegistration();
 }
 
 void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std::shared_ptr<SDL_Window> window)

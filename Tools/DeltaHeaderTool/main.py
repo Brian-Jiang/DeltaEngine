@@ -1,16 +1,24 @@
-"""DeltaHeaderTool — C++ reflection code generator for DeltaEngine."""
+"""DeltaHeaderTool — C++ reflection code generator for DeltaEngine.
+
+Pass 1: fast text pre-scan (no libclang) to find headers containing DCLASS().
+Pass 2: parallel libclang AST parse + code generation via multiprocessing.Pool.
+"""
 
 from __future__ import annotations
 
 import argparse
+import os
 import sys
+import time
+from multiprocessing import Pool
 from pathlib import Path
 
-from parser import parse_header
-from generator import generate_header, generate_source
+
+# ── fast pre-scan (no libclang) ──────────────────────────────
 
 
 def _contains_dclass(path: Path) -> bool:
+    """Return True if the file uses DCLASS() outside of a preprocessor directive."""
     try:
         for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
             stripped = line.lstrip()
@@ -33,6 +41,50 @@ def _is_up_to_date(source: Path, out_h: Path, out_cpp: Path) -> bool:
     )
 
 
+# ── multiprocessing worker ───────────────────────────────────
+
+
+def _pool_init():
+    """Called once per worker process to eagerly load libclang."""
+    from parser import _ensure_configured
+    _ensure_configured()
+
+
+def _process_one(job):
+    """Parse one header and generate reflection code.
+
+    Must live at module level so multiprocessing can pickle it.
+    Returns (stem, header_text | None, source_text | None, warning | None).
+    """
+    header_path, input_dir, include_dirs = job
+    stem = header_path.stem
+
+    from parser import parse_header
+    from generator import generate_header, generate_source
+
+    try:
+        classes = parse_header(header_path, input_dir, include_dirs)
+        if not classes:
+            return (
+                stem, None, None,
+                f"WARNING: {header_path.name} contains DCLASS( but no "
+                "reflected classes were found by libclang",
+            )
+
+        header_text = ""
+        source_text = ""
+        for cls in classes:
+            header_text += generate_header(cls)
+            source_text += generate_source(cls)
+
+        return (stem, header_text, source_text, None)
+    except Exception as e:
+        return (stem, None, None, f"ERROR processing {header_path.name}: {e}")
+
+
+# ── main ─────────────────────────────────────────────────────
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="DeltaHeaderTool")
     ap.add_argument("--input-dir", required=True, type=Path)
@@ -41,23 +93,31 @@ def main() -> int:
     ap.add_argument("--engine-root", required=True, type=Path)
     ap.add_argument("--include-dir", action="append", default=[], type=Path)
     ap.add_argument("--force", action="store_true")
+    ap.add_argument(
+        "-j", "--jobs", type=int, default=0,
+        help="Max parallel workers (0 = cpu count)",
+    )
     args = ap.parse_args()
 
     input_dir: Path = args.engine_root / args.input_dir
     output_dir: Path = args.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    headers = sorted(input_dir.rglob("*.h"))
+    t0 = time.perf_counter()
 
+    # ── pass 1: fast text pre-scan (no libclang) ──────────────
+    all_headers = sorted(input_dir.rglob("*.h"))
+    candidates: list[Path] = [h for h in all_headers if _contains_dclass(h)]
+
+    t_scan = time.perf_counter()
+
+    # ── filter by timestamp ───────────────────────────────────
     reflected_stems: set[str] = set()
     generated_cpps: list[Path] = []
+    jobs: list[tuple[Path, Path, list[Path]]] = []
 
-    for header in headers:
+    for header in candidates:
         stem = header.stem
-
-        if not _contains_dclass(header):
-            continue
-
         reflected_stems.add(stem)
 
         out_h = output_dir / f"{stem}.generated.h"
@@ -68,24 +128,32 @@ def main() -> int:
             print(f"  up-to-date: {stem}")
             continue
 
-        print(f"  generating: {stem}")
+        jobs.append((header, input_dir, args.include_dir))
 
-        classes = parse_header(header, input_dir, args.include_dir)
+    # ── pass 2: parallel libclang parse + codegen ─────────────
+    if jobs:
+        max_workers = args.jobs if args.jobs > 0 else (os.cpu_count() or 1)
+        num_workers = min(max_workers, len(jobs))
 
-        if not classes:
-            print(f"  WARNING: {header.name} contains DCLASS( but no "
-                  "reflected classes were found by libclang", file=sys.stderr)
-            continue
+        if num_workers <= 1:
+            _pool_init()
+            results = [_process_one(j) for j in jobs]
+        else:
+            with Pool(processes=num_workers, initializer=_pool_init) as pool:
+                results = pool.map(_process_one, jobs)
 
-        header_text = ""
-        source_text = ""
-        for cls in classes:
-            header_text += generate_header(cls)
-            source_text += generate_source(cls)
+        for stem, header_text, source_text, warning in results:
+            if warning:
+                print(f"  {warning}", file=sys.stderr)
+            if header_text is None:
+                continue
 
-        out_h.write_text(header_text, encoding="utf-8", newline="\n")
-        out_cpp.write_text(source_text, encoding="utf-8", newline="\n")
-        generated_cpps.append(out_cpp)
+            out_h = output_dir / f"{stem}.generated.h"
+            out_cpp = output_dir / f"{stem}.generated.cpp"
+            out_h.write_text(header_text, encoding="utf-8", newline="\n")
+            out_cpp.write_text(source_text, encoding="utf-8", newline="\n")
+            generated_cpps.append(out_cpp)
+            print(f"  generated:  {stem}")
 
     # ── stale file cleanup ────────────────────────────────────
     for f in sorted(output_dir.iterdir()):
@@ -100,12 +168,20 @@ def main() -> int:
 
     # ── write manifest ────────────────────────────────────────
     args.manifest.parent.mkdir(parents=True, exist_ok=True)
-    lines = ['# AUTO-GENERATED by DeltaHeaderTool - DO NOT EDIT\n']
-    lines.append('set(DELTA_GENERATED_SOURCES\n')
+    lines = ["# AUTO-GENERATED by DeltaHeaderTool - DO NOT EDIT\n"]
+    lines.append("set(DELTA_GENERATED_SOURCES\n")
     for cpp in sorted(generated_cpps):
         lines.append(f'    "{cpp.resolve().as_posix()}"\n')
-    lines.append(')\n')
+    lines.append(")\n")
     args.manifest.write_text("".join(lines), encoding="utf-8", newline="\n")
+
+    elapsed = time.perf_counter() - t0
+    scan_ms = (t_scan - t0) * 1000
+    print(
+        f"  DeltaHeaderTool: scanned {len(all_headers)} headers in {scan_ms:.0f}ms, "
+        f"{len(candidates)} reflected, {len(jobs)} regenerated  "
+        f"({elapsed:.2f}s total)"
+    )
 
     return 0
 
