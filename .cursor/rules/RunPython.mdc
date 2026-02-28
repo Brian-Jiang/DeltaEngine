@@ -1,0 +1,5 @@
+---
+alwaysApply: true
+---
+
+when try to run python tool, use the embedded python @Tools/Python
