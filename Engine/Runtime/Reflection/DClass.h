@@ -2,6 +2,8 @@
 
 #include "EngineIncludes.h"
 
+#include "Runtime/Reflection/DStruct.h"
+
 #include <string>
 #include <unordered_map>
 
@@ -12,7 +14,7 @@ class DProperty;
 class DFunction;
 class ReflectionRegistry;
 
-class DClass
+class DClass : public DStruct
 {
     friend class ReflectionRegistry;
 
@@ -24,43 +26,26 @@ public:
            void (*constructFn)(void* address),
            void (*destructFn)(void* address),
            void (*copyFn)(void* dest, const void* src),
-           DObject* classDefaultObject
+           DObject* classDefaultObject,
+           bool isAbstract = false
     );
-
-    void AddProperty(DProperty* property);
-    DProperty* FindPropertyByName(const std::string& name) const;
 
     void AddFunction(DFunction* function);
     DFunction* FindFunctionByName(const std::string& name) const;
 
-    void SetSuper(DClass* super);
-
     bool IsChildOf(const DClass* other) const;
-
-    const std::string& GetName() const;
-    const std::string& GetSuperName() const;
-    DClass* GetSuper() const;
-    size_t GetClassSize() const;
-    size_t GetMinAlignment() const;
-    DProperty* GetProperties() const;
-    DProperty* GetOwnProperties() const;
+    bool IsAbstract() const;
 
     void ConstructObject(void* address) const;
     void DestroyObject(void* address) const;
     void CopyObject(void* dest, const void* src) const;
 
 private:
-    std::string m_name;
-    std::string m_superName;
-    DClass* m_super;
-    DProperty* m_properties;
-    DProperty* m_ownProperties;
-    size_t m_classSize;
-    size_t m_minAlignment;
     void (*m_constructFn)(void* address);
     void (*m_destructFn)(void* address);
     void (*m_copyFn)(void* dest, const void* src);
     DObject* m_classDefaultObject;
+    bool m_abstract;
 
     std::unordered_map<std::string, DFunction*> m_functions;
 };

@@ -5,12 +5,9 @@
 #include <unordered_map>
 #include <string>
 
-//export module DeltaEngine.Runtime.Reflection;
-//
-//import <unordered_map>
-
 DELTA_ENGINE_NS_BEGIN
 
+class DStruct;
 class DClass;
 class DObject;
 
@@ -27,9 +24,13 @@ class ReflectionRegistry
 {
 
 public:
+    void RegisterDStruct(DStruct* dstruct);
     void RegisterDClass(DClass* dclass);
     void FinalizeRegistration();
+
+    DStruct* FindStructByName(const std::string& name) const;
     DClass* FindClassByName(const std::string& name) const;
+
     DObject* CreateObject(const std::string& className) const;
 
     template <typename T>
@@ -40,6 +41,7 @@ public:
     }
 
 private:
+    std::unordered_map<std::string, DStruct*> m_structMap;
     std::unordered_map<std::string, DClass*> m_classMap;
 };
 

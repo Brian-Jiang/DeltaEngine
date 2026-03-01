@@ -1,6 +1,6 @@
 """DeltaHeaderTool — C++ reflection code generator for DeltaEngine.
 
-Pass 1: fast text pre-scan (no libclang) to find headers containing DCLASS().
+Pass 1: fast text pre-scan (no libclang) to find headers containing DCLASS() or DSTRUCT().
 Pass 2: parallel libclang AST parse + code generation via multiprocessing.Pool.
 """
 
@@ -17,14 +17,14 @@ from pathlib import Path
 # ── fast pre-scan (no libclang) ──────────────────────────────
 
 
-def _contains_dclass(path: Path) -> bool:
-    """Return True if the file uses DCLASS() outside of a preprocessor directive."""
+def _contains_reflected_macro(path: Path) -> bool:
+    """Return True if the file uses DCLASS() or DSTRUCT() outside of a preprocessor directive."""
     try:
         for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
             stripped = line.lstrip()
             if stripped.startswith("#"):
                 continue
-            if "DCLASS(" in stripped:
+            if "DCLASS(" in stripped or "DSTRUCT(" in stripped:
                 return True
         return False
     except OSError:
@@ -60,14 +60,14 @@ def _process_one(job):
     stem = header_path.stem
 
     from parser import parse_header
-    from generator import generate_header_file, generate_source
+    from generator import generate_header_file, generate_source_file
 
     try:
         result = parse_header(header_path, input_dir, include_dirs)
         if not result.classes:
             return (
                 stem, None, None,
-                f"WARNING: {header_path.name} contains DCLASS( but no "
+                f"WARNING: {header_path.name} contains DCLASS(/DSTRUCT( but no "
                 "reflected classes were found by libclang",
             )
 
@@ -76,9 +76,7 @@ def _process_one(job):
             result.source_includes,
             result.forward_decls,
         )
-        source_text = ""
-        for cls in result.classes:
-            source_text += generate_source(cls)
+        source_text = generate_source_file(result.classes, stem)
 
         return (stem, header_text, source_text, None)
     except Exception as e:
@@ -110,7 +108,7 @@ def main() -> int:
 
     # ── pass 1: fast text pre-scan (no libclang) ──────────────
     all_headers = sorted(input_dir.rglob("*.h"))
-    candidates: list[Path] = [h for h in all_headers if _contains_dclass(h)]
+    candidates: list[Path] = [h for h in all_headers if _contains_reflected_macro(h)]
 
     t_scan = time.perf_counter()
 

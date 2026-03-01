@@ -1,57 +1,95 @@
 #include "Reflection/ReflectionRegistry.h"
 
+#include "Reflection/DStruct.h"
 #include "Reflection/DClass.h"
 
 #include <iostream>
 
 using namespace DeltaEngine;
 
+void ReflectionRegistry::RegisterDStruct(DStruct* dstruct)
+{
+    const std::string& name = dstruct->GetName();
+    if (m_structMap.find(name) == m_structMap.end())
+    {
+        m_structMap[name] = dstruct;
+    }
+}
+
 void ReflectionRegistry::RegisterDClass(DClass* cls)
 {
-    std::string& name = cls->m_name;
+    const std::string& name = cls->GetName();
     if (m_classMap.find(name) == m_classMap.end())
     {
         m_classMap[name] = cls;
-    }
-    else
-    {
-        // Handle duplicate class registration if necessary
     }
 }
 
 void ReflectionRegistry::FinalizeRegistration()
 {
-    for (auto& pair : m_classMap)
+    for (auto& [name, dstruct] : m_structMap)
     {
-        const std::string& name = pair.first;
-        DClass* cls = pair.second;
-        const std::string& superName = cls->GetSuperName();
+        const std::string& superName = dstruct->GetSuperName();
         if (superName.empty())
-        {
             continue;
-        }
 
-        DClass* super = FindClassByName(superName);
+        DStruct* super = FindStructByName(superName);
+        if (!super)
+        {
+            DClass* superClass = FindClassByName(superName);
+            super = superClass;
+        }
         if (super)
         {
-            cls->SetSuper(super);
+            dstruct->SetSuper(super);
         }
         else
         {
             std::cerr << "WARNING: Reflection superclass '" << superName
-                      << "' for '" << name << "' not found in ReflectionRegistry.\n";
+                      << "' for struct '" << name << "' not found in ReflectionRegistry.\n";
         }
     }
+
+    for (auto& [name, cls] : m_classMap)
+    {
+        const std::string& superName = cls->GetSuperName();
+        if (superName.empty())
+            continue;
+
+        DClass* superClass = FindClassByName(superName);
+        if (superClass)
+        {
+            cls->SetSuper(superClass);
+        }
+        else
+        {
+            DStruct* superStruct = FindStructByName(superName);
+            if (superStruct)
+            {
+                cls->SetSuper(superStruct);
+            }
+            else
+            {
+                std::cerr << "WARNING: Reflection superclass '" << superName
+                          << "' for '" << name << "' not found in ReflectionRegistry.\n";
+            }
+        }
+    }
+}
+
+DStruct* ReflectionRegistry::FindStructByName(const std::string& name) const
+{
+    auto it = m_structMap.find(name);
+    if (it != m_structMap.end())
+        return it->second;
+    return nullptr;
 }
 
 DClass* ReflectionRegistry::FindClassByName(const std::string& name) const
 {
     auto it = m_classMap.find(name);
     if (it != m_classMap.end())
-    {
         return it->second;
-    }
-
     return nullptr;
 }
 
@@ -60,18 +98,19 @@ DObject* ReflectionRegistry::CreateObject(const std::string& className) const
     DClass* cls = FindClassByName(className);
     if (cls)
     {
-        void* memory = operator new(cls->GetClassSize(), std::align_val_t(cls->GetMinAlignment()));
+        if (cls->IsAbstract())
+        {
+            std::cerr << "WARNING: Cannot create instance of abstract class '" << className << "'.\n";
+            return nullptr;
+        }
+
+        void* memory = operator new(cls->GetStructSize(), std::align_val_t(cls->GetMinAlignment()));
         cls->ConstructObject(memory);
         return static_cast<DObject*>(memory);
     }
 
     return nullptr;
 }
-
-//DClass* ReflectionRegistry::FindClassByName(const std::string& name) const
-//{
-//    return nullptr;
-// }
 
 ReflectionRegistry& DeltaEngine::GetReflectionRegistry()
 {

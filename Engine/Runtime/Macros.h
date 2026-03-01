@@ -20,7 +20,10 @@
 
 // Reflection macros
 #define DCLASS(...)
+#define DSTRUCT(...)
 #define DFUNCTION(...)
 #define DPROPERTY(...)
 #define DGENERATED_BODY(ClassName) \
     friend class DeltaEngine::Reflection::Private::ReflectionRegister_##ClassName;
+#define DGENERATED_BODY_STRUCT(StructName) \
+    friend class DeltaEngine::Reflection::Private::ReflectionRegister_##StructName;

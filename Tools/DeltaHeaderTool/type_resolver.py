@@ -1,3 +1,4 @@
+import re
 import sys
 from clang.cindex import TypeKind
 
@@ -5,14 +6,21 @@ from clang.cindex import TypeKind
 TYPE_MAP = {
     "int":                                "DIntProperty",
     "int32_t":                            "DIntProperty",
+    "unsigned int":                       "DIntProperty",
     "float":                              "DFloatProperty",
     "bool":                               "DBoolProperty",
     "double":                             "DDoubleProperty",
     "std::string":                        "DStringProperty",
     "std::basic_string<char>":            "DStringProperty",
+    "std::wstring":                       "DWStringProperty",
+    "std::basic_string<wchar_t>":         "DWStringProperty",
     "DirectX::SimpleMath::Vector3":       "DVector3Property",
     "DirectX::SimpleMath::Quaternion":    "DQuaternionProperty",
+    "DirectX::XMMATRIX":                  "DFloat4x4Property",
+    "DirectX::XMVECTOR":                  "DFloat4Property",
 }
+
+_SHARED_PTR_RE = re.compile(r"^std::shared_ptr<(.+)>$")
 
 
 def resolve_type(cursor_type, field_name="", class_name=""):
@@ -20,20 +28,34 @@ def resolve_type(cursor_type, field_name="", class_name=""):
 
     Returns None if the type is unrecognized.
     """
+    if cursor_type.kind == TypeKind.LVALUEREFERENCE:
+        return resolve_type(cursor_type.get_pointee(), field_name, class_name)
+
     if cursor_type.kind == TypeKind.POINTER:
         pointee = cursor_type.get_pointee()
         pointee_name = _strip_namespaces(pointee.spelling)
         return (f"DObjectPtrProperty<{pointee_name}>", True, pointee_name)
 
-    spelling = cursor_type.spelling
+    spelling = _strip_const(cursor_type.spelling)
+
+    m = _SHARED_PTR_RE.match(spelling)
+    if m:
+        inner = _strip_namespaces(m.group(1))
+        return (f"DSharedObjectPtrProperty<{inner}>", True, inner)
+
     prop = TYPE_MAP.get(spelling)
     if prop:
         return (prop, False, "")
 
-    canonical = cursor_type.get_canonical().spelling
+    canonical = _strip_const(cursor_type.get_canonical().spelling)
     prop = TYPE_MAP.get(canonical)
     if prop:
         return (prop, False, "")
+
+    m = _SHARED_PTR_RE.match(canonical)
+    if m:
+        inner = _strip_namespaces(m.group(1))
+        return (f"DSharedObjectPtrProperty<{inner}>", True, inner)
 
     print(
         f"WARNING: unknown type '{spelling}' for property "
@@ -41,6 +63,13 @@ def resolve_type(cursor_type, field_name="", class_name=""):
         file=sys.stderr,
     )
     return None
+
+
+def _strip_const(spelling: str) -> str:
+    """Remove leading 'const ' qualifier from a type spelling."""
+    if spelling.startswith("const "):
+        return spelling[6:]
+    return spelling
 
 
 def _strip_namespaces(name):

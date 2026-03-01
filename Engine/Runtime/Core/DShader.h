@@ -10,9 +10,9 @@
 
 #include "Runtime/Core/DObject.h"
 
-#include "DShader.generated.h"
+#include <dxcapi.h>
 
-struct IDxcBlob;
+#include "DShader.generated.h"
 
 DELTA_ENGINE_NS_BEGIN
 

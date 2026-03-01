@@ -85,7 +85,7 @@ set_property(
 include("${MANIFEST}")
 
 target_sources(${TARGET_NAME} PRIVATE ${DELTA_GENERATED_SOURCES})
-target_include_directories(${TARGET_NAME} PRIVATE "${GENERATED_DIR}")
+target_include_directories(${TARGET_NAME} PUBLIC "${GENERATED_DIR}")
 
 # ── Build time: run the header tool before DeltaEngine (and thus DeltaEditor)
 #    every time they are built. PRE_BUILD does not run when the target is

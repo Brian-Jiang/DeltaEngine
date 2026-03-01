@@ -33,11 +33,11 @@ DeltaEngine::DTexture::~DTexture()
     m_scratchImage.reset();
 }
 
-inline UINT DeltaEngine::DTexture::GetWidth() const { return m_metadata->width; }
+UINT DeltaEngine::DTexture::GetWidth() const { return m_metadata->width; }
 
-inline UINT DeltaEngine::DTexture::GetHeight() const { return m_metadata->height; }
+UINT DeltaEngine::DTexture::GetHeight() const { return m_metadata->height; }
 
-inline DXGI_FORMAT DeltaEngine::DTexture::GetFormat() const { return m_metadata->format; }
+DXGI_FORMAT DeltaEngine::DTexture::GetFormat() const { return m_metadata->format; }
 
 void DeltaEngine::DTexture::LoadTexture()
 {

@@ -8,6 +8,7 @@
 
 DELTA_ENGINE_NS_BEGIN
 
+class DStruct;
 class DClass;
 class DObject;
 
@@ -18,14 +19,18 @@ enum class EPropertyType
     Bool,
     Double,
     String,
+    WString,
     Vector3,
     Quaternion,
+    Float4,
+    Float4x4,
     ObjectPtr,
+    SharedObjectPtr,
 };
 
 class DProperty
 {
-    friend class DClass;
+    friend class DStruct;
 
 public:
     DProperty(std::string name,
@@ -49,7 +54,7 @@ public:
     const std::string& GetType() const { return m_type; }
     uint32_t GetOffset() const { return m_offset; }
     uint32_t GetSize() const { return m_size; }
-    DClass* GetDeclaringClass() const { return m_declaringClass; }
+    DStruct* GetDeclaringStruct() const { return m_declaringStruct; }
     DProperty* GetNext() const { return m_next; }
 
 protected:
@@ -57,7 +62,7 @@ protected:
     std::string m_type;
     uint32_t m_offset;
     uint32_t m_size;
-    DClass* m_declaringClass;
+    DStruct* m_declaringStruct;
 
     DProperty* m_next;
 };
@@ -254,6 +259,112 @@ public:
     {
         return EPropertyType::ObjectPtr;
     }
+};
+
+
+template <typename T>
+class DSharedObjectPtrProperty : public DProperty
+{
+public:
+    DSharedObjectPtrProperty(std::string name, std::string type, uint32_t offset)
+        : DProperty(std::move(name), std::move(type), offset, sizeof(std::shared_ptr<T>))
+    {
+    }
+
+    void InitializeValue(void* address) const override
+    {
+        new (address) std::shared_ptr<T>();
+    }
+
+    void DestroyValue(void* address) const override
+    {
+        static_cast<std::shared_ptr<T>*>(address)->~shared_ptr();
+    }
+
+    void SetValue(void* instance, const void* field_value) const override
+    {
+        void* addr = static_cast<uint8_t*>(instance) + m_offset;
+        if (field_value)
+            *static_cast<std::shared_ptr<T>*>(addr) = *static_cast<const std::shared_ptr<T>*>(field_value);
+        else
+            static_cast<std::shared_ptr<T>*>(addr)->reset();
+    }
+
+    void* GetValue(const void* instance) const override
+    {
+        return static_cast<uint8_t*>(const_cast<void*>(instance)) + m_offset;
+    }
+
+    void CopyValue(void* dest, const void* src) const override
+    {
+        new (dest) std::shared_ptr<T>(*static_cast<const std::shared_ptr<T>*>(src));
+    }
+
+    bool Identical(const void* a, const void* b) const override
+    {
+        return *static_cast<const std::shared_ptr<T>*>(a) == *static_cast<const std::shared_ptr<T>*>(b);
+    }
+
+    std::string ToString(const void* address) const override
+    {
+        const auto& ptr = *static_cast<const std::shared_ptr<T>*>(address);
+        if (ptr)
+            return "SharedPtr(" + m_type + ")";
+        return "nullptr";
+    }
+
+    EPropertyType GetPropertyType() const override
+    {
+        return EPropertyType::SharedObjectPtr;
+    }
+};
+
+
+class DWStringProperty : public DProperty
+{
+public:
+    DWStringProperty(std::string name, uint32_t offset);
+
+    void InitializeValue(void* address) const override;
+    void DestroyValue(void* address) const override;
+    void SetValue(void* instance, const void* field_value) const override;
+    void* GetValue(const void* instance) const override;
+    void CopyValue(void* dest, const void* src) const override;
+    bool Identical(const void* a, const void* b) const override;
+    std::string ToString(const void* address) const override;
+    EPropertyType GetPropertyType() const override;
+};
+
+
+class DFloat4Property : public DProperty
+{
+public:
+    DFloat4Property(std::string name, uint32_t offset);
+
+    void InitializeValue(void* address) const override;
+    void DestroyValue(void* address) const override;
+    void SetValue(void* instance, const void* field_value) const override;
+    void* GetValue(const void* instance) const override;
+    void CopyValue(void* dest, const void* src) const override;
+    bool Identical(const void* a, const void* b) const override;
+    std::string ToString(const void* address) const override;
+    EPropertyType GetPropertyType() const override;
+};
+
+
+class DFloat4x4Property : public DProperty
+{
+public:
+    DFloat4x4Property(std::string name, uint32_t offset);
+
+    void InitializeValue(void* address) const override;
+    void DestroyValue(void* address) const override;
+    void SetValue(void* instance, const void* field_value) const override;
+    void* GetValue(const void* instance) const override;
+    void CopyValue(void* dest, const void* src) const override;
+    bool Identical(const void* a, const void* b) const override;
+    std::string ToString(const void* address) const override;
+    EPropertyType GetPropertyType() const override;
 };
 
 DELTA_ENGINE_NS_END

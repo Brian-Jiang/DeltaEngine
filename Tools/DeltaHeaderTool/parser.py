@@ -12,12 +12,17 @@ from type_resolver import resolve_type
 # Use canonical (underlying) type for emission when type is a typedef/using alias
 # so param struct and thunk use e.g. __m128 instead of DirectX::XMVECTOR.
 def _type_spelling_for_emission(clang_type) -> str:
-    """Return type spelling to emit in param struct and thunk; strip typedef/alias."""
-    kind = clang_type.kind
-    if kind == ci.TypeKind.TYPEDEF or kind == ci.TypeKind.ELABORATED:
-        canonical = clang_type.get_canonical()
-        return canonical.spelling
-    return clang_type.spelling
+    """Return type spelling to emit in param struct and thunk.
+    Strips references, const qualifiers, and typedef/alias to produce a value type."""
+    t = clang_type
+    if t.kind == ci.TypeKind.LVALUEREFERENCE or t.kind == ci.TypeKind.RVALUEREFERENCE:
+        t = t.get_pointee()
+    if t.kind == ci.TypeKind.TYPEDEF or t.kind == ci.TypeKind.ELABORATED:
+        t = t.get_canonical()
+    spelling = t.spelling
+    if spelling.startswith("const "):
+        spelling = spelling[6:]
+    return spelling
 
 TOOL_DIR = Path(__file__).resolve().parent
 TOOLS_DIR = TOOL_DIR.parent
@@ -32,7 +37,7 @@ _INCLUDE_RE = re.compile(r'^\s*#\s*include\s*[<"].*?[>"]', re.MULTILINE)
 _INCLUDE_CAPTURE_RE = re.compile(r'^\s*#\s*include\s+[<"][^">]+[">]', re.MULTILINE)
 
 # Preamble: stubs and forward declarations so stripped headers parse well enough
-# for DCLASS/DPROPERTY/DFUNCTION extraction. We tolerate unresolved-type errors.
+# for DCLASS/DSTRUCT/DPROPERTY/DFUNCTION extraction. We tolerate unresolved-type errors.
 _PREAMBLE = r"""
 // --- primitive typedefs (cstdint-style) ---
 typedef unsigned char      uint8_t;
@@ -59,11 +64,12 @@ namespace SimpleMath {
 struct Vector3 { float x, y, z; };
 struct Quaternion { float x, y, z, w; };
 }
+struct XMFLOAT4X4 { float m[4][4]; };
+struct XMFLOAT4 { float x, y, z, w; };
 struct XMMATRIX { float m[4][4]; };
 struct __declspec(align(16)) XMVECTOR { float f[4]; };
-typedef XMVECTOR XMFLOAT2;
-typedef XMVECTOR XMFLOAT3;
-typedef XMVECTOR XMFLOAT4;
+typedef XMFLOAT4 XMFLOAT2;
+typedef XMFLOAT4 XMFLOAT3;
 struct TexMetadata {};
 class ScratchImage {};
 }
@@ -90,6 +96,7 @@ template<typename T> class enable_shared_from_this {};
 namespace DeltaEngine {
 class DObject;
 class DClass;
+class DStruct;
 class GameObject;
 class DComponent;
 class SceneComponent;
@@ -119,9 +126,11 @@ struct Vertex { float x; };
 
 // --- Reflection macros (redefine to annotate form for libclang) ---
 #define DCLASS(...)
+#define DSTRUCT(...)
 #define DPROPERTY(...)
 #define DFUNCTION(...)
 #define DGENERATED_BODY(ClassName)
+#define DGENERATED_BODY_STRUCT(StructName)
 
 #define DELTA_ENGINE_NS_BEGIN  namespace DeltaEngine {
 #define DELTA_ENGINE_NS_END    }
@@ -188,6 +197,15 @@ class ClassInfo:
     base_name: str = ""
     properties: list[PropertyInfo] = field(default_factory=list)
     functions: list[FunctionInfo] = field(default_factory=list)
+    is_struct: bool = False
+    is_abstract: bool = False
+
+
+@dataclass
+class ForwardDeclInfo:
+    kind: str           # "class", "struct", "template_class"
+    name: str
+    namespaces: tuple[str, ...]  # ("DeltaEngine",) or () for global
 
 
 @dataclass
@@ -195,7 +213,7 @@ class ParseResult:
     """Result of parsing one header: reflected classes plus file-level data."""
     classes: list[ClassInfo]
     source_includes: list[str]
-    forward_decls: list[tuple[str, str]]  # (kind, name) with kind in ("class", "struct", "template_class")
+    forward_decls: list[ForwardDeclInfo]
 
 
 # ── source includes and forward decls ────────────────────────
@@ -223,16 +241,30 @@ def _is_anonymous_or_invalid(spelling: str) -> bool:
     """Return True if the type spelling should not be forward-declared."""
     if not spelling or not spelling.strip():
         return True
-    if spelling.strip().startswith("(anonymous)"):
+    s = spelling.strip()
+    if s.startswith("(anonymous") or s.startswith("(unnamed"):
         return True
     return False
 
 
-def _collect_forward_decls(tu, file_str: str, source_line_start: int) -> list[tuple[str, str]]:
-    """Walk AST and collect (kind, name) for every class/struct/class_template declared in the source file.
-    Includes both definitions and forward declarations (e.g. 'class GameObject;').
+def _get_namespace_chain(cursor) -> tuple[str, ...]:
+    """Walk semantic parents to build the namespace chain for a cursor."""
+    namespaces: list[str] = []
+    parent = cursor.semantic_parent
+    while parent and parent.kind != ci.CursorKind.TRANSLATION_UNIT:
+        if parent.kind == ci.CursorKind.NAMESPACE:
+            namespaces.append(parent.spelling)
+        parent = parent.semantic_parent
+    namespaces.reverse()
+    return tuple(namespaces)
+
+
+def _collect_forward_decls(tu, file_str: str, source_line_start: int) -> list[ForwardDeclInfo]:
+    """Walk AST and collect forward declaration info for every class/struct/class_template
+    declared in the source file, including their namespace chain.
     Cursors at line <= source_line_start are from the preamble and are excluded."""
-    decls: list[tuple[str, str]] = []
+    seen: set[tuple[str, str, tuple[str, ...]]] = set()
+    decls: list[ForwardDeclInfo] = []
     for cursor in tu.cursor.walk_preorder():
         if cursor.location.file is None:
             continue
@@ -252,8 +284,12 @@ def _collect_forward_decls(tu, file_str: str, source_line_start: int) -> list[tu
         spelling = cursor.spelling or ""
         if _is_anonymous_or_invalid(spelling):
             continue
-        decls.append((kind, spelling))
-    return list(dict.fromkeys(decls))
+        ns_chain = _get_namespace_chain(cursor)
+        key = (kind, spelling, ns_chain)
+        if key not in seen:
+            seen.add(key)
+            decls.append(ForwardDeclInfo(kind=kind, name=spelling, namespaces=ns_chain))
+    return decls
 
 
 # ── token-based macro detection ──────────────────────────────
@@ -278,6 +314,45 @@ def _is_annotated(tu, cursor, macro_name):
     return False
 
 
+def _extract_macro_args(tu, cursor, macro_name) -> str | None:
+    """Extract the argument string from a macro invocation like DCLASS(abstract).
+    Returns the text between parentheses, or None if not found."""
+    tokens = _get_tokens_before_cursor(tu, cursor)
+    for i, tok in enumerate(reversed(tokens)):
+        if tok.spelling == macro_name:
+            # Collect tokens forward from macro position to find (...)
+            macro_idx = len(tokens) - 1 - i
+            if macro_idx + 1 < len(tokens) and tokens[macro_idx + 1].spelling == "(":
+                depth = 0
+                arg_tokens = []
+                for t in tokens[macro_idx + 1:]:
+                    if t.spelling == "(":
+                        depth += 1
+                        if depth > 1:
+                            arg_tokens.append(t.spelling)
+                    elif t.spelling == ")":
+                        depth -= 1
+                        if depth == 0:
+                            return "".join(arg_tokens).strip()
+                        arg_tokens.append(t.spelling)
+                    else:
+                        arg_tokens.append(t.spelling)
+            return ""
+        if i > 10:
+            break
+    return None
+
+
+def _collect_dfunction_lines(tu, class_cursor) -> list[int]:
+    """Collect line numbers of all DFUNCTION tokens within the class body."""
+    tokens = list(tu.get_tokens(extent=class_cursor.extent))
+    lines: list[int] = []
+    for tok in tokens:
+        if tok.spelling == "DFUNCTION":
+            lines.append(tok.location.line)
+    return lines
+
+
 # ── AST walking ──────────────────────────────────────────────
 
 
@@ -296,6 +371,10 @@ def _parse_function(tu, method_cursor, class_name):
             ret_prop_class = ""
 
     params: list[ParamInfo] = []
+    expected_param_count = sum(
+        1 for child in method_cursor.get_children()
+        if child.kind == ci.CursorKind.PARM_DECL
+    )
     for child in method_cursor.get_children():
         if child.kind == ci.CursorKind.PARM_DECL:
             p_resolved = resolve_type(child.type, child.spelling, class_name)
@@ -307,6 +386,9 @@ def _parse_function(tu, method_cursor, class_name):
                 property_class=p_resolved[0],
             ))
 
+    if len(params) != expected_param_count:
+        return None
+
     return FunctionInfo(
         name=method_cursor.spelling,
         return_type=ret_emission if not is_void else "void",
@@ -315,13 +397,19 @@ def _parse_function(tu, method_cursor, class_name):
     )
 
 
-def _parse_class(tu, class_cursor, source_file, include_path):
+def _parse_class(tu, class_cursor, source_file, include_path, *, is_struct=False, is_abstract=False):
     class_name = class_cursor.spelling
     info = ClassInfo(
         name=class_name,
         source_file=source_file,
         include_path=include_path,
+        is_struct=is_struct,
+        is_abstract=is_abstract,
     )
+
+    # Pre-collect DFUNCTION macro line numbers for scope-correct matching
+    dfunction_lines = _collect_dfunction_lines(tu, class_cursor)
+    consumed_dfunction_lines: set[int] = set()
 
     for child in class_cursor.get_children():
         if child.kind == ci.CursorKind.CXX_BASE_SPECIFIER and not info.base_name:
@@ -347,9 +435,25 @@ def _parse_class(tu, class_cursor, source_file, include_path):
             ))
 
         elif child.kind == ci.CursorKind.CXX_METHOD:
-            if not _is_annotated(tu, child, "DFUNCTION"):
+            if is_struct:
                 continue
+
+            method_line = child.location.line
+            matched = False
+            for dl in dfunction_lines:
+                if dl in consumed_dfunction_lines:
+                    continue
+                if dl < method_line:
+                    matched = True
+                    consumed_dfunction_lines.add(dl)
+                    break
+
+            if not matched:
+                continue
+
             fn = _parse_function(tu, child, class_name)
+            if fn is None:
+                continue
             same_name_count = sum(1 for f in info.functions if f.name == fn.name)
             fn.overload_index = same_name_count + 1
             info.functions.append(fn)
@@ -414,10 +518,26 @@ def parse_header(
             continue
         if not cursor.is_definition():
             continue
-        if not _is_annotated(tu, cursor, "DCLASS"):
+
+        is_dclass = _is_annotated(tu, cursor, "DCLASS")
+        is_dstruct = _is_annotated(tu, cursor, "DSTRUCT")
+
+        if not is_dclass and not is_dstruct:
             continue
 
-        results.append(_parse_class(tu, cursor, file_path, include_path))
+        is_abstract = False
+        if is_dclass:
+            macro_args = _extract_macro_args(tu, cursor, "DCLASS")
+            if macro_args and "abstract" in macro_args:
+                is_abstract = True
+            if not is_abstract:
+                is_abstract = cursor.is_abstract_record()
+
+        results.append(_parse_class(
+            tu, cursor, file_path, include_path,
+            is_struct=is_dstruct,
+            is_abstract=is_abstract,
+        ))
 
     return ParseResult(
         classes=results,
