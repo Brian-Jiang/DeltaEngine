@@ -26,7 +26,6 @@ public:
 	DELTAENGINE_API GameObject(const std::string& name);
 	DELTAENGINE_API ~GameObject();
 
-	DFUNCTION()
 	template <typename T> requires IsDComponent<T>
 	std::shared_ptr<T> AddComponent(std::string name = "New Component")
     {
@@ -35,11 +34,11 @@ public:
         return component;
 	}
 
-	DFUNCTION()
 	template <typename T> requires IsSceneComponent<T>
     std::shared_ptr<T> AddSceneComponent(std::string name = "New Scene Component")
     {
         std::shared_ptr<T> sceneComponent = std::make_shared<T>(name, shared_from_this());
+        //std::shared_ptr<T> sceneComponent = CreateDObject<T>();
         m_sceneComponents.push_back(sceneComponent);
         if (m_rootSceneComponent.expired())
         {
@@ -73,7 +72,6 @@ public:
     DFUNCTION()
     inline const std::vector<std::shared_ptr<DComponent>>& GetComponents() const { return m_components; }
 
-    DFUNCTION()
     template <typename T> requires IsSceneComponent<T>
     inline std::shared_ptr<T> GetRootSceneComponent() const
     {

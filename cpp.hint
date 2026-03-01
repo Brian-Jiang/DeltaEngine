@@ -8,3 +8,6 @@
 #define DGENERATED_BODY(ClassName) friend class DeltaEngine::Reflection::Private::ReflectionRegister_##ClassName;
 #define DFUNCTION(__VA_ARGS__)
 #define DPROPERTY(__VA_ARGS__)
+#define DELTAENGINE_API __declspec(dllexport)
+#define DELTAENGINE_API __declspec(dllimport)
+#define DELTAENGINE_API __attribute__((visibility("default")))

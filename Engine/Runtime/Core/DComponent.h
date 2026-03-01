@@ -35,9 +35,6 @@ public:
 private:
     std::weak_ptr<GameObject> m_gameObject;
 
-    //DPROPERTY()
-    //GameObject* m_gameObjectRawPtr;
-
     DPROPERTY()
     std::string m_name;
 };

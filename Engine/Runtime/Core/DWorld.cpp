@@ -18,7 +18,8 @@ DeltaEngine::DWorld::DWorld()
 
 std::shared_ptr<GameObject> DWorld::CreateGameObject(const std::string& name)
 {
-    std::shared_ptr<GameObject> gameObject = std::make_shared<GameObject>(name);
+    std::shared_ptr<GameObject> gameObject = std::shared_ptr<GameObject>(CreateDObject<GameObject>());
+    gameObject->m_name = name;
     gameObject->m_currentWorld = shared_from_this();
     m_gameObjects.push_back(gameObject);
     m_gameObjectsChanged = true;
