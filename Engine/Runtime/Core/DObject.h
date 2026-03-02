@@ -16,7 +16,7 @@ class DObject
 
 public:
     DELTAENGINE_API DObject();
-    DELTAENGINE_API ~DObject();
+    DELTAENGINE_API virtual ~DObject();
 
 };
 
