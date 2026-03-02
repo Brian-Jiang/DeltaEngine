@@ -46,9 +46,9 @@ public:
     DELTAENGINE_API void Clear();
 
     DFUNCTION()
-    const std::vector<std::shared_ptr<GameObject>>& GetGameObjects() const;
+    DELTAENGINE_API const std::vector<std::shared_ptr<GameObject>>& GetGameObjects() const;
     DFUNCTION()
-    bool IsGameObjectsChanged() const;
+    DELTAENGINE_API bool IsGameObjectsChanged() const;
 
     DFUNCTION()
     DELTAENGINE_API static std::shared_ptr<DWorld> CreateWorld();

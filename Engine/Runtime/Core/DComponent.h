@@ -33,10 +33,10 @@ public:
 
 public:
     DFUNCTION()
-    std::shared_ptr<GameObject> GetGameObject() const;
+    DELTAENGINE_API std::shared_ptr<GameObject> GetGameObject() const;
 
     DFUNCTION()
-    const std::string& GetName() const;
+    DELTAENGINE_API const std::string& GetName() const;
 
 private:
     std::weak_ptr<GameObject> m_gameObject;

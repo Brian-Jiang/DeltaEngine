@@ -71,19 +71,19 @@ public:
     DELTAENGINE_API void Destroy();
 
     DFUNCTION()
-    const std::string& GetName() const;
+    DELTAENGINE_API const std::string& GetName() const;
 
     DFUNCTION()
-    std::shared_ptr<DWorld> GetCurrentWorld() const;
+    DELTAENGINE_API std::shared_ptr<DWorld> GetCurrentWorld() const;
     DFUNCTION()
-    std::shared_ptr<SceneComponent> GetRootSceneComponent() const;
+    DELTAENGINE_API std::shared_ptr<SceneComponent> GetRootSceneComponent() const;
     DFUNCTION()
-    const std::vector<std::shared_ptr<SceneComponent>>& GetSceneComponents() const;
+    DELTAENGINE_API const std::vector<std::shared_ptr<SceneComponent>>& GetSceneComponents() const;
     DFUNCTION()
-    const std::vector<std::shared_ptr<DComponent>>& GetComponents() const;
+    DELTAENGINE_API const std::vector<std::shared_ptr<DComponent>>& GetComponents() const;
 
     template <typename T> requires IsSceneComponent<T>
-    inline std::shared_ptr<T> GetRootSceneComponent() const
+    DELTAENGINE_API inline std::shared_ptr<T> GetRootSceneComponent() const
     {
         return std::static_pointer_cast<T>(m_rootSceneComponent.lock()); 
     }
