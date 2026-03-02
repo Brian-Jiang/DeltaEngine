@@ -12,7 +12,7 @@ using namespace DeltaEngine;
 
 DeltaEngine::DWorld::DWorld()
 {
-    std::shared_ptr<SceneComponent> sceneComponent = std::make_shared<SceneComponent>();
+    std::shared_ptr<SceneComponent> sceneComponent = std::shared_ptr<SceneComponent>(CreateDObject<SceneComponent>());
     m_rootSceneComponent = sceneComponent;
 }
 
@@ -124,8 +124,14 @@ void DeltaEngine::DWorld::Clear()
     m_gameObjects.clear();
 }
 
+std::shared_ptr<SceneComponent> DeltaEngine::DWorld::GetRootSceneComponent() const { return m_rootSceneComponent; }
+
+const std::vector<std::shared_ptr<GameObject>>& DeltaEngine::DWorld::GetGameObjects() const { return m_gameObjects; }
+
+bool DeltaEngine::DWorld::IsGameObjectsChanged() const { return m_gameObjectsChanged; }
+
 std::shared_ptr<DWorld> DeltaEngine::DWorld::CreateWorld()
 {
-    std::shared_ptr<DWorld> world = std::make_shared<DWorld>();
+    std::shared_ptr<DWorld> world = std::shared_ptr<DWorld>(CreateDObject<DWorld>());
     return world;
 }

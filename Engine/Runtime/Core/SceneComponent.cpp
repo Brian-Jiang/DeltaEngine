@@ -230,6 +230,12 @@ DirectX::SimpleMath::Vector3 DeltaEngine::SceneComponent::GetForward() const
     return m_worldTransform.r[2];
 }
 
+XMMATRIX DeltaEngine::SceneComponent::GetWorldTransform() const { return m_worldTransform; }
+
+std::shared_ptr<SceneComponent> DeltaEngine::SceneComponent::GetParent() const { return m_parent.lock(); }
+
+const std::vector<std::shared_ptr<SceneComponent>>& DeltaEngine::SceneComponent::GetChildren() const { return m_children; }
+
 void DeltaEngine::SceneComponent::SetParent(std::shared_ptr<SceneComponent> parent)
 {
     m_parent = parent;

@@ -65,7 +65,10 @@ void DeltaEngine::DTexture::LoadTexture()
 }
 
 
+std::wstring DeltaEngine::DTexture::GetSourcePath() const { return m_sourcePath; }
+
 std::shared_ptr<DTexture> DTexture::LoadFromFile(const std::wstring& filePath, bool sRGB)
 {
+    // TODO: Cannot use CreateDObject here — parameterized constructor
     return std::make_shared<DTexture>(filePath, sRGB);
 }

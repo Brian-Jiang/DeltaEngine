@@ -12,8 +12,12 @@ TYPE_MAP = {
     "double":                             "DDoubleProperty",
     "std::string":                        "DStringProperty",
     "std::basic_string<char>":            "DStringProperty",
+    "std::basic_string<char, std::char_traits<char>>": "DStringProperty",
+    "std::basic_string<char, std::char_traits<char>, std::allocator<char>>": "DStringProperty",
     "std::wstring":                       "DWStringProperty",
     "std::basic_string<wchar_t>":         "DWStringProperty",
+    "std::basic_string<wchar_t, std::char_traits<wchar_t>>": "DWStringProperty",
+    "std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t>>": "DWStringProperty",
     "DirectX::SimpleMath::Vector3":       "DVector3Property",
     "DirectX::SimpleMath::Quaternion":    "DQuaternionProperty",
     "DirectX::XMMATRIX":                  "DFloat4x4Property",
@@ -23,13 +27,15 @@ TYPE_MAP = {
 _SHARED_PTR_RE = re.compile(r"^std::shared_ptr<(.+)>$")
 
 
-def resolve_type(cursor_type, field_name="", class_name=""):
+def resolve_type(cursor_type, field_name="", class_name="", *,
+                  diag=None, source_file="", line=0):
     """Resolve a clang Type to (property_class, is_object_ptr, pointee_type).
 
     Returns None if the type is unrecognized.
     """
     if cursor_type.kind == TypeKind.LVALUEREFERENCE:
-        return resolve_type(cursor_type.get_pointee(), field_name, class_name)
+        return resolve_type(cursor_type.get_pointee(), field_name, class_name,
+                            diag=diag, source_file=source_file, line=line)
 
     if cursor_type.kind == TypeKind.POINTER:
         pointee = cursor_type.get_pointee()
@@ -57,11 +63,16 @@ def resolve_type(cursor_type, field_name="", class_name=""):
         inner = _strip_namespaces(m.group(1))
         return (f"DSharedObjectPtrProperty<{inner}>", True, inner)
 
-    print(
-        f"WARNING: unknown type '{spelling}' for property "
-        f"'{field_name}' in '{class_name}' — skipping",
-        file=sys.stderr,
-    )
+    if diag:
+        diag.warn(source_file, line,
+                  f"No corresponding property type found for '{spelling}' "
+                  f"on property '{field_name}'")
+    else:
+        print(
+            f"WARNING: unknown type '{spelling}' for property "
+            f"'{field_name}' in '{class_name}' — skipping",
+            file=sys.stderr,
+        )
     return None
 
 

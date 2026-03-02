@@ -42,7 +42,7 @@ public:
     inline std::shared_ptr<DirectX::ScratchImage> GetScratchImage() const { return m_scratchImage; }
 
     DFUNCTION()
-    inline std::wstring GetSourcePath() const { return m_sourcePath; }
+    DELTAENGINE_API std::wstring GetSourcePath() const;
 
 private:
     void LoadTexture();

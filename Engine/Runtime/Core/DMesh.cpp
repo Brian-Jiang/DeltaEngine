@@ -289,6 +289,8 @@ std::vector<std::shared_ptr<DTexture>> DMesh::LoadMaterialTextures(const aiScene
     return textures;
 }
 
+void DMesh::SetMaterials(std::vector<std::shared_ptr<DMaterial>>& materials) { m_materials = materials; }
+
 std::shared_ptr<DMaterial> DMesh::GetMaterial(int index) const
 {
     if (index < 0 || index >= m_materials.size())
@@ -298,3 +300,13 @@ std::shared_ptr<DMaterial> DMesh::GetMaterial(int index) const
 
     return m_materials[index];
 }
+
+const std::vector<std::vector<Vertex>>& DMesh::GetVertices() const { return m_vertices; }
+
+const std::vector<std::vector<unsigned int>>& DMesh::GetIndices() const { return m_indices; }
+
+const std::vector<std::shared_ptr<DMaterial>>& DMesh::GetMaterials() const { return m_materials; }
+
+const std::vector<std::shared_ptr<DTexture>>& DMesh::GetTextures() const { return m_textures; }
+
+int DMesh::GetSubMeshCount() const { return static_cast<int>(m_vertices.size()); }

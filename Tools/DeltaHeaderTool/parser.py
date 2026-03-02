@@ -8,9 +8,15 @@ from pathlib import Path
 import clang.cindex as ci
 
 from type_resolver import resolve_type
+from diagnostics import DiagnosticCollector
 
 # Use canonical (underlying) type for emission when type is a typedef/using alias
 # so param struct and thunk use e.g. __m128 instead of DirectX::XMVECTOR.
+_BASIC_STRING_NORMALIZE = [
+    (re.compile(r"std::basic_string<char(?:,\s*std::char_traits<char>(?:,\s*std::allocator<char>)?)?>"), "std::string"),
+    (re.compile(r"std::basic_string<wchar_t(?:,\s*std::char_traits<wchar_t>(?:,\s*std::allocator<wchar_t>)?)?>"), "std::wstring"),
+]
+
 def _type_spelling_for_emission(clang_type) -> str:
     """Return type spelling to emit in param struct and thunk.
     Strips references, const qualifiers, and typedef/alias to produce a value type."""
@@ -22,6 +28,8 @@ def _type_spelling_for_emission(clang_type) -> str:
     spelling = t.spelling
     if spelling.startswith("const "):
         spelling = spelling[6:]
+    for pattern, replacement in _BASIC_STRING_NORMALIZE:
+        spelling = pattern.sub(replacement, spelling)
     return spelling
 
 TOOL_DIR = Path(__file__).resolve().parent
@@ -214,6 +222,7 @@ class ParseResult:
     classes: list[ClassInfo]
     source_includes: list[str]
     forward_decls: list[ForwardDeclInfo]
+    diagnostics: DiagnosticCollector = field(default_factory=DiagnosticCollector)
 
 
 # ── source includes and forward decls ────────────────────────
@@ -356,7 +365,7 @@ def _collect_dfunction_lines(tu, class_cursor) -> list[int]:
 # ── AST walking ──────────────────────────────────────────────
 
 
-def _parse_function(tu, method_cursor, class_name):
+def _parse_function(tu, method_cursor, class_name, diag=None, source_file=""):
     ret_type = method_cursor.result_type
     ret_spelling = ret_type.spelling
     is_void = ret_spelling == "void"
@@ -364,7 +373,9 @@ def _parse_function(tu, method_cursor, class_name):
 
     ret_prop_class = ""
     if not is_void:
-        resolved = resolve_type(ret_type, "returnValue", class_name)
+        resolved = resolve_type(ret_type, "returnValue", class_name,
+                                diag=diag, source_file=source_file,
+                                line=method_cursor.location.line - _PREAMBLE_LINE_COUNT)
         if resolved:
             ret_prop_class = resolved[0]
         else:
@@ -377,7 +388,9 @@ def _parse_function(tu, method_cursor, class_name):
     )
     for child in method_cursor.get_children():
         if child.kind == ci.CursorKind.PARM_DECL:
-            p_resolved = resolve_type(child.type, child.spelling, class_name)
+            p_resolved = resolve_type(child.type, child.spelling, class_name,
+                                      diag=diag, source_file=source_file,
+                                      line=child.location.line - _PREAMBLE_LINE_COUNT)
             if p_resolved is None:
                 continue
             params.append(ParamInfo(
@@ -397,8 +410,10 @@ def _parse_function(tu, method_cursor, class_name):
     )
 
 
-def _parse_class(tu, class_cursor, source_file, include_path, *, is_struct=False, is_abstract=False):
+def _parse_class(tu, class_cursor, source_file, include_path, *,
+                  is_struct=False, is_abstract=False, diag=None):
     class_name = class_cursor.spelling
+    file_name = str(source_file)
     info = ClassInfo(
         name=class_name,
         source_file=source_file,
@@ -413,13 +428,29 @@ def _parse_class(tu, class_cursor, source_file, include_path, *, is_struct=False
 
     for child in class_cursor.get_children():
         if child.kind == ci.CursorKind.CXX_BASE_SPECIFIER and not info.base_name:
-            info.base_name = child.spelling
+            if "enable_shared_from_this" not in child.spelling:
+                info.base_name = child.spelling
             continue
+
+        # Warn on non-default constructors
+        if child.kind == ci.CursorKind.CONSTRUCTOR and diag:
+            param_count = sum(
+                1 for c in child.get_children()
+                if c.kind == ci.CursorKind.PARM_DECL
+            )
+            if param_count > 0:
+                src_line = child.location.line - _PREAMBLE_LINE_COUNT
+                diag.warn(file_name, src_line,
+                          f"DCLASS '{class_name}' has non-default constructor "
+                          f"'{child.displayname}' — CreateDObject only calls "
+                          f"the default constructor")
 
         if child.kind == ci.CursorKind.FIELD_DECL:
             if not _is_annotated(tu, child, "DPROPERTY"):
                 continue
-            resolved = resolve_type(child.type, child.spelling, class_name)
+            resolved = resolve_type(child.type, child.spelling, class_name,
+                                    diag=diag, source_file=file_name,
+                                    line=child.location.line - _PREAMBLE_LINE_COUNT)
             if resolved is None:
                 continue
             prop_class, is_obj_ptr, pointee = resolved
@@ -433,6 +464,22 @@ def _parse_class(tu, class_cursor, source_file, include_path, *, is_struct=False
                 is_object_ptr=is_obj_ptr,
                 pointee_type=pointee,
             ))
+
+        elif child.kind == ci.CursorKind.FUNCTION_TEMPLATE:
+            # Check if a DFUNCTION annotation precedes this template method
+            method_line = child.location.line
+            for dl in dfunction_lines:
+                if dl in consumed_dfunction_lines:
+                    continue
+                if dl < method_line:
+                    consumed_dfunction_lines.add(dl)
+                    if diag:
+                        src_line = method_line - _PREAMBLE_LINE_COUNT
+                        diag.warn(file_name, src_line,
+                                  f"DFUNCTION() on template function "
+                                  f"'{child.spelling}' is not supported "
+                                  f"and will be ignored")
+                    break
 
         elif child.kind == ci.CursorKind.CXX_METHOD:
             if is_struct:
@@ -451,7 +498,15 @@ def _parse_class(tu, class_cursor, source_file, include_path, *, is_struct=False
             if not matched:
                 continue
 
-            fn = _parse_function(tu, child, class_name)
+            # Warn if the DFUNCTION is defined inline in the header
+            if child.is_definition() and diag:
+                src_line = method_line - _PREAMBLE_LINE_COUNT
+                diag.warn(file_name, src_line,
+                          f"DFUNCTION() '{child.spelling}' is inline "
+                          f"— move definition to .cpp")
+
+            fn = _parse_function(tu, child, class_name,
+                                 diag=diag, source_file=file_name)
             if fn is None:
                 continue
             same_name_count = sum(1 for f in info.functions if f.name == fn.name)
@@ -470,6 +525,8 @@ def parse_header(
     extra_include_dirs: list[Path] | None = None,
 ) -> ParseResult:
     _ensure_configured()
+
+    diag = DiagnosticCollector()
 
     file_path = file_path.resolve()
     input_dir = input_dir.resolve()
@@ -537,10 +594,12 @@ def parse_header(
             tu, cursor, file_path, include_path,
             is_struct=is_dstruct,
             is_abstract=is_abstract,
+            diag=diag,
         ))
 
     return ParseResult(
         classes=results,
         source_includes=source_includes,
         forward_decls=forward_decls,
+        diagnostics=diag,
     )

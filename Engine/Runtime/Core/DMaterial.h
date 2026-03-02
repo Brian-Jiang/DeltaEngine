@@ -44,11 +44,11 @@ public:
     std::shared_ptr<DTexture> GetTexture(int index) const;
 
     DFUNCTION()
-    inline std::shared_ptr<DShader> GetShader() const { return m_shader; }
+    DELTAENGINE_API std::shared_ptr<DShader> GetShader() const;
     DFUNCTION()
-    inline CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC GetBlendState() const { return m_blendDesc; }
+    DELTAENGINE_API CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC GetBlendState() const;
     DFUNCTION()
-    inline CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL GetDepthStencilState() const { return m_depthStencilState; }
+    DELTAENGINE_API CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL GetDepthStencilState() const;
 
 private:
     DPROPERTY()

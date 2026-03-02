@@ -27,10 +27,10 @@ public:
 
 public:
     DFUNCTION()
-    inline std::shared_ptr<GameObject> GetGameObject() const { return m_gameObject.lock(); }
+    DELTAENGINE_API std::shared_ptr<GameObject> GetGameObject() const;
 
     DFUNCTION()
-    inline const std::string& GetName() const { return m_name; }
+    DELTAENGINE_API const std::string& GetName() const;
 
 private:
     std::weak_ptr<GameObject> m_gameObject;

@@ -33,7 +33,7 @@ public:
     DELTAENGINE_API DirectX::SimpleMath::Vector3 GetWorldPosition() const;
     /// World transform matrix for rendering (model matrix). Updated when hierarchy changes.
     DFUNCTION()
-    inline DirectX::XMMATRIX GetWorldTransform() const { return m_worldTransform; }
+    DELTAENGINE_API DirectX::XMMATRIX GetWorldTransform() const;
     DFUNCTION()
     DELTAENGINE_API void SetLocalPosition(DirectX::SimpleMath::Vector3 position);
     DFUNCTION()
@@ -81,9 +81,9 @@ public:
     DELTAENGINE_API DirectX::SimpleMath::Vector3 GetForward() const;
     
     DFUNCTION()
-    DELTAENGINE_API std::shared_ptr<SceneComponent> GetParent() const { return m_parent.lock(); }
+    DELTAENGINE_API std::shared_ptr<SceneComponent> GetParent() const;
     DFUNCTION()
-    DELTAENGINE_API const std::vector<std::shared_ptr<SceneComponent>>& GetChildren() const { return m_children; }
+    DELTAENGINE_API const std::vector<std::shared_ptr<SceneComponent>>& GetChildren() const;
     DFUNCTION()
     DELTAENGINE_API void SetParent(std::shared_ptr<SceneComponent> parent);
 

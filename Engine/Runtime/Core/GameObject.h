@@ -29,6 +29,7 @@ public:
 	template <typename T> requires IsDComponent<T>
 	std::shared_ptr<T> AddComponent(std::string name = "New Component")
     {
+        // TODO: Cannot use CreateDObject here — template factory with parameterized constructor
         std::shared_ptr<T> component = std::make_shared<T>(name, shared_from_this());
         m_components.push_back(component);
         return component;
@@ -37,6 +38,7 @@ public:
 	template <typename T> requires IsSceneComponent<T>
     std::shared_ptr<T> AddSceneComponent(std::string name = "New Scene Component")
     {
+        // TODO: Cannot use CreateDObject here — template factory with parameterized constructor
         std::shared_ptr<T> sceneComponent = std::make_shared<T>(name, shared_from_this());
         //std::shared_ptr<T> sceneComponent = CreateDObject<T>();
         m_sceneComponents.push_back(sceneComponent);
@@ -61,16 +63,16 @@ public:
     DELTAENGINE_API void Destroy();
 
     DFUNCTION()
-    const std::string& GetName() const { return m_name; }
+    DELTAENGINE_API const std::string& GetName() const;
 
     DFUNCTION()
-    inline std::shared_ptr<DWorld> GetCurrentWorld() const { return m_currentWorld; }
+    DELTAENGINE_API std::shared_ptr<DWorld> GetCurrentWorld() const;
     DFUNCTION()
-    inline std::shared_ptr<SceneComponent> GetRootSceneComponent() const { return m_rootSceneComponent.lock(); }
+    DELTAENGINE_API std::shared_ptr<SceneComponent> GetRootSceneComponent() const;
     DFUNCTION()
-    inline const std::vector<std::shared_ptr<SceneComponent>>& GetSceneComponents() const { return m_sceneComponents; }
+    DELTAENGINE_API const std::vector<std::shared_ptr<SceneComponent>>& GetSceneComponents() const;
     DFUNCTION()
-    inline const std::vector<std::shared_ptr<DComponent>>& GetComponents() const { return m_components; }
+    DELTAENGINE_API const std::vector<std::shared_ptr<DComponent>>& GetComponents() const;
 
     template <typename T> requires IsSceneComponent<T>
     DELTAENGINE_API inline std::shared_ptr<T> GetRootSceneComponent() const
