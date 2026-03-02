@@ -13,18 +13,18 @@ using namespace DeltaEngine;
 
 DMesh::DMesh() { }
 
-DMesh::DMesh(std::wstring sourcePath)
-    : m_sourcePath(sourcePath)
-{
-    ImportMesh();
-}
-
-DMesh::DMesh(std::wstring sourcePath, std::shared_ptr<DMaterial> material)
-    : m_sourcePath(sourcePath)
-    //, m_material(material)
-{
-    ImportMesh();
-}
+//DMesh::DMesh(std::wstring sourcePath)
+//    : m_sourcePath(sourcePath)
+//{
+//    ImportMesh();
+//}
+//
+//DMesh::DMesh(std::wstring sourcePath, std::shared_ptr<DMaterial> material)
+//    : m_sourcePath(sourcePath)
+//    //, m_material(material)
+//{
+//    ImportMesh();
+//}
 
 //DMesh::DMesh(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices,
 //    std::shared_ptr<DMaterial>& material)
@@ -287,6 +287,12 @@ std::vector<std::shared_ptr<DTexture>> DMesh::LoadMaterialTextures(const aiScene
     }
 
     return textures;
+}
+
+void DMesh::Initialize(std::wstring sourcePath)
+{
+    m_sourcePath = sourcePath;
+    ImportMesh();
 }
 
 void DMesh::SetMaterials(std::vector<std::shared_ptr<DMaterial>>& materials) { m_materials = materials; }

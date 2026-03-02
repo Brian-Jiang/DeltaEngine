@@ -29,8 +29,8 @@ class MeshRenderer: public Renderer
 
 public:
     MeshRenderer();
-    MeshRenderer(std::string name);
-    MeshRenderer(std::string name, std::shared_ptr<GameObject> gameObject);
+    //MeshRenderer(std::string name);
+    //MeshRenderer(std::string name, std::shared_ptr<GameObject> gameObject);
     ~MeshRenderer();
 
     DFUNCTION()

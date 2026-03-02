@@ -23,14 +23,15 @@ class GameObject: public DObject, public std::enable_shared_from_this<GameObject
 
 public:
 	DELTAENGINE_API GameObject();
-	DELTAENGINE_API GameObject(const std::string& name);
+	//DELTAENGINE_API GameObject(const std::string& name);
 	DELTAENGINE_API ~GameObject();
 
 	template <typename T> requires IsDComponent<T>
 	std::shared_ptr<T> AddComponent(std::string name = "New Component")
     {
-        // TODO: Cannot use CreateDObject here — template factory with parameterized constructor
-        std::shared_ptr<T> component = std::make_shared<T>(name, shared_from_this());
+        std::shared_ptr<T> component = std::shared_ptr<T>(CreateDObject<T>());
+        component->RegisterComponent(shared_from_this());
+        component->SetName(name);
         m_components.push_back(component);
         return component;
 	}
@@ -38,9 +39,9 @@ public:
 	template <typename T> requires IsSceneComponent<T>
     std::shared_ptr<T> AddSceneComponent(std::string name = "New Scene Component")
     {
-        // TODO: Cannot use CreateDObject here — template factory with parameterized constructor
-        std::shared_ptr<T> sceneComponent = std::make_shared<T>(name, shared_from_this());
-        //std::shared_ptr<T> sceneComponent = CreateDObject<T>();
+        std::shared_ptr<T> sceneComponent = std::shared_ptr<T>(CreateDObject<T>());  // alignment issue
+        sceneComponent->RegisterComponent(shared_from_this());
+        sceneComponent->SetName(name);
         m_sceneComponents.push_back(sceneComponent);
         if (m_rootSceneComponent.expired())
         {

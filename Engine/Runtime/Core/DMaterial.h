@@ -25,10 +25,12 @@ class DMaterial : public DObject
 
 public:
     DMaterial();
-    DMaterial(std::shared_ptr<DShader> shader);
-    DMaterial(std::shared_ptr<DShader> shader, const CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC& blendDesc,
-        const CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL& depthStencilState);
+    //DMaterial(std::shared_ptr<DShader> shader);
+    //DMaterial(std::shared_ptr<DShader> shader, const CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC& blendDesc,
+    //    const CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL& depthStencilState);
     ~DMaterial();
+
+    void Initialize(std::shared_ptr<DShader> shader);
 
     DFUNCTION()
     void SetShader(std::shared_ptr<DShader> shader);
@@ -45,9 +47,8 @@ public:
 
     DFUNCTION()
     DELTAENGINE_API std::shared_ptr<DShader> GetShader() const;
-    DFUNCTION()
+
     DELTAENGINE_API CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC GetBlendState() const;
-    DFUNCTION()
     DELTAENGINE_API CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL GetDepthStencilState() const;
 
 private:

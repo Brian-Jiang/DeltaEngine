@@ -19,18 +19,27 @@ DeltaEngine::DTexture::DTexture()
     m_scratchImage = std::make_shared<ScratchImage>();
 }
 
-DTexture::DTexture(const std::wstring& filePath, bool sRGB)
-    : m_sourcePath(filePath)
-    , m_sRGB(sRGB)
-{
-    m_metadata = std::make_shared<TexMetadata>();
-    m_scratchImage = std::make_shared<ScratchImage>();
-    LoadTexture();
-}
+//DTexture::DTexture(const std::wstring& filePath, bool sRGB)
+//    : m_sourcePath(filePath)
+//    , m_sRGB(sRGB)
+//{
+//    m_metadata = std::make_shared<TexMetadata>();
+//    m_scratchImage = std::make_shared<ScratchImage>();
+//    LoadTexture();
+//}
 
 DeltaEngine::DTexture::~DTexture()
 {
     m_scratchImage.reset();
+}
+
+void DTexture::Initialize(const std::wstring& filePath, bool sRGB)
+{
+    m_sourcePath = filePath;
+    m_sRGB = sRGB;
+    m_metadata = std::make_shared<TexMetadata>();
+    m_scratchImage = std::make_shared<ScratchImage>();
+    LoadTexture();
 }
 
 UINT DeltaEngine::DTexture::GetWidth() const { return m_metadata->width; }
@@ -69,6 +78,7 @@ std::wstring DeltaEngine::DTexture::GetSourcePath() const { return m_sourcePath;
 
 std::shared_ptr<DTexture> DTexture::LoadFromFile(const std::wstring& filePath, bool sRGB)
 {
-    // TODO: Cannot use CreateDObject here — parameterized constructor
-    return std::make_shared<DTexture>(filePath, sRGB);
+    DTexture* texture = CreateDObject<DTexture>();
+    texture->Initialize(filePath, sRGB);
+    return std::shared_ptr<DTexture>(texture);
 }

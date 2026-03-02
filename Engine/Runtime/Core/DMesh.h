@@ -28,9 +28,11 @@ class DMesh : public DObject
 
 public:
     DMesh();
-    DMesh(std::wstring sourcePath);
-    DMesh(std::wstring sourcePath, std::shared_ptr<DMaterial> material);
+    //DMesh(std::wstring sourcePath);
+    //DMesh(std::wstring sourcePath, std::shared_ptr<DMaterial> material);
     //DMesh(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices, std::shared_ptr<DMaterial>& material);
+
+    void Initialize(std::wstring sourcePath);
 
     DFUNCTION()
     DELTAENGINE_API void SetMaterials(std::vector<std::shared_ptr<DMaterial>>& materials);
@@ -56,14 +58,11 @@ public:
     DELTAENGINE_API int GetSubMeshCount() const;
 
 private:
-    DPROPERTY()
     std::vector<std::vector<Vertex>> m_vertices;
-    DPROPERTY()
     std::vector<std::vector<unsigned int>> m_indices;
-    DPROPERTY()
     std::vector<std::shared_ptr<DMaterial>> m_materials;
-    DPROPERTY()
     std::vector<std::shared_ptr<DTexture>> m_textures;
+
     DPROPERTY()
     std::wstring m_sourcePath;
 };

@@ -9,23 +9,28 @@ DMaterial::DMaterial()
 {
 }
 
-DMaterial::DMaterial(std::shared_ptr<DShader> shader)
-    : m_shader(shader)
-    , m_blendDesc()
-    , m_depthStencilState()
-{
-}
-
-DMaterial::DMaterial(std::shared_ptr<DShader> shader, const CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC& blendDesc,
-                     const CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL& depthStencilState)
-    : m_shader(shader)
-    , m_blendDesc(blendDesc)
-    , m_depthStencilState(depthStencilState)
-{
-}
+//DMaterial::DMaterial(std::shared_ptr<DShader> shader)
+//    : m_shader(shader)
+//    , m_blendDesc()
+//    , m_depthStencilState()
+//{
+//}
+//
+//DMaterial::DMaterial(std::shared_ptr<DShader> shader, const CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC& blendDesc,
+//                     const CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL& depthStencilState)
+//    : m_shader(shader)
+//    , m_blendDesc(blendDesc)
+//    , m_depthStencilState(depthStencilState)
+//{
+//}
 
 DMaterial::~DMaterial()
 {
+}
+
+void DMaterial::Initialize(std::shared_ptr<DShader> shader)
+{
+    m_shader = shader;
 }
 
 void DMaterial::SetShader(std::shared_ptr<DShader> shader)

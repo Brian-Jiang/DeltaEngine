@@ -36,7 +36,7 @@ EditorMain::EditorMain()
     g_editor = this;
     SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
-    if (SDL_Init(SDL_INIT_VIDEO) < 0)
+    if (!SDL_Init(SDL_INIT_VIDEO))
     {
         printf("Couldn't initialize SDL: %s\n", SDL_GetError());
         m_exitCode = 1;

@@ -10,10 +10,10 @@ GameObject::GameObject()
 	//AddComponent<Transform>();
 }
 
-DeltaEngine::GameObject::GameObject(const std::string& name)
-    : m_name(name)
-{
-}
+//DeltaEngine::GameObject::GameObject(const std::string& name)
+//    : m_name(name)
+//{
+//}
 
 GameObject::~GameObject()
 {

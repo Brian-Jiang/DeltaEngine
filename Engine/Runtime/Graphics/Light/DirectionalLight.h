@@ -19,8 +19,8 @@ class DirectionalLight : public LightComponent
 
 public:
     DirectionalLight();
-    DirectionalLight(std::string name);
-    DirectionalLight(std::string name, std::shared_ptr<GameObject> gameObject);
+    //DirectionalLight(std::string name);
+    //DirectionalLight(std::string name, std::shared_ptr<GameObject> gameObject);
     ~DirectionalLight();
 
     DFUNCTION()

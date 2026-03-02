@@ -48,8 +48,9 @@ void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std:
         std::shared_ptr<GameObject> go = m_world->CreateGameObject("MeshRenderer");
         std::shared_ptr<MeshRenderer> meshRenderer = go->AddSceneComponent<MeshRenderer>();
         meshRenderer->SetLocalPosition(2.0f, 0.0f, 5.0f);
-        // TODO: Cannot use CreateDObject here — parameterized constructor
-        std::shared_ptr<DShader> shader = std::make_shared<DShader>(
+
+        std::shared_ptr<DShader> shader = std::shared_ptr<DShader>(CreateDObject<DShader>());
+        shader->Initialize(
             L"Shaders.hlsl",
             L"VSMain", L"PSMain",
             L"vs_6_0", L"ps_6_0");
@@ -60,15 +61,17 @@ void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std:
             { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
             { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
         });
+
         //std::shared_ptr<DMaterial> material = std::make_shared<DMaterial>(shader);
-        // TODO: Cannot use CreateDObject here — parameterized constructor
-        std::shared_ptr<DMesh> mesh = std::make_shared<DMesh>(std::wstring(L"Star.obj"));
+
+        std::shared_ptr<DMesh> mesh = std::shared_ptr<DMesh>(CreateDObject<DMesh>());
+        mesh->Initialize(std::wstring(L"Star.obj"));
         std::vector<std::shared_ptr<DTexture>> textures = mesh->GetTextures();
         std::vector<std::shared_ptr<DMaterial>> materials;
         for (int i = 0; i < mesh->GetSubMeshCount(); i++)
         {
-            // TODO: Cannot use CreateDObject here — parameterized constructor
-            std::shared_ptr<DMaterial> material = std::make_shared<DMaterial>(shader);
+            std::shared_ptr<DMaterial> material = std::shared_ptr<DMaterial>(CreateDObject<DMaterial>());
+            material->Initialize(shader);
             if (i < textures.size())
             {
                 material->AddTexture(textures[i]);
@@ -85,8 +88,9 @@ void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std:
         std::shared_ptr<GameObject> go = m_world->CreateGameObject("HomeMeshRenderer");
         std::shared_ptr<MeshRenderer> meshRenderer = go->AddSceneComponent<MeshRenderer>();
         meshRenderer->SetLocalPosition(0.0f, 0.0f, 0.0f);
-        // TODO: Cannot use CreateDObject here — parameterized constructor
-        std::shared_ptr<DShader> shader = std::make_shared<DShader>(
+
+        std::shared_ptr<DShader> shader = std::shared_ptr<DShader>(CreateDObject<DShader>());
+        shader->Initialize(
             L"Shaders.hlsl",
             L"VSMain", L"PSMain",
             L"vs_6_0", L"ps_6_0");
@@ -98,15 +102,16 @@ void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std:
             { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
         });
         //std::shared_ptr<DMaterial> material = std::make_shared<DMaterial>(shader);
-        // TODO: Cannot use CreateDObject here — parameterized constructor
-        std::shared_ptr<DMesh> mesh = std::make_shared<DMesh>(std::wstring(L"home/source/home.fbx"));
+
+        std::shared_ptr<DMesh> mesh = std::shared_ptr<DMesh>(CreateDObject<DMesh>());
+        mesh->Initialize(std::wstring(L"home/source/home.fbx"));
         //std::shared_ptr<DMesh> mesh = std::make_shared<DMesh>(std::wstring(L"car/source/datsun240k.fbx"));
         std::vector<std::shared_ptr<DTexture>> textures = mesh->GetTextures();
         std::vector<std::shared_ptr<DMaterial>> materials;
         for (int i = 0; i < mesh->GetSubMeshCount(); i++)
         {
-            // TODO: Cannot use CreateDObject here — parameterized constructor
-            std::shared_ptr<DMaterial> material = std::make_shared<DMaterial>(shader);
+            std::shared_ptr<DMaterial> material = std::shared_ptr<DMaterial>(CreateDObject<DMaterial>());
+            material->Initialize(shader);
             if (i < textures.size())
             {
                 material->AddTexture(textures[i]);

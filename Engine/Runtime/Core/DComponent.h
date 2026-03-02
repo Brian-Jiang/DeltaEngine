@@ -21,11 +21,16 @@ class DComponent: public DObject
 
 public:
     DELTAENGINE_API DComponent();
-    DELTAENGINE_API DComponent(std::string name);
-    DELTAENGINE_API DComponent(std::string name, std::shared_ptr<GameObject> gameObject);
+    //DELTAENGINE_API DComponent(std::string name);
+    //DELTAENGINE_API DComponent(std::string name, std::shared_ptr<GameObject> gameObject);
     DELTAENGINE_API virtual ~DComponent();
 
+    virtual void RegisterComponent(std::shared_ptr<GameObject> gameObject);
+
 public:
+    DFUNCTION()
+    DELTAENGINE_API void SetName(const std::string& name);
+
     DFUNCTION()
     DELTAENGINE_API std::shared_ptr<GameObject> GetGameObject() const;
 

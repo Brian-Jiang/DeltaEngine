@@ -19,8 +19,8 @@ class SpotLight : public LightComponent
 
 public:
     SpotLight();
-    SpotLight(std::string name);
-    SpotLight(std::string name, std::shared_ptr<GameObject> gameObject);
+    //SpotLight(std::string name);
+    //SpotLight(std::string name, std::shared_ptr<GameObject> gameObject);
     ~SpotLight();
 
     DFUNCTION()

@@ -27,8 +27,10 @@ class DTexture : public DObject, public std::enable_shared_from_this<DTexture>
 
 public:
     DTexture();
-    DTexture(const std::wstring& filePath, bool sRGB);
+    //DTexture(const std::wstring& filePath, bool sRGB);
     ~DTexture();
+
+    void Initialize(const std::wstring& filePath, bool sRGB = false);
 
     DFUNCTION()
     UINT GetWidth() const;

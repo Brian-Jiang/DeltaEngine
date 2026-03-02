@@ -23,10 +23,14 @@ class DShader : public DObject
 
 public:
     DShader();
-    DShader(const std::wstring& sourcePath, const std::wstring& vertexShaderEntryPoint,
-            const std::wstring& pixelShaderEntryPoint, const std::wstring& vertexShaderTargetProfile,
-            const std::wstring& pixelShaderTargetProfile);
+    //DShader(const std::wstring& sourcePath, const std::wstring& vertexShaderEntryPoint,
+    //        const std::wstring& pixelShaderEntryPoint, const std::wstring& vertexShaderTargetProfile,
+    //        const std::wstring& pixelShaderTargetProfile);
     ~DShader();
+
+    void Initialize(const std::wstring& sourcePath, const std::wstring& vertexShaderEntryPoint,
+                    const std::wstring& pixelShaderEntryPoint, const std::wstring& vertexShaderTargetProfile,
+                    const std::wstring& pixelShaderTargetProfile);
 
     DFUNCTION()
     void SetSourcePath(const std::wstring& sourcePath);

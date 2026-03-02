@@ -23,8 +23,8 @@ class Camera : public SceneComponent
 
 public:
     DELTAENGINE_API Camera();
-    DELTAENGINE_API Camera(std::string name);
-    DELTAENGINE_API Camera(std::string name, std::shared_ptr<GameObject> gameObject);
+    //DELTAENGINE_API Camera(std::string name);
+    //DELTAENGINE_API Camera(std::string name, std::shared_ptr<GameObject> gameObject);
     DELTAENGINE_API ~Camera();
 
     DFUNCTION()

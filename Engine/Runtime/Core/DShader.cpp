@@ -22,19 +22,19 @@ DShader::DShader()
 
 }
 
-DShader::DShader(const std::wstring& sourcePath, const std::wstring& vertexShaderEntryPoint,
-                 const std::wstring& pixelShaderEntryPoint, const std::wstring& vertexShaderTargetProfile,
-                 const std::wstring& pixelShaderTargetProfile)
-    : m_vertexShaderBlob(nullptr)
-    , m_pixelShaderBlob(nullptr)
-    , m_sourcePath(sourcePath)
-    , m_vertexShaderEntryPoint(vertexShaderEntryPoint)
-    , m_pixelShaderEntryPoint(pixelShaderEntryPoint)
-    , m_vertexShaderTargetProfile(vertexShaderTargetProfile)
-    , m_pixelShaderTargetProfile(pixelShaderTargetProfile)
-{
-    CompileShader();
-}
+//DShader::DShader(const std::wstring& sourcePath, const std::wstring& vertexShaderEntryPoint,
+//                 const std::wstring& pixelShaderEntryPoint, const std::wstring& vertexShaderTargetProfile,
+//                 const std::wstring& pixelShaderTargetProfile)
+//    : m_vertexShaderBlob(nullptr)
+//    , m_pixelShaderBlob(nullptr)
+//    , m_sourcePath(sourcePath)
+//    , m_vertexShaderEntryPoint(vertexShaderEntryPoint)
+//    , m_pixelShaderEntryPoint(pixelShaderEntryPoint)
+//    , m_vertexShaderTargetProfile(vertexShaderTargetProfile)
+//    , m_pixelShaderTargetProfile(pixelShaderTargetProfile)
+//{
+//    CompileShader();
+//}
 
 DeltaEngine::DShader::~DShader()
 {
@@ -47,6 +47,16 @@ DeltaEngine::DShader::~DShader()
     //{
     //    m_pixelShaderBlob->Release();
     //}
+}
+
+void DShader::Initialize(const std::wstring& sourcePath, const std::wstring& vertexShaderEntryPoint, const std::wstring& pixelShaderEntryPoint, const std::wstring& vertexShaderTargetProfile, const std::wstring& pixelShaderTargetProfile)
+{
+    m_sourcePath = sourcePath;
+    m_vertexShaderEntryPoint = vertexShaderEntryPoint;
+    m_pixelShaderEntryPoint = pixelShaderEntryPoint;
+    m_vertexShaderTargetProfile = vertexShaderTargetProfile;
+    m_pixelShaderTargetProfile = pixelShaderTargetProfile;
+    CompileShader();
 }
 
 void DeltaEngine::DShader::SetSourcePath(const std::wstring& sourcePath)
