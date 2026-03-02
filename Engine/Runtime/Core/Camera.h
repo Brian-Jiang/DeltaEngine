@@ -17,14 +17,22 @@ class CameraRenderProxy;
 struct DXGraphicsContext;
 
 DCLASS()
+    DELTAENGINE_API void Initialize(std::string name);
+    DELTAENGINE_API void Initialize(std::string name, std::shared_ptr<GameObject> gameObject);
 class Camera : public SceneComponent
 {
     DGENERATED_BODY(Camera)
 
 public:
     DELTAENGINE_API Camera();
-    DELTAENGINE_API Camera(std::string name);
-    DELTAENGINE_API Camera(std::string name, std::shared_ptr<GameObject> gameObject);
+    Camera(std::string name) = delete;
+
+    DELTAENGINE_API void Initialize(std::string name);
+
+    Camera(std::string name, std::shared_ptr<GameObject> gameObject) = delete;
+
+    DELTAENGINE_API void Initialize(std::string name, std::shared_ptr<GameObject> gameObject);
+
     DELTAENGINE_API ~Camera();
 
     DFUNCTION()

@@ -21,8 +21,13 @@ class LightComponent : public SceneComponent
 
 public:
     LightComponent() = default;
-    LightComponent(std::string name) : SceneComponent(name) {}
-    LightComponent(std::string name, std::shared_ptr<GameObject> gameObject) : SceneComponent(name, gameObject) {}
+    LightComponent(std::string name) = delete;
+
+    DELTAENGINE_API void Initialize(std::string name);
+
+    LightComponent(std::string name, std::shared_ptr<GameObject> gameObject) = delete;
+
+    DELTAENGINE_API void Initialize(std::string name, std::shared_ptr<GameObject> gameObject);
 
 protected:
     virtual void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) = 0;

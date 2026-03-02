@@ -338,7 +338,11 @@ def _generate_class_footer(cls: ClassInfo) -> str:
     return FILE_FOOTER_CLASS.substitute(class_name=cls.name)
 
 
-def generate_source_file(classes: list[ClassInfo], header_stem: str) -> str:
+def generate_source_file(
+    classes: list[ClassInfo],
+    header_stem: str,
+    extra_cpp_definitions: list[str] | None = None,
+) -> str:
     """Generate the entire .generated.cpp for all classes in one header file.
     Emits a single #include block, then per-class thunks/registration/footers."""
     parts: list[str] = []
@@ -353,6 +357,9 @@ def generate_source_file(classes: list[ClassInfo], header_stem: str) -> str:
         header_stem=header_stem,
         source_header_include=source_header_include,
     ))
+
+    if extra_cpp_definitions:
+        parts.append("\n".join(extra_cpp_definitions))
 
     for cls in classes:
         for fn in cls.functions:

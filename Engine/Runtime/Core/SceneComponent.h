@@ -24,8 +24,13 @@ class SceneComponent : public DComponent, public std::enable_shared_from_this<Sc
 
 public:
     DELTAENGINE_API SceneComponent();
-    DELTAENGINE_API SceneComponent(std::string name);
-    DELTAENGINE_API SceneComponent(std::string name, std::shared_ptr<GameObject> gameObject);
+    SceneComponent(std::string name) = delete;
+
+    DELTAENGINE_API void Initialize(std::string name);
+
+    SceneComponent(std::string name, std::shared_ptr<GameObject> gameObject) = delete;
+
+    DELTAENGINE_API void Initialize(std::string name, std::shared_ptr<GameObject> gameObject);
 
     DFUNCTION()
     DELTAENGINE_API DirectX::SimpleMath::Vector3 GetLocalPosition() const;
@@ -33,7 +38,7 @@ public:
     DELTAENGINE_API DirectX::SimpleMath::Vector3 GetWorldPosition() const;
     /// World transform matrix for rendering (model matrix). Updated when hierarchy changes.
     DFUNCTION()
-    inline DirectX::XMMATRIX GetWorldTransform() const { return m_worldTransform; }
+    DirectX::XMMATRIX GetWorldTransform() const;
     DFUNCTION()
     DELTAENGINE_API void SetLocalPosition(DirectX::SimpleMath::Vector3 position);
     DFUNCTION()
@@ -81,9 +86,9 @@ public:
     DELTAENGINE_API DirectX::SimpleMath::Vector3 GetForward() const;
     
     DFUNCTION()
-    DELTAENGINE_API std::shared_ptr<SceneComponent> GetParent() const { return m_parent.lock(); }
+    DELTAENGINE_API std::shared_ptr<SceneComponent> GetParent() const;
     DFUNCTION()
-    DELTAENGINE_API const std::vector<std::shared_ptr<SceneComponent>>& GetChildren() const { return m_children; }
+    DELTAENGINE_API const std::vector<std::shared_ptr<SceneComponent>>& GetChildren() const;
     DFUNCTION()
     DELTAENGINE_API void SetParent(std::shared_ptr<SceneComponent> parent);
 

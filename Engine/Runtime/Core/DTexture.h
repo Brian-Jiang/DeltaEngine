@@ -27,7 +27,10 @@ class DTexture : public DObject, public std::enable_shared_from_this<DTexture>
 
 public:
     DTexture();
-    DTexture(const std::wstring& filePath, bool sRGB);
+    DTexture(const std::wstring& filePath, bool sRGB) = delete;
+
+    DELTAENGINE_API void Initialize(const std::wstring& filePath, bool sRGB);
+
     ~DTexture();
 
     DFUNCTION()
@@ -38,11 +41,11 @@ public:
     DXGI_FORMAT GetFormat() const;
 
     
-    inline std::shared_ptr<DirectX::TexMetadata> GetMetadata() const { return m_metadata; }
+    std::shared_ptr<DirectX::TexMetadata> GetMetadata() const;
     inline std::shared_ptr<DirectX::ScratchImage> GetScratchImage() const { return m_scratchImage; }
 
     DFUNCTION()
-    inline std::wstring GetSourcePath() const { return m_sourcePath; }
+    std::wstring GetSourcePath() const;
 
 private:
     void LoadTexture();

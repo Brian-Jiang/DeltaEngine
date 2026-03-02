@@ -28,8 +28,14 @@ class DMesh : public DObject
 
 public:
     DMesh();
-    DMesh(std::wstring sourcePath);
-    DMesh(std::wstring sourcePath, std::shared_ptr<DMaterial> material);
+    DMesh(std::wstring sourcePath) = delete;
+
+    DELTAENGINE_API void Initialize(std::wstring sourcePath);
+
+    DMesh(std::wstring sourcePath, std::shared_ptr<DMaterial> material) = delete;
+
+    DELTAENGINE_API void Initialize(std::wstring sourcePath, std::shared_ptr<DMaterial> material);
+
     //DMesh(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices, std::shared_ptr<DMaterial>& material);
 
     DFUNCTION()
@@ -45,15 +51,15 @@ public:
     std::shared_ptr<DMaterial> GetMaterial(int index = 0) const;
 
     DFUNCTION()
-    inline const std::vector<std::vector<Vertex>>& GetVertices() const { return m_vertices; }
+    const std::vector<std::vector<Vertex>>& GetVertices() const;
     DFUNCTION()
-    inline const std::vector<std::vector<unsigned int>>& GetIndices() const { return m_indices; }
+    const std::vector<std::vector<unsigned int>>& GetIndices() const;
     DFUNCTION()
-    inline const std::vector<std::shared_ptr<DMaterial>>& GetMaterials() const { return m_materials; }
+    const std::vector<std::shared_ptr<DMaterial>>& GetMaterials() const;
     DFUNCTION()
-    inline const std::vector<std::shared_ptr<DTexture>>& GetTextures() const { return m_textures; }
+    const std::vector<std::shared_ptr<DTexture>>& GetTextures() const;
     DFUNCTION()
-    inline int GetSubMeshCount() const { return static_cast<int>(m_vertices.size()); }
+    int GetSubMeshCount() const;
 
 private:
     DPROPERTY()

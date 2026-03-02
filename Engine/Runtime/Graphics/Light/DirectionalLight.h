@@ -13,14 +13,22 @@ DELTA_ENGINE_NS_BEGIN
 class DirectionalLightRenderProxy;
 
 DCLASS()
+    DELTAENGINE_API void Initialize(std::string name);
+    DELTAENGINE_API void Initialize(std::string name, std::shared_ptr<GameObject> gameObject);
 class DirectionalLight : public LightComponent
 {
     DGENERATED_BODY(DirectionalLight)
 
 public:
     DirectionalLight();
-    DirectionalLight(std::string name);
-    DirectionalLight(std::string name, std::shared_ptr<GameObject> gameObject);
+    DirectionalLight(std::string name) = delete;
+
+    DELTAENGINE_API void Initialize(std::string name);
+
+    DirectionalLight(std::string name, std::shared_ptr<GameObject> gameObject) = delete;
+
+    DELTAENGINE_API void Initialize(std::string name, std::shared_ptr<GameObject> gameObject);
+
     ~DirectionalLight();
 
     DFUNCTION()

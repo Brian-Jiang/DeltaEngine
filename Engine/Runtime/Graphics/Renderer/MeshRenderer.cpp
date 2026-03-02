@@ -24,22 +24,6 @@ MeshRenderer::MeshRenderer()
 {
 }
 
-MeshRenderer::MeshRenderer(std::string name)
-    : Renderer(name)
-    , meshCount(0)
-    , loadedTextureCount(0)
-    , m_dirty(true)
-{
-}
-
-MeshRenderer::MeshRenderer(std::string name, std::shared_ptr<GameObject> gameObject)
-    : Renderer(name, gameObject)
-    , meshCount(0)
-    , loadedTextureCount(0)
-    , m_dirty(true)
-{
-}
-
 MeshRenderer::~MeshRenderer()
 {
 }

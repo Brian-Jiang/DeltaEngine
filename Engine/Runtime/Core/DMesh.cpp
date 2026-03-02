@@ -13,28 +13,6 @@ using namespace DeltaEngine;
 
 DMesh::DMesh() { }
 
-DMesh::DMesh(std::wstring sourcePath)
-    : m_sourcePath(sourcePath)
-{
-    ImportMesh();
-}
-
-DMesh::DMesh(std::wstring sourcePath, std::shared_ptr<DMaterial> material)
-    : m_sourcePath(sourcePath)
-    //, m_material(material)
-{
-    ImportMesh();
-}
-
-//DMesh::DMesh(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices,
-//    std::shared_ptr<DMaterial>& material)
-//    : m_vertices(vertices)
-//    , m_indices(indices)
-//    , m_material(material)
-//{
-//    
-//}
-
 void DMesh::ImportMesh()
 {
     // Assimp::Importer::SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, true)
@@ -297,4 +275,29 @@ std::shared_ptr<DMaterial> DMesh::GetMaterial(int index) const
     }
 
     return m_materials[index];
+}
+
+const std::vector<std::vector<Vertex>>& DMesh::GetVertices() const
+{
+    return m_vertices;
+}
+
+const std::vector<std::vector<unsigned int>>& DMesh::GetIndices() const
+{
+    return m_indices;
+}
+
+const std::vector<std::shared_ptr<DMaterial>>& DMesh::GetMaterials() const
+{
+    return m_materials;
+}
+
+const std::vector<std::shared_ptr<DTexture>>& DMesh::GetTextures() const
+{
+    return m_textures;
+}
+
+int DMesh::GetSubMeshCount() const
+{
+    return static_cast<int>(m_vertices.size());
 }

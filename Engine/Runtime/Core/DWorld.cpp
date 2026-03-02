@@ -12,14 +12,14 @@ using namespace DeltaEngine;
 
 DeltaEngine::DWorld::DWorld()
 {
-    std::shared_ptr<SceneComponent> sceneComponent = std::make_shared<SceneComponent>();
+    std::shared_ptr<SceneComponent> sceneComponent = std::shared_ptr<SceneComponent>(CreateDObject<SceneComponent>());
     m_rootSceneComponent = sceneComponent;
 }
 
 std::shared_ptr<GameObject> DWorld::CreateGameObject(const std::string& name)
 {
     std::shared_ptr<GameObject> gameObject = std::shared_ptr<GameObject>(CreateDObject<GameObject>());
-    gameObject->m_name = name;
+    gameObject->Initialize(name);
     gameObject->m_currentWorld = shared_from_this();
     m_gameObjects.push_back(gameObject);
     m_gameObjectsChanged = true;
@@ -126,6 +126,21 @@ void DeltaEngine::DWorld::Clear()
 
 std::shared_ptr<DWorld> DeltaEngine::DWorld::CreateWorld()
 {
-    std::shared_ptr<DWorld> world = std::make_shared<DWorld>();
+    std::shared_ptr<DWorld> world = std::shared_ptr<DWorld>(CreateDObject<DWorld>());
     return world;
+}
+
+std::shared_ptr<SceneComponent> DWorld::GetRootSceneComponent() const
+{
+    return m_rootSceneComponent;
+}
+
+const std::vector<std::shared_ptr<GameObject>>& DWorld::GetGameObjects() const
+{
+    return m_gameObjects;
+}
+
+bool DWorld::IsGameObjectsChanged() const
+{
+    return m_gameObjectsChanged;
 }

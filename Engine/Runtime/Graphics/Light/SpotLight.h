@@ -13,14 +13,22 @@ DELTA_ENGINE_NS_BEGIN
 class SpotLightRenderProxy;
 
 DCLASS()
+    DELTAENGINE_API void Initialize(std::string name);
+    DELTAENGINE_API void Initialize(std::string name, std::shared_ptr<GameObject> gameObject);
 class SpotLight : public LightComponent
 {
     DGENERATED_BODY(SpotLight)
 
 public:
     SpotLight();
-    SpotLight(std::string name);
-    SpotLight(std::string name, std::shared_ptr<GameObject> gameObject);
+    SpotLight(std::string name) = delete;
+
+    DELTAENGINE_API void Initialize(std::string name);
+
+    SpotLight(std::string name, std::shared_ptr<GameObject> gameObject) = delete;
+
+    DELTAENGINE_API void Initialize(std::string name, std::shared_ptr<GameObject> gameObject);
+
     ~SpotLight();
 
     DFUNCTION()

@@ -13,14 +13,22 @@ DELTA_ENGINE_NS_BEGIN
 class PointLightRenderProxy;
 
 DCLASS()
+    DELTAENGINE_API void Initialize(std::string name);
+    DELTAENGINE_API void Initialize(std::string name, std::shared_ptr<GameObject> gameObject);
 class PointLight : public LightComponent
 {
     DGENERATED_BODY(PointLight)
 
 public:
     PointLight();
-    PointLight(std::string name);
-    PointLight(std::string name, std::shared_ptr<GameObject> gameObject);
+    PointLight(std::string name) = delete;
+
+    DELTAENGINE_API void Initialize(std::string name);
+
+    PointLight(std::string name, std::shared_ptr<GameObject> gameObject) = delete;
+
+    DELTAENGINE_API void Initialize(std::string name, std::shared_ptr<GameObject> gameObject);
+
     ~PointLight();
 
     DFUNCTION()

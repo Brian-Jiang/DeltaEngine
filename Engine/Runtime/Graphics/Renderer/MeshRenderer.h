@@ -29,8 +29,14 @@ class MeshRenderer: public Renderer
 
 public:
     MeshRenderer();
-    MeshRenderer(std::string name);
-    MeshRenderer(std::string name, std::shared_ptr<GameObject> gameObject);
+    MeshRenderer(std::string name) = delete;
+
+    DELTAENGINE_API void Initialize(std::string name);
+
+    MeshRenderer(std::string name, std::shared_ptr<GameObject> gameObject) = delete;
+
+    DELTAENGINE_API void Initialize(std::string name, std::shared_ptr<GameObject> gameObject);
+
     ~MeshRenderer();
 
     DFUNCTION()

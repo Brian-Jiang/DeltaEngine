@@ -21,8 +21,13 @@ class Renderer : public SceneComponent
 
 public:
     Renderer();
-    Renderer(std::string name);
-    Renderer(std::string name, std::shared_ptr<GameObject> gameObject);
+    Renderer(std::string name) = delete;
+
+    DELTAENGINE_API void Initialize(std::string name);
+
+    Renderer(std::string name, std::shared_ptr<GameObject> gameObject) = delete;
+
+    DELTAENGINE_API void Initialize(std::string name, std::shared_ptr<GameObject> gameObject);
 
 protected:
     virtual void InitGraphicState(std::shared_ptr<DXGraphicsContext> context) = 0;

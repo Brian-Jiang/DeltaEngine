@@ -18,16 +18,6 @@ DeltaEngine::DTexture::DTexture()
     m_metadata = std::make_shared<TexMetadata>();
     m_scratchImage = std::make_shared<ScratchImage>();
 }
-
-DTexture::DTexture(const std::wstring& filePath, bool sRGB)
-    : m_sourcePath(filePath)
-    , m_sRGB(sRGB)
-{
-    m_metadata = std::make_shared<TexMetadata>();
-    m_scratchImage = std::make_shared<ScratchImage>();
-    LoadTexture();
-}
-
 DeltaEngine::DTexture::~DTexture()
 {
     m_scratchImage.reset();
@@ -67,5 +57,20 @@ void DeltaEngine::DTexture::LoadTexture()
 
 std::shared_ptr<DTexture> DTexture::LoadFromFile(const std::wstring& filePath, bool sRGB)
 {
-    return std::make_shared<DTexture>(filePath, sRGB);
+    std::shared_ptr<DTexture> texture = std::shared_ptr<DTexture>(CreateDObject<DTexture>());
+    if (texture)
+    {
+        texture->Initialize(filePath, sRGB);
+    }
+    return texture;
+}
+
+std::shared_ptr<DirectX::TexMetadata> DTexture::GetMetadata() const
+{
+    return m_metadata;
+}
+
+std::wstring DTexture::GetSourcePath() const
+{
+    return m_sourcePath;
 }
