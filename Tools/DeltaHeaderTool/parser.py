@@ -246,6 +246,79 @@ def _collect_source_includes(raw: str, file_path: Path) -> list[str]:
     return list(dict.fromkeys(result))
 
 
+def _base_class_name_from_cursor(cursor) -> str:
+    """Extract unqualified base class name from CXX_BASE_SPECIFIER cursor.
+    cursor.spelling is often empty for base specifiers; use type.spelling as fallback."""
+    name = (cursor.spelling or "").strip()
+    if not name:
+        # libclang often leaves spelling empty for base specifiers; use type
+        t = cursor.type
+        if t and t.kind != ci.TypeKind.INVALID:
+            name = (t.spelling or "").strip()
+    if not name:
+        return ""
+    # Skip mixin bases like enable_shared_from_this
+    if "enable_shared_from_this" in name:
+        return ""
+    # Strip "class " and "struct " prefixes
+    for prefix in ("class ", "struct "):
+        if name.startswith(prefix):
+            name = name[len(prefix):].strip()
+    # Strip namespace qualifiers: DeltaEngine::DObject -> DObject
+    if "::" in name:
+        name = name.rsplit("::", 1)[-1]
+    return name
+
+
+def _extract_base_from_source(source: str, class_name: str, start_line: int) -> str:
+    """Extract first reflected base class from class declaration in source.
+    Used when libclang does not provide CXX_BASE_SPECIFIER (e.g. with stripped/incomplete parse)."""
+    lines = source.splitlines()
+    if start_line < 1 or start_line > len(lines):
+        return ""
+    # Collect declaration lines until we hit {
+    decl_parts: list[str] = []
+    for i in range(start_line - 1, len(lines)):
+        line = lines[i]
+        decl_parts.append(line)
+        if "{" in line:
+            break
+    decl = " ".join(decl_parts)
+    # Match ": base_specifiers" - after class/struct Name :
+    m = re.search(rf"\b(?:class|struct)\s+{re.escape(class_name)}\s*:\s*(.+?)(?:\{{|$)", decl, re.DOTALL)
+    if not m:
+        return ""
+    bases_str = m.group(1).strip()
+    # Split by comma, respecting angle brackets
+    bases: list[str] = []
+    depth = 0
+    start = 0
+    for i, c in enumerate(bases_str + ","):
+        if c == "<":
+            depth += 1
+        elif c == ">":
+            depth -= 1
+        elif c == "," and depth == 0:
+            bases.append(bases_str[start:i].strip())
+            start = i + 1
+    for base in bases:
+        # Strip access specifier
+        for prefix in ("public ", "protected ", "private "):
+            if base.startswith(prefix):
+                base = base[len(prefix):].strip()
+        if "enable_shared_from_this" in base:
+            continue
+        # Get unqualified name: DeltaEngine::DObject -> DObject
+        if "::" in base:
+            base = base.rsplit("::", 1)[-1]
+        # Strip template args for the name: Foo<T> -> Foo (we want the base class name)
+        if "<" in base:
+            base = base[: base.index("<")].strip()
+        if base:
+            return base
+    return ""
+
+
 def _is_anonymous_or_invalid(spelling: str) -> bool:
     """Return True if the type spelling should not be forward-declared."""
     if not spelling or not spelling.strip():
@@ -410,7 +483,7 @@ def _parse_function(tu, method_cursor, class_name, diag=None, source_file=""):
     )
 
 
-def _parse_class(tu, class_cursor, source_file, include_path, *,
+def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
                   is_struct=False, is_abstract=False, diag=None):
     class_name = class_cursor.spelling
     file_name = str(source_file)
@@ -428,8 +501,9 @@ def _parse_class(tu, class_cursor, source_file, include_path, *,
 
     for child in class_cursor.get_children():
         if child.kind == ci.CursorKind.CXX_BASE_SPECIFIER and not info.base_name:
-            if "enable_shared_from_this" not in child.spelling:
-                info.base_name = child.spelling
+            base_name = _base_class_name_from_cursor(child)
+            if base_name:
+                info.base_name = base_name
             continue
 
         # Warn on non-default constructors
@@ -513,6 +587,12 @@ def _parse_class(tu, class_cursor, source_file, include_path, *,
             fn.overload_index = same_name_count + 1
             info.functions.append(fn)
 
+    # Fallback: libclang often omits CXX_BASE_SPECIFIER with stripped/incomplete parse
+    if not info.base_name and class_name != "DObject" and source:
+        info.base_name = _extract_base_from_source(
+            source, class_name, class_cursor.location.line
+        )
+
     return info
 
 
@@ -591,7 +671,7 @@ def parse_header(
                 is_abstract = cursor.is_abstract_record()
 
         results.append(_parse_class(
-            tu, cursor, file_path, include_path,
+            tu, cursor, file_path, include_path, stripped_source,
             is_struct=is_dstruct,
             is_abstract=is_abstract,
             diag=diag,
