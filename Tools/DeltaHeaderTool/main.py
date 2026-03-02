@@ -54,81 +54,33 @@ def _process_one(job):
     """Parse one header and generate reflection code.
 
     Must live at module level so multiprocessing can pickle it.
-    Returns:
-      (
-        stem,
-        header_text | None,
-        source_text | None,
-        warnings: list[str],
-        class_super_pairs: list[tuple[str, str]],
-        reflected_names: list[str],
-      )
+    Returns (stem, header_text | None, source_text | None, warning | None).
     """
     header_path, input_dir, include_dirs = job
     stem = header_path.stem
 
     from parser import parse_header
     from generator import generate_header_file, generate_source_file
-    from source_rewriter import rewrite_header, rewrite_source_cpp
 
     try:
         result = parse_header(header_path, input_dir, include_dirs)
         if not result.classes:
             return (
-                stem,
-                None,
-                None,
-                [
-                    "WARNING: "
-                    f"[{header_path.as_posix()}:1] {header_path.name} contains "
-                    "DCLASS(/DSTRUCT( but no reflected classes were found by libclang."
-                ],
-                [],
-                [],
+                stem, None, None,
+                f"WARNING: {header_path.name} contains DCLASS(/DSTRUCT( but no "
+                "reflected classes were found by libclang",
             )
-
-        rewrite_result = rewrite_header(header_path, result.classes)
-        cpp_rewrite_result = rewrite_source_cpp(header_path, result.classes)
 
         header_text = generate_header_file(
             result.classes,
             result.source_includes,
             result.forward_decls,
         )
-        source_text = generate_source_file(
-            result.classes,
-            stem,
-            extra_cpp_definitions=rewrite_result.extra_cpp_definitions,
-        )
+        source_text = generate_source_file(result.classes, stem)
 
-        class_super_pairs = [
-            (c.name, c.declared_super_name)
-            for c in result.classes
-            if c.declared_super_name
-        ]
-        reflected_names = [c.name for c in result.classes]
-        all_warnings = (
-            list(result.warnings)
-            + list(rewrite_result.warnings)
-            + list(cpp_rewrite_result.warnings)
-        )
-        return (
-            stem,
-            header_text,
-            source_text,
-            all_warnings,
-            class_super_pairs,
-            reflected_names,
-        )
+        return (stem, header_text, source_text, None)
     except Exception as e:
-        return (
-            stem,
-            None,
-            None,
-            [f"ERROR processing {header_path.name}: {e}"],
-            [],
-            [],
-        )
+        return (stem, None, None, f"ERROR processing {header_path.name}: {e}")
 
 
 # ── main ─────────────────────────────────────────────────────
@@ -164,9 +116,6 @@ def main() -> int:
     reflected_stems: set[str] = set()
     generated_cpps: list[Path] = []
     jobs: list[tuple[Path, Path, list[Path]]] = []
-    warning_messages: list[str] = []
-    class_super_pairs: list[tuple[str, str]] = []
-    reflected_type_names: set[str] = set()
 
     for header in candidates:
         stem = header.stem
@@ -194,10 +143,9 @@ def main() -> int:
             with Pool(processes=num_workers, initializer=_pool_init) as pool:
                 results = pool.map(_process_one, jobs)
 
-        for stem, header_text, source_text, warnings, supers, names in results:
-            warning_messages.extend(warnings)
-            class_super_pairs.extend(supers)
-            reflected_type_names.update(names)
+        for stem, header_text, source_text, warning in results:
+            if warning:
+                print(f"  {warning}", file=sys.stderr)
             if header_text is None:
                 continue
 
@@ -207,15 +155,6 @@ def main() -> int:
             out_cpp.write_text(source_text, encoding="utf-8", newline="\n")
             generated_cpps.append(out_cpp)
             print(f"  generated:  {stem}")
-
-    # Deferred post-pass validation: class super names must exist in parsed registry.
-    for class_name, super_name in class_super_pairs:
-        if super_name and super_name not in reflected_type_names:
-            warning_messages.append(
-                "WARNING: "
-                f"'{class_name}' declares super '{super_name}' but no "
-                "DCLASS/DSTRUCT with that name was found in any parsed header."
-            )
 
     # ── stale file cleanup ────────────────────────────────────
     for f in sorted(output_dir.iterdir()):
@@ -244,11 +183,6 @@ def main() -> int:
         f"{len(candidates)} reflected, {len(jobs)} regenerated  "
         f"({elapsed:.2f}s total)"
     )
-
-    if warning_messages:
-        print("\nDeltaHeaderTool warnings:")
-        for w in sorted(dict.fromkeys(warning_messages)):
-            print(f"  {w}")
 
     return 0
 

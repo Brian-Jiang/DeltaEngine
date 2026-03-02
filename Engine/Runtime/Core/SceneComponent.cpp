@@ -11,14 +11,23 @@ SceneComponent::SceneComponent()
 
 }
 
+SceneComponent::SceneComponent(std::string name)
+    : DComponent(name)
+    , m_localTransform(XMMatrixIdentity())
+    , m_worldTransform(XMMatrixIdentity())
+{
+}
+
+SceneComponent::SceneComponent(std::string name, std::shared_ptr<GameObject> gameObject)
+    : DComponent(name, gameObject)
+    , m_localTransform(XMMatrixIdentity())
+    , m_worldTransform(XMMatrixIdentity())
+{
+}
+
 SimpleMath::Vector3 SceneComponent::GetLocalPosition() const
 {
     return SimpleMath::Vector3(m_localTransform.r[3]);
-}
-
-DirectX::XMMATRIX SceneComponent::GetWorldTransform() const
-{
-    return m_worldTransform;
 }
 
 DirectX::SimpleMath::Vector3 DeltaEngine::SceneComponent::GetWorldPosition() const
@@ -226,16 +235,6 @@ void DeltaEngine::SceneComponent::SetParent(std::shared_ptr<SceneComponent> pare
     m_parent = parent;
     parent->m_children.push_back(shared_from_this());
     SetTransformDirty();
-}
-
-std::shared_ptr<SceneComponent> SceneComponent::GetParent() const
-{
-    return m_parent.lock();
-}
-
-const std::vector<std::shared_ptr<SceneComponent>>& SceneComponent::GetChildren() const
-{
-    return m_children;
 }
 
 void DeltaEngine::SceneComponent::UpdateTransformHierarchy(DirectX::XMMATRIX worldTransform)

@@ -13,6 +13,24 @@ PointLight::PointLight()
     m_renderProxy = std::make_shared<PointLightRenderProxy>();
 }
 
+PointLight::PointLight(std::string name)
+    : LightComponent(name)
+    , m_color(1.0f, 1.0f, 1.0f, 1.0f)
+    , m_intensity(1.0f)
+    , m_range(10.0f)
+{
+    m_renderProxy = std::make_shared<PointLightRenderProxy>();
+}
+
+PointLight::PointLight(std::string name, std::shared_ptr<GameObject> gameObject)
+    : LightComponent(name, gameObject)
+    , m_color(1.0f, 1.0f, 1.0f, 1.0f)
+    , m_intensity(1.0f)
+    , m_range(10.0f)
+{
+    m_renderProxy = std::make_shared<PointLightRenderProxy>();
+}
+
 PointLight::~PointLight()
 {
 }

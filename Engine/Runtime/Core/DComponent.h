@@ -21,22 +21,16 @@ class DComponent: public DObject
 
 public:
     DELTAENGINE_API DComponent();
-    DComponent(std::string name) = delete;
-
-    DELTAENGINE_API void Initialize(std::string name);
-
-    DComponent(std::string name, std::shared_ptr<GameObject> gameObject) = delete;
-
-    DELTAENGINE_API void Initialize(std::string name, std::shared_ptr<GameObject> gameObject);
-
+    DELTAENGINE_API DComponent(std::string name);
+    DELTAENGINE_API DComponent(std::string name, std::shared_ptr<GameObject> gameObject);
     DELTAENGINE_API virtual ~DComponent();
 
 public:
     DFUNCTION()
-    DELTAENGINE_API std::shared_ptr<GameObject> GetGameObject() const;
+    inline std::shared_ptr<GameObject> GetGameObject() const { return m_gameObject.lock(); }
 
     DFUNCTION()
-    DELTAENGINE_API const std::string& GetName() const;
+    inline const std::string& GetName() const { return m_name; }
 
 private:
     std::weak_ptr<GameObject> m_gameObject;

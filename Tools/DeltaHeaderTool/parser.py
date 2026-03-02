@@ -7,7 +7,7 @@ from pathlib import Path
 
 import clang.cindex as ci
 
-from type_resolver import normalize_type_spelling, resolve_type, resolve_type_spelling
+from type_resolver import resolve_type
 
 # Use canonical (underlying) type for emission when type is a typedef/using alias
 # so param struct and thunk use e.g. __m128 instead of DirectX::XMVECTOR.
@@ -19,7 +19,10 @@ def _type_spelling_for_emission(clang_type) -> str:
         t = t.get_pointee()
     if t.kind == ci.TypeKind.TYPEDEF or t.kind == ci.TypeKind.ELABORATED:
         t = t.get_canonical()
-    return normalize_type_spelling(t.spelling)
+    spelling = t.spelling
+    if spelling.startswith("const "):
+        spelling = spelling[6:]
+    return spelling
 
 TOOL_DIR = Path(__file__).resolve().parent
 TOOLS_DIR = TOOL_DIR.parent
@@ -138,10 +141,6 @@ struct Vertex { float x; };
 _PREAMBLE_LINE_COUNT = len(_PREAMBLE.splitlines())
 
 
-def _to_source_line(parsed_line: int) -> int:
-    return max(1, parsed_line - _PREAMBLE_LINE_COUNT)
-
-
 def _ensure_configured():
     global _configured
     if not _configured:
@@ -166,7 +165,6 @@ class PropertyInfo:
     cpp_type: str
     property_class: str
     offset: int
-    line: int = 0
     is_object_ptr: bool = False
     pointee_type: str = ""
 
@@ -185,10 +183,6 @@ class FunctionInfo:
     return_property_class: str
     params: list[ParamInfo] = field(default_factory=list)
     overload_index: int = 1  # 1-based; _2, _3, ... for overloads
-    line: int = 0
-    macro_line: int = 0
-    is_inline: bool = False
-    is_template: bool = False
 
     @property
     def has_params_struct(self) -> bool:
@@ -196,24 +190,13 @@ class FunctionInfo:
 
 
 @dataclass
-class ConstructorInfo:
-    signature: str
-    line: int
-    is_default: bool
-
-
-@dataclass
 class ClassInfo:
     name: str
     source_file: Path
     include_path: str
-    line: int = 0
     base_name: str = ""
-    declared_super_name: str = ""
     properties: list[PropertyInfo] = field(default_factory=list)
     functions: list[FunctionInfo] = field(default_factory=list)
-    constructors: list[ConstructorInfo] = field(default_factory=list)
-    template_dfunction_macro_lines: list[int] = field(default_factory=list)
     is_struct: bool = False
     is_abstract: bool = False
 
@@ -231,11 +214,6 @@ class ParseResult:
     classes: list[ClassInfo]
     source_includes: list[str]
     forward_decls: list[ForwardDeclInfo]
-    warnings: list[str] = field(default_factory=list)
-
-
-def _format_warning(file_path: Path, line: int, message: str) -> str:
-    return f"WARNING: [{file_path.as_posix()}:{line}] {message}"
 
 
 # ── source includes and forward decls ────────────────────────
@@ -326,20 +304,22 @@ def _get_tokens_before_cursor(tu, cursor, lookback_lines=5):
     return list(tu.get_tokens(extent=extent))
 
 
-def _is_annotated(tu, cursor, macro_name, *, max_line_gap: int = 2):
+def _is_annotated(tu, cursor, macro_name):
     tokens = _get_tokens_before_cursor(tu, cursor)
-    for tok in reversed(tokens):
-        if tok.spelling == macro_name and (cursor.location.line - tok.location.line) <= max_line_gap:
+    for i, tok in enumerate(reversed(tokens)):
+        if tok.spelling == macro_name:
             return True
+        if i > 10:
+            break
     return False
 
 
-def _extract_macro_args(tu, cursor, macro_name, *, max_line_gap: int = 20) -> str | None:
+def _extract_macro_args(tu, cursor, macro_name) -> str | None:
     """Extract the argument string from a macro invocation like DCLASS(abstract).
     Returns the text between parentheses, or None if not found."""
     tokens = _get_tokens_before_cursor(tu, cursor)
     for i, tok in enumerate(reversed(tokens)):
-        if tok.spelling == macro_name and (cursor.location.line - tok.location.line) <= max_line_gap:
+        if tok.spelling == macro_name:
             # Collect tokens forward from macro position to find (...)
             macro_idx = len(tokens) - 1 - i
             if macro_idx + 1 < len(tokens) and tokens[macro_idx + 1].spelling == "(":
@@ -358,6 +338,8 @@ def _extract_macro_args(tu, cursor, macro_name, *, max_line_gap: int = 20) -> st
                     else:
                         arg_tokens.append(t.spelling)
             return ""
+        if i > 10:
+            break
     return None
 
 
@@ -369,80 +351,6 @@ def _collect_dfunction_lines(tu, class_cursor) -> list[int]:
         if tok.spelling == "DFUNCTION":
             lines.append(tok.location.line)
     return lines
-
-
-def _is_std_enable_shared_from_this(base_name: str) -> bool:
-    n = base_name.replace(" ", "")
-    return (
-        n.startswith("std::enable_shared_from_this<")
-        or n.startswith("enable_shared_from_this<")
-    )
-
-
-def _is_std_base(base_name: str) -> bool:
-    return base_name.strip().startswith("std::")
-
-
-def _resolve_filtered_super_name(base_specifiers: list[str]) -> str:
-    for base in base_specifiers:
-        normalized = normalize_type_spelling(base)
-        if _is_std_enable_shared_from_this(normalized):
-            continue
-        if _is_std_base(normalized):
-            continue
-        return normalized
-    return ""
-
-
-def _extract_declared_field_type(source_lines: list[str], line: int, field_name: str) -> str:
-    for probe in range(line - 1, line + 3):
-        idx = probe - 1
-        if idx < 0 or idx >= len(source_lines):
-            continue
-        line_text = source_lines[idx]
-        # Strip trailing comment and semicolon.
-        line_text = line_text.split("//", 1)[0].strip().rstrip(";").strip()
-        if not line_text:
-            continue
-        m = re.match(rf"(?P<type>.+?)\s+{re.escape(field_name)}\s*$", line_text)
-        if m:
-            return m.group("type").strip()
-    return ""
-
-
-def _method_is_inline(tu, method_cursor) -> bool:
-    try:
-        if method_cursor.is_function_inlined():
-            return True
-    except Exception:
-        pass
-
-    tokens = list(tu.get_tokens(extent=method_cursor.extent))
-    return any(tok.spelling == "inline" for tok in tokens)
-
-
-def _extract_constructor_signature(class_name: str, ctor_cursor) -> str:
-    params: list[str] = []
-    for child in ctor_cursor.get_children():
-        if child.kind == ci.CursorKind.PARM_DECL:
-            ptype = _type_spelling_for_emission(child.type)
-            pname = child.spelling or "arg"
-            params.append(f"{ptype} {pname}")
-    return f"{class_name}({', '.join(params)})"
-
-
-def _find_next_annotated_method_line(
-    dfunction_lines: list[int],
-    consumed_dfunction_lines: set[int],
-    target_line: int,
-) -> int | None:
-    for dl in dfunction_lines:
-        if dl in consumed_dfunction_lines:
-            continue
-        if dl < target_line and (target_line - dl) <= 2:
-            consumed_dfunction_lines.add(dl)
-            return dl
-    return None
 
 
 # ── AST walking ──────────────────────────────────────────────
@@ -486,28 +394,15 @@ def _parse_function(tu, method_cursor, class_name):
         return_type=ret_emission if not is_void else "void",
         return_property_class=ret_prop_class,
         params=params,
-        line=method_cursor.location.line,
-        is_inline=_method_is_inline(tu, method_cursor),
     )
 
 
-def _parse_class(
-    tu,
-    class_cursor,
-    source_file,
-    include_path,
-    warnings: list[str],
-    source_lines: list[str],
-    *,
-    is_struct=False,
-    is_abstract=False,
-):
+def _parse_class(tu, class_cursor, source_file, include_path, *, is_struct=False, is_abstract=False):
     class_name = class_cursor.spelling
     info = ClassInfo(
         name=class_name,
         source_file=source_file,
         include_path=include_path,
-        line=_to_source_line(class_cursor.location.line),
         is_struct=is_struct,
         is_abstract=is_abstract,
     )
@@ -515,133 +410,53 @@ def _parse_class(
     # Pre-collect DFUNCTION macro line numbers for scope-correct matching
     dfunction_lines = _collect_dfunction_lines(tu, class_cursor)
     consumed_dfunction_lines: set[int] = set()
-    base_specifiers: list[str] = []
 
     for child in class_cursor.get_children():
-        if child.kind == ci.CursorKind.CXX_BASE_SPECIFIER:
-            base_specifiers.append(child.spelling)
+        if child.kind == ci.CursorKind.CXX_BASE_SPECIFIER and not info.base_name:
+            info.base_name = child.spelling
             continue
 
         if child.kind == ci.CursorKind.FIELD_DECL:
-            if not _is_annotated(tu, child, "DPROPERTY", max_line_gap=2):
+            if not _is_annotated(tu, child, "DPROPERTY"):
                 continue
-            source_line = _to_source_line(child.location.line)
-            declared_cpp_type = _extract_declared_field_type(source_lines, source_line, child.spelling)
-            resolved = None
-            if declared_cpp_type:
-                resolved = resolve_type_spelling(declared_cpp_type, child.spelling, class_name)
+            resolved = resolve_type(child.type, child.spelling, class_name)
             if resolved is None:
-                resolved = resolve_type(child.type, child.spelling, class_name)
-            if resolved is None:
-                unknown_type = (
-                    normalize_type_spelling(declared_cpp_type)
-                    if declared_cpp_type
-                    else normalize_type_spelling(child.type.spelling)
-                )
-                warnings.append(
-                    _format_warning(
-                        source_file,
-                        source_line,
-                        (
-                            f"Property '{child.spelling}' of type '{unknown_type}' in "
-                            f"'{class_name}' has no known property type mapping — skipped."
-                        ),
-                    )
-                )
                 continue
             prop_class, is_obj_ptr, pointee = resolved
             offset_bits = class_cursor.type.get_offset(child.spelling)
             offset_bytes = offset_bits // 8 if offset_bits >= 0 else -1
             info.properties.append(PropertyInfo(
                 name=child.spelling,
-                cpp_type=normalize_type_spelling(declared_cpp_type or child.type.spelling),
+                cpp_type=child.type.spelling,
                 property_class=prop_class,
                 offset=offset_bytes,
-                line=source_line,
                 is_object_ptr=is_obj_ptr,
                 pointee_type=pointee,
             ))
-
-        elif child.kind == ci.CursorKind.CONSTRUCTOR:
-            if is_struct:
-                continue
-            is_default_ctor = False
-            try:
-                is_default_ctor = child.is_default_constructor()
-            except Exception:
-                is_default_ctor = False
-
-            signature = _extract_constructor_signature(class_name, child)
-            info.constructors.append(ConstructorInfo(
-                signature=signature,
-                line=_to_source_line(child.location.line),
-                is_default=is_default_ctor,
-            ))
-
-            if not is_default_ctor:
-                warnings.append(
-                    _format_warning(
-                        source_file,
-                        _to_source_line(child.location.line),
-                        (
-                            f"'{class_name}' has non-default constructor '{signature}' — "
-                            "DObject-derived classes should use Initialize() pattern instead. "
-                            "Consider deleting this constructor."
-                        ),
-                    )
-                )
 
         elif child.kind == ci.CursorKind.CXX_METHOD:
             if is_struct:
                 continue
 
             method_line = child.location.line
-            macro_line = _find_next_annotated_method_line(dfunction_lines, consumed_dfunction_lines, method_line)
-            if macro_line is None:
+            matched = False
+            for dl in dfunction_lines:
+                if dl in consumed_dfunction_lines:
+                    continue
+                if dl < method_line:
+                    matched = True
+                    consumed_dfunction_lines.add(dl)
+                    break
+
+            if not matched:
                 continue
 
             fn = _parse_function(tu, child, class_name)
             if fn is None:
                 continue
-            fn.macro_line = _to_source_line(macro_line)
-            if fn.is_inline:
-                warnings.append(
-                    _format_warning(
-                        source_file,
-                        _to_source_line(child.location.line),
-                        (
-                            f"DFUNCTION on '{class_name}::{fn.name}' is inline — "
-                            "definition will be moved to .cpp."
-                        ),
-                    )
-                )
-            fn.line = _to_source_line(fn.line)
             same_name_count = sum(1 for f in info.functions if f.name == fn.name)
             fn.overload_index = same_name_count + 1
             info.functions.append(fn)
-
-        elif child.kind == ci.CursorKind.FUNCTION_TEMPLATE:
-            if is_struct:
-                continue
-            method_line = child.location.line
-            macro_line = _find_next_annotated_method_line(dfunction_lines, consumed_dfunction_lines, method_line)
-            if macro_line is None:
-                continue
-            info.template_dfunction_macro_lines.append(_to_source_line(macro_line))
-            fn_name = child.spelling or "<template>"
-            warnings.append(
-                _format_warning(
-                    source_file,
-                    _to_source_line(child.location.line),
-                    (
-                        f"DFUNCTION on '{class_name}::{fn_name}' is a template — "
-                        "DFUNCTION will be removed, function will not be reflected."
-                    ),
-                )
-            )
-
-    info.declared_super_name = _resolve_filtered_super_name(base_specifiers)
-    info.base_name = info.declared_super_name
 
     return info
 
@@ -661,7 +476,6 @@ def parse_header(
     engine_include_root = input_dir.parent  # e.g. Engine/
 
     raw = file_path.read_text(encoding="utf-8", errors="replace")
-    source_lines = raw.splitlines()
     source_includes = _collect_source_includes(raw, file_path)
     stripped_source = _PREAMBLE + _INCLUDE_RE.sub("", raw)
 
@@ -695,7 +509,6 @@ def parse_header(
     include_path = (parent_part + "/") if parent_part != "." else ""
 
     results: list[ClassInfo] = []
-    warnings: list[str] = []
     for cursor in tu.cursor.walk_preorder():
         if cursor.location.file is None:
             continue
@@ -706,15 +519,15 @@ def parse_header(
         if not cursor.is_definition():
             continue
 
-        is_dclass = _is_annotated(tu, cursor, "DCLASS", max_line_gap=20)
-        is_dstruct = _is_annotated(tu, cursor, "DSTRUCT", max_line_gap=20)
+        is_dclass = _is_annotated(tu, cursor, "DCLASS")
+        is_dstruct = _is_annotated(tu, cursor, "DSTRUCT")
 
         if not is_dclass and not is_dstruct:
             continue
 
         is_abstract = False
         if is_dclass:
-            macro_args = _extract_macro_args(tu, cursor, "DCLASS", max_line_gap=20)
+            macro_args = _extract_macro_args(tu, cursor, "DCLASS")
             if macro_args and "abstract" in macro_args:
                 is_abstract = True
             if not is_abstract:
@@ -722,8 +535,6 @@ def parse_header(
 
         results.append(_parse_class(
             tu, cursor, file_path, include_path,
-            warnings,
-            source_lines,
             is_struct=is_dstruct,
             is_abstract=is_abstract,
         ))
@@ -732,5 +543,4 @@ def parse_header(
         classes=results,
         source_includes=source_includes,
         forward_decls=forward_decls,
-        warnings=warnings,
     )

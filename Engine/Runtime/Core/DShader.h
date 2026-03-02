@@ -25,12 +25,7 @@ public:
     DShader();
     DShader(const std::wstring& sourcePath, const std::wstring& vertexShaderEntryPoint,
             const std::wstring& pixelShaderEntryPoint, const std::wstring& vertexShaderTargetProfile,
-            const std::wstring& pixelShaderTargetProfile) = delete;
-
-    DELTAENGINE_API void Initialize(const std::wstring& sourcePath, const std::wstring& vertexShaderEntryPoint,
-            const std::wstring& pixelShaderEntryPoint, const std::wstring& vertexShaderTargetProfile,
             const std::wstring& pixelShaderTargetProfile);
-
     ~DShader();
 
     DFUNCTION()

@@ -23,20 +23,13 @@ class GameObject: public DObject, public std::enable_shared_from_this<GameObject
 
 public:
 	DELTAENGINE_API GameObject();
-	GameObject(const std::string& name) = delete;
-
-	DELTAENGINE_API void Initialize(const std::string& name);
-
+	DELTAENGINE_API GameObject(const std::string& name);
 	DELTAENGINE_API ~GameObject();
 
 	template <typename T> requires IsDComponent<T>
 	std::shared_ptr<T> AddComponent(std::string name = "New Component")
     {
-        std::shared_ptr<T> component = std::shared_ptr<T>(CreateDObject<T>());
-        if (component)
-        {
-            component->Initialize(name, shared_from_this());
-        }
+        std::shared_ptr<T> component = std::make_shared<T>(name, shared_from_this());
         m_components.push_back(component);
         return component;
 	}
@@ -44,11 +37,8 @@ public:
 	template <typename T> requires IsSceneComponent<T>
     std::shared_ptr<T> AddSceneComponent(std::string name = "New Scene Component")
     {
-        std::shared_ptr<T> sceneComponent = std::shared_ptr<T>(CreateDObject<T>());
-        if (sceneComponent)
-        {
-            sceneComponent->Initialize(name, shared_from_this());
-        }
+        std::shared_ptr<T> sceneComponent = std::make_shared<T>(name, shared_from_this());
+        //std::shared_ptr<T> sceneComponent = CreateDObject<T>();
         m_sceneComponents.push_back(sceneComponent);
         if (m_rootSceneComponent.expired())
         {
@@ -71,16 +61,16 @@ public:
     DELTAENGINE_API void Destroy();
 
     DFUNCTION()
-    DELTAENGINE_API const std::string& GetName() const;
+    const std::string& GetName() const { return m_name; }
 
     DFUNCTION()
-    DELTAENGINE_API std::shared_ptr<DWorld> GetCurrentWorld() const;
+    inline std::shared_ptr<DWorld> GetCurrentWorld() const { return m_currentWorld; }
     DFUNCTION()
-    DELTAENGINE_API std::shared_ptr<SceneComponent> GetRootSceneComponent() const;
+    inline std::shared_ptr<SceneComponent> GetRootSceneComponent() const { return m_rootSceneComponent.lock(); }
     DFUNCTION()
-    DELTAENGINE_API const std::vector<std::shared_ptr<SceneComponent>>& GetSceneComponents() const;
+    inline const std::vector<std::shared_ptr<SceneComponent>>& GetSceneComponents() const { return m_sceneComponents; }
     DFUNCTION()
-    DELTAENGINE_API const std::vector<std::shared_ptr<DComponent>>& GetComponents() const;
+    inline const std::vector<std::shared_ptr<DComponent>>& GetComponents() const { return m_components; }
 
     template <typename T> requires IsSceneComponent<T>
     DELTAENGINE_API inline std::shared_ptr<T> GetRootSceneComponent() const

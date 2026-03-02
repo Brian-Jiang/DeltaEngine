@@ -39,16 +39,16 @@ public:
     DELTAENGINE_API void PreTick(float deltaTime);
 
     DFUNCTION()
-    std::shared_ptr<SceneComponent> GetRootSceneComponent() const;
+    std::shared_ptr<SceneComponent> GetRootSceneComponent() const { return m_rootSceneComponent; }
 
     /// Clears all game objects and breaks the circular reference between the world and game objects.
     DFUNCTION()
     DELTAENGINE_API void Clear();
 
     DFUNCTION()
-    DELTAENGINE_API const std::vector<std::shared_ptr<GameObject>>& GetGameObjects() const;
+    const std::vector<std::shared_ptr<GameObject>>& GetGameObjects() const { return m_gameObjects; }
     DFUNCTION()
-    DELTAENGINE_API bool IsGameObjectsChanged() const;
+    inline bool IsGameObjectsChanged() const { return m_gameObjectsChanged; }
 
     DFUNCTION()
     DELTAENGINE_API static std::shared_ptr<DWorld> CreateWorld();
