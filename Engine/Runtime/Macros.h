@@ -27,7 +27,7 @@
     friend class DeltaEngine::Reflection::Private::ReflectionRegister_##ClassName; \
     \
 public: \
-    DClass* GetClass() const \
+    DClass* GetClass() const override \
     { \
         return GetReflectionRegistry().FindClassByName(#ClassName); \
     }

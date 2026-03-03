@@ -155,55 +155,55 @@ void EditorWindow_Details::DrawPropertyEditor(DObject* instance, DClass* dclass,
     for (DStruct* s = dclass; s; s = s->GetSuper())
     {
         for (DProperty* prop = s->GetOwnProperties(); prop; prop = prop->GetNext())
-    {
-        ImGui::PushID(prop->GetName().c_str());
-
-        const char* label = prop->GetName().c_str();
-        switch (prop->GetPropertyType())
         {
-        case EPropertyType::Int:
-            DrawIntProperty(instance, prop);
-            break;
-        case EPropertyType::Float:
-            DrawFloatProperty(instance, prop);
-            break;
-        case EPropertyType::Double:
-            DrawDoubleProperty(instance, prop);
-            break;
-        case EPropertyType::Bool:
-            DrawBoolProperty(instance, prop);
-            break;
-        case EPropertyType::String:
-            DrawStringProperty(instance, prop);
-            break;
-        case EPropertyType::WString:
-            DrawWStringProperty(instance, prop);
-            break;
-        case EPropertyType::Vector3:
-            DrawVector3Property(instance, prop);
-            break;
-        case EPropertyType::Quaternion:
-            DrawQuaternionProperty(instance, prop);
-            break;
-        case EPropertyType::Float4:
-            DrawFloat4Property(instance, prop);
-            break;
-        case EPropertyType::Float4x4:
-            DrawFloat4x4Property(instance, prop);
-            break;
-        case EPropertyType::ObjectPtr:
-            DrawObjectPtrProperty(instance, prop, depth);
-            break;
-        case EPropertyType::SharedObjectPtr:
-            DrawSharedObjectPtrProperty(instance, prop, depth);
-            break;
-        default:
-            ImGui::Text("%s: %s", label, prop->ToString(prop->GetValue(instance)).c_str());
-            break;
-        }
+            ImGui::PushID(prop->GetName().c_str());
 
-        ImGui::PopID();
-    }
+            const char* label = prop->GetName().c_str();
+            switch (prop->GetPropertyType())
+            {
+            case EPropertyType::Int:
+                DrawIntProperty(instance, prop);
+                break;
+            case EPropertyType::Float:
+                DrawFloatProperty(instance, prop);
+                break;
+            case EPropertyType::Double:
+                DrawDoubleProperty(instance, prop);
+                break;
+            case EPropertyType::Bool:
+                DrawBoolProperty(instance, prop);
+                break;
+            case EPropertyType::String:
+                DrawStringProperty(instance, prop);
+                break;
+            case EPropertyType::WString:
+                DrawWStringProperty(instance, prop);
+                break;
+            case EPropertyType::Vector3:
+                DrawVector3Property(instance, prop);
+                break;
+            case EPropertyType::Quaternion:
+                DrawQuaternionProperty(instance, prop);
+                break;
+            case EPropertyType::Float4:
+                DrawFloat4Property(instance, prop);
+                break;
+            case EPropertyType::Float4x4:
+                DrawFloat4x4Property(instance, prop);
+                break;
+            case EPropertyType::ObjectPtr:
+                DrawObjectPtrProperty(instance, prop, depth);
+                break;
+            case EPropertyType::SharedObjectPtr:
+                DrawSharedObjectPtrProperty(instance, prop, depth);
+                break;
+            default:
+                ImGui::Text("%s: %s", label, prop->ToString(prop->GetValue(instance)).c_str());
+                break;
+            }
+
+            ImGui::PopID();
+        }
     }
 }
 

@@ -13,7 +13,14 @@ class DClass;
 DCLASS()
 class DObject
 {
-    DGENERATED_BODY(DObject)
+    friend class DeltaEngine::Reflection::Private::ReflectionRegister_DObject;
+
+public:
+    virtual DClass* GetClass() const
+    {
+        return GetReflectionRegistry().FindClassByName("DObject");
+    }
+
     friend class DClass;
 
 public:
