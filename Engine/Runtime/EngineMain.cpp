@@ -152,31 +152,31 @@ void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std:
     spotLight->UpdateParameters(XMVectorSet(0.2f, 0.8f, 1.0f, 1.0f), 3.0f, 20.0f, XM_PI / 6.0f, XM_PI / 3.0f);
     
 
-    TestComponent* testComp = CreateDObject<TestComponent>();
+    //TestComponent* testComp = CreateDObject<TestComponent>();
 
-    DClass* testClass = GetReflectionRegistry().FindClassByName("TestComponent");
+    //DClass* testClass = GetReflectionRegistry().FindClassByName("TestComponent");
 
-    DFunction* addFn = testClass->FindFunctionByName("TestAdd");
-    //struct { int a; int b; int retVal; } addParams = { 3, 7, 0 };
-    struct TestAdd_Params {
-        int a;
-        int b;
-        int returnValue;
-    } addParams = { 3, 7, 0 };
-    addFn->Invoke(testComp, &addParams);
-    int addResult = addParams.returnValue;
+    //DFunction* addFn = testClass->FindFunctionByName("TestAdd");
+    ////struct { int a; int b; int retVal; } addParams = { 3, 7, 0 };
+    //struct TestAdd_Params {
+    //    int a;
+    //    int b;
+    //    int returnValue;
+    //} addParams = { 3, 7, 0 };
+    //addFn->Invoke(testComp, &addParams);
+    //int addResult = addParams.returnValue;
 
-    DFunction* mulFn = testClass->FindFunctionByName("TestMultiply");
-    //struct { float x; bool negate; char _pad[3]; float retVal; } mulParams = { 5.0f, true, {}, 0.0f };
-    struct TestMultiply_Params {
-        float x;
-        bool neg;
-        float returnValue;
-    } mulParams2 = { 5.0f, true, 0.0f };
-    mulFn->Invoke(testComp, &mulParams2);
-    float mulResult = mulParams2.returnValue;
+    //DFunction* mulFn = testClass->FindFunctionByName("TestMultiply");
+    ////struct { float x; bool negate; char _pad[3]; float retVal; } mulParams = { 5.0f, true, {}, 0.0f };
+    //struct TestMultiply_Params {
+    //    float x;
+    //    bool neg;
+    //    float returnValue;
+    //} mulParams2 = { 5.0f, true, 0.0f };
+    //mulFn->Invoke(testComp, &mulParams2);
+    //float mulResult = mulParams2.returnValue;
 
-    DClass* testClass2 = GetReflectionRegistry().FindClassByName("TestComponent2");
+    //DClass* testClass2 = GetReflectionRegistry().FindClassByName("TestComponent2");
 
 
     // D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {

@@ -11,6 +11,8 @@
 using namespace DeltaEngine;
 
 DeltaEngine::DWorld::DWorld()
+    : m_rootSceneComponent(nullptr)
+    , m_gameObjectsChanged(false)
 {
     SceneComponent* sceneComponent = CreateDObject<SceneComponent>();
     m_rootSceneComponent = sceneComponent;

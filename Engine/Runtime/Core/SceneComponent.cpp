@@ -7,6 +7,7 @@ SceneComponent::SceneComponent()
     : DComponent()
     , m_localTransform(XMMatrixIdentity())
     , m_worldTransform(XMMatrixIdentity())
+    , m_parent(nullptr)
 {
 
 }

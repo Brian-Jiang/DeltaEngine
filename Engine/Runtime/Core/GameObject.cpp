@@ -1,11 +1,15 @@
 #include "Core/GameObject.h"
 
+#include "Reflection/ReflectionRegistry.h"
+
 #include "Core/DWorld.h"
 
 using namespace DeltaEngine;
 
 GameObject::GameObject()
     : m_name("New GameObject")
+    , m_rootSceneComponent(nullptr)
+    , m_currentWorld(nullptr)
 {
 	//AddComponent<Transform>();
 }
@@ -22,15 +26,15 @@ GameObject::~GameObject()
 
 void GameObject::Destroy()
 {
-    //for (std::shared_ptr<DComponent> component : m_components)
-    //{
-    //    component.reset();
-    //}
+    for (DComponent* component : m_components)
+    {
+        GetReflectionRegistry().DestroyObject(component);
+    }
 
-    //for (std::shared_ptr<SceneComponent> sceneComponent : m_sceneComponents)
-    //{
-    //    sceneComponent.reset();
-    //}
+    for (SceneComponent* sceneComponent : m_sceneComponents)
+    {
+        GetReflectionRegistry().DestroyObject(sceneComponent);
+    }
 }
 
 const std::string& GameObject::GetName() const { return m_name; }

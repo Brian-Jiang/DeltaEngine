@@ -3,6 +3,7 @@
 using namespace DeltaEngine;
 
 DComponent::DComponent()
+    : m_gameObject(nullptr)
 {
 }
 
