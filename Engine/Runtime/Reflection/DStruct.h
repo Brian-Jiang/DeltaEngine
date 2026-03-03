@@ -26,13 +26,13 @@ public:
 
     void SetSuper(DStruct* super);
 
-    const std::string& GetName() const;
-    const std::string& GetSuperName() const;
-    DStruct* GetSuper() const;
-    size_t GetStructSize() const;
-    size_t GetMinAlignment() const;
-    DProperty* GetProperties() const;
-    DProperty* GetOwnProperties() const;
+    DELTAENGINE_API const std::string& GetName() const;
+    DELTAENGINE_API const std::string& GetSuperName() const;
+    DELTAENGINE_API DStruct* GetSuper() const;
+    DELTAENGINE_API size_t GetStructSize() const;
+    DELTAENGINE_API size_t GetMinAlignment() const;
+    DELTAENGINE_API DProperty* GetProperties() const;
+    DELTAENGINE_API DProperty* GetOwnProperties() const;
 
 protected:
     std::string m_name;

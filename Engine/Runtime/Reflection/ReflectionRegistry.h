@@ -28,8 +28,8 @@ public:
     void RegisterDClass(DClass* dclass);
     void FinalizeRegistration();
 
-    DStruct* FindStructByName(const std::string& name) const;
-    DClass* FindClassByName(const std::string& name) const;
+    DELTAENGINE_API DStruct* FindStructByName(const std::string& name) const;
+    DELTAENGINE_API DClass* FindClassByName(const std::string& name) const;
 
     DObject* CreateObject(const std::string& className) const;
 
@@ -47,6 +47,6 @@ private:
     std::unordered_map<std::string, DClass*> m_classMap;
 };
 
-extern ReflectionRegistry& GetReflectionRegistry();
+DELTAENGINE_API extern ReflectionRegistry& GetReflectionRegistry();
 
 DELTA_ENGINE_NS_END
