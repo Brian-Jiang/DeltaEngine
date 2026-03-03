@@ -266,7 +266,9 @@ public:
 
     DObject* GetObjectPointer(const void* instance) const override
     {
-        T* ptr = *static_cast<T* const*>(GetValue(instance));
+        //T* ptr = *static_cast<T* const*>(GetValue(instance));
+        auto ptr = *static_cast<T**>(GetValue(instance));
+        //static_assert(DObjectDerived<T>, "T is not DObject derived");
         if constexpr (DObjectDerived<T>)
             return static_cast<DObject*>(ptr);
         return nullptr;

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import clang.cindex as ci
 
-from type_resolver import resolve_type
+from type_resolver import resolve_type, resolve_type_from_string
 from diagnostics import DiagnosticCollector
 
 # Use canonical (underlying) type for emission when type is a typedef/using alias
@@ -268,6 +268,34 @@ def _base_class_name_from_cursor(cursor) -> str:
     if "::" in name:
         name = name.rsplit("::", 1)[-1]
     return name
+
+
+def _extract_dproperty_fields_from_source(source: str, class_name: str, class_start_line: int, class_end_line: int) -> list[tuple[str, str]]:
+    """Text-scan for DPROPERTY fields that may be missing from the AST (e.g. std::string when using stub types).
+    Returns list of (field_name, type_str) for fields preceded by DPROPERTY()."""
+    lines = source.splitlines()
+    result: list[tuple[str, str]] = []
+    i = class_start_line - 1  # 0-based
+    while i < len(lines) and i < class_end_line:
+        line = lines[i]
+        if "DPROPERTY" in line and re.search(r"DPROPERTY\s*\(", line):
+            # Next non-empty line is the declaration
+            j = i + 1
+            while j < len(lines) and j < class_end_line:
+                decl_line = lines[j].strip()
+                if not decl_line or decl_line.startswith("//"):
+                    j += 1
+                    continue
+                # Match: type name; or type name = ...
+                m = re.match(r"^(.+?)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*[;=]", decl_line)
+                if m:
+                    type_str = m.group(1).strip()
+                    field_name = m.group(2)
+                    result.append((field_name, type_str))
+                break
+            i = j
+        i += 1
+    return result
 
 
 def _extract_base_from_source(source: str, class_name: str, start_line: int) -> str:
@@ -586,6 +614,33 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
             same_name_count = sum(1 for f in info.functions if f.name == fn.name)
             fn.overload_index = same_name_count + 1
             info.functions.append(fn)
+
+    # Fallback: text-scan for DPROPERTY fields missing from AST (e.g. std::string with stub types)
+    existing_names = {p.name for p in info.properties}
+    try:
+        extent = class_cursor.extent
+        start_line = extent.start.line if extent.start else class_cursor.location.line
+        end_line = extent.end.line if extent.end else start_line + 500
+        text_fields = _extract_dproperty_fields_from_source(
+            source, class_name, start_line, end_line
+        )
+        for field_name, type_str in text_fields:
+            if field_name in existing_names:
+                continue
+            resolved = resolve_type_from_string(type_str, field_name, class_name)
+            if resolved is not None:
+                prop_class, is_obj_ptr, pointee = resolved
+                info.properties.append(PropertyInfo(
+                    name=field_name,
+                    cpp_type=type_str,
+                    property_class=prop_class,
+                    offset=-1,
+                    is_object_ptr=is_obj_ptr,
+                    pointee_type=pointee,
+                ))
+                existing_names.add(field_name)
+    except Exception:
+        pass
 
     # Fallback: libclang often omits CXX_BASE_SPECIFIER with stripped/incomplete parse
     if not info.base_name and class_name != "DObject" and source:

@@ -35,6 +35,6 @@ private:
 };
 
 template <typename T>
-concept DObjectDerived = std::derived_from<T, DObject>;
+concept DObjectDerived = std::derived_from<std::remove_pointer_t<T>, DObject>;
 
 DELTA_ENGINE_NS_END
