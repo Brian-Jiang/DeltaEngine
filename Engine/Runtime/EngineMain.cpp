@@ -153,6 +153,7 @@ void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std:
     
 
     //TestComponent* testComp = CreateDObject<TestComponent>();
+    cameraGo->AddComponent<TestComponent>();
 
     //DClass* testClass = GetReflectionRegistry().FindClassByName("TestComponent");
 

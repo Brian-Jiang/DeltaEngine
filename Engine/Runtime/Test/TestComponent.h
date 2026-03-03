@@ -16,7 +16,7 @@ DELTA_ENGINE_NS_BEGIN
 class DTexture;
 
 DCLASS()
-class TestComponent : public DObject
+class TestComponent : public DComponent
 {
     DGENERATED_BODY(TestComponent)
 
