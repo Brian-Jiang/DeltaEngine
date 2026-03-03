@@ -40,16 +40,16 @@ void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std:
     m_window = window;
 
     // ---- Build the scene world and add renderers ----
-    m_world = std::shared_ptr<DWorld>(CreateDObject<DWorld>());
+    m_world = CreateDObject<DWorld>();
 
 
     // ---------- game object: star mesh renderer
     {
-        std::shared_ptr<GameObject> go = m_world->CreateGameObject("MeshRenderer");
-        std::shared_ptr<MeshRenderer> meshRenderer = go->AddSceneComponent<MeshRenderer>();
+        GameObject* go = m_world->CreateGameObject("MeshRenderer");
+        MeshRenderer* meshRenderer = go->AddSceneComponent<MeshRenderer>();
         meshRenderer->SetLocalPosition(2.0f, 0.0f, 5.0f);
 
-        std::shared_ptr<DShader> shader = std::shared_ptr<DShader>(CreateDObject<DShader>());
+        DShader* shader = CreateDObject<DShader>();
         shader->Initialize(
             L"Shaders.hlsl",
             L"VSMain", L"PSMain",
@@ -64,13 +64,13 @@ void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std:
 
         //std::shared_ptr<DMaterial> material = std::make_shared<DMaterial>(shader);
 
-        std::shared_ptr<DMesh> mesh = std::shared_ptr<DMesh>(CreateDObject<DMesh>());
+        DMesh* mesh = CreateDObject<DMesh>();
         mesh->Initialize(std::wstring(L"Star.obj"));
-        std::vector<std::shared_ptr<DTexture>> textures = mesh->GetTextures();
-        std::vector<std::shared_ptr<DMaterial>> materials;
+        std::vector<DTexture*> textures = mesh->GetTextures();
+        std::vector<DMaterial*> materials;
         for (int i = 0; i < mesh->GetSubMeshCount(); i++)
         {
-            std::shared_ptr<DMaterial> material = std::shared_ptr<DMaterial>(CreateDObject<DMaterial>());
+            DMaterial* material = CreateDObject<DMaterial>();
             material->Initialize(shader);
             if (i < textures.size())
             {
@@ -85,11 +85,11 @@ void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std:
 
     // ---------- game object: home mesh renderer
     {
-        std::shared_ptr<GameObject> go = m_world->CreateGameObject("HomeMeshRenderer");
-        std::shared_ptr<MeshRenderer> meshRenderer = go->AddSceneComponent<MeshRenderer>();
+        GameObject* go = m_world->CreateGameObject("HomeMeshRenderer");
+        MeshRenderer* meshRenderer = go->AddSceneComponent<MeshRenderer>();
         meshRenderer->SetLocalPosition(0.0f, 0.0f, 0.0f);
 
-        std::shared_ptr<DShader> shader = std::shared_ptr<DShader>(CreateDObject<DShader>());
+        DShader* shader = CreateDObject<DShader>();
         shader->Initialize(
             L"Shaders.hlsl",
             L"VSMain", L"PSMain",
@@ -103,14 +103,14 @@ void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std:
         });
         //std::shared_ptr<DMaterial> material = std::make_shared<DMaterial>(shader);
 
-        std::shared_ptr<DMesh> mesh = std::shared_ptr<DMesh>(CreateDObject<DMesh>());
+        DMesh* mesh = CreateDObject<DMesh>();
         mesh->Initialize(std::wstring(L"home/source/home.fbx"));
         //std::shared_ptr<DMesh> mesh = std::make_shared<DMesh>(std::wstring(L"car/source/datsun240k.fbx"));
-        std::vector<std::shared_ptr<DTexture>> textures = mesh->GetTextures();
-        std::vector<std::shared_ptr<DMaterial>> materials;
+        std::vector<DTexture*> textures = mesh->GetTextures();
+        std::vector<DMaterial*> materials;
         for (int i = 0; i < mesh->GetSubMeshCount(); i++)
         {
-            std::shared_ptr<DMaterial> material = std::shared_ptr<DMaterial>(CreateDObject<DMaterial>());
+            DMaterial* material = CreateDObject<DMaterial>();
             material->Initialize(shader);
             if (i < textures.size())
             {
@@ -125,28 +125,28 @@ void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std:
 
 
     // ---------- game object: camera
-    std::shared_ptr<GameObject> cameraGo = m_world->CreateGameObject("Camera");
+    GameObject* cameraGo = m_world->CreateGameObject("Camera");
     m_cameraGameObject = cameraGo;
-    std::shared_ptr<Camera> camera = cameraGo->AddSceneComponent<Camera>();
+    Camera* camera = cameraGo->AddSceneComponent<Camera>();
     camera->SetLocalPosition(0.0f, 50.0f, -400.0f);
     camera->UpdateParameters(DirectX::XM_PIDIV4, static_cast<float>(SCREEN_WIDTH) / SCREEN_HEIGHT, 0.1f, 1000.0f);
 
 
     // ---------- game object: directional light (sun)
-    std::shared_ptr<GameObject> directionalLightGo = m_world->CreateGameObject("DirectionalLight");
-    std::shared_ptr<DirectionalLight> directionalLight = directionalLightGo->AddSceneComponent<DirectionalLight>();
+    GameObject* directionalLightGo = m_world->CreateGameObject("DirectionalLight");
+    DirectionalLight* directionalLight = directionalLightGo->AddSceneComponent<DirectionalLight>();
     directionalLight->SetLocalRotation(DirectX::SimpleMath::Quaternion::CreateFromAxisAngle(DirectX::SimpleMath::Vector3::UnitX, XM_PIDIV4));
     directionalLight->UpdateParameters(XMVectorSet(0, -1, 0, 0), XMVectorSet(1.0f, 1.0f, 0.95f, 1.0f), 0.7f);
 
     // ---------- game object: point light
-    std::shared_ptr<GameObject> pointLightGo = m_world->CreateGameObject("PointLight");
-    std::shared_ptr<PointLight> pointLight = pointLightGo->AddSceneComponent<PointLight>();
+    GameObject* pointLightGo = m_world->CreateGameObject("PointLight");
+    PointLight* pointLight = pointLightGo->AddSceneComponent<PointLight>();
     pointLight->SetLocalPosition(0.0f, 3.0f, 2.0f);
     pointLight->UpdateParameters(XMVectorSet(1.0f, 0.4f, 0.2f, 1.0f), 2.0f, 15.0f);
 
     // ---------- game object: spot light
-    std::shared_ptr<GameObject> spotLightGo = m_world->CreateGameObject("SpotLight");
-    std::shared_ptr<SpotLight> spotLight = spotLightGo->AddSceneComponent<SpotLight>();
+    GameObject* spotLightGo = m_world->CreateGameObject("SpotLight");
+    SpotLight* spotLight = spotLightGo->AddSceneComponent<SpotLight>();
     spotLight->SetLocalPosition(-2.0f, 4.0f, 0.0f);
     spotLight->SetLocalRotation(DirectX::SimpleMath::Quaternion::CreateFromAxisAngle(DirectX::SimpleMath::Vector3::UnitZ, -XM_PIDIV4));
     spotLight->UpdateParameters(XMVectorSet(0.2f, 0.8f, 1.0f, 1.0f), 3.0f, 20.0f, XM_PI / 6.0f, XM_PI / 3.0f);
@@ -232,10 +232,11 @@ void EngineMain::Tick()
     time->TickTime();
 }
 
-std::shared_ptr<Camera> EngineMain::GetCamera()
+Camera* EngineMain::GetCamera()
 {
     if (!m_cameraGameObject)
         return nullptr;
+
     return m_cameraGameObject->GetRootSceneComponent<Camera>();
 }
 
@@ -259,11 +260,11 @@ void EngineMain::RecordSceneDraws(std::shared_ptr<DXGraphicsContext> context)
 
 void EngineMain::Cleanup()
 {
-    m_cameraGameObject.reset();
+    m_cameraGameObject = nullptr;
     if (m_world)
     {
         m_world->Clear();
-        m_world.reset();
+        m_world = nullptr;
     }
 
     if (dxRenderManager)

@@ -12,13 +12,13 @@ using namespace DeltaEngine;
 
 DeltaEngine::DWorld::DWorld()
 {
-    std::shared_ptr<SceneComponent> sceneComponent = std::shared_ptr<SceneComponent>(CreateDObject<SceneComponent>());
+    SceneComponent* sceneComponent = CreateDObject<SceneComponent>();
     m_rootSceneComponent = sceneComponent;
 }
 
-std::shared_ptr<GameObject> DWorld::CreateGameObject(const std::string& name)
+GameObject* DWorld::CreateGameObject(const std::string& name)
 {
-    std::shared_ptr<GameObject> gameObject = std::shared_ptr<GameObject>(CreateDObject<GameObject>());
+    GameObject* gameObject = CreateDObject<GameObject>();
     gameObject->m_name = name;
     gameObject->m_currentWorld = shared_from_this();
     m_gameObjects.push_back(gameObject);
@@ -28,21 +28,21 @@ std::shared_ptr<GameObject> DWorld::CreateGameObject(const std::string& name)
 
 void DeltaEngine::DWorld::InitRenderers(std::shared_ptr<DXGraphicsContext> context) const
 {
-    std::stack<std::shared_ptr<SceneComponent>> stack;
+    std::stack<SceneComponent*> stack;
     stack.push(m_rootSceneComponent);
 
     while (!stack.empty()) {
-        std::shared_ptr<SceneComponent> current = stack.top();
+        SceneComponent* current = stack.top();
         stack.pop();
 
-        if (auto renderer = dynamic_cast<Renderer*>(current.get()))
+        if (auto renderer = dynamic_cast<Renderer*>(current))
         {
             renderer->InitGraphicState(context);
         }
 
         size_t childCount = current->m_children.size();
         for (int i = static_cast<int>(childCount) - 1; i >= 0; --i) {
-            std::shared_ptr<SceneComponent> child = current->m_children[i];
+            SceneComponent* child = current->m_children[i].get();
             stack.push(child);
         }
     }
@@ -50,19 +50,19 @@ void DeltaEngine::DWorld::InitRenderers(std::shared_ptr<DXGraphicsContext> conte
 
 void DeltaEngine::DWorld::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const
 {
-    std::stack<std::shared_ptr<SceneComponent>> stack;
+    std::stack<SceneComponent*> stack;
     stack.push(m_rootSceneComponent);
     bool hasCamera = false;
 
     while (!stack.empty())
     {
-        std::shared_ptr<SceneComponent> current = stack.top();
+        SceneComponent* current = stack.top();
         stack.pop();
 
         // Gather draw calls.
         if (!hasCamera)
         {
-            if (std::shared_ptr<Camera> camera = std::dynamic_pointer_cast<Camera>(current))
+            if (Camera* camera = dynamic_cast<Camera*>(current))
             {
                 camera->PreGatherDrawCalls(context);
                 // todo support multiple cameras and render targets in the future.
@@ -70,7 +70,7 @@ void DeltaEngine::DWorld::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> 
             }
         }
 
-        if (std::shared_ptr<LightComponent> light = std::dynamic_pointer_cast<LightComponent>(current))
+        if (LightComponent* light = dynamic_cast<LightComponent*>(current))
         {
             light->PreGatherDrawCalls(context);
         }
@@ -78,7 +78,7 @@ void DeltaEngine::DWorld::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> 
         size_t childCount = current->m_children.size();
         for (int i = static_cast<int>(childCount) - 1; i >= 0; --i)
         {
-            std::shared_ptr<SceneComponent> child = current->m_children[i];
+            SceneComponent* child = current->m_children[i].get();
             stack.push(child);
         }
     }
@@ -86,16 +86,16 @@ void DeltaEngine::DWorld::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> 
 
 void DeltaEngine::DWorld::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const
 {
-    std::stack<std::shared_ptr<SceneComponent>> stack;
+    std::stack<SceneComponent*> stack;
     stack.push(m_rootSceneComponent);
     
     while (!stack.empty())
     {
-        std::shared_ptr<SceneComponent> current = stack.top();
+        SceneComponent* current = stack.top();
         stack.pop();
 
         // Gather draw calls.
-        if (std::shared_ptr<Renderer> renderer = std::dynamic_pointer_cast<Renderer>(current))
+        if (Renderer* renderer = dynamic_cast<Renderer*>(current))
         {
             renderer->GatherDrawCalls(context);
         }
@@ -103,7 +103,7 @@ void DeltaEngine::DWorld::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> con
         size_t childCount = current->m_children.size();
         for (int i = static_cast<int>(childCount) - 1; i >= 0; --i)
         {
-            std::shared_ptr<SceneComponent> child = current->m_children[i];
+            SceneComponent* child = current->m_children[i].get();
             stack.push(child);
         }
     }
@@ -116,7 +116,7 @@ void DeltaEngine::DWorld::PreTick(float deltaTime)
 
 void DeltaEngine::DWorld::Clear()
 {
-    for (std::shared_ptr<GameObject> gameObject : m_gameObjects)
+    for (GameObject* gameObject : m_gameObjects)
     {
         gameObject->Destroy();
     }
@@ -124,14 +124,14 @@ void DeltaEngine::DWorld::Clear()
     m_gameObjects.clear();
 }
 
-std::shared_ptr<SceneComponent> DeltaEngine::DWorld::GetRootSceneComponent() const { return m_rootSceneComponent; }
+SceneComponent* DeltaEngine::DWorld::GetRootSceneComponent() const { return m_rootSceneComponent; }
 
-const std::vector<std::shared_ptr<GameObject>>& DeltaEngine::DWorld::GetGameObjects() const { return m_gameObjects; }
+const std::vector<GameObject*>& DeltaEngine::DWorld::GetGameObjects() const { return m_gameObjects; }
 
 bool DeltaEngine::DWorld::IsGameObjectsChanged() const { return m_gameObjectsChanged; }
 
-std::shared_ptr<DWorld> DeltaEngine::DWorld::CreateWorld()
+DWorld* DeltaEngine::DWorld::CreateWorld()
 {
-    std::shared_ptr<DWorld> world = std::shared_ptr<DWorld>(CreateDObject<DWorld>());
+    DWorld* world = CreateDObject<DWorld>();
     return world;
 }

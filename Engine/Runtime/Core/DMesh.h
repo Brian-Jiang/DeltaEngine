@@ -35,33 +35,33 @@ public:
     void Initialize(std::wstring sourcePath);
 
     DFUNCTION()
-    DELTAENGINE_API void SetMaterials(std::vector<std::shared_ptr<DMaterial>>& materials);
+    DELTAENGINE_API void SetMaterials(std::vector<DMaterial*>& materials);
 
     void ImportMesh();
 
     void ProcessNode(aiNode* node, const aiScene* scene, DirectX::XMMATRIX accTransform);
     void ProcessMesh(aiMesh* mesh, const aiScene* scene);
-    std::vector<std::shared_ptr<DTexture>> LoadMaterialTextures(const aiScene* scene, aiMaterial* mat, aiTextureType type, std::string typeName, const std::string& filePath);
+    std::vector<DTexture*> LoadMaterialTextures(const aiScene* scene, aiMaterial* mat, aiTextureType type, std::string typeName, const std::string& filePath);
 
     DFUNCTION()
-    DELTAENGINE_API std::shared_ptr<DMaterial> GetMaterial(int index = 0) const;
+    DELTAENGINE_API DMaterial* GetMaterial(int index = 0) const;
 
     DFUNCTION()
     DELTAENGINE_API const std::vector<std::vector<Vertex>>& GetVertices() const;
     DFUNCTION()
     DELTAENGINE_API const std::vector<std::vector<unsigned int>>& GetIndices() const;
     DFUNCTION()
-    DELTAENGINE_API const std::vector<std::shared_ptr<DMaterial>>& GetMaterials() const;
+    DELTAENGINE_API const std::vector<DMaterial*>& GetMaterials() const;
     DFUNCTION()
-    DELTAENGINE_API const std::vector<std::shared_ptr<DTexture>>& GetTextures() const;
+    DELTAENGINE_API const std::vector<DTexture*>& GetTextures() const;
     DFUNCTION()
     DELTAENGINE_API int GetSubMeshCount() const;
 
 private:
     std::vector<std::vector<Vertex>> m_vertices;
     std::vector<std::vector<unsigned int>> m_indices;
-    std::vector<std::shared_ptr<DMaterial>> m_materials;
-    std::vector<std::shared_ptr<DTexture>> m_textures;
+    std::vector<DMaterial*> m_materials;
+    std::vector<DTexture*> m_textures;
 
     DPROPERTY()
     std::wstring m_sourcePath;

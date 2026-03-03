@@ -1,6 +1,8 @@
 #pragma once
 
 #include "EngineIncludes.h"
+#include "Core/DHandle.h"
+#include "Reflection/ReflectionRegistry.h"
 
 #include "DObject.generated.h"
 
@@ -17,6 +19,11 @@ class DObject
 public:
     DELTAENGINE_API DObject();
     DELTAENGINE_API virtual ~DObject();
+
+    void SetHandle(const DHandle& handle) { m_handle = handle; }
+
+private:
+    DHandle m_handle;
 
 };
 

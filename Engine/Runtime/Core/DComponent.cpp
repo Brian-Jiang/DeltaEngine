@@ -21,7 +21,7 @@ DComponent::~DComponent()
 {
 }
 
-void DComponent::RegisterComponent(std::shared_ptr<GameObject> gameObject)
+void DComponent::RegisterComponent(GameObject* gameObject)
 {
     m_gameObject = gameObject;
 }
@@ -31,6 +31,6 @@ void DeltaEngine::DComponent::SetName(const std::string& name)
     m_name = name;
 }
 
-std::shared_ptr<GameObject> DComponent::GetGameObject() const { return m_gameObject.lock(); }
+GameObject* DComponent::GetGameObject() const { return m_gameObject; }
 
 const std::string& DComponent::GetName() const { return m_name; }

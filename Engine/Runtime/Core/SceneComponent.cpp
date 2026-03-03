@@ -65,10 +65,10 @@ void SceneComponent::SetWorldPosition(DirectX::XMVECTOR position)
 
 void SceneComponent::SetWorldPosition(float x, float y, float z)
 {
-    if (auto parent = m_parent.lock())
+    if (m_parent)
     {
         auto position = XMVectorSet(x, y, z, 1.0f);
-        XMVECTOR parentPosition = parent->m_worldTransform.r[3];
+        XMVECTOR parentPosition = m_parent->m_worldTransform.r[3];
         auto localPositionParentSpace = position - parentPosition;
         SetLocalPosition(localPositionParentSpace);
     }
@@ -147,9 +147,9 @@ void DeltaEngine::SceneComponent::SetWorldRotation(DirectX::SimpleMath::Quaterni
 
 void DeltaEngine::SceneComponent::SetWorldRotation(DirectX::XMVECTOR rotation)
 {
-    if (auto parent = m_parent.lock())
+    if (m_parent)
     {
-        auto parentWorldTransform = parent->m_worldTransform;
+        auto parentWorldTransform = m_parent->m_worldTransform;
         XMVECTOR translation;
         XMVECTOR parentRotation;
         XMVECTOR scale;
@@ -165,7 +165,8 @@ void DeltaEngine::SceneComponent::SetWorldRotation(DirectX::XMVECTOR rotation)
         m_eulerRotationCache = SimpleMath::Vector3(XMConvertToDegrees(eulerRadian.x), XMConvertToDegrees(eulerRadian.y), XMConvertToDegrees(eulerRadian.z));
         SetLocalRotation(localRotationParentSpace);
     }
-    else {
+    else
+    {
         SetLocalRotation(rotation);
     }
 }
@@ -232,14 +233,14 @@ DirectX::SimpleMath::Vector3 DeltaEngine::SceneComponent::GetForward() const
 
 XMMATRIX DeltaEngine::SceneComponent::GetWorldTransform() const { return m_worldTransform; }
 
-std::shared_ptr<SceneComponent> DeltaEngine::SceneComponent::GetParent() const { return m_parent.lock(); }
+SceneComponent* DeltaEngine::SceneComponent::GetParent() const { return m_parent; }
 
-const std::vector<std::shared_ptr<SceneComponent>>& DeltaEngine::SceneComponent::GetChildren() const { return m_children; }
+const std::vector<SceneComponent*>& DeltaEngine::SceneComponent::GetChildren() const { return m_children; }
 
-void DeltaEngine::SceneComponent::SetParent(std::shared_ptr<SceneComponent> parent)
+void DeltaEngine::SceneComponent::SetParent(SceneComponent* parent)
 {
     m_parent = parent;
-    parent->m_children.push_back(shared_from_this());
+    parent->m_children.push_back(this);
     SetTransformDirty();
 }
 
@@ -248,18 +249,19 @@ void DeltaEngine::SceneComponent::UpdateTransformHierarchy(DirectX::XMMATRIX wor
     m_worldTransform = m_localTransform * worldTransform;
     OnTransformChanged();
 
-    for (std::shared_ptr<SceneComponent> child : m_children) {
+    for (SceneComponent* child : m_children) {
         child->UpdateTransformHierarchy(m_worldTransform);
     }
 }
 
 void DeltaEngine::SceneComponent::UpdateTransform()
 {
-    if (auto parent = m_parent.lock()) {
-        XMMATRIX parentTransform = parent->m_worldTransform;
+    if (m_parent) {
+        XMMATRIX parentTransform = m_parent->m_worldTransform;
         UpdateTransformHierarchy(parentTransform);
     }
-    else {
+    else
+    {
         UpdateTransformHierarchy(XMMatrixIdentity());
     }
 }

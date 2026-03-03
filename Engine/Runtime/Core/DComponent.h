@@ -25,20 +25,20 @@ public:
     //DELTAENGINE_API DComponent(std::string name, std::shared_ptr<GameObject> gameObject);
     DELTAENGINE_API virtual ~DComponent();
 
-    virtual void RegisterComponent(std::shared_ptr<GameObject> gameObject);
+    virtual void RegisterComponent(GameObject* gameObject);
 
 public:
     DFUNCTION()
     DELTAENGINE_API void SetName(const std::string& name);
 
     DFUNCTION()
-    DELTAENGINE_API std::shared_ptr<GameObject> GetGameObject() const;
+    DELTAENGINE_API GameObject* GetGameObject() const;
 
     DFUNCTION()
     DELTAENGINE_API const std::string& GetName() const;
 
 private:
-    std::weak_ptr<GameObject> m_gameObject;
+    GameObject* m_gameObject;
 
     DPROPERTY()
     std::string m_name;

@@ -40,6 +40,8 @@ public:
         return static_cast<T*>(obj);
     }
 
+    void DestroyObject(DObject* obj) const;
+
 private:
     std::unordered_map<std::string, DStruct*> m_structMap;
     std::unordered_map<std::string, DClass*> m_classMap;

@@ -34,7 +34,7 @@ public:
     ~MeshRenderer();
 
     DFUNCTION()
-    void SetMesh(std::shared_ptr<DMesh> mesh);
+    void SetMesh(DMesh* mesh);
 
 protected:
     void InitGraphicState(std::shared_ptr<DXGraphicsContext> context) override;
@@ -53,7 +53,7 @@ private:
     //std::vector<D3D12_INDEX_BUFFER_VIEW> indexBufferViews;
 
     DPROPERTY()
-    std::vector<std::shared_ptr<DTexture>> loadedTextures;
+    std::vector<DTexture*> loadedTextures;
 
     //Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
 
@@ -65,7 +65,7 @@ private:
     std::vector<DirectX::XMMATRIX> meshTransforms;
 
     DPROPERTY()
-    std::shared_ptr<DMesh> m_mesh;
+    DMesh* m_mesh;
 
     DPROPERTY()
     std::shared_ptr<MeshRenderProxy> m_meshRenderProxy;

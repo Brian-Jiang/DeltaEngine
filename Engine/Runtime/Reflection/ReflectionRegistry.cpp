@@ -2,6 +2,8 @@
 
 #include "Reflection/DStruct.h"
 #include "Reflection/DClass.h"
+#include "Core/DObject.h"
+#include "Core/DHandle.h"
 
 #include <iostream>
 
@@ -93,6 +95,19 @@ DClass* ReflectionRegistry::FindClassByName(const std::string& name) const
     return nullptr;
 }
 
+void ReflectionRegistry::DestroyObject(DObject* obj) const
+{
+    if (!obj)
+        return;
+
+    DClass* cls = obj->GetClass();
+    if (cls)
+    {
+        cls->DestroyObject(obj);
+        operator delete(obj, std::align_val_t(cls->GetMinAlignment()));
+    }
+}
+
 DObject* ReflectionRegistry::CreateObject(const std::string& className) const
 {
     DClass* cls = FindClassByName(className);
@@ -106,7 +121,11 @@ DObject* ReflectionRegistry::CreateObject(const std::string& className) const
 
         void* memory = operator new(cls->GetStructSize(), std::align_val_t(cls->GetMinAlignment()));
         cls->ConstructObject(memory);
-        return static_cast<DObject*>(memory);
+        DHandle handle {};
+        handle.m_ptr = memory;
+        DObject* obj = static_cast<DObject*>(memory);
+        obj->SetHandle(handle);
+        return obj;
     }
 
     return nullptr;

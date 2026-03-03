@@ -27,9 +27,9 @@ public:
 	DELTAENGINE_API ~GameObject();
 
 	template <typename T> requires IsDComponent<T>
-	std::shared_ptr<T> AddComponent(std::string name = "New Component")
+	T* AddComponent(std::string name = "New Component")
     {
-        std::shared_ptr<T> component = std::shared_ptr<T>(CreateDObject<T>());
+        T* component = CreateDObject<T>();
         component->RegisterComponent(shared_from_this());
         component->SetName(name);
         m_components.push_back(component);
@@ -37,9 +37,9 @@ public:
 	}
 
 	template <typename T> requires IsSceneComponent<T>
-    std::shared_ptr<T> AddSceneComponent(std::string name = "New Scene Component")
+    T* AddSceneComponent(std::string name = "New Scene Component")
     {
-        std::shared_ptr<T> sceneComponent = std::shared_ptr<T>(CreateDObject<T>());  // alignment issue
+        T* sceneComponent = CreateDObject<T>();  // alignment issue
         sceneComponent->RegisterComponent(shared_from_this());
         sceneComponent->SetName(name);
         m_sceneComponents.push_back(sceneComponent);
@@ -67,29 +67,29 @@ public:
     DELTAENGINE_API const std::string& GetName() const;
 
     DFUNCTION()
-    DELTAENGINE_API std::shared_ptr<DWorld> GetCurrentWorld() const;
+    DELTAENGINE_API DWorld* GetCurrentWorld() const;
     DFUNCTION()
-    DELTAENGINE_API std::shared_ptr<SceneComponent> GetRootSceneComponent() const;
+    DELTAENGINE_API SceneComponent* GetRootSceneComponent() const;
     DFUNCTION()
-    DELTAENGINE_API const std::vector<std::shared_ptr<SceneComponent>>& GetSceneComponents() const;
+    DELTAENGINE_API const std::vector<SceneComponent*>& GetSceneComponents() const;
     DFUNCTION()
-    DELTAENGINE_API const std::vector<std::shared_ptr<DComponent>>& GetComponents() const;
+    DELTAENGINE_API const std::vector<DComponent*>& GetComponents() const;
 
     template <typename T> requires IsSceneComponent<T>
-    DELTAENGINE_API inline std::shared_ptr<T> GetRootSceneComponent() const
+    DELTAENGINE_API inline T* GetRootSceneComponent() const
     {
-        return std::static_pointer_cast<T>(m_rootSceneComponent.lock()); 
+        return static_cast<T*>(m_rootSceneComponent); 
     }
 
 private:
     DPROPERTY()
     std::string m_name;
     DPROPERTY()
-    std::weak_ptr<SceneComponent> m_rootSceneComponent;
+    SceneComponent* m_rootSceneComponent;
     DPROPERTY()
-    std::vector<std::shared_ptr<SceneComponent>> m_sceneComponents;
+    std::vector<SceneComponent*> m_sceneComponents;
     DPROPERTY()
-	std::vector<std::shared_ptr<DComponent>> m_components;
+    std::vector<DComponent*> m_components;
     DPROPERTY()
 	std::shared_ptr<DWorld> m_currentWorld;
 };

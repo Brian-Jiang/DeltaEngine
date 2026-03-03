@@ -55,11 +55,11 @@ public:
 	inline std::shared_ptr<DXRenderManager> GetRenderManager() const { return dxRenderManager; }
 
 	/// Returns the main editor camera. May be null if not initialized.
-	DELTAENGINE_API std::shared_ptr<Camera> GetCamera();
+	DELTAENGINE_API Camera* GetCamera();
 
 	/// Cleanup before exit. Call when shutting down.
 	DELTAENGINE_API void Cleanup();
-    inline std::shared_ptr<DWorld> GetWorld() const { return m_world; }
+    inline DWorld* GetWorld() const { return m_world; }
 	inline std::shared_ptr<SDL_Window> GetWindow() const { return m_window; }
 
 private:
@@ -67,8 +67,8 @@ private:
 
     std::unique_ptr<Time> time;
 
-    std::shared_ptr<DWorld> m_world;
-    std::shared_ptr<GameObject> m_cameraGameObject;
+    DWorld* m_world;
+    GameObject* m_cameraGameObject;
 };
 
 DELTA_ENGINE_NS_END

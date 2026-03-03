@@ -44,7 +44,7 @@ MeshRenderer::~MeshRenderer()
 {
 }
 
-void MeshRenderer::SetMesh(std::shared_ptr<DMesh> mesh)
+void MeshRenderer::SetMesh(DMesh* mesh)
 {
     m_mesh = mesh;
     CreateMeshRenderProxy();

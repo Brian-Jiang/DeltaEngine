@@ -58,12 +58,13 @@ private:
 
     DPROPERTY()
     std::wstring m_sourcePath;
+
     DPROPERTY()
     bool m_sRGB;
 
 
 public:
-    static std::shared_ptr<DTexture> LoadFromFile(const std::wstring& filePath, bool sRGB = false);
+    static DTexture* LoadFromFile(const std::wstring& filePath, bool sRGB = false);
 };
 
 DELTA_ENGINE_NS_END

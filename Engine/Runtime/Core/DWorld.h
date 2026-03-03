@@ -25,7 +25,7 @@ public:
     DELTAENGINE_API DWorld();
 
     DFUNCTION()
-    DELTAENGINE_API std::shared_ptr<GameObject> CreateGameObject(const std::string& name = "New GameObject");
+    DELTAENGINE_API GameObject* CreateGameObject(const std::string& name = "New GameObject");
 
     /// Walk the scene tree and call InitGraphicState on every Renderer.
     DELTAENGINE_API void InitRenderers(std::shared_ptr<DXGraphicsContext> context) const;
@@ -39,25 +39,25 @@ public:
     DELTAENGINE_API void PreTick(float deltaTime);
 
     DFUNCTION()
-    DELTAENGINE_API std::shared_ptr<SceneComponent> GetRootSceneComponent() const;
+    DELTAENGINE_API SceneComponent* GetRootSceneComponent() const;
 
     /// Clears all game objects and breaks the circular reference between the world and game objects.
     DFUNCTION()
     DELTAENGINE_API void Clear();
 
     DFUNCTION()
-    DELTAENGINE_API const std::vector<std::shared_ptr<GameObject>>& GetGameObjects() const;
+    DELTAENGINE_API const std::vector<GameObject*>& GetGameObjects() const;
     DFUNCTION()
     DELTAENGINE_API bool IsGameObjectsChanged() const;
 
     DFUNCTION()
-    DELTAENGINE_API static std::shared_ptr<DWorld> CreateWorld();
+    DELTAENGINE_API static DWorld* CreateWorld();
 
 private:
     DPROPERTY()
-    std::shared_ptr<SceneComponent> m_rootSceneComponent;
+    SceneComponent* m_rootSceneComponent;
     DPROPERTY()
-    std::vector<std::shared_ptr<GameObject>> m_gameObjects;
+    std::vector<GameObject*> m_gameObjects;
     DPROPERTY()
     bool m_gameObjectsChanged = false;
 };

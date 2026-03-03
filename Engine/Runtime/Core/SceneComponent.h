@@ -17,7 +17,7 @@ DELTA_ENGINE_NS_BEGIN
 class DWorld;
 
 DCLASS()
-class SceneComponent : public DComponent, public std::enable_shared_from_this<SceneComponent>
+class SceneComponent : public DComponent
 {
     DGENERATED_BODY(SceneComponent)
     friend class DWorld;
@@ -81,12 +81,11 @@ public:
     DELTAENGINE_API DirectX::SimpleMath::Vector3 GetForward() const;
     
     DFUNCTION()
-    DELTAENGINE_API std::shared_ptr<SceneComponent> GetParent() const;
+    DELTAENGINE_API SceneComponent* GetParent() const;
     DFUNCTION()
-    DELTAENGINE_API const std::vector<std::shared_ptr<SceneComponent>>& GetChildren() const;
+    DELTAENGINE_API const std::vector<SceneComponent*>& GetChildren() const;
     DFUNCTION()
-    DELTAENGINE_API void SetParent(std::shared_ptr<SceneComponent> parent);
-
+    DELTAENGINE_API void SetParent(SceneComponent* parent);
 protected:
     virtual void OnTransformChanged() {}
 
@@ -96,9 +95,9 @@ private:
     DPROPERTY()
     DirectX::XMMATRIX m_worldTransform;
     DPROPERTY()
-    std::weak_ptr<SceneComponent> m_parent;
+    SceneComponent* m_parent;
     DPROPERTY()
-    std::vector<std::shared_ptr<SceneComponent>> m_children;
+    std::vector<SceneComponent*> m_children;
     DPROPERTY()
     DirectX::SimpleMath::Vector3 m_eulerRotationCache;
 

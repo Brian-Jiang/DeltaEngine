@@ -30,37 +30,37 @@ public:
     //    const CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL& depthStencilState);
     ~DMaterial();
 
-    void Initialize(std::shared_ptr<DShader> shader);
+    void Initialize(DShader* shader);
 
     DFUNCTION()
-    void SetShader(std::shared_ptr<DShader> shader);
+    void SetShader(DShader* shader);
 
     void SetBlendState(const CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC& blendDesc);
     
     void SetDepthStencilState(const CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL& depthStencilState);
 
     DFUNCTION()
-    void AddTexture(std::shared_ptr<DTexture> texture);
+    void AddTexture(DTexture* texture);
 
     DFUNCTION()
-    std::shared_ptr<DTexture> GetTexture(int index) const;
+    DTexture* GetTexture(int index) const;
 
     DFUNCTION()
-    DELTAENGINE_API std::shared_ptr<DShader> GetShader() const;
+    DELTAENGINE_API DShader* GetShader() const;
 
     DELTAENGINE_API CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC GetBlendState() const;
     DELTAENGINE_API CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL GetDepthStencilState() const;
 
 private:
     DPROPERTY()
-    std::shared_ptr<DShader> m_shader;
+    DShader* m_shader;
 
     CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC m_blendDesc;
     
     CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL m_depthStencilState;
 
     DPROPERTY()
-    std::vector<std::shared_ptr<DTexture>> m_textures;
+    std::vector<DTexture*> m_textures;
 };
 
 DELTA_ENGINE_NS_END

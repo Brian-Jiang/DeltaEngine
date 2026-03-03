@@ -215,11 +215,11 @@ void DMesh::ProcessMesh(aiMesh* mesh, const aiScene* scene)
         std::filesystem::path path(fullPath);
         aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
 
-        std::vector<std::shared_ptr<DTexture>> diffuseMaps = LoadMaterialTextures(
+        std::vector<DTexture*> diffuseMaps = LoadMaterialTextures(
             scene, material, aiTextureType_DIFFUSE, "texture_diffuse", path.string());
         textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
 
-        std::vector<std::shared_ptr<DTexture>> specularMaps = LoadMaterialTextures(scene, material,
+        std::vector<DTexture*> specularMaps = LoadMaterialTextures(scene, material,
             aiTextureType_SPECULAR, "texture_specular", path.string());
         textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
     }
@@ -261,10 +261,10 @@ std::string FindTextureFile(const std::string& directory, const std::string& fil
     return "";
 }
 
-std::vector<std::shared_ptr<DTexture>> DMesh::LoadMaterialTextures(const aiScene* scene, aiMaterial* mat, aiTextureType type, std::string typeName, const std::string& filePath)
+std::vector<DTexture*> DMesh::LoadMaterialTextures(const aiScene* scene, aiMaterial* mat, aiTextureType type, std::string typeName, const std::string& filePath)
 {
     auto folderPath = GetParentDirectory(filePath, 2);
-    std::vector<std::shared_ptr<DTexture>> textures;
+    std::vector<DTexture*> textures;
     for (unsigned int i = 0; i < mat->GetTextureCount(type); i++)
     {
         aiString str;
@@ -282,7 +282,7 @@ std::vector<std::shared_ptr<DTexture>> DMesh::LoadMaterialTextures(const aiScene
             continue;
         }
 
-        auto texture = DTexture::LoadFromFile(std::wstring(texturePath.begin(), texturePath.end()), true);
+        DTexture* texture = DTexture::LoadFromFile(std::wstring(texturePath.begin(), texturePath.end()), true);
         textures.push_back(texture);
     }
 
@@ -295,9 +295,9 @@ void DMesh::Initialize(std::wstring sourcePath)
     ImportMesh();
 }
 
-void DMesh::SetMaterials(std::vector<std::shared_ptr<DMaterial>>& materials) { m_materials = materials; }
+void DMesh::SetMaterials(std::vector<DMaterial*>& materials) { m_materials = materials; }
 
-std::shared_ptr<DMaterial> DMesh::GetMaterial(int index) const
+DMaterial* DMesh::GetMaterial(int index) const
 {
     if (index < 0 || index >= m_materials.size())
     {
@@ -311,8 +311,8 @@ const std::vector<std::vector<Vertex>>& DMesh::GetVertices() const { return m_ve
 
 const std::vector<std::vector<unsigned int>>& DMesh::GetIndices() const { return m_indices; }
 
-const std::vector<std::shared_ptr<DMaterial>>& DMesh::GetMaterials() const { return m_materials; }
+const std::vector<DMaterial*>& DMesh::GetMaterials() const { return m_materials; }
 
-const std::vector<std::shared_ptr<DTexture>>& DMesh::GetTextures() const { return m_textures; }
+const std::vector<DTexture*>& DMesh::GetTextures() const { return m_textures; }
 
 int DMesh::GetSubMeshCount() const { return static_cast<int>(m_vertices.size()); }

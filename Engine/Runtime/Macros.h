@@ -24,6 +24,13 @@
 #define DFUNCTION(...)
 #define DPROPERTY(...)
 #define DGENERATED_BODY(ClassName) \
-    friend class DeltaEngine::Reflection::Private::ReflectionRegister_##ClassName;
+    friend class DeltaEngine::Reflection::Private::ReflectionRegister_##ClassName; \
+    \
+public: \
+    DClass* GetClass() const \
+    { \
+        return GetReflectionRegistry().FindClassByName(#ClassName); \
+    }
+
 #define DGENERATED_BODY_STRUCT(StructName) \
     friend class DeltaEngine::Reflection::Private::ReflectionRegister_##StructName;
