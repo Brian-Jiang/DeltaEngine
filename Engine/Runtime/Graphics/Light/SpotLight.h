@@ -30,8 +30,8 @@ public:
     void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) override;
 
 private:
-    DPROPERTY()
     std::shared_ptr<SpotLightRenderProxy> m_renderProxy;
+
     DPROPERTY()
     DirectX::XMVECTOR m_color;
     DPROPERTY()

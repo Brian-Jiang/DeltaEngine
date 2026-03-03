@@ -54,11 +54,8 @@ public:
     DELTAENGINE_API static DWorld* CreateWorld();
 
 private:
-    DPROPERTY()
     SceneComponent* m_rootSceneComponent;
-    DPROPERTY()
     std::vector<GameObject*> m_gameObjects;
-    DPROPERTY()
     bool m_gameObjectsChanged = false;
 };
 

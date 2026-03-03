@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-DeltaEngine is a DirectX 12 game engine with an integrated editor, written in C++23. The editor uses ImGui for UI and SDL3 for window management.
+DeltaEngine is a DirectX 12 game engine with an integrated editor, written in C++23. The editor uses ImGui for UI and SDL3 for window management. The engine has a full static reflection system driven by a Python-based code generator (`DeltaHeaderTool`).
 
 ## Build System
 
@@ -24,11 +24,27 @@ Build output goes to `Build/x64-Debug/bin/` (executables) and `Build/x64-Debug/l
 
 **Compiler requirements:** MSVC with C++23, `/permissive-` (strict), `/MP` (parallel compilation). No test suite exists — the editor is the primary verification tool.
 
+### DeltaHeaderTool Build Integration
+
+`DeltaHeaderTool` is a code generator that runs automatically as part of every build:
+
+1. **Configure time** — if the manifest is missing (first configure or clean), the tool runs once to produce `Intermediate/DeltaHeaderTool/generated_sources.cmake`.
+2. **Build time** — custom target `DeltaHeaderToolRun` always executes before `DeltaEngine`, running the tool with timestamp-based incremental checks (only files with updated sources are regenerated).
+3. The manifest lists all generated `.cpp` files; CMake automatically reconfigures if it changes.
+
+```bash
+# Force full regeneration (VS: build the DeltaHeaderTool target)
+cmake --build Build/x64-Debug --target DeltaHeaderTool
+
+# Or via script
+Tools/Scripts/delta_header_force_generate.bat
+```
+
 ## Architecture
 
 The project is split into two CMake targets:
 
-- **DeltaEngine** (`Engine/Runtime/`) — static library: core, graphics, assets, importers
+- **DeltaEngine** (`Engine/Runtime/`) — shared library: core, graphics, assets, importers, reflection
 - **DeltaEditor** (`Engine/Editor/`) — executable: editor app, ImGui windows, selection state
 
 ### Frame Loop
@@ -98,14 +114,128 @@ All editor windows implement `EditorWindow` interface. Current windows:
 - `EditorWindow_Viewport` — displays scene texture, fly camera (WASD + mouse)
 - `EditorWindow_WorldOutliner` — scene hierarchy tree
 - `EditorWindow_ComponentsHierarchy` — components of selected GameObject
-- `EditorWindow_Details` — property inspector
+- `EditorWindow_Details` — property inspector (reflection-driven: reads DClass/DProperty to display fields)
 
 `EditorSelectionState` (singleton-like, owned by `EditorMain`) is the shared selection model passed to all editor windows.
+
+---
+
+## Reflection System
+
+DeltaEngine has a full static reflection system. Source classes annotated with macros are processed at build time by `DeltaHeaderTool` to generate registration code. At runtime, `ReflectionRegistry` provides type lookup, property access, function invocation, and object creation by name.
+
+### Annotation Macros (`Engine/Runtime/Macros.h`)
+
+| Macro | Target | Effect |
+|---|---|---|
+| `DCLASS()` | class | Marks for reflection; DeltaHeaderTool generates `.generated.h/.cpp` |
+| `DSTRUCT()` | struct | Same as DCLASS, generates DStruct metadata instead of DClass |
+| `DPROPERTY()` | field | Reflects the field; type and offset captured via AST |
+| `DFUNCTION()` | method | Reflects the method; thunk + params struct generated |
+| `DGENERATED_BODY(Name)` | class body | Injects `friend` declaration and `GetClass()` override |
+
+All annotation macros expand to nothing at compile time — they are only tokens for the code generator.
+
+### Reflection Types (`Engine/Runtime/Reflection/`)
+
+- **`DStruct`** — metadata for structs: name, super name, size, alignment, linked list of `DProperty`
+- **`DClass`** — extends `DStruct` for classes: adds `DFunction` map, constructor/destructor/copy lambdas, abstract flag
+- **`DProperty`** — abstract base for field metadata; offset-based access; concrete subclasses: `DFloatProperty`, `DIntProperty`, `DBoolProperty`, `DDoubleProperty`, `DStringProperty`, `DVector3Property`, `DQuaternionProperty`, `DWStringProperty`, `DFloat4Property`, `DFloat4x4Property`, `DObjectPtrProperty<T>`, `DSharedObjectPtrProperty<T>`
+- **`DFunction`** — method metadata: name, native thunk pointer, param list (`DProperty*`), optional return property; `Invoke(DObject*, void*)` dispatches via thunk
+- **`ReflectionRegistry`** — singleton (`GetReflectionRegistry()`); maps name → `DStruct*` / `DClass*`; `CreateObject(name)` and `DestroyObject()` for runtime instantiation
+
+### How Reflection Registration Works
+
+Each reflected class gets a generated `.cpp` that:
+1. Defines a **thunk function** per `DFUNCTION()` method — signature `void Thunk(DObject*, void*)`, extracts params from a generated struct, calls the real method, writes return value back.
+2. Defines `ReflectionRegisterFn_ClassName()` — creates `DClass`/`DStruct`, adds `DProperty` instances (via `offsetof`), adds `DFunction` instances (with thunks), registers into `GetReflectionRegistry()`.
+3. Defines `CreateDObject<ClassName>()` specialization — delegates to `ReflectionRegistry::CreateObject`.
+4. Declares a **static `ReflectionRegistration`** instance — calls the register function at program startup, before `main()`.
+
+`ReflectionRegistry::FinalizeRegistration()` is called once after startup to resolve super-class links across the full hierarchy.
+
+### Generated File Layout
+
+```
+Source:     Engine/Runtime/Core/Foo.h          (annotated with DCLASS)
+Generated:  Intermediate/DeltaHeaderTool/Generated/Foo.generated.h
+            Intermediate/DeltaHeaderTool/Generated/Foo.generated.cpp
+```
+
+`Foo.generated.h` is `#include`d at the top of `Foo.h` (before the class body) to expose forward declarations required by `DGENERATED_BODY`. The generated `.cpp` files are compiled as part of `DeltaEngine` via the manifest.
+
+### Currently Reflected Classes (18)
+
+Core: `DObject`, `GameObject`, `DComponent`, `SceneComponent`, `DWorld`, `Camera`, `Renderer`, `MeshRenderer`
+Assets: `DMesh`, `DMaterial`, `DTexture`, `DShader`
+Lighting: `LightComponent`, `DirectionalLight`, `PointLight`, `SpotLight`
+Test: `TestComponent`, `TestComponent2`
+
+### Reflection Limitations
+
+- `std::vector` and other container types are **not** supported as properties (generator warns and skips).
+- Template class reflection is **not** supported.
+- Nested class reflection is **not** supported.
+- Method overloads are tracked by index but discrimination is limited.
+
+---
+
+## Tools & Scripts
+
+### Directory Layout
+
+```
+Tools/
+├── Python/              # Bundled Python 3.12+ (build-time only, not embedded at runtime)
+│   ├── python.exe
+│   ├── Lib/
+│   └── DLLs/
+├── Clang/               # LLVM libclang.dll + Python bindings (used by DeltaHeaderTool)
+├── DeltaHeaderTool/     # Reflection code generator (~1,900 lines Python)
+│   ├── main.py          # Driver: two-pass pipeline, multiprocessing pool
+│   ├── parser.py        # libclang AST parser → ClassInfo / PropertyInfo / FunctionInfo
+│   ├── generator.py     # Code emitter → .generated.h and .generated.cpp
+│   ├── templates.py     # String templates for thunks, registration, property binding
+│   ├── type_resolver.py # C++ type → DProperty subclass mapping
+│   ├── diagnostics.py   # Non-fatal warning accumulation
+│   └── clang/           # Bundled libclang Python bindings
+├── CMake/
+│   └── PythonSetup.cmake  # Sets DELTA_PYTHON to bundled python.exe
+└── Scripts/
+    ├── build.bat
+    ├── build-x64-debug.bat
+    ├── rebuild-x64-debug.bat
+    ├── run-x64-debug.bat
+    ├── set_env.bat
+    ├── delta_header_generate.bat        # Incremental generation
+    └── delta_header_force_generate.bat  # Full regeneration (--force)
+```
+
+### DeltaHeaderTool Pipeline
+
+**Two-pass architecture:**
+
+1. **Fast text scan** — quick grep for `DCLASS`/`DSTRUCT` tokens; skips unchanged files by timestamp.
+2. **Parallel AST parse** — `multiprocessing.Pool` (default: all CPU cores); each worker loads libclang once, strips `#include` directives, parses with `-std=c++23`, walks AST to extract annotated classes, properties, and functions.
+
+**Output per source file:**
+- `.generated.h` — params structs, `ReflectionRegister_*` forward declarations, `CreateDObject<>` specialization
+- `.generated.cpp` — thunk functions, full registration function, `CreateDObject<>` implementation, static registration instance
+
+**Key design:** libclang parses a stripped copy of the header (includes removed, replaced with minimal type stubs) so the tool has zero dependency on the full engine include tree.
+
+### Python Usage
+
+Python is **build-time only**. The bundled `Tools/Python/python.exe` runs `DeltaHeaderTool` during CMake builds. There is **no embedded Python in the engine runtime** (no pybind11, no Python C API in `Engine/` code).
+
+---
 
 ## Key Conventions
 
 - **Headers only for declarations/implementations split:** most files use `.h` + `.cpp` pairs under the same directory.
 - **Smart pointers everywhere:** `shared_ptr`/`weak_ptr` for scene objects, `unique_ptr` for owned subsystems.
-- **No raw `new`/`delete`** for engine objects.
+- **No raw `new`/`delete`** for engine objects — use `CreateDObject<T>()` for reflected types.
 - **HLSL shaders** live alongside engine source in `Engine/Runtime/Shaders/` and are compiled at runtime (not offline). The `StandardObject.hlsl` / `StandardLighting.hlsl` / `StandardConstantStructs.hlsl` trio forms the standard material shader.
 - **`DXGraphicsContext`** is the primary way to pass rendering state down the call stack — do not add global graphics state.
+- **Adding a new reflected class:** annotate with `DCLASS()` + `DGENERATED_BODY(Name)`, add `DPROPERTY()`/`DFUNCTION()` annotations, then build (or run `delta_header_generate.bat`) — the tool regenerates the `.generated.h/.cpp` pair automatically.
+- **Do not hand-edit generated files** in `Intermediate/DeltaHeaderTool/Generated/` — they are overwritten on every build.
