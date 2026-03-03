@@ -416,11 +416,13 @@ def _get_tokens_before_cursor(tu, cursor, lookback_lines=5):
 
 def _is_annotated(tu, cursor, macro_name):
     tokens = _get_tokens_before_cursor(tu, cursor)
-    for i, tok in enumerate(reversed(tokens)):
+    for tok in reversed(tokens):
         if tok.spelling == macro_name:
             return True
-        if i > 10:
-            break
+        # A semicolon means we've crossed the end of a prior declaration;
+        # any macro before it was already consumed by that declaration.
+        if tok.spelling == ";":
+            return False
     return False
 
 
