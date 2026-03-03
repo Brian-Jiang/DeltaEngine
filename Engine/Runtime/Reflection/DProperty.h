@@ -6,11 +6,12 @@
 #include <memory>
 #include <type_traits>
 
+#include "Core/DObject.h"
+
 DELTA_ENGINE_NS_BEGIN
 
 class DStruct;
 class DClass;
-class DObject;
 
 enum class EPropertyType
 {
@@ -49,6 +50,9 @@ public:
     virtual bool Identical(const void* a, const void* b) const = 0;
     virtual std::string ToString(const void* address) const = 0;
     virtual EPropertyType GetPropertyType() const = 0;
+
+    /// Returns the pointed-to DObject* for ObjectPtr/SharedObjectPtr, or nullptr for other types.
+    virtual DObject* GetObjectPointer(const void* instance) const { return nullptr; }
 
     const std::string& GetName() const { return m_name; }
     const std::string& GetType() const { return m_type; }
@@ -259,6 +263,14 @@ public:
     {
         return EPropertyType::ObjectPtr;
     }
+
+    DObject* GetObjectPointer(const void* instance) const override
+    {
+        T* ptr = *static_cast<T* const*>(GetValue(instance));
+        if constexpr (DObjectDerived<T>)
+            return static_cast<DObject*>(ptr);
+        return nullptr;
+    }
 };
 
 
@@ -316,6 +328,14 @@ public:
     EPropertyType GetPropertyType() const override
     {
         return EPropertyType::SharedObjectPtr;
+    }
+
+    DObject* GetObjectPointer(const void* instance) const override
+    {
+        const auto& sp = *static_cast<const std::shared_ptr<T>*>(GetValue(instance));
+        if constexpr (DObjectDerived<T>)
+            return static_cast<DObject*>(sp.get());
+        return nullptr;
     }
 };
 

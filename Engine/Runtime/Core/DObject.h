@@ -27,7 +27,7 @@ private:
 
 };
 
-//template <typename T>
-//concept DObjectDerived = std::is_base_of_v<DObject, T>;
+template <typename T>
+concept DObjectDerived = std::derived_from<T, DObject>;
 
 DELTA_ENGINE_NS_END
