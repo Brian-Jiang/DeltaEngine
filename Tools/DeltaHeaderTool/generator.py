@@ -34,6 +34,7 @@ from templates import (
 )
 
 _SHARED_PTR_PROP_RE = re.compile(r"^DSharedObjectPtrProperty<(.+)>$")
+_OBJECT_PTR_PROP_RE = re.compile(r"^DObjectPtrProperty<(.+)>$")
 
 
 # ── header generation ────────────────────────────────────────
@@ -211,12 +212,14 @@ def _generate_function_registration(cls: ClassInfo, fn: FunctionInfo) -> str:
 
     param_registrations = ""
     for p in fn.params:
-        m_param = _SHARED_PTR_PROP_RE.match(p.property_class)
-        if m_param:
+        m_shared = _SHARED_PTR_PROP_RE.match(p.property_class)
+        m_obj = _OBJECT_PTR_PROP_RE.match(p.property_class)
+        if m_shared or m_obj:
+            pointee = (m_shared or m_obj).group(1)
             param_registrations += DFUNCTION_PARAM_SHARED_PTR.substitute(
                 property_type=p.property_class,
                 param_name=p.name,
-                pointee_type=m_param.group(1),
+                pointee_type=pointee,
                 class_name=cls.name,
                 func_name=fn.name,
                 params_struct_suffix=params_struct_suffix,
@@ -245,11 +248,13 @@ def _generate_function_registration(cls: ClassInfo, fn: FunctionInfo) -> str:
 
     return_registration = ""
     if not is_void and fn.return_property_class:
-        m = _SHARED_PTR_PROP_RE.match(fn.return_property_class)
-        if m:
+        m_shared = _SHARED_PTR_PROP_RE.match(fn.return_property_class)
+        m_obj = _OBJECT_PTR_PROP_RE.match(fn.return_property_class)
+        if m_shared or m_obj:
+            pointee = (m_shared or m_obj).group(1)
             return_registration = DFUNCTION_RETURN_SHARED_PTR.substitute(
                 property_type=fn.return_property_class,
-                pointee_type=m.group(1),
+                pointee_type=pointee,
                 class_name=cls.name,
                 func_name=fn.name,
                 params_struct_suffix=params_struct_suffix,
