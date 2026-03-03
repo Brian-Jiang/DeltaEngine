@@ -405,7 +405,7 @@ std::shared_ptr<DirectX12Texture> CommandList::LoadTextureFromFile(const std::ws
     return texture;
 }
 
-std::shared_ptr<DirectX12Texture> CommandList::LoadTexture(std::shared_ptr<DTexture> texture)
+std::shared_ptr<DirectX12Texture> CommandList::LoadTexture(DTexture* texture)
 {
     std::shared_ptr<DirectX12Texture> dx12texture;
 

@@ -16,7 +16,7 @@
 DELTA_ENGINE_NS_BEGIN
 
 DCLASS()
-class GameObject: public DObject, public std::enable_shared_from_this<GameObject>
+class GameObject: public DObject
 {
     DGENERATED_BODY(GameObject)
     friend class DWorld;
@@ -30,7 +30,7 @@ public:
 	T* AddComponent(std::string name = "New Component")
     {
         T* component = CreateDObject<T>();
-        component->RegisterComponent(shared_from_this());
+        component->RegisterComponent(this);
         component->SetName(name);
         m_components.push_back(component);
         return component;
@@ -40,10 +40,10 @@ public:
     T* AddSceneComponent(std::string name = "New Scene Component")
     {
         T* sceneComponent = CreateDObject<T>();  // alignment issue
-        sceneComponent->RegisterComponent(shared_from_this());
+        sceneComponent->RegisterComponent(this);
         sceneComponent->SetName(name);
         m_sceneComponents.push_back(sceneComponent);
-        if (m_rootSceneComponent.expired())
+        if (!m_rootSceneComponent)
         {
             m_rootSceneComponent = sceneComponent;
             auto worldSceneRoot = m_currentWorld->GetRootSceneComponent();
@@ -54,7 +54,7 @@ public:
         }
         else
         {
-            sceneComponent->SetParent(m_rootSceneComponent.lock());
+            sceneComponent->SetParent(m_rootSceneComponent);
         }
 
         return sceneComponent;
@@ -91,7 +91,7 @@ private:
     DPROPERTY()
     std::vector<DComponent*> m_components;
     DPROPERTY()
-	std::shared_ptr<DWorld> m_currentWorld;
+    DWorld* m_currentWorld;
 };
 
 DELTA_ENGINE_NS_END

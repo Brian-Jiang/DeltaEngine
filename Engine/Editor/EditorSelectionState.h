@@ -17,24 +17,24 @@ class EditorSelectionState
 public:
     EditorSelectionState() = default;
 
-    void SelectGameObject(std::shared_ptr<GameObject> gameObject);
-    void SelectComponent(std::shared_ptr<DComponent> component);
-    void AddGameObjectToSelection(std::shared_ptr<GameObject> gameObject);
-    void AddComponentToSelection(std::shared_ptr<DComponent> component);
+    void SelectGameObject(GameObject* gameObject);
+    void SelectComponent(DComponent* component);
+    void AddGameObjectToSelection(GameObject* gameObject);
+    void AddComponentToSelection(DComponent* component);
     void ClearSelection();
 
-    const std::vector<std::weak_ptr<GameObject>>& GetSelectedGameObjects() const { return m_selectedGameObjects; }
-    const std::vector<std::weak_ptr<DComponent>>& GetSelectedComponents() const { return m_selectedComponents; }
+    const std::vector<GameObject*>& GetSelectedGameObjects() const { return m_selectedGameObjects; }
+    const std::vector<DComponent*>& GetSelectedComponents() const { return m_selectedComponents; }
 
     /// Returns the GameObject to use as context for ComponentsHierarchy.
     /// First selected GameObject, or the owning GameObject of the first selected component.
-    std::shared_ptr<GameObject> GetContextGameObject() const;
+    GameObject* GetContextGameObject() const;
 
     bool HasSelection() const;
 
 private:
-    std::vector<std::weak_ptr<GameObject>> m_selectedGameObjects;
-    std::vector<std::weak_ptr<DComponent>> m_selectedComponents;
+    std::vector<GameObject*> m_selectedGameObjects;
+    std::vector<DComponent*> m_selectedComponents;
 };
 
 DELTA_ENGINE_NS_END

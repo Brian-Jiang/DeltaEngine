@@ -73,7 +73,7 @@ void EditorWindow_ComponentsHierarchy::Render()
     ImGui::End();
 }
 
-void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(std::shared_ptr<SceneComponent> sceneComponent)
+void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(SceneComponent* sceneComponent)
 {
     if (!sceneComponent)
         return;
@@ -88,7 +88,7 @@ void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(std::shared_ptr<
     bool isSelected = false;
     for (const auto& comp : selectionState->GetSelectedComponents())
     {
-        if (comp.lock() == sceneComponent)
+        if (comp == sceneComponent)
         {
             isSelected = true;
             break;
@@ -114,7 +114,7 @@ void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(std::shared_ptr<
     }
 }
 
-void EditorWindow_ComponentsHierarchy::RenderRegularComponents(const std::vector<std::shared_ptr<DComponent>>& components)
+void EditorWindow_ComponentsHierarchy::RenderRegularComponents(const std::vector<DComponent*>& components)
 {
     auto selectionState = g_editor->GetSelectionState();
 
@@ -126,7 +126,7 @@ void EditorWindow_ComponentsHierarchy::RenderRegularComponents(const std::vector
         bool isSelected = false;
         for (const auto& comp : selectionState->GetSelectedComponents())
         {
-            if (comp.lock() == component)
+            if (comp == component)
             {
                 isSelected = true;
                 break;

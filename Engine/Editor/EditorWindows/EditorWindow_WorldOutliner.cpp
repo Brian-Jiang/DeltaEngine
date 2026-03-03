@@ -23,7 +23,7 @@ namespace
     };
 
     static int CompareGameObjects(const ImGuiTableSortSpecs* sortSpecs,
-        const std::shared_ptr<GameObject>& a, const std::shared_ptr<GameObject>& b, int indexA, int indexB)
+        const GameObject* a, const GameObject* b, int indexA, int indexB)
     {
         for (int n = 0; n < sortSpecs->SpecsCount; n++)
         {
@@ -121,7 +121,7 @@ void EditorWindow_WorldOutliner::Render()
                 {
                     for (const auto& selectedGo : selectionState->GetSelectedGameObjects())
                     {
-                        if (selectedGo.lock() == go)
+                        if (selectedGo == go)
                         {
                             selected = true;
                             break;
@@ -155,7 +155,7 @@ void EditorWindow_WorldOutliner::Render()
     ImGui::End();
 }
 
-void EditorWindow_WorldOutliner::RefreshSortedIndices(const std::vector<std::shared_ptr<GameObject>>& gameObjects)
+void EditorWindow_WorldOutliner::RefreshSortedIndices(const std::vector<GameObject*>& gameObjects)
 {
     m_sortedIndices.clear();
     m_sortedIndices.reserve(gameObjects.size());

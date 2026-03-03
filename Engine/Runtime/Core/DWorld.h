@@ -17,7 +17,7 @@ class SceneComponent;
 class GameObject;
 
 DCLASS()
-class DWorld : public DObject, public std::enable_shared_from_this<DWorld>
+class DWorld : public DObject
 {
     DGENERATED_BODY(DWorld)
 

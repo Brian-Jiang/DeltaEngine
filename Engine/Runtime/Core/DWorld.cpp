@@ -20,7 +20,7 @@ GameObject* DWorld::CreateGameObject(const std::string& name)
 {
     GameObject* gameObject = CreateDObject<GameObject>();
     gameObject->m_name = name;
-    gameObject->m_currentWorld = shared_from_this();
+    gameObject->m_currentWorld = this;
     m_gameObjects.push_back(gameObject);
     m_gameObjectsChanged = true;
     return gameObject;
@@ -42,7 +42,7 @@ void DeltaEngine::DWorld::InitRenderers(std::shared_ptr<DXGraphicsContext> conte
 
         size_t childCount = current->m_children.size();
         for (int i = static_cast<int>(childCount) - 1; i >= 0; --i) {
-            SceneComponent* child = current->m_children[i].get();
+            SceneComponent* child = current->m_children[i];
             stack.push(child);
         }
     }
@@ -78,7 +78,7 @@ void DeltaEngine::DWorld::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> 
         size_t childCount = current->m_children.size();
         for (int i = static_cast<int>(childCount) - 1; i >= 0; --i)
         {
-            SceneComponent* child = current->m_children[i].get();
+            SceneComponent* child = current->m_children[i];
             stack.push(child);
         }
     }
@@ -103,7 +103,7 @@ void DeltaEngine::DWorld::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> con
         size_t childCount = current->m_children.size();
         for (int i = static_cast<int>(childCount) - 1; i >= 0; --i)
         {
-            SceneComponent* child = current->m_children[i].get();
+            SceneComponent* child = current->m_children[i];
             stack.push(child);
         }
     }

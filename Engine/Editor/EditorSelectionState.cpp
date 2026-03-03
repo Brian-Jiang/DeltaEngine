@@ -5,7 +5,7 @@
 
 using namespace DeltaEngine;
 
-void EditorSelectionState::SelectGameObject(std::shared_ptr<GameObject> gameObject)
+void EditorSelectionState::SelectGameObject(GameObject* gameObject)
 {
     m_selectedGameObjects.clear();
     m_selectedComponents.clear();
@@ -15,7 +15,7 @@ void EditorSelectionState::SelectGameObject(std::shared_ptr<GameObject> gameObje
     }
 }
 
-void EditorSelectionState::SelectComponent(std::shared_ptr<DComponent> component)
+void EditorSelectionState::SelectComponent(DComponent* component)
 {
     m_selectedComponents.clear();
     m_selectedGameObjects.clear();
@@ -25,7 +25,7 @@ void EditorSelectionState::SelectComponent(std::shared_ptr<DComponent> component
     }
 }
 
-void EditorSelectionState::AddGameObjectToSelection(std::shared_ptr<GameObject> gameObject)
+void EditorSelectionState::AddGameObjectToSelection(GameObject* gameObject)
 {
     if (gameObject)
     {
@@ -33,7 +33,7 @@ void EditorSelectionState::AddGameObjectToSelection(std::shared_ptr<GameObject> 
     }
 }
 
-void EditorSelectionState::AddComponentToSelection(std::shared_ptr<DComponent> component)
+void EditorSelectionState::AddComponentToSelection(DComponent* component)
 {
     if (component)
     {
@@ -47,15 +47,15 @@ void EditorSelectionState::ClearSelection()
     m_selectedComponents.clear();
 }
 
-std::shared_ptr<GameObject> EditorSelectionState::GetContextGameObject() const
+GameObject* EditorSelectionState::GetContextGameObject() const
 {
     if (!m_selectedGameObjects.empty())
     {
-        return m_selectedGameObjects.front().lock();
+        return m_selectedGameObjects.front();
     }
     if (!m_selectedComponents.empty())
     {
-        return m_selectedComponents.front().lock()->GetGameObject();
+        return m_selectedComponents.front()->GetGameObject();
     }
     return nullptr;
 }

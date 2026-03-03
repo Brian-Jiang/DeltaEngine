@@ -25,10 +25,10 @@ class MeshRenderProxy
 {
 public:
     MeshRenderProxy();
-    MeshRenderProxy(std::shared_ptr<DMesh> mesh, std::shared_ptr<MeshRendererSettings> settings);
+    MeshRenderProxy(DMesh* mesh, std::shared_ptr<MeshRendererSettings> settings);
     ~MeshRenderProxy();
 
-    void SetMesh(std::shared_ptr<DMesh> mesh);
+    void SetMesh(DMesh* mesh);
     void UpdateWorldTransform(DirectX::XMMATRIX worldMatrix);
     
     void BuildPipelineStateObject(std::shared_ptr<DXGraphicsContext> renderContext);
@@ -47,7 +47,7 @@ public:
     size_t GetVertexCount() const;
 
 private:
-    std::shared_ptr<DMesh> m_mesh;
+    DMesh* m_mesh;
     std::shared_ptr<MeshRendererSettings> m_settings;
 
     //using BufferMap = std::map<uint32_t, std::shared_ptr<VertexBuffer>>;

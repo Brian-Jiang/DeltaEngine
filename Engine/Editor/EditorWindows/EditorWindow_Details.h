@@ -24,9 +24,9 @@ public:
     bool* m_open = nullptr;
 
 private:
-    void RenderGameObjectDetails(std::shared_ptr<GameObject> gameObject);
-    void RenderComponentDetails(std::shared_ptr<DComponent> component);
-    void RenderSceneComponentTransform(std::shared_ptr<SceneComponent> sceneComponent);
+    void RenderGameObjectDetails(GameObject* gameObject);
+    void RenderComponentDetails(DComponent* component);
+    void RenderSceneComponentTransform(SceneComponent* sceneComponent);
 };
 
 DELTA_ENGINE_NS_END

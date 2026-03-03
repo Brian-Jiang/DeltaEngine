@@ -25,7 +25,7 @@ MeshRenderProxy::MeshRenderProxy()
 {
 }
 
-DeltaEngine::MeshRenderProxy::MeshRenderProxy(std::shared_ptr<DMesh> mesh, std::shared_ptr<MeshRendererSettings> settings)
+DeltaEngine::MeshRenderProxy::MeshRenderProxy(DMesh* mesh, std::shared_ptr<MeshRendererSettings> settings)
     : m_mesh(mesh)
     , m_settings(settings)
     , m_PrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST) // todo : get primitive topology from mesh
@@ -36,7 +36,7 @@ DeltaEngine::MeshRenderProxy::~MeshRenderProxy()
 {
 }
 
-void DeltaEngine::MeshRenderProxy::SetMesh(std::shared_ptr<DMesh> mesh)
+void DeltaEngine::MeshRenderProxy::SetMesh(DMesh* mesh)
 {
     m_mesh = mesh;
     m_meshDirty = true;

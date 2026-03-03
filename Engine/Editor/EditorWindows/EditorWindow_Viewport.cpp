@@ -73,7 +73,7 @@ void EditorWindow_Viewport::UpdateViewportFlyMode(bool viewportImageHovered)
     if (!engine)
         return;
 
-    std::shared_ptr<Camera> camera = engine->GetCamera();
+    Camera* camera = engine->GetCamera();
     if (!camera)
         return;
 

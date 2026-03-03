@@ -23,7 +23,7 @@ public:
     bool* m_open = nullptr;
 
 private:
-    void RefreshSortedIndices(const std::vector<std::shared_ptr<GameObject>>& gameObjects);
+    void RefreshSortedIndices(const std::vector<GameObject*>& gameObjects);
 
 private:
     std::vector<int> m_sortedIndices;

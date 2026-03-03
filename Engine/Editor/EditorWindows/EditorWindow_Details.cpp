@@ -47,24 +47,24 @@ void EditorWindow_Details::Render()
 
     for (const auto& gameObject : gameObjects)
     {
-        if (auto lockedGameObject = gameObject.lock())
+        if (gameObject)
         {
-            RenderGameObjectDetails(lockedGameObject);
+            RenderGameObjectDetails(gameObject);
         }
     }
 
     for (const auto& component : components)
     {
-        if (auto lockedComponent = component.lock())
+        if (component)
         {
-            RenderComponentDetails(lockedComponent);
+            RenderComponentDetails(component);
         }
     }
 
     ImGui::End();
 }
 
-void EditorWindow_Details::RenderGameObjectDetails(std::shared_ptr<GameObject> gameObject)
+void EditorWindow_Details::RenderGameObjectDetails(GameObject* gameObject)
 {
     ImGui::TextUnformatted("GameObject");
     ImGui::SameLine();
@@ -81,13 +81,13 @@ void EditorWindow_Details::RenderGameObjectDetails(std::shared_ptr<GameObject> g
     ImGui::Separator();
 }
 
-void EditorWindow_Details::RenderComponentDetails(std::shared_ptr<DComponent> component)
+void EditorWindow_Details::RenderComponentDetails(DComponent* component)
 {
     ImGui::TextUnformatted("Component");
     ImGui::SameLine();
     ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "%s", component->GetName().c_str());
 
-    auto sceneComponent = std::dynamic_pointer_cast<SceneComponent>(component);
+    auto sceneComponent = dynamic_cast<SceneComponent*>(component);
     if (sceneComponent)
     {
         RenderSceneComponentTransform(sceneComponent);
@@ -96,7 +96,7 @@ void EditorWindow_Details::RenderComponentDetails(std::shared_ptr<DComponent> co
     ImGui::Separator();
 }
 
-void EditorWindow_Details::RenderSceneComponentTransform(std::shared_ptr<SceneComponent> sceneComponent)
+void EditorWindow_Details::RenderSceneComponentTransform(SceneComponent* sceneComponent)
 {
     if (!sceneComponent)
         return;

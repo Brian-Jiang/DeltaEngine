@@ -156,7 +156,7 @@ void DMesh::ProcessMesh(aiMesh* mesh, const aiScene* scene)
 {
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
-    std::vector<std::shared_ptr<DTexture>> textures;
+    std::vector<DTexture*> textures;
     for (unsigned int i = 0; i < mesh->mNumVertices; i++)
     {
         Vertex vertex {};

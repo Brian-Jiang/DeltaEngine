@@ -163,7 +163,7 @@ public:
      * Load a texture by a filename.
      */
     DELTAENGINE_API std::shared_ptr<DirectX12Texture> LoadTextureFromFile(const std::wstring& fileName, bool sRGB = false);
-    DELTAENGINE_API std::shared_ptr<DirectX12Texture> LoadTexture(std::shared_ptr<DTexture> texture);
+    DELTAENGINE_API std::shared_ptr<DirectX12Texture> LoadTexture(DTexture* texture);
 
     /**
      * Clear a texture.
