@@ -7,11 +7,13 @@ from string import Template
 # Emitted once per .generated.cpp for all classes in the file.
 # ${header_stem} is the header file stem (e.g. "TestComponent")
 # ${source_header_include} is the #include for the source header
+# ${cpp_full_includes} is full includes for ObjectPtr/SharedObjectPtr DObject-derived types
 FILE_HEADER = Template("""\
 #include "${header_stem}.generated.h"
 
 ${source_header_include}
 
+${cpp_full_includes}
 #include "Runtime/Reflection/DStruct.h"
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DProperty.h"

@@ -31,6 +31,18 @@ def _contains_reflected_macro(path: Path) -> bool:
         return False
 
 
+def _build_type_to_header_map(input_dir: Path, engine_include_root: Path) -> dict[str, str]:
+    """Map type name (e.g. 'GameObject') -> include path (e.g. 'Runtime/Core/GameObject.h').
+    Paths are relative to engine_include_root (Engine/) to match parser's include_path format."""
+    type_to_header: dict[str, str] = {}
+    for path in input_dir.rglob("*.h"):
+        rel = path.relative_to(engine_include_root)
+        include_path = rel.as_posix()
+        type_name = path.stem
+        type_to_header[type_name] = include_path
+    return type_to_header
+
+
 def _is_up_to_date(source: Path, out_h: Path, out_cpp: Path) -> bool:
     if not out_h.exists() or not out_cpp.exists():
         return False
@@ -57,7 +69,7 @@ def _process_one(job):
     Returns (stem, header_text | None, source_text | None, warning | None,
              class_super_pairs, diagnostics_list).
     """
-    header_path, input_dir, include_dirs = job
+    header_path, input_dir, include_dirs, type_to_header = job
     stem = header_path.stem
 
     from parser import parse_header
@@ -85,7 +97,7 @@ def _process_one(job):
             result.source_includes,
             result.forward_decls,
         )
-        source_text = generate_source_file(result.classes, stem)
+        source_text = generate_source_file(result.classes, stem, type_to_header)
 
         return (stem, header_text, source_text, None,
                 class_super_pairs, diag_list)
@@ -126,7 +138,8 @@ def main() -> int:
     # ── filter by timestamp ───────────────────────────────────
     reflected_stems: set[str] = set()
     generated_cpps: list[Path] = []
-    jobs: list[tuple[Path, Path, list[Path]]] = []
+    type_to_header = _build_type_to_header_map(input_dir, input_dir.parent)
+    jobs: list[tuple[Path, Path, list[Path], dict[str, str]]] = []
 
     for header in candidates:
         stem = header.stem
@@ -140,7 +153,7 @@ def main() -> int:
             print(f"  up-to-date: {stem}")
             continue
 
-        jobs.append((header, input_dir, args.include_dir))
+        jobs.append((header, input_dir, args.include_dir, type_to_header))
 
     # ── pass 2: parallel libclang parse + codegen ─────────────
     from diagnostics import DiagnosticCollector

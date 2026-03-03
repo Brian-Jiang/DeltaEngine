@@ -37,6 +37,47 @@ _SHARED_PTR_PROP_RE = re.compile(r"^DSharedObjectPtrProperty<(.+)>$")
 _OBJECT_PTR_PROP_RE = re.compile(r"^DObjectPtrProperty<(.+)>$")
 
 
+def _strip_namespaces(name: str) -> str:
+    """Strip all namespace qualifiers: 'A::B::C' -> 'C'."""
+    return name.rsplit("::", 1)[-1] if "::" in name else name
+
+
+def _collect_cpp_full_includes(
+    classes: list[ClassInfo],
+    header_stem: str,
+    type_to_header: dict[str, str],
+) -> set[str]:
+    """Collect header paths for DObject-derived types used in ObjectPtr/SharedObjectPtr."""
+    cpp_full_includes: set[str] = set()
+    source_include = f"{classes[0].include_path}{header_stem}.h"
+
+    for cls in classes:
+        for prop in cls.properties:
+            if prop.is_object_ptr and prop.pointee_type:
+                pointee = _strip_namespaces(prop.pointee_type)
+                path = type_to_header.get(pointee)
+                if path and path != source_include:
+                    cpp_full_includes.add(path)
+
+        for fn in cls.functions:
+            for p in fn.params:
+                m = _SHARED_PTR_PROP_RE.match(p.property_class) or _OBJECT_PTR_PROP_RE.match(p.property_class)
+                if m:
+                    pointee = _strip_namespaces(m.group(1))
+                    path = type_to_header.get(pointee)
+                    if path and path != source_include:
+                        cpp_full_includes.add(path)
+            if fn.return_property_class:
+                m = _SHARED_PTR_PROP_RE.match(fn.return_property_class) or _OBJECT_PTR_PROP_RE.match(fn.return_property_class)
+                if m:
+                    pointee = _strip_namespaces(m.group(1))
+                    path = type_to_header.get(pointee)
+                    if path and path != source_include:
+                        cpp_full_includes.add(path)
+
+    return cpp_full_includes
+
+
 # ── header generation ────────────────────────────────────────
 
 
@@ -343,7 +384,7 @@ def _generate_class_footer(cls: ClassInfo) -> str:
     return FILE_FOOTER_CLASS.substitute(class_name=cls.name)
 
 
-def generate_source_file(classes: list[ClassInfo], header_stem: str) -> str:
+def generate_source_file(classes: list[ClassInfo], header_stem: str, type_to_header: dict[str, str]) -> str:
     """Generate the entire .generated.cpp for all classes in one header file.
     Emits a single #include block, then per-class thunks/registration/footers."""
     parts: list[str] = []
@@ -354,9 +395,15 @@ def generate_source_file(classes: list[ClassInfo], header_stem: str) -> str:
         source_includes.add(f'#include "{cls.include_path}{header_stem}.h"')
     source_header_include = "\n".join(sorted(source_includes))
 
+    cpp_full_includes = _collect_cpp_full_includes(classes, header_stem, type_to_header)
+    cpp_full_includes_block = "\n".join(sorted(f'#include "{p}"' for p in cpp_full_includes))
+    if cpp_full_includes_block:
+        cpp_full_includes_block += "\n"
+
     parts.append(FILE_HEADER.substitute(
         header_stem=header_stem,
         source_header_include=source_header_include,
+        cpp_full_includes=cpp_full_includes_block,
     ))
 
     for cls in classes:
