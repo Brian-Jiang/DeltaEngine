@@ -62,6 +62,7 @@ public:
     void SetSceneRenderSize(UINT width, UINT height);
     void GetSceneRenderSize(UINT& width, UINT& height) const;
     EditorSelectionState* GetSelectionState() { return m_selectionState.get(); }
+    EditorTheme* GetEditorTheme() { return m_editorTheme.get(); }
 
 private:
     void ProcessEvents();

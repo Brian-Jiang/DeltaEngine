@@ -77,7 +77,7 @@ EditorMain::EditorMain()
     ImGui_ImplSDL3_InitForD3D(m_window.get());
 
     // todo get from sdl3 window
-    float main_scale = 2.0f;
+    float main_scale = 1.5f;
     // Setup scaling
     ImGuiStyle& style = ImGui::GetStyle();
     //style.FontSizeBase = 20.0f;

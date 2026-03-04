@@ -101,6 +101,25 @@ void EditorTheme::ApplyTheme()
     colors[ImGuiCol_TableBorderStrong] = HexToVec4(0x191f30);
     colors[ImGuiCol_TableBorderLight] = HexToVec4(0x0a0d16);
 
+    // Named theme colors for chrome panels and UI components
+    this->colors.DFloor = HexToVec4(0x090c14);
+    this->colors.DRaised = HexToVec4(0x121620);
+    this->colors.DHover = HexToVec4(0x1c2234);
+    this->colors.AccBg = HexToVec4(0x6B8CFF, 0.05f);
+    this->colors.AccMid = HexToVec4(0x6B8CFF, 0.40f);
+    this->colors.AccHi = HexToVec4(0x8FAAFF);
+    this->colors.BDeep = HexToVec4(0x0a0d16);
+    this->colors.BMid = HexToVec4(0x191f30);
+    this->colors.BLight = HexToVec4(0x222d44);
+    this->colors.BHover = HexToVec4(0x2e3d5e);
+    this->colors.TPrimary = HexToVec4(0xbcc4de);
+    this->colors.TLabel = HexToVec4(0x6c7898);
+    this->colors.TDim = HexToVec4(0x384060);
+    this->colors.TGhost = HexToVec4(0x1e2640);
+    this->colors.Ok = HexToVec4(0x34d399);
+    this->colors.CMesh = HexToVec4(0x1ec8b4);
+    this->colors.DPanel = HexToVec4(0x0d1019);
+
     LoadFonts();
 }
 
