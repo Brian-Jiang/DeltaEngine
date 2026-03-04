@@ -22,7 +22,14 @@ void AppHeader::Draw()
     const float pad = ImGui::GetStyle().ItemSpacing.x;
 
     // Window height must match EditorTheme::HdrH() so the toolbar starts flush below.
-    const float hdrH = EditorTheme::HdrH();
+    
+    {
+        const auto& style = ImGui::GetStyle();
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
+            ImVec2(style.FramePadding.x, style.FramePadding.y + fs * 0.25f));
+    }
+    //const float hdrH = EditorTheme::HdrH();
+    const float hdrH = ImGui::GetFrameHeight();
 
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, hdrH));
@@ -39,11 +46,7 @@ void AppHeader::Draw()
     ImGui::PopStyleColor(2);
     ImGui::PopStyleVar(3);
 
-    {
-        const auto& style = ImGui::GetStyle();
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
-            ImVec2(style.FramePadding.x, style.FramePadding.y + fs * 0.25f));
-    }
+    
 
     ImDrawList* dl = ImGui::GetWindowDrawList();
     ImVec2 winPos = ImGui::GetCursorScreenPos();
@@ -64,8 +67,10 @@ void AppHeader::Draw()
             const float side = fs;
             const float triH = side * 0.866f; // √3/2
             ImVec2 sp = ImGui::GetCursorScreenPos();
-            //float offY = (fh - triH) * 0.5f - ImGui::GetStyle().FramePadding.y;
-            float offY = (fh - triH) * 0.5f;
+            //float offY = (ImGui::GetTextLineHeight() - triH) * 0.5f - ImGui::GetStyle().FramePadding.y;
+            //float offY = (ImGui::GetTextLineHeight() - triH) * 0.5f;
+            //float offY = ImGui::GetTextLineHeight();
+            float offY = 13.0f;
             ImVec2 p1(sp.x, sp.y + offY + triH); // bottom-left
             ImVec2 p2(sp.x + side, sp.y + offY + triH); // bottom-right
             ImVec2 p3(sp.x + side * 0.5f, sp.y + offY); // apex
@@ -83,16 +88,16 @@ void AppHeader::Draw()
             ImGui::PopFont();
 
         // ── Vertical divider ─────────────────────────────────────────────────
-        ImGui::SameLine(0.f, pad);
-        {
-            ImVec2 sp = ImGui::GetCursorScreenPos();
-            dl->AddLine(
-                ImVec2(sp.x, sp.y),
-                ImVec2(sp.x, sp.y + fs),
-                ImGui::ColorConvertFloat4ToU32(c.BMid), 1.f);
-            ImGui::Dummy(ImVec2(1.f, 0.f));
-        }
-        ImGui::SameLine(0.f, pad * 0.5f);
+        //ImGui::SameLine(0.f, pad);
+        //{
+        //    ImVec2 sp = ImGui::GetCursorScreenPos();
+        //    dl->AddLine(
+        //        ImVec2(sp.x, sp.y),
+        //        ImVec2(sp.x, sp.y + fs),
+        //        ImGui::ColorConvertFloat4ToU32(c.BMid), 1.f);
+        //    ImGui::Dummy(ImVec2(1.f, 0.f));
+        //}
+        //ImGui::SameLine(0.f, pad * 0.5f);
 
         // ── Menu items ───────────────────────────────────────────────────────
         if (ImGui::BeginMenu("File"))
@@ -122,12 +127,13 @@ void AppHeader::Draw()
         ImGui::PushStyleColor(ImGuiCol_Border, c.BLight);
         ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.f);
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.f);
-        ImGui::Button("Debug x64", ImVec2(btnW, 0.f)); // 0 height = auto (fh)
+        ImGui::Button("Debug x64", ImVec2(0.f, 0.f)); // 0 height = auto (fh)
         ImGui::PopStyleVar(2);
         ImGui::PopStyleColor(2);
 
         ImGui::SameLine(0.f, pad * 0.5f);
-        if (ImGui::Button("⚙##Settings", ImVec2(iconW, 0.f))) { /* placeholder */
+        if (ImGui::Button("⚙##Settings", ImVec2(0.f, 0.f)))
+        { /* placeholder */
         }
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Settings");

@@ -101,6 +101,7 @@ void MainToolbar::Draw()
             ImVec2(style.FramePadding.x, style.FramePadding.y + fs * 0.25f));
     }
 
+    //const float kItemH = fs * 1.55f;   // tweak this single knob
     const float fh  = ImGui::GetFrameHeight();   // inflated
     //const float fh = fs + g.Style.FramePadding.y * 2.0f;
     const float pad = ImGui::GetStyle().ItemSpacing.x;

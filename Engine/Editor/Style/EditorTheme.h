@@ -32,8 +32,19 @@ public:
         ImVec4 DPanel;   // 0x0d1019 — panel body bg (dockable window background)
     };
 
-    static float HdrH() { return ImGui::GetFrameHeight() * 1.5f; }         // 1 row
-    static float TbH()  { return ImGui::GetFrameHeight() * 2.0f; }
+    static float HdrH()
+    {
+        const float kExtra = ImGui::GetFontSize() * 0.25f;
+        return ImGui::GetFontSize()
+            + (ImGui::GetStyle().FramePadding.y + kExtra) * 2.f;
+    }
+
+    static float TbH()
+    {
+        const float kItemH = ImGui::GetFontSize() * 2.0f;
+        return kItemH + ImGui::GetStyle().ItemSpacing.y * 2.f;
+    }
+
     static float StH()  { return ImGui::GetFrameHeight(); }         // 1 row
 
     EditorTheme();

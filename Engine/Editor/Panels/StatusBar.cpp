@@ -46,7 +46,8 @@ void StatusBar::Draw()
     ImVec2 dotPos = ImGui::GetCursorScreenPos();
     drawList->AddCircleFilled(ImVec2(dotPos.x + fs * 0.2f, dotPos.y + ImGui::GetTextLineHeight() * 0.5f),
         fs * 0.2f, ImGui::ColorConvertFloat4ToU32(c.Ok));
-    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + pad);
+    ImGui::Dummy(ImVec2(fs * 0.4f, 0.f)); // Reserve space for the dot
+    //ImGui::SetCursorPosX(ImGui::GetCursorPosX() + pad);
     ImGui::SameLine(0, pad * 0.5f);
 
     // "Ready" (bold)
@@ -99,9 +100,18 @@ void StatusBar::Draw()
     }
 
     // Right items — right-aligned
-    float rightW = fs * 17.f;
+    // Measure right group width precisely
+    char rBuf[256];
+    snprintf(rBuf, sizeof(rBuf), "Renderer %s  Build %s  %s",
+        rendererName.c_str(), buildConfig.c_str(), engineVersion.c_str());
+    const float rightW = ImGui::CalcTextSize(rBuf).x
+        + pad * 4.f; // account for SameLine gaps between items
+
     ImGui::SetCursorPosX(io.DisplaySize.x - rightW - pad);
     ImGui::SetCursorPosY((EditorTheme::StH() - fs) * 0.5f);
+    //float rightW = fs * 17.f;
+    //ImGui::SetCursorPosX(io.DisplaySize.x - rightW - pad);
+    //ImGui::SetCursorPosY((EditorTheme::StH() - fs) * 0.5f);
 
     ImGui::PushStyleColor(ImGuiCol_Text, c.TDim);
     ImGui::Text("Renderer");
@@ -122,7 +132,7 @@ void StatusBar::Draw()
 
     ImGui::SameLine(0, pad);
     ImGui::PushStyleColor(ImGuiCol_Text, c.TGhost);
-    ImGui::Text("\xce\x94 %s", engineVersion.c_str());
+    ImGui::Text("%s", engineVersion.c_str());
     ImGui::PopStyleColor();
 
     ImGui::End();
