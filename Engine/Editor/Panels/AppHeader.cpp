@@ -21,10 +21,8 @@ void AppHeader::Draw()
     const float fs = ImGui::GetFontSize();
     const float pad = ImGui::GetStyle().ItemSpacing.x;
 
-    // Window height = exactly the menu bar row.
-    // NoDecoration removes the title bar (0 height), so the whole window IS
-    // the menu bar — no leftover content area that would get clipped.
-    const float hdrH = fh;
+    // Window height must match EditorTheme::HdrH() so the toolbar starts flush below.
+    const float hdrH = EditorTheme::HdrH();
 
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, hdrH));
@@ -41,8 +39,14 @@ void AppHeader::Draw()
     ImGui::PopStyleColor(2);
     ImGui::PopStyleVar(3);
 
+    {
+        const auto& style = ImGui::GetStyle();
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
+            ImVec2(style.FramePadding.x, style.FramePadding.y + fs * 0.25f));
+    }
+
     ImDrawList* dl = ImGui::GetWindowDrawList();
-    ImVec2 winPos = ImGui::GetWindowPos();
+    ImVec2 winPos = ImGui::GetCursorScreenPos();
 
     // ── 1 px bottom separator ────────────────────────────────────────────────
     float sepY = winPos.y + hdrH - 1.f;
@@ -60,7 +64,8 @@ void AppHeader::Draw()
             const float side = fs;
             const float triH = side * 0.866f; // √3/2
             ImVec2 sp = ImGui::GetCursorScreenPos();
-            float offY = (fh - triH) * 0.5f - ImGui::GetStyle().FramePadding.y;
+            //float offY = (fh - triH) * 0.5f - ImGui::GetStyle().FramePadding.y;
+            float offY = (fh - triH) * 0.5f;
             ImVec2 p1(sp.x, sp.y + offY + triH); // bottom-left
             ImVec2 p2(sp.x + side, sp.y + offY + triH); // bottom-right
             ImVec2 p3(sp.x + side * 0.5f, sp.y + offY); // apex
@@ -130,5 +135,6 @@ void AppHeader::Draw()
         ImGui::EndMenuBar();
     }
 
+    ImGui::PopStyleVar();
     ImGui::End();
 }

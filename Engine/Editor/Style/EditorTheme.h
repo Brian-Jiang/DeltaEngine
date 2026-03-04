@@ -32,8 +32,8 @@ public:
         ImVec4 DPanel;   // 0x0d1019 — panel body bg (dockable window background)
     };
 
-    static float HdrH() { return ImGui::GetFrameHeight(); }         // 1 row
-    static float TbH()  { return ImGui::GetFrameHeight() * 1.5f; }  // ~99px at 13px default font
+    static float HdrH() { return ImGui::GetFrameHeight() * 1.5f; }         // 1 row
+    static float TbH()  { return ImGui::GetFrameHeight() * 2.0f; }
     static float StH()  { return ImGui::GetFrameHeight(); }         // 1 row
 
     EditorTheme();
