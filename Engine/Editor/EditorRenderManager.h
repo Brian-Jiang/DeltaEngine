@@ -19,6 +19,9 @@ class DXRenderManager;
 class CommandList;
 class EditorWindow_WorldOutliner;
 class EditorWindow_Viewport;
+class AppHeader;
+class MainToolbar;
+class StatusBar;
 
 /// Editor-specific render manager. Owns window, swap chain, offscreen RT for scene, and ImGui.
 /// Resembles DXRenderManager structure but targets the actual window.
@@ -77,6 +80,10 @@ private:
     D3D12_CPU_DESCRIPTOR_HANDLE m_imguiSrvCpuHandle;
     D3D12_GPU_DESCRIPTOR_HANDLE m_imguiSrvGpuHandle;
     ImTextureID m_sceneTextureId;
+
+    std::unique_ptr<AppHeader> m_appHeader;
+    std::unique_ptr<MainToolbar> m_toolbar;
+    std::unique_ptr<StatusBar> m_statusBar;
 };
 
 DELTA_ENGINE_NS_END

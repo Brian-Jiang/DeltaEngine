@@ -13,6 +13,10 @@
 #include "Runtime/Graphics/DXUtils.h"
 #include "Editor/EditorMain.h"
 #include "Editor/EditorWindows/EditorWindow_Viewport.h"
+#include "Panels/AppHeader.h"
+#include "Panels/MainToolbar.h"
+#include "Panels/StatusBar.h"
+#include "Style/EditorTheme.h"
 
 #include "imgui.h"
 #include "backends/imgui_impl_sdl3.h"
@@ -45,6 +49,10 @@ EditorRenderManager::EditorRenderManager(HWND hwnd, UINT width, UINT height)
     m_imguiSrvCpuHandle = out_cpu;
     m_imguiSrvGpuHandle = out_gpu;
     m_sceneTextureId = (ImTextureID)(intptr_t)m_imguiSrvGpuHandle.ptr;
+
+    m_appHeader = std::make_unique<AppHeader>();
+    m_toolbar = std::make_unique<MainToolbar>();
+    m_statusBar = std::make_unique<StatusBar>();
 }
 
 EditorRenderManager::~EditorRenderManager()
@@ -124,8 +132,31 @@ void EditorRenderManager::RenderFrame(EngineMain* engine)
     ImGui_ImplDX12_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
-    //ImGui::DockSpaceOverViewport();
-    ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_AutoHideTabBar);
+
+    m_appHeader->Draw();
+    m_toolbar->Draw();
+
+    float topOffset = EditorTheme::kHdrH + EditorTheme::kTbH;
+    float botOffset = EditorTheme::kStH;
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui::SetNextWindowPos(ImVec2(0, topOffset));
+    ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, io.DisplaySize.y - topOffset - botOffset));
+    ImGui::SetNextWindowBgAlpha(0.f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    ImGui::Begin("##DockHost", nullptr,
+        ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoSavedSettings |
+        ImGuiWindowFlags_NoDocking);
+    ImGui::PopStyleVar(3);
+
+    ImGui::DockSpace(ImGui::GetID("MainDockSpace"), ImVec2(0, 0),
+        ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_AutoHideTabBar);
+
+    ImGui::End();
+
+    m_statusBar->Draw();
 
     m_sceneRenderer->PrepareFrame();
     engine->RecordSceneDraws(m_sceneRenderer->GetGraphicsContext());
