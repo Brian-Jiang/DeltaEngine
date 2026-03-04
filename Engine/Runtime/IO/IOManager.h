@@ -15,6 +15,7 @@ public:
 	static std::wstring GetAssetFullPath(LPCWSTR assetName);
 	static std::string GetAssetFullPath(const std::string & assetName);
     static std::wstring GetEngineSourceAssetFullPath(std::wstring assetName);
+    DELTAENGINE_API static std::string GetEditorSourceAssetFullPath(std::string assetName);
 };
 
 DELTA_ENGINE_NS_END

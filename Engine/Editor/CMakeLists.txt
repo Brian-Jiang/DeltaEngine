@@ -14,3 +14,14 @@ target_include_directories(${TARGET_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_compile_options(${TARGET_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/WX->")
 
 target_link_libraries(${TARGET_NAME} DeltaEngine)
+
+# Copy Editor fonts to output dir so ApplyDeltaTheme can load them
+set(EDITOR_FONTS_SRC "${CMAKE_CURRENT_SOURCE_DIR}/Assets/Fonts")
+if(EXISTS "${EDITOR_FONTS_SRC}")
+    add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${EDITOR_FONTS_SRC}"
+            "$<TARGET_FILE_DIR:${TARGET_NAME}>/Editor/Assets/Fonts"
+        COMMENT "Copying Editor fonts to output directory"
+    )
+endif()

@@ -41,8 +41,14 @@ std::string IOManager::GetAssetFullPath(const std::string& assetName)
 	return prefix + std::string(assetName.begin(), assetName.end());
 }
 
-std::wstring DeltaEngine::IOManager::GetEngineSourceAssetFullPath(std::wstring assetName)
+std::wstring IOManager::GetEngineSourceAssetFullPath(std::wstring assetName)
 {
     std::string prefix = "../../../Engine/Runtime/EngineSourceAssets/";
     return std::wstring(prefix.begin(), prefix.end()) + assetName;
+}
+
+std::string IOManager::GetEditorSourceAssetFullPath(std::string assetName)
+{
+    std::string prefix = "../../../Engine/Editor/Assets/";
+    return prefix + assetName;
 }

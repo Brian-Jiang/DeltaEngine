@@ -9,6 +9,7 @@
 #include "Editor/EditorWindows/EditorWindow_Viewport.h"
 #include "Editor/EditorWindows/EditorWindow_ComponentsHierarchy.h"
 #include "Editor/EditorWindows/EditorWindow_Details.h"
+#include "Editor/Style/EditorTheme.h"
 
 #include "imgui.h"
 #include "backends/imgui_impl_sdl3.h"
@@ -69,6 +70,9 @@ EditorMain::EditorMain()
     //io.ConfigDpiScaleFonts = true; // (Docking branch only) Automatically overwrite style.FontScaleDpi in Begin() when Monitor DPI changes. This will scale fonts but _NOT_ scale sizes/padding for now.
     io.ConfigDpiScaleViewports = true; // (Docking branch only) Scale Dear ImGui and Platform Windows when Monitor DPI changes.
     //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
+    m_editorTheme = std::make_unique<EditorTheme>();
+    m_editorTheme->ApplyTheme();
 
     ImGui_ImplSDL3_InitForD3D(m_window.get());
 
