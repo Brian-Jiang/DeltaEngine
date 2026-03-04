@@ -9,8 +9,11 @@ using namespace DeltaEngine;
 
 namespace
 {
-    void DrawVerticalDivider(float height = 20.f)
+    void DrawVerticalDivider(float height = 0.f)
     {
+        const float fs  = ImGui::GetFontSize();
+        const float pad = ImGui::GetStyle().ItemSpacing.x;
+        if (height <= 0.f) height = fs;
         EditorTheme* theme = g_editor->GetEditorTheme();
         const auto& c = theme->colors;
         ImVec2 pos = ImGui::GetCursorScreenPos();
@@ -19,10 +22,10 @@ namespace
             ImVec2(pos.x, yCenter - height * 0.5f),
             ImVec2(pos.x, yCenter + height * 0.5f),
             ImGui::ColorConvertFloat4ToU32(c.BMid), 1.f);
-        ImGui::SameLine(0, 8);
+        ImGui::SameLine(0, pad);
     }
 
-    void DrawTbDropButton(const char* label, float height = 28.f)
+    void DrawTbDropButton(const char* label)
     {
         EditorTheme* theme = g_editor->GetEditorTheme();
         const auto& c = theme->colors;
@@ -33,7 +36,7 @@ namespace
         ImGui::PushStyleColor(ImGuiCol_Border, c.BLight);
         ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.f);
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 5.f);
-        ImGui::Button(label, ImVec2(0, height));
+        ImGui::Button(label, ImVec2(0.f, 0.f));
         ImGui::PopStyleVar(2);
         ImGui::PopStyleColor(5);
     }
@@ -45,8 +48,12 @@ void MainToolbar::Draw()
     EditorTheme* theme = g_editor->GetEditorTheme();
     const auto& c = theme->colors;
 
-    ImGui::SetNextWindowPos(ImVec2(0, EditorTheme::kHdrH));
-    ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, EditorTheme::kTbH));
+    const float fh  = ImGui::GetFrameHeight();
+    const float fs  = ImGui::GetFontSize();
+    const float pad = ImGui::GetStyle().ItemSpacing.x;
+
+    ImGui::SetNextWindowPos(ImVec2(0, EditorTheme::HdrH()));
+    ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, EditorTheme::TbH()));
     ImGui::PushStyleColor(ImGuiCol_WindowBg, c.DFloor);
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove
         | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoBringToFrontOnFocus
@@ -54,8 +61,8 @@ void MainToolbar::Draw()
     ImGui::Begin("##MainToolbar", nullptr, flags);
     ImGui::PopStyleColor();
 
-    ImGui::SetCursorPosY((EditorTheme::kTbH - 24.f) * 0.5f);
-    ImGui::SetCursorPosX(12);
+    ImGui::SetCursorPosY((EditorTheme::TbH() - fh) * 0.5f);
+    ImGui::SetCursorPosX(pad);
 
     // Transform toggle
     static const HorizontalToggleGroup::Item transformItems[] = {
@@ -64,26 +71,26 @@ void MainToolbar::Draw()
         {"\xe2\x86\xbb", "Rotate"},    // ↻
         {"\xe2\xa4\xa2", "Scale"},    // ⤢
     };
-    m_transformGroup.Draw("##xform", transformItems, 4, m_transformMode, 28.f, 24.f);
+    m_transformGroup.Draw("##xform", transformItems, 4, m_transformMode, 0.f, 0.f);
 
-    ImGui::SameLine(0, 8);
-    DrawVerticalDivider(20.f);
+    ImGui::SameLine(0, pad);
+    DrawVerticalDivider();
 
     // Coord space dropdown (placeholder)
     DrawTbDropButton("World \xe2\x96\xbe");
-    ImGui::SameLine(0, 4);
+    ImGui::SameLine(0, pad * 0.5f);
 
     // Pivot dropdown (placeholder)
     DrawTbDropButton("Pivot \xe2\x96\xbe");
-    ImGui::SameLine(0, 8);
-    DrawVerticalDivider(20.f);
+    ImGui::SameLine(0, pad);
+    DrawVerticalDivider();
 
     // Snap widget — two-cell row: icon | value
     ImGui::PushStyleColor(ImGuiCol_ChildBg, c.DRaised);
     ImGui::PushStyleColor(ImGuiCol_Border, c.BLight);
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 5.f);
     ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1.f);
-    ImGui::BeginChild("##SnapWidget", ImVec2(60, 28), ImGuiChildFlags_None,
+    ImGui::BeginChild("##SnapWidget", ImVec2(fh * 2.5f, fh), ImGuiChildFlags_None,
         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
     ImGui::PopStyleVar(2);
     ImGui::PopStyleColor(2);
@@ -92,7 +99,7 @@ void MainToolbar::Draw()
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, c.DHover);
     ImGui::PushStyleColor(ImGuiCol_Text, c.AccHi);
-    ImGui::Button("\xe2\x8a\x9e##SnapToggle", ImVec2(28, 28));
+    ImGui::Button("\xe2\x8a\x9e##SnapToggle", ImVec2(fh, fh));
     ImGui::PopStyleColor(3);
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Toggle snap");
@@ -102,7 +109,7 @@ void MainToolbar::Draw()
     if (theme->GetMonoFont())
         ImGui::PushFont(theme->GetMonoFont());
     ImGui::PushStyleColor(ImGuiCol_Text, c.CMesh);
-    ImGui::SetCursorPos(ImVec2(28, (28 - ImGui::GetTextLineHeight()) * 0.5f));
+    ImGui::SetCursorPos(ImVec2(fh, (fh - ImGui::GetTextLineHeight()) * 0.5f));
     ImGui::Text("%.2f", m_snapValue);
     ImGui::PopStyleColor();
     if (theme->GetMonoFont())
@@ -110,17 +117,17 @@ void MainToolbar::Draw()
 
     ImGui::EndChild();
 
-    ImGui::SameLine(0, 8);
-    DrawVerticalDivider(20.f);
+    ImGui::SameLine(0, pad);
+    DrawVerticalDivider();
 
     // Perspective dropdown (placeholder)
     DrawTbDropButton("Perspective \xe2\x96\xbe");
-    ImGui::SameLine(0, 4);
+    ImGui::SameLine(0, pad * 0.5f);
 
     // Lit dropdown (placeholder)
     DrawTbDropButton("Lit \xe2\x96\xbe");
-    ImGui::SameLine(0, 8);
-    DrawVerticalDivider(20.f);
+    ImGui::SameLine(0, pad);
+    DrawVerticalDivider();
 
     // Play toggle — when playing (index 1), use Ok green for selected state
     static const HorizontalToggleGroup::Item playItems[] = {
@@ -130,17 +137,17 @@ void MainToolbar::Draw()
         {"\xe2\x8f\xad", "Step"},   // ⏭
     };
     static const int playOverrideIndex = 1;
-    m_playGroup.Draw("##play", playItems, 4, m_playState, 27.f, 24.f,
+    m_playGroup.Draw("##play", playItems, 4, m_playState, 0.f, 0.f,
         (m_playState == 1) ? &playOverrideIndex : nullptr,
         (m_playState == 1) ? &c.Ok : nullptr);
 
-    ImGui::SameLine(0, 8);
-    DrawVerticalDivider(20.f);
+    ImGui::SameLine(0, pad);
+    DrawVerticalDivider();
 
     // FPS label — frame with bg and border, then text
     ImVec2 fpsCursor = ImGui::GetCursorScreenPos();
-    float fpsW = 60.f;
-    float fpsH = 28.f;
+    float fpsW = fs * 4.5f;
+    float fpsH = fh;
     ImDrawList* dl = ImGui::GetWindowDrawList();
     dl->AddRectFilled(fpsCursor, ImVec2(fpsCursor.x + fpsW, fpsCursor.y + fpsH),
         ImGui::ColorConvertFloat4ToU32(c.DRaised), 4.f);
@@ -156,7 +163,6 @@ void MainToolbar::Draw()
     ImGui::Text("%s", fpsBuf);
     if (theme->GetMonoFont())
         ImGui::PopFont();
-    //ImGui::SetCursorScreenPos(ImVec2(fpsCursor.x + fpsW + 8, fpsCursor.y));
 
     ImGui::End();
 }

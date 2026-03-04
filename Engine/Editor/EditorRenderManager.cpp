@@ -136,8 +136,8 @@ void EditorRenderManager::RenderFrame(EngineMain* engine)
     m_appHeader->Draw();
     m_toolbar->Draw();
 
-    float topOffset = EditorTheme::kHdrH + EditorTheme::kTbH;
-    float botOffset = EditorTheme::kStH;
+    float topOffset = EditorTheme::HdrH() + EditorTheme::TbH();
+    float botOffset = EditorTheme::StH();
     ImGuiIO& io = ImGui::GetIO();
     ImGui::SetNextWindowPos(ImVec2(0, topOffset));
     ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, io.DisplaySize.y - topOffset - botOffset));

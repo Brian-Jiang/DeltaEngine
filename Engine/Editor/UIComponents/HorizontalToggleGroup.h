@@ -24,7 +24,7 @@ public:
     // overrideSelectedColor — color for text/border when override applies (e.g. Ok green for Play)
     // Returns true if selection changed this frame.
     bool Draw(const char* id, const Item* items, int itemCount,
-              int& selected, float itemW = 28.f, float itemH = 24.f,
+              int& selected, float itemW = 0.f, float itemH = 0.f,
               const int* overrideSelectedIndex = nullptr,
               const ImVec4* overrideSelectedColor = nullptr);
 };

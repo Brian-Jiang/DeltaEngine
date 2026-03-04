@@ -15,6 +15,10 @@ bool HorizontalToggleGroup::Draw(const char* id, const Item* items, int itemCoun
     if (!items || itemCount <= 0)
         return false;
 
+    const float fh = ImGui::GetFrameHeight();
+    if (itemH <= 0.f) itemH = fh;
+    if (itemW <= 0.f) itemW = fh;
+
     EditorTheme* theme = g_editor->GetEditorTheme();
     const auto& c = theme->colors;
     ImDrawList* drawList = ImGui::GetWindowDrawList();
