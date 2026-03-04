@@ -19,10 +19,14 @@ void StatusBar::Draw()
     ImGui::SetNextWindowPos(ImVec2(0, io.DisplaySize.y - EditorTheme::StH()));
     ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, EditorTheme::StH()));
     ImGui::PushStyleColor(ImGuiCol_WindowBg, c.DFloor);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove
         | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoSavedSettings;
     ImGui::Begin("##StatusBar", nullptr, flags);
     ImGui::PopStyleColor();
+    ImGui::PopStyleVar(3);
 
     // 1px top separator
     ImDrawList* drawList = ImGui::GetWindowDrawList();

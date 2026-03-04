@@ -29,6 +29,7 @@ bool HorizontalToggleGroup::Draw(const char* id, const Item* items, int itemCoun
     const float rounding = 6.f;
     const float buttonRounding = 4.f;
 
+    ImGui::PushID(id);
     ImGui::BeginGroup();
     ImVec2 cursorScreen = ImGui::GetCursorScreenPos();
     ImVec2 groupMin = cursorScreen;
@@ -117,6 +118,7 @@ bool HorizontalToggleGroup::Draw(const char* id, const Item* items, int itemCoun
     drawList->AddRect(groupMin, groupMax, ImGui::ColorConvertFloat4ToU32(c.BLight), rounding, 0, 1.f);
 
     ImGui::EndGroup();
+    ImGui::PopID();
 
     return selectionChanged;
 }

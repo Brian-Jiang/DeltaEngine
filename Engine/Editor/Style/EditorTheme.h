@@ -33,7 +33,7 @@ public:
     };
 
     static float HdrH() { return ImGui::GetFrameHeight(); }         // 1 row
-    static float TbH()  { return ImGui::GetFrameHeight() * 4.5f; }  // ~99px at 13px default font
+    static float TbH()  { return ImGui::GetFrameHeight() * 1.5f; }  // ~99px at 13px default font
     static float StH()  { return ImGui::GetFrameHeight(); }         // 1 row
 
     EditorTheme();

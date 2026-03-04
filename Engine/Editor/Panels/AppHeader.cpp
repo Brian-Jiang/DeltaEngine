@@ -31,6 +31,7 @@ void AppHeader::Draw()
 
     ImGui::PushStyleColor(ImGuiCol_WindowBg, c.DFloor);
     ImGui::PushStyleColor(ImGuiCol_MenuBarBg, c.DFloor); // unify colors
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
 
@@ -38,7 +39,7 @@ void AppHeader::Draw()
 
     ImGui::Begin("##AppHeader", nullptr, flags);
     ImGui::PopStyleColor(2);
-    ImGui::PopStyleVar(2);
+    ImGui::PopStyleVar(3);
 
     ImDrawList* dl = ImGui::GetWindowDrawList();
     ImVec2 winPos = ImGui::GetWindowPos();
