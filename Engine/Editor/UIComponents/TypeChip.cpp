@@ -7,9 +7,14 @@ using namespace DeltaEngine;
 
 void TypeChip::Draw(const EditorTheme::ThemeColors& c)
 {
-    constexpr float kSize = 15.f;
+    constexpr float kSize = 25.f;
     // \xe2\x97\x88 = U+25C8 "◈"
     constexpr const char* kIcon = "\xe2\x97\x88";
+
+    // Vertically center the chip against the current text line height
+    ImVec2 cursorPos = ImGui::GetCursorScreenPos();
+    float adjustedY = cursorPos.y + (ImGui::GetTextLineHeight() - kSize) * 0.5f;
+    ImGui::SetCursorScreenPos(ImVec2(cursorPos.x, adjustedY));
 
     ImVec2 pos = ImGui::GetCursorScreenPos();
     ImGui::InvisibleButton("##chip", ImVec2(kSize, kSize));
@@ -28,11 +33,11 @@ void TypeChip::Draw(const EditorTheme::ThemeColors& c)
     borderColor.w = 0.16f;
     dl->AddRect(pMin, pMax, ImGui::ColorConvertFloat4ToU32(borderColor), 3.f, 0, 1.f);
 
-    // Icon "◈" — CMesh full color, 8.5px, centered
-    ImVec2 textSize = ImGui::CalcTextSize(kIcon);
+    // Icon "◈" — CMesh full color, 18.5px, centered
+    ImVec2 textSize = ImGui::GetFont()->CalcTextSizeA(18.5f, FLT_MAX, 0.f, kIcon);
     ImVec2 textPos = ImVec2(
         pos.x + (kSize - textSize.x) * 0.5f,
         pos.y + (kSize - textSize.y) * 0.5f);
-    dl->AddText(ImGui::GetFont(), 8.5f, textPos,
+    dl->AddText(ImGui::GetFont(), 18.5f, textPos,
         ImGui::ColorConvertFloat4ToU32(c.CMesh), kIcon);
 }

@@ -212,9 +212,9 @@ void EditorWindow_WorldOutliner::Render()
         if (monoFont) ImGui::PopFont();
 
         // b) Type chip
-        ImGui::SameLine(0.f, 6.f);
+        ImGui::SameLine(0.f, 10.f);
         m_typeChip.Draw(c);
-        ImGui::SameLine(0.f, 6.f);
+        ImGui::SameLine(0.f, 15.f);
 
         // c) Name — clipped, bold+bright when selected
         float nameMaxW = rowMax.x - ImGui::GetCursorScreenPos().x - 21.f;
