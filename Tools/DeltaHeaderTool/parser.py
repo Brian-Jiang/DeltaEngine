@@ -175,6 +175,7 @@ class PropertyInfo:
     offset: int
     is_object_ptr: bool = False
     pointee_type: str = ""
+    metadata: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -450,9 +451,27 @@ def _extract_macro_args(tu, cursor, macro_name) -> str | None:
                     else:
                         arg_tokens.append(t.spelling)
             return ""
-        if i > 10:
+        if tok.spelling == ";":
+            break  # crossed a previous declaration boundary; stop searching
+        if i > 64:
             break
     return None
+
+
+def _parse_dproperty_meta(args_str: str) -> dict[str, str]:
+    """Extract key=value pairs from meta=(...) in a DPROPERTY argument string.
+    e.g. 'meta=(UIType="Color")' -> {'UIType': 'Color'}
+    """
+    if not args_str:
+        return {}
+    m = re.search(r'meta\s*=\s*\(([^)]*)\)', args_str)
+    if not m:
+        return {}
+    content = m.group(1)
+    result = {}
+    for kv in re.finditer(r'(\w+)\s*=\s*"([^"]*)"', content):
+        result[kv.group(1)] = kv.group(2)
+    return result
 
 
 def _collect_dfunction_lines(tu, class_cursor) -> list[int]:
@@ -560,6 +579,8 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
             prop_class, is_obj_ptr, pointee = resolved
             offset_bits = class_cursor.type.get_offset(child.spelling)
             offset_bytes = offset_bits // 8 if offset_bits >= 0 else -1
+            dprop_args = _extract_macro_args(tu, child, "DPROPERTY") or ""
+            prop_metadata = _parse_dproperty_meta(dprop_args)
             info.properties.append(PropertyInfo(
                 name=child.spelling,
                 cpp_type=child.type.spelling,
@@ -567,6 +588,7 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
                 offset=offset_bytes,
                 is_object_ptr=is_obj_ptr,
                 pointee_type=pointee,
+                metadata=prop_metadata,
             ))
 
         elif child.kind == ci.CursorKind.FUNCTION_TEMPLATE:

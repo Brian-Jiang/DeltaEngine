@@ -5,6 +5,7 @@
 #include <string>
 #include <memory>
 #include <type_traits>
+#include <unordered_map>
 
 #include "Core/DObject.h"
 
@@ -61,6 +62,18 @@ public:
     DStruct* GetDeclaringStruct() const { return m_declaringStruct; }
     DProperty* GetNext() const { return m_next; }
 
+    void SetMetadata(std::unordered_map<std::string, std::string> metadata)
+    {
+        m_metadata = std::move(metadata);
+    }
+
+    bool HasMeta(const std::string& key) const
+    {
+        return m_metadata.count(key) > 0;
+    }
+
+    DELTAENGINE_API std::string GetMeta(const std::string& key, const std::string& defaultVal = "") const;
+
 protected:
     std::string m_name;
     std::string m_type;
@@ -69,6 +82,7 @@ protected:
     DStruct* m_declaringStruct;
 
     DProperty* m_next;
+    std::unordered_map<std::string, std::string> m_metadata;
 };
 
 

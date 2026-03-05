@@ -31,7 +31,7 @@ public:
 private:
     DPROPERTY()
     std::shared_ptr<PointLightRenderProxy> m_renderProxy;
-    DPROPERTY()
+    DPROPERTY(meta=(UIType="Color"))
     DirectX::XMVECTOR m_color;
     DPROPERTY()
     float m_intensity;

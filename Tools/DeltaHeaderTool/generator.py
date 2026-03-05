@@ -18,6 +18,7 @@ from templates import (
     DSTRUCT_REGISTRATION_BEGIN,
     DSTRUCT_REGISTRATION_END,
     DPROPERTY,
+    DPROPERTY_WITH_META,
     DPROPERTY_OBJECT_PTR,
     DPROPERTY_SHARED_PTR,
     DFUNCTION_VOID_NO_PARAMS,
@@ -35,6 +36,12 @@ from templates import (
 
 _SHARED_PTR_PROP_RE = re.compile(r"^DSharedObjectPtrProperty<(.+)>$")
 _OBJECT_PTR_PROP_RE = re.compile(r"^DObjectPtrProperty<(.+)>$")
+
+
+def _format_meta_init(metadata: dict) -> str:
+    """Format a Python dict as a C++ unordered_map initializer list."""
+    pairs = ", ".join(f'{{"{k}", "{v}"}}' for k, v in metadata.items())
+    return "{" + pairs + "}"
 
 
 def _strip_namespaces(name: str) -> str:
@@ -358,6 +365,13 @@ def _generate_class_registration(cls: ClassInfo) -> str:
                 pointee_type=prop.pointee_type,
                 field_name=prop.name,
                 class_name=cls.name,
+            ))
+        elif prop.metadata:
+            parts.append(DPROPERTY_WITH_META.substitute(
+                property_type=prop.property_class,
+                field_name=prop.name,
+                class_name=cls.name,
+                meta_init=_format_meta_init(prop.metadata),
             ))
         else:
             parts.append(DPROPERTY.substitute(

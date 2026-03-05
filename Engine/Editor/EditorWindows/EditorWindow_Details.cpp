@@ -353,11 +353,21 @@ bool EditorWindow_Details::DrawQuaternionProperty(DObject* instance, DProperty* 
 
 bool EditorWindow_Details::DrawFloat4Property(DObject* instance, DProperty* prop)
 {
+    void* addr = prop->GetValue(instance);
+
+    if (prop->GetMeta("UIType") == "Color")
+    {
+        float* val = static_cast<float*>(addr);
+        bool changed = m_colorField.Draw(prop->GetName().c_str(), val, /*hasAlpha=*/true);
+        if (changed)
+            prop->SetValue(instance, val);
+        return changed;
+    }
+
     EditorTheme* theme = g_editor->GetEditorTheme();
     const auto&  c     = theme->colors;
 
-    void*               addr = prop->GetValue(instance);
-    DirectX::XMFLOAT4* val  = static_cast<DirectX::XMFLOAT4*>(addr);
+    DirectX::XMFLOAT4* val = static_cast<DirectX::XMFLOAT4*>(addr);
 
     float availW = BeginPropertyRow(prop->GetName().c_str(), c);
     ImGui::SetNextItemWidth(availW);

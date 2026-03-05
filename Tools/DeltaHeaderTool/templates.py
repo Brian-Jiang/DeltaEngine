@@ -152,6 +152,16 @@ DPROPERTY = Template("""\
         offsetof(${class_name}, ${field_name})));
 """)
 
+DPROPERTY_WITH_META = Template("""\
+    {
+        auto* _prop = new ${property_type}(
+            "${field_name}",
+            offsetof(${class_name}, ${field_name}));
+        _prop->SetMetadata(${meta_init});
+        cls->AddProperty(_prop);
+    }
+""")
+
 DPROPERTY_OBJECT_PTR = Template("""\
     cls->AddProperty(new DObjectPtrProperty<${pointee_type}>(
         "${field_name}",

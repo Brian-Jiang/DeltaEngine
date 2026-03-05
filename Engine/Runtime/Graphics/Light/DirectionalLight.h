@@ -33,7 +33,7 @@ private:
     std::shared_ptr<DirectionalLightRenderProxy> m_renderProxy;
     DPROPERTY()
     DirectX::XMVECTOR m_direction;
-    DPROPERTY()
+    DPROPERTY(meta=(UIType="Color"))
     DirectX::XMVECTOR m_color;
     DPROPERTY()
     float m_intensity;
