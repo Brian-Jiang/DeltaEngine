@@ -15,7 +15,66 @@
 
 #include "imgui.h"
 
+#include <cctype>
+#include <string>
+
 using namespace DeltaEngine;
+
+namespace
+{
+// Converts reflection property name to display name:
+// - Removes m_ prefix
+// - Capitalizes first letter
+// - Adds space before each word (camelCase boundaries)
+// - Consecutive capitals stay together (e.g. myHTTPURL -> "My HTTPURL")
+std::string GetPropertyDisplayName(const std::string& propName)
+{
+    if (propName.empty())
+        return {};
+
+    std::string name = propName;
+    if (name.size() >= 2 && name[0] == 'm' && name[1] == '_')
+        name.erase(0, 2);
+
+    if (name.empty())
+        return {};
+
+    std::string result;
+    result.reserve(name.size() + 8);
+    bool prevUpper = false;
+    bool prevLower = false;
+
+    for (size_t i = 0; i < name.size(); ++i)
+    {
+        char c = name[i];
+        bool isUpper = std::isupper(static_cast<unsigned char>(c));
+        bool isLower = std::islower(static_cast<unsigned char>(c));
+
+        if (i == 0)
+        {
+            result += static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+            prevUpper = isUpper;
+            prevLower = isLower;
+            continue;
+        }
+        else if (isUpper)
+        {
+            if (prevLower)
+                result += ' ';
+            else if (!prevUpper && std::isdigit(static_cast<unsigned char>(name[i - 1])))
+                result += ' ';
+            result += c;
+        }
+        else
+        {
+            result += c;
+        }
+        prevUpper = isUpper;
+        prevLower = isLower;
+    }
+    return result;
+}
+} // namespace
 using namespace DirectX::SimpleMath;
 
 EditorWindow_Details::EditorWindow_Details()
@@ -213,8 +272,11 @@ void EditorWindow_Details::DrawPropertyEditor(DObject* instance, DClass* dclass,
                 DrawSharedObjectPtrProperty(instance, prop, depth);
                 break;
             default:
-                ImGui::Text("%s: %s", prop->GetName().c_str(),
+            {
+                std::string displayName = GetPropertyDisplayName(prop->GetName());
+                ImGui::Text("%s: %s", displayName.c_str(),
                     prop->ToString(prop->GetValue(instance)).c_str());
+            }
                 break;
             }
 
@@ -231,7 +293,7 @@ bool EditorWindow_Details::DrawIntProperty(DObject* instance, DProperty* prop)
     void* addr = prop->GetValue(instance);
     int*  val  = static_cast<int*>(addr);
 
-    float availW = BeginPropertyRow(prop->GetName().c_str(), c);
+    float availW = BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
     ImGui::SetNextItemWidth(availW);
     bool changed = ImGui::DragInt("##v", val);
     EndPropertyRow();
@@ -246,7 +308,7 @@ bool EditorWindow_Details::DrawFloatProperty(DObject* instance, DProperty* prop)
     void*  addr = prop->GetValue(instance);
     float* val  = static_cast<float*>(addr);
 
-    bool changed = m_scalarField.Draw(prop->GetName().c_str(), val, 0.1f);
+    bool changed = m_scalarField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), val, 0.1f);
     if (changed)
         prop->SetValue(instance, val);
     return changed;
@@ -260,7 +322,7 @@ bool EditorWindow_Details::DrawDoubleProperty(DObject* instance, DProperty* prop
     void*   addr = prop->GetValue(instance);
     double* val  = static_cast<double*>(addr);
 
-    float availW = BeginPropertyRow(prop->GetName().c_str(), c);
+    float availW = BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
     ImGui::SetNextItemWidth(availW);
     bool changed = ImGui::InputDouble("##v", val, 0.1, 1.0, "%.6f");
     EndPropertyRow();
@@ -278,7 +340,7 @@ bool EditorWindow_Details::DrawBoolProperty(DObject* instance, DProperty* prop)
     void* addr = prop->GetValue(instance);
     bool* val  = static_cast<bool*>(addr);
 
-    BeginPropertyRow(prop->GetName().c_str(), c);
+    BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
     bool changed = ImGui::Checkbox("##v", val);
     EndPropertyRow();
 
@@ -296,7 +358,7 @@ bool EditorWindow_Details::DrawStringProperty(DObject* instance, DProperty* prop
     buf[len] = '\0';
     buf[sizeof(buf) - 1] = '\0';
 
-    if (m_stringField.Draw(prop->GetName().c_str(), buf, sizeof(buf)))
+    if (m_stringField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), buf, sizeof(buf)))
     {
         std::string newVal(buf);
         prop->SetValue(instance, &newVal);
@@ -313,7 +375,7 @@ bool EditorWindow_Details::DrawWStringProperty(DObject* instance, DProperty* pro
     const std::wstring& ws  = *static_cast<const std::wstring*>(prop->GetValue(instance));
     std::string         utf8(ws.begin(), ws.end());
 
-    BeginPropertyRow(prop->GetName().c_str(), c);
+    BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
     ImGui::PushStyleColor(ImGuiCol_Text, c.TDim);
     ImGui::TextUnformatted(utf8.c_str());
     ImGui::PopStyleColor();
@@ -327,7 +389,7 @@ bool EditorWindow_Details::DrawVector3Property(DObject* instance, DProperty* pro
     void*    addr = prop->GetValue(instance);
     Vector3* val  = static_cast<Vector3*>(addr);
 
-    bool changed = m_vec3Field.Draw(prop->GetName().c_str(), &val->x, 0.1f);
+    bool changed = m_vec3Field.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), &val->x, 0.1f);
     if (changed)
         prop->SetValue(instance, val);
     return changed;
@@ -341,7 +403,7 @@ bool EditorWindow_Details::DrawQuaternionProperty(DObject* instance, DProperty* 
     void*       addr = prop->GetValue(instance);
     Quaternion* val  = static_cast<Quaternion*>(addr);
 
-    float availW = BeginPropertyRow(prop->GetName().c_str(), c);
+    float availW = BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
     ImGui::SetNextItemWidth(availW);
     bool changed = ImGui::DragFloat4("##v", &val->x, 0.01f);
     EndPropertyRow();
@@ -358,7 +420,7 @@ bool EditorWindow_Details::DrawFloat4Property(DObject* instance, DProperty* prop
     if (prop->GetMeta("UIType") == "Color")
     {
         float* val = static_cast<float*>(addr);
-        bool changed = m_colorField.Draw(prop->GetName().c_str(), val, /*hasAlpha=*/true);
+        bool changed = m_colorField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), val, /*hasAlpha=*/true);
         if (changed)
             prop->SetValue(instance, val);
         return changed;
@@ -369,7 +431,7 @@ bool EditorWindow_Details::DrawFloat4Property(DObject* instance, DProperty* prop
 
     DirectX::XMFLOAT4* val = static_cast<DirectX::XMFLOAT4*>(addr);
 
-    float availW = BeginPropertyRow(prop->GetName().c_str(), c);
+    float availW = BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
     ImGui::SetNextItemWidth(availW);
     bool changed = ImGui::DragFloat4("##v", &val->x, 0.01f);
     EndPropertyRow();
@@ -391,7 +453,7 @@ bool EditorWindow_Details::DrawFloat4x4Property(DObject* instance, DProperty* pr
     DirectX::XMFLOAT4X4* mat = static_cast<DirectX::XMFLOAT4X4*>(addr);
     bool changed = false;
 
-    if (ImGui::TreeNodeEx(prop->GetName().c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+    if (ImGui::TreeNodeEx(GetPropertyDisplayName(prop->GetName()).c_str(), ImGuiTreeNodeFlags_DefaultOpen))
     {
         float availW = BeginPropertyRow("Row 0", c);
         ImGui::SetNextItemWidth(availW);
@@ -426,8 +488,9 @@ bool EditorWindow_Details::DrawFloat4x4Property(DObject* instance, DProperty* pr
 
 bool EditorWindow_Details::DrawObjectPtrProperty(DObject* instance, DProperty* prop, int depth)
 {
-    DObject*    child = prop->GetObjectPointer(instance);
-    const char* label = prop->GetName().c_str();
+    DObject*       child = prop->GetObjectPointer(instance);
+    std::string     displayName = GetPropertyDisplayName(prop->GetName());
+    const char*     label = displayName.c_str();
 
     if (child == nullptr)
     {
@@ -457,8 +520,9 @@ bool EditorWindow_Details::DrawSharedObjectPtrProperty(DObject* instance, DPrope
     ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f),
         "WARNING: SharedObjectPtr will be deprecated in a future version");
 
-    DObject*    child = prop->GetObjectPointer(instance);
-    const char* label = prop->GetName().c_str();
+    DObject*       child = prop->GetObjectPointer(instance);
+    std::string    displayName = GetPropertyDisplayName(prop->GetName());
+    const char*    label = displayName.c_str();
 
     if (child == nullptr)
     {
