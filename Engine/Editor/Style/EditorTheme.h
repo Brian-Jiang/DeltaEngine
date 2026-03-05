@@ -39,7 +39,15 @@ public:
         ImVec4 AxXBg;    // 0x3b1212 — X axis chip background (dark red)
         ImVec4 AxYBg;    // 0x0f2e18 — Y axis chip background (dark green)
         ImVec4 AxZBg;    // 0x0d1e38 — Z axis chip background (dark blue)
+        ImVec4 Acc;      // 0x6B8CFF @ 0.85 — main periwinkle (left bar, selected dot)
+        ImVec4 AccRim;   // 0x6B8CFF @ 0.18 — rim lines (selection top/bottom)
     };
+
+    //static constexpr float kRowH = 30.f;
+    static float RowH()
+    {
+        return ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.f;
+    }
 
     static float HdrH()
     {

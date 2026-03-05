@@ -128,6 +128,8 @@ void EditorTheme::ApplyTheme()
     this->colors.AxXBg   = HexToVec4(0x3b1212);
     this->colors.AxYBg   = HexToVec4(0x0f2e18);
     this->colors.AxZBg   = HexToVec4(0x0d1e38);
+    this->colors.Acc     = HexToVec4(0x6B8CFF, 0.85f);
+    this->colors.AccRim  = HexToVec4(0x6B8CFF, 0.18f);
 
     LoadFonts();
 }
