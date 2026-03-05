@@ -27,6 +27,11 @@ void DComponent::RegisterComponent(GameObject* gameObject)
     m_gameObject = gameObject;
 }
 
+void DComponent::MarkForDestroy()
+{
+    m_gameObject = nullptr;
+}
+
 void DeltaEngine::DComponent::SetName(const std::string& name)
 {
     m_name = name;

@@ -240,8 +240,38 @@ const std::vector<SceneComponent*>& DeltaEngine::SceneComponent::GetChildren() c
 
 void DeltaEngine::SceneComponent::SetParent(SceneComponent* parent)
 {
+    if (parent == m_parent)
+    {
+        return;
+    }
+
+    if (parent != nullptr)
+    {
+        // Check for circular reference
+        SceneComponent* current = parent;
+        while (current) {
+            if (current == this) {
+                // Circular reference detected, ignore the new parent assignment
+                return;
+            }
+            current = current->m_parent;
+        }
+    }
+
+    if (m_parent)
+    {
+        // Detach from current parent
+        auto& siblings = m_parent->m_children;
+        std::erase(siblings, this);
+    }
+
     m_parent = parent;
-    parent->m_children.push_back(this);
+
+    if (parent)
+    {
+        parent->m_children.push_back(this);
+    }
+    
     SetTransformDirty();
 }
 

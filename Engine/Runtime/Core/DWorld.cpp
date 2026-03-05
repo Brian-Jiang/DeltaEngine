@@ -13,7 +13,7 @@
 
 using namespace DeltaEngine;
 
-DeltaEngine::DWorld::DWorld()
+DWorld::DWorld()
     : m_rootSceneComponent(nullptr)
     , m_gameObjectsChanged(false)
 {
@@ -43,6 +43,20 @@ GameObject* DWorld::CreateGameObjectByClass(const DClass* dclass)
     m_gameObjects.push_back(gameObject);
     m_gameObjectsChanged = true;
     return gameObject;
+}
+
+void DWorld::DestroyGameObject(GameObject* gameObject)
+{
+    if (!gameObject)
+        return;
+    auto it = std::find(m_gameObjects.begin(), m_gameObjects.end(), gameObject);
+    if (it != m_gameObjects.end())
+    {
+        (*it)->Destroy();
+        m_gameObjects.erase(it);
+        m_gameObjectsChanged = true;
+        GetReflectionRegistry().DestroyObject(*it);
+    }
 }
 
 void DeltaEngine::DWorld::InitRenderers(std::shared_ptr<DXGraphicsContext> context) const

@@ -1,6 +1,7 @@
 #include "Core/GameObject.h"
 
 #include <format>
+#include <queue>
 
 #include "Reflection/ReflectionRegistry.h"
 #include "Reflection/DClass.h"
@@ -32,12 +33,12 @@ void GameObject::Destroy()
 {
     for (DComponent* component : m_components)
     {
-        GetReflectionRegistry().DestroyObject(component);
+        RemoveComponent(component);
     }
 
-    for (SceneComponent* sceneComponent : m_sceneComponents)
+    if (m_rootSceneComponent)
     {
-        GetReflectionRegistry().DestroyObject(sceneComponent);
+        RemoveComponent(m_rootSceneComponent);
     }
 }
 
@@ -82,6 +83,51 @@ DComponent* GameObject::AddComponentByClass(const DClass* dclass)
         comp->SetName(std::format("New {}", dclass->GetName()));
         m_components.push_back(comp);
         return comp;
+    }
+}
+
+void GameObject::RemoveComponent(DComponent* component)
+{
+    if (!component)
+        return;
+
+    auto it = std::find(m_components.begin(), m_components.end(), component);
+    if (it != m_components.end())
+    {
+        m_components.erase(it);
+        GetReflectionRegistry().DestroyObject(component);
+        return;
+    }
+
+    auto scIt = std::find(m_sceneComponents.begin(), m_sceneComponents.end(), component);
+    if (scIt != m_sceneComponents.end())
+    {
+        std::queue<SceneComponent*> componentQueue;
+        std::vector<SceneComponent*> componentsToRemove;
+        componentQueue.push(*scIt);
+        while (!componentQueue.empty())
+        {
+            SceneComponent* current = componentQueue.front();
+            componentQueue.pop();
+            componentsToRemove.push_back(current);
+            for (SceneComponent* child : current->GetChildren())
+            {
+                componentQueue.push(child);
+            }
+        }
+
+        std::reverse(componentsToRemove.begin(), componentsToRemove.end());
+        for (SceneComponent* comp : componentsToRemove)
+        {
+            if (comp == m_rootSceneComponent)
+            {
+                m_rootSceneComponent = nullptr;
+            }
+
+            comp->SetParent(nullptr);
+            std::erase(m_sceneComponents, comp);
+            GetReflectionRegistry().DestroyObject(comp);
+        }
     }
 }
 

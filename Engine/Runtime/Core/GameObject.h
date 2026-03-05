@@ -64,6 +64,8 @@ public:
 
     DELTAENGINE_API DComponent* AddComponentByClass(const DClass* dclass);
 
+    DELTAENGINE_API void RemoveComponent(DComponent* component);
+
     DFUNCTION()
     DELTAENGINE_API void Destroy();
 

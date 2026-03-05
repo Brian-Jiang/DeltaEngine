@@ -30,6 +30,8 @@ public:
 
     DELTAENGINE_API GameObject* CreateGameObjectByClass(const DClass* dclass);
 
+    DELTAENGINE_API void DestroyGameObject(GameObject* gameObject);
+
     /// Walk the scene tree and call InitGraphicState on every Renderer.
     DELTAENGINE_API void InitRenderers(std::shared_ptr<DXGraphicsContext> context) const;
 

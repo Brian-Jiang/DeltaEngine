@@ -26,6 +26,7 @@ public:
     DELTAENGINE_API virtual ~DComponent();
 
     virtual void RegisterComponent(GameObject* gameObject);
+    void MarkForDestroy();
 
 public:
     DFUNCTION()
