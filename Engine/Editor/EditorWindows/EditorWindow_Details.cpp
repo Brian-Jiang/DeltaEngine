@@ -1,7 +1,8 @@
 #include "Editor/EditorWindows/EditorWindow_Details.h"
-
 #include "Editor/EditorMain.h"
 #include "Editor/EditorSelectionState.h"
+#include "Editor/Style/EditorTheme.h"
+#include "Editor/UIComponents/PropertyWidgets/PropertyWidgetUtil.h"
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Core/SceneComponent.h"
 #include "Runtime/Core/DComponent.h"
@@ -42,7 +43,7 @@ void EditorWindow_Details::Render()
 
     auto selectionState = g_editor->GetSelectionState();
     const auto& gameObjects = selectionState->GetSelectedGameObjects();
-    const auto& components = selectionState->GetSelectedComponents();
+    const auto& components  = selectionState->GetSelectedComponents();
 
     if (gameObjects.empty() && components.empty())
     {
@@ -54,17 +55,13 @@ void EditorWindow_Details::Render()
     for (const auto& gameObject : gameObjects)
     {
         if (gameObject)
-        {
             RenderGameObjectDetails(gameObject);
-        }
     }
 
     for (const auto& component : components)
     {
         if (component)
-        {
             RenderComponentDetails(component);
-        }
     }
 
     ImGui::End();
@@ -72,9 +69,22 @@ void EditorWindow_Details::Render()
 
 void EditorWindow_Details::RenderGameObjectDetails(GameObject* gameObject)
 {
-    ImGui::TextUnformatted("GameObject");
-    ImGui::SameLine();
-    ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "%s", gameObject->GetName().c_str());
+    EditorTheme* theme = g_editor->GetEditorTheme();
+    const auto&  c     = theme->colors;
+
+    // Object name — bold + bright
+    if (theme->GetBoldFont()) ImGui::PushFont(theme->GetBoldFont());
+    ImGui::PushStyleColor(ImGuiCol_Text, c.TBright);
+    ImGui::TextUnformatted(gameObject->GetName().c_str());
+    ImGui::PopStyleColor();
+    if (theme->GetBoldFont()) ImGui::PopFont();
+
+    // Class name — dim
+    ImGui::SameLine(0.f, ImGui::GetStyle().ItemSpacing.x);
+    ImGui::PushStyleColor(ImGuiCol_Text, c.TDim);
+    DClass* dc = gameObject->GetClass();
+    ImGui::TextUnformatted(dc ? dc->GetName().c_str() : "GameObject");
+    ImGui::PopStyleColor();
 
     auto rootSceneComponent = gameObject->GetRootSceneComponent();
     if (rootSceneComponent)
@@ -86,9 +96,8 @@ void EditorWindow_Details::RenderGameObjectDetails(GameObject* gameObject)
 
     ImGui::Separator();
     ImGui::TextUnformatted("Properties");
-    DClass* dclass = gameObject->GetClass();
-    if (dclass)
-        DrawPropertyEditor(gameObject, dclass);
+    if (dc)
+        DrawPropertyEditor(gameObject, dc);
     else
         ImGui::TextDisabled("No reflection data");
 
@@ -97,21 +106,31 @@ void EditorWindow_Details::RenderGameObjectDetails(GameObject* gameObject)
 
 void EditorWindow_Details::RenderComponentDetails(DComponent* component)
 {
-    ImGui::TextUnformatted("Component");
-    ImGui::SameLine();
-    ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "%s", component->GetName().c_str());
+    EditorTheme* theme = g_editor->GetEditorTheme();
+    const auto&  c     = theme->colors;
+
+    // Component name — bold + bright
+    if (theme->GetBoldFont()) ImGui::PushFont(theme->GetBoldFont());
+    ImGui::PushStyleColor(ImGuiCol_Text, c.TBright);
+    ImGui::TextUnformatted(component->GetName().c_str());
+    ImGui::PopStyleColor();
+    if (theme->GetBoldFont()) ImGui::PopFont();
+
+    // Class name — dim
+    ImGui::SameLine(0.f, ImGui::GetStyle().ItemSpacing.x);
+    ImGui::PushStyleColor(ImGuiCol_Text, c.TDim);
+    DClass* dc = component->GetClass();
+    ImGui::TextUnformatted(dc ? dc->GetName().c_str() : "Component");
+    ImGui::PopStyleColor();
 
     auto sceneComponent = dynamic_cast<SceneComponent*>(component);
     if (sceneComponent)
-    {
         RenderSceneComponentTransform(sceneComponent);
-    }
 
     ImGui::Separator();
     ImGui::TextUnformatted("Properties");
-    DClass* dclass = component->GetClass();
-    if (dclass)
-        DrawPropertyEditor(component, dclass);
+    if (dc)
+        DrawPropertyEditor(component, dc);
     else
         ImGui::TextDisabled("No reflection data");
 
@@ -123,20 +142,17 @@ void EditorWindow_Details::RenderSceneComponentTransform(SceneComponent* sceneCo
     if (!sceneComponent)
         return;
 
-    Vector3 pos = sceneComponent->GetLocalPosition();
+    Vector3 pos   = sceneComponent->GetLocalPosition();
     Vector3 euler = sceneComponent->GetLocalRotationEulerAngles();
     Vector3 scale = sceneComponent->GetLocalScale();
-    //const float radToDeg = 180.0f / DirectX::XM_PI;
-    //euler *= radToDeg;
 
     bool changed = false;
-    changed |= ImGui::DragFloat3("Position", &pos.x, 0.1f);
-    changed |= ImGui::DragFloat3("Rotation", &euler.x, 1.0f);
-    changed |= ImGui::DragFloat3("Scale", &scale.x, 0.01f);
+    changed |= m_vec3Field.Draw("Position", &pos.x,   0.1f);
+    changed |= m_vec3Field.Draw("Rotation", &euler.x, 1.0f);
+    changed |= m_vec3Field.Draw("Scale",    &scale.x, 0.01f);
 
     if (changed)
     {
-        const float degToRad = DirectX::XM_PI / 180.0f;
         sceneComponent->SetLocalPosition(pos);
         sceneComponent->SetLocalRotation(euler);
         sceneComponent->SetLocalScale(scale);
@@ -158,7 +174,6 @@ void EditorWindow_Details::DrawPropertyEditor(DObject* instance, DClass* dclass,
         {
             ImGui::PushID(prop->GetName().c_str());
 
-            const char* label = prop->GetName().c_str();
             switch (prop->GetPropertyType())
             {
             case EPropertyType::Int:
@@ -198,7 +213,8 @@ void EditorWindow_Details::DrawPropertyEditor(DObject* instance, DClass* dclass,
                 DrawSharedObjectPtrProperty(instance, prop, depth);
                 break;
             default:
-                ImGui::Text("%s: %s", label, prop->ToString(prop->GetValue(instance)).c_str());
+                ImGui::Text("%s: %s", prop->GetName().c_str(),
+                    prop->ToString(prop->GetValue(instance)).c_str());
                 break;
             }
 
@@ -209,50 +225,66 @@ void EditorWindow_Details::DrawPropertyEditor(DObject* instance, DClass* dclass,
 
 bool EditorWindow_Details::DrawIntProperty(DObject* instance, DProperty* prop)
 {
+    EditorTheme* theme = g_editor->GetEditorTheme();
+    const auto&  c     = theme->colors;
+
     void* addr = prop->GetValue(instance);
-    int* val = static_cast<int*>(addr);
-    if (ImGui::DragInt(prop->GetName().c_str(), val))
-    {
+    int*  val  = static_cast<int*>(addr);
+
+    float availW = BeginPropertyRow(prop->GetName().c_str(), c);
+    ImGui::SetNextItemWidth(availW);
+    bool changed = ImGui::DragInt("##v", val);
+    EndPropertyRow();
+
+    if (changed)
         prop->SetValue(instance, val);
-        return true;
-    }
-    return false;
+    return changed;
 }
 
 bool EditorWindow_Details::DrawFloatProperty(DObject* instance, DProperty* prop)
 {
-    void* addr = prop->GetValue(instance);
-    float* val = static_cast<float*>(addr);
-    if (ImGui::DragFloat(prop->GetName().c_str(), val, 0.1f))
-    {
+    void*  addr = prop->GetValue(instance);
+    float* val  = static_cast<float*>(addr);
+
+    bool changed = m_scalarField.Draw(prop->GetName().c_str(), val, 0.1f);
+    if (changed)
         prop->SetValue(instance, val);
-        return true;
-    }
-    return false;
+    return changed;
 }
 
 bool EditorWindow_Details::DrawDoubleProperty(DObject* instance, DProperty* prop)
 {
-    void* addr = prop->GetValue(instance);
-    double* val = static_cast<double*>(addr);
-    if (ImGui::InputDouble(prop->GetName().c_str(), val, 0.1, 1.0, "%.6f"))
-    {
+    EditorTheme* theme = g_editor->GetEditorTheme();
+    const auto&  c     = theme->colors;
+
+    void*   addr = prop->GetValue(instance);
+    double* val  = static_cast<double*>(addr);
+
+    float availW = BeginPropertyRow(prop->GetName().c_str(), c);
+    ImGui::SetNextItemWidth(availW);
+    bool changed = ImGui::InputDouble("##v", val, 0.1, 1.0, "%.6f");
+    EndPropertyRow();
+
+    if (changed)
         prop->SetValue(instance, val);
-        return true;
-    }
-    return false;
+    return changed;
 }
 
 bool EditorWindow_Details::DrawBoolProperty(DObject* instance, DProperty* prop)
 {
+    EditorTheme* theme = g_editor->GetEditorTheme();
+    const auto&  c     = theme->colors;
+
     void* addr = prop->GetValue(instance);
-    bool* val = static_cast<bool*>(addr);
-    if (ImGui::Checkbox(prop->GetName().c_str(), val))
-    {
+    bool* val  = static_cast<bool*>(addr);
+
+    BeginPropertyRow(prop->GetName().c_str(), c);
+    bool changed = ImGui::Checkbox("##v", val);
+    EndPropertyRow();
+
+    if (changed)
         prop->SetValue(instance, val);
-        return true;
-    }
-    return false;
+    return changed;
 }
 
 bool EditorWindow_Details::DrawStringProperty(DObject* instance, DProperty* prop)
@@ -263,7 +295,8 @@ bool EditorWindow_Details::DrawStringProperty(DObject* instance, DProperty* prop
     memcpy(buf, current.c_str(), len);
     buf[len] = '\0';
     buf[sizeof(buf) - 1] = '\0';
-    if (ImGui::InputText(prop->GetName().c_str(), buf, sizeof(buf)))
+
+    if (m_stringField.Draw(prop->GetName().c_str(), buf, sizeof(buf)))
     {
         std::string newVal(buf);
         prop->SetValue(instance, &newVal);
@@ -274,62 +307,105 @@ bool EditorWindow_Details::DrawStringProperty(DObject* instance, DProperty* prop
 
 bool EditorWindow_Details::DrawWStringProperty(DObject* instance, DProperty* prop)
 {
-    const std::wstring& ws = *static_cast<const std::wstring*>(prop->GetValue(instance));
-    std::string utf8(ws.begin(), ws.end());
-    ImGui::Text("%s: %s", prop->GetName().c_str(), utf8.c_str());
+    EditorTheme* theme = g_editor->GetEditorTheme();
+    const auto&  c     = theme->colors;
+
+    const std::wstring& ws  = *static_cast<const std::wstring*>(prop->GetValue(instance));
+    std::string         utf8(ws.begin(), ws.end());
+
+    BeginPropertyRow(prop->GetName().c_str(), c);
+    ImGui::PushStyleColor(ImGuiCol_Text, c.TDim);
+    ImGui::TextUnformatted(utf8.c_str());
+    ImGui::PopStyleColor();
+    EndPropertyRow();
+
     return false;
 }
 
 bool EditorWindow_Details::DrawVector3Property(DObject* instance, DProperty* prop)
 {
-    void* addr = prop->GetValue(instance);
-    Vector3* val = static_cast<Vector3*>(addr);
-    if (ImGui::DragFloat3(prop->GetName().c_str(), &val->x, 0.1f))
-    {
+    void*    addr = prop->GetValue(instance);
+    Vector3* val  = static_cast<Vector3*>(addr);
+
+    bool changed = m_vec3Field.Draw(prop->GetName().c_str(), &val->x, 0.1f);
+    if (changed)
         prop->SetValue(instance, val);
-        return true;
-    }
-    return false;
+    return changed;
 }
 
 bool EditorWindow_Details::DrawQuaternionProperty(DObject* instance, DProperty* prop)
 {
-    void* addr = prop->GetValue(instance);
-    Quaternion* val = static_cast<Quaternion*>(addr);
-    if (ImGui::DragFloat4(prop->GetName().c_str(), &val->x, 0.01f))
-    {
+    EditorTheme* theme = g_editor->GetEditorTheme();
+    const auto&  c     = theme->colors;
+
+    void*       addr = prop->GetValue(instance);
+    Quaternion* val  = static_cast<Quaternion*>(addr);
+
+    float availW = BeginPropertyRow(prop->GetName().c_str(), c);
+    ImGui::SetNextItemWidth(availW);
+    bool changed = ImGui::DragFloat4("##v", &val->x, 0.01f);
+    EndPropertyRow();
+
+    if (changed)
         prop->SetValue(instance, val);
-        return true;
-    }
-    return false;
+    return changed;
 }
 
 bool EditorWindow_Details::DrawFloat4Property(DObject* instance, DProperty* prop)
 {
-    void* addr = prop->GetValue(instance);
-    DirectX::XMFLOAT4* val = static_cast<DirectX::XMFLOAT4*>(addr);
-    if (ImGui::DragFloat4(prop->GetName().c_str(), &val->x, 0.01f))
+    EditorTheme* theme = g_editor->GetEditorTheme();
+    const auto&  c     = theme->colors;
+
+    void*               addr = prop->GetValue(instance);
+    DirectX::XMFLOAT4* val  = static_cast<DirectX::XMFLOAT4*>(addr);
+
+    float availW = BeginPropertyRow(prop->GetName().c_str(), c);
+    ImGui::SetNextItemWidth(availW);
+    bool changed = ImGui::DragFloat4("##v", &val->x, 0.01f);
+    EndPropertyRow();
+
+    if (changed)
     {
         DirectX::XMVECTOR v = DirectX::XMLoadFloat4(val);
         prop->SetValue(instance, &v);
-        return true;
     }
-    return false;
+    return changed;
 }
 
 bool EditorWindow_Details::DrawFloat4x4Property(DObject* instance, DProperty* prop)
 {
-    void* addr = prop->GetValue(instance);
+    EditorTheme* theme = g_editor->GetEditorTheme();
+    const auto&  c     = theme->colors;
+
+    void*                addr = prop->GetValue(instance);
     DirectX::XMFLOAT4X4* mat = static_cast<DirectX::XMFLOAT4X4*>(addr);
     bool changed = false;
+
     if (ImGui::TreeNodeEx(prop->GetName().c_str(), ImGuiTreeNodeFlags_DefaultOpen))
     {
-        changed |= ImGui::DragFloat4("Row 0", &mat->_11, 0.01f);
-        changed |= ImGui::DragFloat4("Row 1", &mat->_21, 0.01f);
-        changed |= ImGui::DragFloat4("Row 2", &mat->_31, 0.01f);
-        changed |= ImGui::DragFloat4("Row 3", &mat->_41, 0.01f);
+        float availW = BeginPropertyRow("Row 0", c);
+        ImGui::SetNextItemWidth(availW);
+        changed |= ImGui::DragFloat4("##r0", &mat->_11, 0.01f);
+        EndPropertyRow();
+
+        availW = BeginPropertyRow("Row 1", c);
+        ImGui::SetNextItemWidth(availW);
+        changed |= ImGui::DragFloat4("##r1", &mat->_21, 0.01f);
+        EndPropertyRow();
+
+        availW = BeginPropertyRow("Row 2", c);
+        ImGui::SetNextItemWidth(availW);
+        changed |= ImGui::DragFloat4("##r2", &mat->_31, 0.01f);
+        EndPropertyRow();
+
+        availW = BeginPropertyRow("Row 3", c);
+        ImGui::SetNextItemWidth(availW);
+        changed |= ImGui::DragFloat4("##r3", &mat->_41, 0.01f);
+        EndPropertyRow();
+
         ImGui::TreePop();
     }
+
     if (changed)
     {
         DirectX::XMMATRIX m = DirectX::XMLoadFloat4x4(mat);
@@ -340,12 +416,12 @@ bool EditorWindow_Details::DrawFloat4x4Property(DObject* instance, DProperty* pr
 
 bool EditorWindow_Details::DrawObjectPtrProperty(DObject* instance, DProperty* prop, int depth)
 {
-    DObject* child = prop->GetObjectPointer(instance);
+    DObject*    child = prop->GetObjectPointer(instance);
     const char* label = prop->GetName().c_str();
 
     if (child == nullptr)
     {
-        ImGui::Text("%s: (null)", label);
+        m_refField.Draw(label, "(null)", true);
         return false;
     }
 
@@ -356,8 +432,8 @@ bool EditorWindow_Details::DrawObjectPtrProperty(DObject* instance, DProperty* p
         return false;
     }
 
-    DClass* childClass = child->GetClass();
-    const char* typeName = childClass ? childClass->GetName().c_str() : "?";
+    DClass*     childClass = child->GetClass();
+    const char* typeName   = childClass ? childClass->GetName().c_str() : "?";
     if (ImGui::TreeNodeEx(label, ImGuiTreeNodeFlags_DefaultOpen, "%s (%s)", label, typeName))
     {
         DrawPropertyEditor(child, childClass, depth + 1);
@@ -368,14 +444,15 @@ bool EditorWindow_Details::DrawObjectPtrProperty(DObject* instance, DProperty* p
 
 bool EditorWindow_Details::DrawSharedObjectPtrProperty(DObject* instance, DProperty* prop, int depth)
 {
-    ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "⚠ SharedObjectPtr will be deprecated in a future version");
+    ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f),
+        "WARNING: SharedObjectPtr will be deprecated in a future version");
 
-    DObject* child = prop->GetObjectPointer(instance);
+    DObject*    child = prop->GetObjectPointer(instance);
     const char* label = prop->GetName().c_str();
 
     if (child == nullptr)
     {
-        ImGui::Text("%s: (null)", label);
+        m_refField.Draw(label, "(null)", true);
         return false;
     }
 
@@ -386,8 +463,8 @@ bool EditorWindow_Details::DrawSharedObjectPtrProperty(DObject* instance, DPrope
         return false;
     }
 
-    DClass* childClass = child->GetClass();
-    const char* typeName = childClass ? childClass->GetName().c_str() : "?";
+    DClass*     childClass = child->GetClass();
+    const char* typeName   = childClass ? childClass->GetName().c_str() : "?";
     if (ImGui::TreeNodeEx(label, ImGuiTreeNodeFlags_DefaultOpen, "%s (%s)", label, typeName))
     {
         DrawPropertyEditor(child, childClass, depth + 1);

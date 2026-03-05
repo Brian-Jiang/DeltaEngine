@@ -118,7 +118,16 @@ void EditorTheme::ApplyTheme()
     this->colors.TGhost = HexToVec4(0x1e2640);
     this->colors.Ok = HexToVec4(0x34d399);
     this->colors.CMesh = HexToVec4(0x1ec8b4);
-    this->colors.DPanel = HexToVec4(0x0d1019);
+    this->colors.DPanel  = HexToVec4(0x0d1019);
+    this->colors.DInput  = HexToVec4(0x0b0f1a);
+    this->colors.TBright = HexToVec4(0xecf0ff);
+    this->colors.Err     = HexToVec4(0xef4444);
+    this->colors.AxX     = HexToVec4(0xf87171);
+    this->colors.AxY     = HexToVec4(0x4ade80);
+    this->colors.AxZ     = HexToVec4(0x60a5fa);
+    this->colors.AxXBg   = HexToVec4(0x3b1212);
+    this->colors.AxYBg   = HexToVec4(0x0f2e18);
+    this->colors.AxZBg   = HexToVec4(0x0d1e38);
 
     LoadFonts();
 }

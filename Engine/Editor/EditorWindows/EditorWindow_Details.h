@@ -8,6 +8,11 @@
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DProperty.h"
 #include "Runtime/Core/DObject.h"
+#include "UIComponents/PropertyWidgets/Vec3Field.h"
+#include "UIComponents/PropertyWidgets/ScalarField.h"
+#include "UIComponents/PropertyWidgets/ColorField.h"
+#include "UIComponents/PropertyWidgets/StringField.h"
+#include "UIComponents/PropertyWidgets/ReferenceField.h"
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -44,6 +49,12 @@ private:
     bool DrawFloat4x4Property(DObject* instance, DProperty* prop);
     bool DrawObjectPtrProperty(DObject* instance, DProperty* prop, int depth);
     bool DrawSharedObjectPtrProperty(DObject* instance, DProperty* prop, int depth);
+
+    Vec3Field      m_vec3Field;
+    ScalarField    m_scalarField;
+    ColorField     m_colorField;
+    StringField    m_stringField;
+    ReferenceField m_refField;
 };
 
 DELTA_ENGINE_NS_END

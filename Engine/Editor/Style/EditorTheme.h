@@ -30,6 +30,15 @@ public:
         ImVec4 Ok;       // 0x34d399 — green status/success
         ImVec4 CMesh;    // 0x1ec8b4 — cyan numeric
         ImVec4 DPanel;   // 0x0d1019 — panel body bg (dockable window background)
+        ImVec4 DInput;   // 0x0b0f1a — input field bg (between DFloor and DRaised)
+        ImVec4 TBright;  // 0xecf0ff — brightest text (object name in header)
+        ImVec4 Err;      // 0xef4444 — error/invalid value highlight
+        ImVec4 AxX;      // 0xf87171 — X axis label text (red)
+        ImVec4 AxY;      // 0x4ade80 — Y axis label text (green)
+        ImVec4 AxZ;      // 0x60a5fa — Z axis label text (blue)
+        ImVec4 AxXBg;    // 0x3b1212 — X axis chip background (dark red)
+        ImVec4 AxYBg;    // 0x0f2e18 — Y axis chip background (dark green)
+        ImVec4 AxZBg;    // 0x0d1e38 — Z axis chip background (dark blue)
     };
 
     static float HdrH()

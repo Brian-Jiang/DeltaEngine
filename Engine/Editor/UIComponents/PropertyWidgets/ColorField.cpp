@@ -1,0 +1,62 @@
+#include "UIComponents/PropertyWidgets/ColorField.h"
+#include "UIComponents/PropertyWidgets/PropertyWidgetUtil.h"
+
+#include "EditorMain.h"
+#include "Style/EditorTheme.h"
+#include "imgui.h"
+
+using namespace DeltaEngine;
+
+bool ColorField::Draw(const char* label, float* values, bool hasAlpha)
+{
+    EditorTheme* theme = g_editor->GetEditorTheme();
+    const auto&  c     = theme->colors;
+    ImFont*      mono  = theme->GetMonoFont();
+
+    ImGui::PushID(label);
+
+    float availW = BeginPropertyRow(label, c);
+    float fh     = ImGui::GetFrameHeight();
+    bool  changed = false;
+
+    // Color swatch button — opens picker popup on click
+    ImVec4 swatchCol = { values[0], values[1], values[2], hasAlpha ? values[3] : 1.f };
+    if (ImGui::ColorButton("##sw", swatchCol,
+            ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoBorder,
+            ImVec2(fh * 0.9f, fh * 0.9f)))
+    {
+        ImGui::OpenPopup("##cpick");
+    }
+
+    ImGui::SameLine(0.f, 4.f);
+    ImGui::SetNextItemWidth(-1.f);
+
+    ImGuiColorEditFlags editFlags =
+        ImGuiColorEditFlags_NoLabel   |
+        ImGuiColorEditFlags_Float     |
+        ImGuiColorEditFlags_NoPicker  |
+        ImGuiColorEditFlags_NoOptions;
+    if (!hasAlpha)
+        editFlags |= ImGuiColorEditFlags_NoAlpha;
+
+    if (mono) ImGui::PushFont(mono);
+    changed |= ImGui::ColorEdit4("##ce", values, editFlags);
+    if (mono) ImGui::PopFont();
+
+    if (ImGui::BeginPopup("##cpick"))
+    {
+        ImGuiColorEditFlags pickerFlags =
+            ImGuiColorEditFlags_Float      |
+            ImGuiColorEditFlags_DisplayRGB |
+            ImGuiColorEditFlags_DisplayHex;
+        if (!hasAlpha)
+            pickerFlags |= ImGuiColorEditFlags_NoAlpha;
+        changed |= ImGui::ColorPicker4("##pk", values, pickerFlags);
+        ImGui::EndPopup();
+    }
+
+    EndPropertyRow();
+    ImGui::PopID();
+
+    return changed;
+}
