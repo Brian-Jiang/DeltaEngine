@@ -11,6 +11,8 @@
 #include "Runtime/EngineMain.h"
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/GameObject.h"
+#include "Runtime/Reflection/ReflectionRegistry.h"
+#include "Runtime/Reflection/DClass.h"
 
 #include "imgui.h"
 
@@ -122,6 +124,51 @@ void EditorWindow_WorldOutliner::Render()
     }
 
     RebuildFilter();
+
+    // --- "+ Add" button (right-aligned) ---
+    {
+        const float btnPadX = 10.f;
+        const float btnPadY = 4.f;
+        const char* addLabel = "+ Add";
+        ImVec2 labelSz = ImGui::CalcTextSize(addLabel);
+        float btnW = labelSz.x + btnPadX * 2.f;
+        float btnH = labelSz.y + btnPadY * 2.f;
+
+        float availW = ImGui::GetContentRegionAvail().x;
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + availW - btnW);
+
+        ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(c.Acc.x, c.Acc.y, c.Acc.z, 0.12f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(c.Acc.x, c.Acc.y, c.Acc.z, 0.22f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(c.Acc.x, c.Acc.y, c.Acc.z, 0.32f));
+        ImGui::PushStyleColor(ImGuiCol_Text,          c.Acc);
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.f);
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,  ImVec2(btnPadX, btnPadY));
+
+        if (ImGui::Button(addLabel, ImVec2(btnW, btnH)))
+        {
+            const DClass* goBaseClass = GetReflectionRegistry().FindClassByName("GameObject");
+            if (goBaseClass)
+            {
+                std::vector<const DClass*> goClasses;
+                for (const auto& [name, cls] : GetReflectionRegistry().GetAllClasses())
+                {
+                    if (cls->IsChildOf(goBaseClass) && !cls->IsAbstract())
+                        goClasses.push_back(cls);
+                }
+                m_addGoPicker.Open(std::move(goClasses));
+                ImGui::OpenPopup("##ClassPicker");
+            }
+        }
+
+        ImGui::PopStyleVar(2);
+        ImGui::PopStyleColor(4);
+    }
+
+    // Draw the picker popup (must be called every frame in same window)
+    if (const DClass* picked = m_addGoPicker.Draw(c))
+    {
+        world->CreateGameObjectByClass(picked);
+    }
 
     // --- Filter bar ---
     ImGui::PushStyleColor(ImGuiCol_FrameBg,        c.DInput);

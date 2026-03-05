@@ -15,6 +15,8 @@
 
 DELTA_ENGINE_NS_BEGIN
 
+class DClass;
+
 DCLASS()
 class GameObject: public DObject
 {
@@ -59,6 +61,8 @@ public:
 
         return sceneComponent;
     }
+
+    DELTAENGINE_API DComponent* AddComponentByClass(const DClass* dclass);
 
     DFUNCTION()
     DELTAENGINE_API void Destroy();

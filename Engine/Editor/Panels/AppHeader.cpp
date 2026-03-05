@@ -2,6 +2,10 @@
 
 #include "EditorMain.h"
 #include "Style/EditorTheme.h"
+#include "Runtime/EngineMain.h"
+#include "Runtime/Core/DWorld.h"
+#include "Runtime/Reflection/ReflectionRegistry.h"
+#include "Runtime/Reflection/DClass.h"
 
 #include "imgui.h"
 
@@ -80,7 +84,7 @@ void AppHeader::Draw()
         }
 
         // ── Title ────────────────────────────────────────────────────────────
-        ImGui::SameLine(0.f, pad * 0.5f);
+        ImGui::SameLine(0.f, pad * 1.0f);
         if (theme->GetBoldFont())
             ImGui::PushFont(theme->GetBoldFont());
         ImGui::Text("Delta Engine");
@@ -109,7 +113,24 @@ void AppHeader::Draw()
         if (ImGui::BeginMenu("Scene"))
             ImGui::EndMenu();
         if (ImGui::BeginMenu("Object"))
+        {
+            if (ImGui::MenuItem("Add GameObject..."))
+            {
+                const DClass* goBaseClass = GetReflectionRegistry().FindClassByName("GameObject");
+                if (goBaseClass)
+                {
+                    std::vector<const DClass*> goClasses;
+                    for (const auto& [name, cls] : GetReflectionRegistry().GetAllClasses())
+                    {
+                        if (cls->IsChildOf(goBaseClass) && !cls->IsAbstract())
+                            goClasses.push_back(cls);
+                    }
+                    m_goPickerPopup.Open(std::move(goClasses));
+                    ImGui::OpenPopup("##ClassPicker");
+                }
+            }
             ImGui::EndMenu();
+        }
         if (ImGui::BeginMenu("Build"))
             ImGui::EndMenu();
         if (ImGui::BeginMenu("Help"))
@@ -139,6 +160,16 @@ void AppHeader::Draw()
             ImGui::SetTooltip("Settings");
 
         ImGui::EndMenuBar();
+    }
+
+    // Draw GO picker popup — must stay inside the ##AppHeader window scope
+    if (const DClass* picked = m_goPickerPopup.Draw(c))
+    {
+        if (g_editor && g_editor->GetEngine())
+        {
+            if (auto* world = g_editor->GetEngine()->GetWorld())
+                world->CreateGameObjectByClass(picked);
+        }
     }
 
     ImGui::PopStyleVar();

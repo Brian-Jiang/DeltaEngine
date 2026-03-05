@@ -2,6 +2,8 @@
 
 #include "EngineIncludes.h"
 
+#include "UIComponents/ClassPickerPopup.h"
+
 DELTA_ENGINE_NS_BEGIN
 
 class AppHeader
@@ -10,7 +12,7 @@ public:
     void Draw();
 
 private:
-    // no state needed yet — all content is static/placeholder
+    ClassPickerPopup m_goPickerPopup;
 };
 
 DELTA_ENGINE_NS_END

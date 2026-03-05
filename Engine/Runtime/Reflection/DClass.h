@@ -33,8 +33,8 @@ public:
     void AddFunction(DFunction* function);
     DFunction* FindFunctionByName(const std::string& name) const;
 
-    bool IsChildOf(const DClass* other) const;
-    bool IsAbstract() const;
+    DELTAENGINE_API bool IsChildOf(const DClass* other) const;
+    DELTAENGINE_API bool IsAbstract() const;
 
     void ConstructObject(void* address) const;
     void DestroyObject(void* address) const;

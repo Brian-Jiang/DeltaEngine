@@ -15,6 +15,7 @@ DELTA_ENGINE_NS_BEGIN
 
 class SceneComponent;
 class GameObject;
+class DClass;
 
 DCLASS()
 class DWorld : public DObject
@@ -26,6 +27,9 @@ public:
 
     DFUNCTION()
     DELTAENGINE_API GameObject* CreateGameObject(const std::string& name = "New GameObject");
+
+    DELTAENGINE_API GameObject* CreateGameObjectByClass(const DClass* dclass,
+                                                        const std::string& name = "New GameObject");
 
     /// Walk the scene tree and call InitGraphicState on every Renderer.
     DELTAENGINE_API void InitRenderers(std::shared_ptr<DXGraphicsContext> context) const;

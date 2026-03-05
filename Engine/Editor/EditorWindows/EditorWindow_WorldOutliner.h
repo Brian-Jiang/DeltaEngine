@@ -1,5 +1,7 @@
 #pragma once
 
+#include "UIComponents/ClassPickerPopup.h"
+
 #include "EngineIncludes.h"
 
 #include <string>
@@ -40,6 +42,7 @@ private:
     int                               m_selectedIndex = -1;
     char                              m_filterBuf[128] = {};
     TypeChip                          m_typeChip;
+    ClassPickerPopup                  m_addGoPicker;
 };
 
 DELTA_ENGINE_NS_END

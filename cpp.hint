@@ -11,3 +11,4 @@
 #define DELTAENGINE_API __declspec(dllexport)
 #define DELTAENGINE_API __declspec(dllimport)
 #define DELTAENGINE_API __attribute__((visibility("default")))
+#define DSTRUCT(__VA_ARGS__)

@@ -95,6 +95,11 @@ DClass* ReflectionRegistry::FindClassByName(const std::string& name) const
     return nullptr;
 }
 
+const std::unordered_map<std::string, DClass*>& ReflectionRegistry::GetAllClasses() const
+{
+    return m_classMap;
+}
+
 void ReflectionRegistry::DestroyObject(DObject* obj) const
 {
     if (!obj)

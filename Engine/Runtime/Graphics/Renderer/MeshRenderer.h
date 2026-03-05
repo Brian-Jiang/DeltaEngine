@@ -17,6 +17,7 @@ class EngineMain;
 class MeshRenderProxy;
 class DMesh;
 
+//DSTRUCT()
 struct MeshRendererSettings
 {
     // Future settings for mesh rendering (e.g., culling mode, shadow casting, etc.) can be added here.
@@ -67,8 +68,8 @@ private:
     DPROPERTY()
     DMesh* m_mesh;
 
-    DPROPERTY()
     std::shared_ptr<MeshRenderProxy> m_meshRenderProxy;
+
     DPROPERTY()
     MeshRendererSettings m_settings;
 

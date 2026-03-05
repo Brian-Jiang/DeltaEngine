@@ -21,6 +21,8 @@ MeshRenderer::MeshRenderer()
     : meshCount(0)
     , loadedTextureCount(0)
     , m_dirty(true)
+    , m_mesh(nullptr)
+    , m_settings()
 {
 }
 

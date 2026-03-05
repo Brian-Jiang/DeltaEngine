@@ -30,6 +30,7 @@ public:
 
     DELTAENGINE_API DStruct* FindStructByName(const std::string& name) const;
     DELTAENGINE_API DClass* FindClassByName(const std::string& name) const;
+    DELTAENGINE_API const std::unordered_map<std::string, DClass*>& GetAllClasses() const;
 
     DObject* CreateObject(const std::string& className) const;
 

@@ -7,6 +7,8 @@
 #include "Runtime/Core/GameObject.h"
 #include "Graphics/Renderer/Renderer.h"
 #include "Graphics/Light/LightComponent.h"
+#include "Reflection/ReflectionRegistry.h"
+#include "Reflection/DClass.h"
 
 using namespace DeltaEngine;
 
@@ -21,6 +23,20 @@ DeltaEngine::DWorld::DWorld()
 GameObject* DWorld::CreateGameObject(const std::string& name)
 {
     GameObject* gameObject = CreateDObject<GameObject>();
+    gameObject->m_name = name;
+    gameObject->m_currentWorld = this;
+    m_gameObjects.push_back(gameObject);
+    m_gameObjectsChanged = true;
+    return gameObject;
+}
+
+GameObject* DWorld::CreateGameObjectByClass(const DClass* dclass, const std::string& name)
+{
+    if (!dclass)
+        return nullptr;
+    GameObject* gameObject = GetReflectionRegistry().CreateObject<GameObject>(dclass->GetName());
+    if (!gameObject)
+        return nullptr;
     gameObject->m_name = name;
     gameObject->m_currentWorld = this;
     m_gameObjects.push_back(gameObject);

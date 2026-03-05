@@ -1,5 +1,7 @@
 #pragma once
 
+#include "UIComponents/ClassPickerPopup.h"
+
 #include "EngineIncludes.h"
 
 #include <memory>
@@ -27,6 +29,8 @@ public:
 private:
     void RenderSceneComponentTree(SceneComponent* sceneComponent);
     void RenderRegularComponents(const std::vector<DComponent*>& components);
+
+    ClassPickerPopup m_addCompPicker;
 };
 
 DELTA_ENGINE_NS_END
