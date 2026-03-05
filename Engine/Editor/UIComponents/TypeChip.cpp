@@ -8,8 +8,7 @@ using namespace DeltaEngine;
 void TypeChip::Draw(const EditorTheme::ThemeColors& c)
 {
     constexpr float kSize = 25.f;
-    // \xe2\x97\x88 = U+25C8 "◈"
-    constexpr const char* kIcon = "\xe2\x97\x88";
+    constexpr const char* kIcon = "\xef\x86\xb2";
 
     // Vertically center the chip against the current text line height
     ImVec2 cursorPos = ImGui::GetCursorScreenPos();

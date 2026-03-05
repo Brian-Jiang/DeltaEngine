@@ -111,10 +111,10 @@ void MainToolbar::Draw()
 
     // ── Transform toggle ────────────────────────────────────────────────────
     static const HorizontalToggleGroup::Item transformItems[] = {
-        {"\xe2\x9c\xa5", "Select"},   // ✥
-        {"\xe2\x8a\x95", "Move"},     // ⊕
-        {"\xe2\x86\xbb", "Rotate"},   // ↻
-        {"\xe2\xa4\xa2", "Scale"},    // ⤢
+        {"\xef\x89\x96", "Select"},
+        {"\xef\x82\xb2", "Move"},
+        {"\xef\x8b\xb9", "Rotate"},
+        {"\xef\x90\xa4", "Scale"},
     };
     m_transformGroup.Draw("##xform", transformItems, 4, m_transformMode, 0.f, 0.f);
 
@@ -145,7 +145,7 @@ void MainToolbar::Draw()
     ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0, 0, 0, 0));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered,  c.DHover);
     ImGui::PushStyleColor(ImGuiCol_Text,           c.AccHi);
-    ImGui::Button("\xe2\x8a\x9e##SnapToggle", ImVec2(fh, fh));
+    ImGui::Button("\xef\xa1\x8c##SnapToggle", ImVec2(fh, fh));
     ImGui::PopStyleColor(3);
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Toggle snap");
@@ -178,10 +178,10 @@ void MainToolbar::Draw()
 
     // ── Play toggle ──────────────────────────────────────────────────────────
     static const HorizontalToggleGroup::Item playItems[] = {
-        {"\xe2\x96\xb6", "Play"},   // ▶
-        {"\xe2\x8f\xb8", "Pause"},  // ⏸
-        {"\xe2\x8f\xb9", "Stop"},   // ⏹
-        {"\xe2\x8f\xad", "Step"},   // ⏭
+        {"\xef\x81\x8b", "Play"},
+        {"\xef\x81\x8c", "Pause"},
+        {"\xef\x81\x8d", "Stop"},
+        {"\xef\x81\x91", "Step"},
     };
     static const int playOverrideIndex = 1;
     m_playGroup.Draw("##play", playItems, 4, m_playState, 0.f, 0.f,

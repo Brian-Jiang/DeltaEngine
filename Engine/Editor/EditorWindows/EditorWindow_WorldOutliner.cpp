@@ -129,7 +129,7 @@ void EditorWindow_WorldOutliner::Render()
     ImGui::PushStyleColor(ImGuiCol_Border,         c.BLight);
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding,   4.f);
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.f);
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,    ImVec2(7.f, 2.f));
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,    ImVec2(7.f, 10.f));
 
     ImVec2 filterOrigin = ImGui::GetCursorScreenPos();
     ImGui::SetNextItemWidth(-1.f);
@@ -138,10 +138,9 @@ void EditorWindow_WorldOutliner::Render()
     if (m_filterBuf[0] == '\0')
     {
         ImDrawList* dl = ImGui::GetWindowDrawList();
-        // ⌕ search glyph (\xe2\x8c\x95)
-        dl->AddText(ImVec2(filterOrigin.x + 7.f,  filterOrigin.y + 3.f),
-            ImGui::ColorConvertFloat4ToU32(c.TDim), "\xe2\x8c\x95");
-        dl->AddText(ImVec2(filterOrigin.x + 20.f, filterOrigin.y + 3.f),
+        dl->AddText(ImVec2(filterOrigin.x + 7.f,  filterOrigin.y + 10.f),
+            ImGui::ColorConvertFloat4ToU32(c.TDim), "\xef\x80\x82");
+        dl->AddText(ImVec2(filterOrigin.x + 50.f, filterOrigin.y + 10.f),
             ImGui::ColorConvertFloat4ToU32(c.TDim), "Filter objects...");
     }
 
@@ -232,15 +231,14 @@ void EditorWindow_WorldOutliner::Render()
         ImGui::PopClipRect();
 
         // d) Visibility dot — right-aligned, shown on hover or selection
-        // ● = \xe2\x97\x8f
-        if (isHovered || isSelected)
-        {
-            ImGui::SetCursorScreenPos(
-                ImVec2(rowMax.x - 14.f, contentY));
-            ImGui::PushStyleColor(ImGuiCol_Text, isSelected ? c.Acc : c.TLabel);
-            ImGui::TextUnformatted("\xe2\x97\x8f");
-            ImGui::PopStyleColor();
-        }
+        //if (isHovered || isSelected)
+        //{
+        //    ImGui::SetCursorScreenPos(
+        //        ImVec2(rowMax.x - 14.f, contentY));
+        //    ImGui::PushStyleColor(ImGuiCol_Text, isSelected ? c.Acc : c.TLabel);
+        //    ImGui::TextUnformatted("\xe2\x97\x8f");
+        //    ImGui::PopStyleColor();
+        //}
     }
 
     ImGui::EndChild();

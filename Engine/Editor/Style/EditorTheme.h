@@ -77,12 +77,13 @@ public:
 
 private:
     void LoadFonts();
-    ImFont* TryLoadFont(std::string path);
+    ImFont* TryLoadFont(std::string path, bool withFaSolid);
     ImVec4 HexToVec4(uint32_t hex, float alphaOverride = -1.f) const;
 
     ImFont* m_regularFont;
     ImFont* m_boldFont;
     ImFont* m_monoFont;
+    ImFont* m_faSolidFont;
 };
 
 DELTA_ENGINE_NS_END

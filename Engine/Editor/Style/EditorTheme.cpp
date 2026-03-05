@@ -137,22 +137,35 @@ void EditorTheme::ApplyTheme()
 void EditorTheme::LoadFonts()
 {
     std::string regularFontPath = IOManager::GetEditorSourceAssetFullPath("Fonts/Outfit-Regular.ttf");
-    m_regularFont = TryLoadFont(regularFontPath);
+    m_regularFont = TryLoadFont(regularFontPath, true);
 
     std::string boldFontPath = IOManager::GetEditorSourceAssetFullPath("Fonts/Outfit-Bold.ttf");
-    m_boldFont = TryLoadFont(boldFontPath);
+    m_boldFont = TryLoadFont(boldFontPath, true);
 
     std::string monoFontPath = IOManager::GetEditorSourceAssetFullPath("Fonts/JetBrainsMono-Regular.ttf");
-    m_monoFont = TryLoadFont(monoFontPath);
+    m_monoFont = TryLoadFont(monoFontPath, false);
+
+    //std::string faSolidFontPath = IOManager::GetEditorSourceAssetFullPath("Fonts/Font Awesome 7 Free-Solid-900.otf");
+    //m_faSolidFont = TryLoadFont(faSolidFontPath);
 }
 
-ImFont* EditorTheme::TryLoadFont(std::string path)
+ImFont* EditorTheme::TryLoadFont(std::string path, bool withFaSolid)
 {
     ImFontConfig config;
     config.Flags = ImFontFlags_NoLoadError;
     ImFont* font = ImGui::GetIO().Fonts->AddFontFromFileTTF(path.c_str(), 0.0f, &config);
     if (font)
     {
+        if (withFaSolid)
+        {
+            ImFontConfig faConfig;
+            faConfig.MergeMode = true;
+            faConfig.PixelSnapH = true;
+            //faConfig.FontDataOwnedByAtlas = false; // Prevent ImGui from trying to free the font data
+            std::string faSolidFontPath = IOManager::GetEditorSourceAssetFullPath("Fonts/Font Awesome 7 Free-Solid-900.otf");
+            ImFont* faSolidFont = ImGui::GetIO().Fonts->AddFontFromFileTTF(faSolidFontPath.c_str(), 0.0f, &faConfig);
+        }
+
         return font;
     }
 
