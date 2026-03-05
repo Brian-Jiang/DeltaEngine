@@ -28,8 +28,7 @@ public:
     DFUNCTION()
     DELTAENGINE_API GameObject* CreateGameObject(const std::string& name = "New GameObject");
 
-    DELTAENGINE_API GameObject* CreateGameObjectByClass(const DClass* dclass,
-                                                        const std::string& name = "New GameObject");
+    DELTAENGINE_API GameObject* CreateGameObjectByClass(const DClass* dclass);
 
     /// Walk the scene tree and call InitGraphicState on every Renderer.
     DELTAENGINE_API void InitRenderers(std::shared_ptr<DXGraphicsContext> context) const;

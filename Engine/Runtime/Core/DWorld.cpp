@@ -1,6 +1,7 @@
 #include "Core/DWorld.h"
 
 #include <stack>
+#include <format>
 
 #include "Core/SceneComponent.h"
 #include "Core/Camera.h"
@@ -30,14 +31,14 @@ GameObject* DWorld::CreateGameObject(const std::string& name)
     return gameObject;
 }
 
-GameObject* DWorld::CreateGameObjectByClass(const DClass* dclass, const std::string& name)
+GameObject* DWorld::CreateGameObjectByClass(const DClass* dclass)
 {
     if (!dclass)
         return nullptr;
     GameObject* gameObject = GetReflectionRegistry().CreateObject<GameObject>(dclass->GetName());
     if (!gameObject)
         return nullptr;
-    gameObject->m_name = name;
+    gameObject->m_name = std::format("New {}", dclass->GetName());
     gameObject->m_currentWorld = this;
     m_gameObjects.push_back(gameObject);
     m_gameObjectsChanged = true;

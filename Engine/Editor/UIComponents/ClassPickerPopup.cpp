@@ -134,7 +134,10 @@ const DClass* ClassPickerPopup::Draw(const EditorTheme::ThemeColors& c)
             cls->GetName().c_str());
 
         if (clicked)
+        {
             picked = cls;
+            ImGui::CloseCurrentPopup();
+        }
     }
 
     ImGui::EndChild();

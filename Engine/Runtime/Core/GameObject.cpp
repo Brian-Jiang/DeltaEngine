@@ -1,5 +1,7 @@
 #include "Core/GameObject.h"
 
+#include <format>
+
 #include "Reflection/ReflectionRegistry.h"
 #include "Reflection/DClass.h"
 
@@ -53,7 +55,7 @@ DComponent* GameObject::AddComponentByClass(const DClass* dclass)
         if (!sc)
             return nullptr;
         sc->RegisterComponent(this);
-        sc->SetName("New Scene Component");
+        sc->SetName(std::format("New {}", dclass->GetName()));
         m_sceneComponents.push_back(sc);
         if (!m_rootSceneComponent)
         {
@@ -77,7 +79,7 @@ DComponent* GameObject::AddComponentByClass(const DClass* dclass)
         if (!comp)
             return nullptr;
         comp->RegisterComponent(this);
-        comp->SetName("New Component");
+        comp->SetName(std::format("New {}", dclass->GetName()));
         m_components.push_back(comp);
         return comp;
     }

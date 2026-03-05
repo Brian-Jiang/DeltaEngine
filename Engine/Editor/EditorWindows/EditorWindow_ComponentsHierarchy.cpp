@@ -16,7 +16,7 @@ using namespace DeltaEngine;
 
 // UTF-8 for FA cube glyph U+F1B2 — same as TypeChip
 static constexpr const char* kCompIcon   = "\xef\x86\xb2";
-static constexpr float       kCompIconSz = 14.f;
+static constexpr float       kCompIconSz = 18.f;
 
 EditorWindow_ComponentsHierarchy::EditorWindow_ComponentsHierarchy()
 {
@@ -155,7 +155,7 @@ void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(SceneComponent* 
         }
     }
     if (isSelected)
-        flags |= ImGuiTreeNodeFlags_Selected;
+        flags |= ImGuiTreeNodeFlags_Selected | ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_OpenOnArrow;
 
     // Icon drawn before the tree node label via DrawList
     {
@@ -170,7 +170,9 @@ void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(SceneComponent* 
         ImGui::SetCursorScreenPos(ImVec2(cursorPos.x + kCompIconSz + 6.f, cursorPos.y));
     }
 
-    bool open = ImGui::TreeNodeEx(sceneComponent->GetName().c_str(), flags);
+    char label[256];
+    std::snprintf(label, sizeof(label), "%s##%p", sceneComponent->GetName().c_str(), (void*)sceneComponent);
+    bool open = ImGui::TreeNodeEx(label, flags);
 
     if (ImGui::IsItemClicked())
         selectionState->SelectComponent(sceneComponent);
