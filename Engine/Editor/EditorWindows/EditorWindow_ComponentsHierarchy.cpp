@@ -2,6 +2,7 @@
 
 #include "Editor/EditorMain.h"
 #include "Editor/EditorSelectionState.h"
+#include "Editor/UIComponents/ContextMenuPopup.h"
 #include "Editor/Style/EditorTheme.h"
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Core/SceneComponent.h"
@@ -122,6 +123,7 @@ void EditorWindow_ComponentsHierarchy::Render()
         ImGui::PopStyleVar(2);
         ImGui::PopStyleColor(4);
     }
+    //ImGui::BeginPopupContextItem
 
     // Draw the component picker popup
     if (const DClass* picked = m_addCompPicker.Draw(c))
@@ -140,6 +142,7 @@ void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(SceneComponent* 
     EditorTheme* theme = g_editor ? g_editor->GetEditorTheme() : nullptr;
     const EditorTheme::ThemeColors& c = theme ? theme->colors : EditorTheme::ThemeColors{};
 
+    ImGui::PushID(static_cast<void*>(sceneComponent));
     const auto& children = sceneComponent->GetChildren();
     bool hasChildren = !children.empty();
     ImGuiTreeNodeFlags flags = hasChildren ? ImGuiTreeNodeFlags_None : ImGuiTreeNodeFlags_Leaf;
@@ -177,12 +180,28 @@ void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(SceneComponent* 
     if (ImGui::IsItemClicked())
         selectionState->SelectComponent(sceneComponent);
 
+    if (ImGui::BeginPopupContextItem())
+    {
+        m_destroyCompMenu.Open({{"Destroy", [&]() {
+            GameObject* owner = sceneComponent->GetGameObject();
+            if (owner)
+            {
+                owner->RemoveComponent(sceneComponent);
+                if (auto* sel = g_editor->GetSelectionState())
+                    sel->ClearSelection();
+            }
+        }}});
+        m_destroyCompMenu.Draw(c);
+        ImGui::EndPopup();
+    }
+
     if (open)
     {
         for (const auto& child : children)
             RenderSceneComponentTree(child);
         ImGui::TreePop();
     }
+    ImGui::PopID();
 }
 
 void EditorWindow_ComponentsHierarchy::RenderRegularComponents(const std::vector<DComponent*>& components)
@@ -197,6 +216,7 @@ void EditorWindow_ComponentsHierarchy::RenderRegularComponents(const std::vector
         if (!component)
             continue;
 
+        ImGui::PushID(static_cast<void*>(component));
         bool isSelected = false;
         for (const auto& comp : selectionState->GetSelectedComponents())
         {
@@ -228,7 +248,23 @@ void EditorWindow_ComponentsHierarchy::RenderRegularComponents(const std::vector
         if (ImGui::IsItemClicked())
             selectionState->SelectComponent(component);
 
+        if (ImGui::BeginPopupContextItem())
+        {
+            m_destroyCompMenu.Open({{"Destroy", [&]() {
+                GameObject* owner = component->GetGameObject();
+                if (owner)
+                {
+                    owner->RemoveComponent(component);
+                    if (auto* sel = g_editor->GetSelectionState())
+                        sel->ClearSelection();
+                }
+            }}});
+            m_destroyCompMenu.Draw(c);
+            ImGui::EndPopup();
+        }
+
         if (open)
             ImGui::TreePop();
+        ImGui::PopID();
     }
 }

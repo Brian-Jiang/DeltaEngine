@@ -7,6 +7,7 @@
 
 #include "Editor/EditorMain.h"
 #include "Editor/EditorSelectionState.h"
+#include "Editor/UIComponents/ContextMenuPopup.h"
 #include "Editor/Style/EditorTheme.h"
 #include "Runtime/EngineMain.h"
 #include "Runtime/Core/DWorld.h"
@@ -200,6 +201,7 @@ void EditorWindow_WorldOutliner::Render()
 
     for (const OutlinerEntry* entry : m_filtered)
     {
+        ImGui::PushID(entry->index);
         ImVec2 rowMin = ImGui::GetCursorScreenPos();
         ImVec2 rowMax = ImVec2(rowMin.x + ImGui::GetContentRegionAvail().x,
                                rowMin.y + EditorTheme::RowH());
@@ -221,6 +223,20 @@ void EditorWindow_WorldOutliner::Render()
         }
         bool isHovered = ImGui::IsItemHovered();
         ImGui::PopStyleColor(3);
+
+        if (ImGui::BeginPopupContextItem())
+        {
+            m_destroyGoMenu.Open({{"Destroy", [&]() {
+                if (entry->go && world)
+                {
+                    world->DestroyGameObject(entry->go);
+                    if (auto* sel = g_editor->GetSelectionState())
+                        sel->ClearSelection();
+                }
+            }}});
+            m_destroyGoMenu.Draw(c);
+            ImGui::EndPopup();
+        }
 
         // DrawList decorations for selected state
         ImDrawList* dl = ImGui::GetWindowDrawList();
@@ -286,6 +302,7 @@ void EditorWindow_WorldOutliner::Render()
         //    ImGui::TextUnformatted("\xe2\x97\x8f");
         //    ImGui::PopStyleColor();
         //}
+        ImGui::PopID();
     }
 
     ImGui::EndChild();

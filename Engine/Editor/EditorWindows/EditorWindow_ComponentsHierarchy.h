@@ -1,6 +1,7 @@
 #pragma once
 
 #include "UIComponents/ClassPickerPopup.h"
+#include "UIComponents/ContextMenuPopup.h"
 
 #include "EngineIncludes.h"
 
@@ -31,6 +32,7 @@ private:
     void RenderRegularComponents(const std::vector<DComponent*>& components);
 
     ClassPickerPopup m_addCompPicker;
+    ContextMenuPopup m_destroyCompMenu;
 };
 
 DELTA_ENGINE_NS_END

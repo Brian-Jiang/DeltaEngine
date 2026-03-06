@@ -1,6 +1,7 @@
 #pragma once
 
 #include "UIComponents/ClassPickerPopup.h"
+#include "UIComponents/ContextMenuPopup.h"
 
 #include "EngineIncludes.h"
 
@@ -43,6 +44,7 @@ private:
     char                              m_filterBuf[128] = {};
     TypeChip                          m_typeChip;
     ClassPickerPopup                  m_addGoPicker;
+    ContextMenuPopup                  m_destroyGoMenu;
 };
 
 DELTA_ENGINE_NS_END

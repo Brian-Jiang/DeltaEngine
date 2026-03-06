@@ -52,10 +52,11 @@ void DWorld::DestroyGameObject(GameObject* gameObject)
     auto it = std::find(m_gameObjects.begin(), m_gameObjects.end(), gameObject);
     if (it != m_gameObjects.end())
     {
-        (*it)->Destroy();
+        GameObject* obj = *it;
+        obj->Destroy();
         m_gameObjects.erase(it);
         m_gameObjectsChanged = true;
-        GetReflectionRegistry().DestroyObject(*it);
+        GetReflectionRegistry().DestroyObject(obj);
     }
 }
 
