@@ -8,6 +8,7 @@ include(dxheaders.cmake)
 include(dxtk12.cmake)
 include(dxtex.cmake)
 include(assimp.cmake)
+include(nlohmann_json.cmake)
 
 add_custom_target(CopyDxcBin ALL
                    COMMAND ${CMAKE_COMMAND} -E copy_directory
