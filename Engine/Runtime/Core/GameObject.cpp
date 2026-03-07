@@ -94,6 +94,7 @@ void GameObject::RemoveComponent(DComponent* component)
     auto it = std::find(m_components.begin(), m_components.end(), component);
     if (it != m_components.end())
     {
+        component->MarkForDestroy();
         m_components.erase(it);
         GetReflectionRegistry().DestroyObject(component);
         return;
@@ -124,6 +125,7 @@ void GameObject::RemoveComponent(DComponent* component)
                 m_rootSceneComponent = nullptr;
             }
 
+            comp->MarkForDestroy();
             comp->SetParent(nullptr);
             std::erase(m_sceneComponents, comp);
             GetReflectionRegistry().DestroyObject(comp);
