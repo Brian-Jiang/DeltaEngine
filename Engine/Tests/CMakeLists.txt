@@ -1,0 +1,6 @@
+set(TEST_TARGET DeltaEngineSerializationTests)
+add_executable(${TEST_TARGET} SerializationTests.cpp)
+set_target_properties(${TEST_TARGET} PROPERTIES CXX_STANDARD 23)
+set_target_properties(${TEST_TARGET} PROPERTIES FOLDER "Engine")
+target_link_libraries(${TEST_TARGET} PRIVATE DeltaEngine)
+target_compile_options(${TEST_TARGET} PRIVATE "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->")
