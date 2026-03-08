@@ -15,7 +15,6 @@ DELTA_ENGINE_NS_BEGIN
 class DStruct;
 class DClass;
 class AssetArchive;
-class EditorAssetDatabase;
 
 enum class EPropertyType
 {
@@ -241,10 +240,10 @@ public:
 
     void Serialize(AssetArchive& ar, void* objectPtr) override;
 
-    virtual void ResolvePointer(void* objectPtr, EditorAssetDatabase& db) = 0;
+    virtual void ResolvePointer(void* objectPtr, DObject* resolved) = 0;
 
-    void SetUnresolvedPointer(void* objectPtr, const ScriptPointer& sp);
-    ScriptPointer GetUnresolvedPointer(void* objectPtr) const;
+    DELTAENGINE_API void SetUnresolvedPointer(void* objectPtr, const ScriptPointer& sp);
+    DELTAENGINE_API ScriptPointer GetUnresolvedPointer(void* objectPtr) const;
 
 protected:
     virtual DObject* GetRawPointer(const void* objectPtr) const = 0;
@@ -325,8 +324,10 @@ public:
         return nullptr;
     }
 
-    void ResolvePointer(void* objectPtr, EditorAssetDatabase& /*db*/) override
+    void ResolvePointer(void* objectPtr, DObject* resolved) override
     {
+        void* addr = static_cast<uint8_t*>(objectPtr) + m_offset;
+        *static_cast<T**>(addr) = static_cast<T*>(resolved);
         m_unresolvedPointers.erase(objectPtr);
     }
 };
@@ -404,7 +405,7 @@ public:
         return nullptr;
     }
 
-    void ResolvePointer(void* objectPtr, EditorAssetDatabase& /*db*/) override
+    void ResolvePointer(void* objectPtr, DObject* /*resolved*/) override
     {
         m_unresolvedPointers.erase(objectPtr);
     }

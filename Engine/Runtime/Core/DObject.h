@@ -37,6 +37,8 @@ public:
     DPrimaryAsset* GetOwningAsset() const { return m_owningAsset; }
     void SetOwningAsset(DPrimaryAsset* asset) { m_owningAsset = asset; }
 
+    DELTAENGINE_API void MarkDirty();
+
 private:
     DHandle        m_handle;
     ObjectId       m_objectId;
