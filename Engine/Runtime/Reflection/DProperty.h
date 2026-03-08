@@ -8,11 +8,14 @@
 #include <unordered_map>
 
 #include "Core/DObject.h"
+#include "Serialization/ScriptPointer.h"
 
 DELTA_ENGINE_NS_BEGIN
 
 class DStruct;
 class DClass;
+class AssetArchive;
+class EditorAssetDatabase;
 
 enum class EPropertyType
 {
@@ -54,6 +57,8 @@ public:
 
     /// Returns the pointed-to DObject* for ObjectPtr/SharedObjectPtr, or nullptr for other types.
     virtual DObject* GetObjectPointer(const void* instance) const { return nullptr; }
+
+    virtual void Serialize(AssetArchive& ar, void* objectPtr) = 0;
 
     const std::string& GetName() const { return m_name; }
     const std::string& GetType() const { return m_type; }
@@ -146,6 +151,7 @@ class DFloatProperty : public DNumericProperty<float>
 public:
     DFloatProperty(std::string name, uint32_t offset);
     EPropertyType GetPropertyType() const override;
+    void Serialize(AssetArchive& ar, void* objectPtr) override;
 };
 
 
@@ -154,6 +160,7 @@ class DIntProperty : public DNumericProperty<int32_t>
 public:
     DIntProperty(std::string name, uint32_t offset);
     EPropertyType GetPropertyType() const override;
+    void Serialize(AssetArchive& ar, void* objectPtr) override;
 };
 
 
@@ -162,6 +169,7 @@ class DBoolProperty : public DNumericProperty<bool>
 public:
     DBoolProperty(std::string name, uint32_t offset);
     EPropertyType GetPropertyType() const override;
+    void Serialize(AssetArchive& ar, void* objectPtr) override;
 };
 
 
@@ -170,6 +178,7 @@ class DDoubleProperty : public DNumericProperty<double>
 public:
     DDoubleProperty(std::string name, uint32_t offset);
     EPropertyType GetPropertyType() const override;
+    void Serialize(AssetArchive& ar, void* objectPtr) override;
 };
 
 
@@ -186,6 +195,7 @@ public:
     bool Identical(const void* a, const void* b) const override;
     std::string ToString(const void* address) const override;
     EPropertyType GetPropertyType() const override;
+    void Serialize(AssetArchive& ar, void* objectPtr) override;
 };
 
 
@@ -202,6 +212,7 @@ public:
     bool Identical(const void* a, const void* b) const override;
     std::string ToString(const void* address) const override;
     EPropertyType GetPropertyType() const override;
+    void Serialize(AssetArchive& ar, void* objectPtr) override;
 };
 
 
@@ -218,17 +229,37 @@ public:
     bool Identical(const void* a, const void* b) const override;
     std::string ToString(const void* address) const override;
     EPropertyType GetPropertyType() const override;
+    void Serialize(AssetArchive& ar, void* objectPtr) override;
+};
+
+
+class DObjectPtrPropertyBase : public DProperty
+{
+public:
+    DObjectPtrPropertyBase(std::string name, std::string type, uint32_t offset, uint32_t size)
+        : DProperty(std::move(name), std::move(type), offset, size) {}
+
+    void Serialize(AssetArchive& ar, void* objectPtr) override;
+
+    virtual void ResolvePointer(void* objectPtr, EditorAssetDatabase& db) = 0;
+
+    void SetUnresolvedPointer(void* objectPtr, const ScriptPointer& sp);
+    ScriptPointer GetUnresolvedPointer(void* objectPtr) const;
+
+protected:
+    virtual DObject* GetRawPointer(const void* objectPtr) const = 0;
+    std::unordered_map<void*, ScriptPointer> m_unresolvedPointers;
 };
 
 
 // Only for raw pointers to DObject-derived types
 template <typename T>
 // requires std::is_base_of_v<DObject, T>
-class DObjectPtrProperty : public DProperty
+class DObjectPtrProperty : public DObjectPtrPropertyBase
 {
 public:
     DObjectPtrProperty(std::string name, std::string type, uint32_t offset)
-        : DProperty(std::move(name), std::move(type), offset, sizeof(T*))
+        : DObjectPtrPropertyBase(std::move(name), std::move(type), offset, sizeof(T*))
     {
     }
 
@@ -285,15 +316,28 @@ public:
             return static_cast<DObject*>(ptr);
         return nullptr;
     }
+
+    DObject* GetRawPointer(const void* objectPtr) const override
+    {
+        T* ptr = *static_cast<T* const*>(GetValue(objectPtr));
+        if constexpr (DObjectDerived<T>)
+            return static_cast<DObject*>(ptr);
+        return nullptr;
+    }
+
+    void ResolvePointer(void* objectPtr, EditorAssetDatabase& /*db*/) override
+    {
+        m_unresolvedPointers.erase(objectPtr);
+    }
 };
 
 
 template <typename T>
-class DSharedObjectPtrProperty : public DProperty
+class DSharedObjectPtrProperty : public DObjectPtrPropertyBase
 {
 public:
     DSharedObjectPtrProperty(std::string name, std::string type, uint32_t offset)
-        : DProperty(std::move(name), std::move(type), offset, sizeof(std::shared_ptr<T>))
+        : DObjectPtrPropertyBase(std::move(name), std::move(type), offset, sizeof(std::shared_ptr<T>))
     {
     }
 
@@ -351,6 +395,19 @@ public:
             return static_cast<DObject*>(sp.get());
         return nullptr;
     }
+
+    DObject* GetRawPointer(const void* objectPtr) const override
+    {
+        const auto& sp = *static_cast<const std::shared_ptr<T>*>(GetValue(objectPtr));
+        if constexpr (DObjectDerived<T>)
+            return static_cast<DObject*>(sp.get());
+        return nullptr;
+    }
+
+    void ResolvePointer(void* objectPtr, EditorAssetDatabase& /*db*/) override
+    {
+        m_unresolvedPointers.erase(objectPtr);
+    }
 };
 
 
@@ -367,6 +424,7 @@ public:
     bool Identical(const void* a, const void* b) const override;
     std::string ToString(const void* address) const override;
     EPropertyType GetPropertyType() const override;
+    void Serialize(AssetArchive& ar, void* objectPtr) override;
 };
 
 
@@ -383,6 +441,7 @@ public:
     bool Identical(const void* a, const void* b) const override;
     std::string ToString(const void* address) const override;
     EPropertyType GetPropertyType() const override;
+    void Serialize(AssetArchive& ar, void* objectPtr) override;
 };
 
 
@@ -399,6 +458,7 @@ public:
     bool Identical(const void* a, const void* b) const override;
     std::string ToString(const void* address) const override;
     EPropertyType GetPropertyType() const override;
+    void Serialize(AssetArchive& ar, void* objectPtr) override;
 };
 
 DELTA_ENGINE_NS_END

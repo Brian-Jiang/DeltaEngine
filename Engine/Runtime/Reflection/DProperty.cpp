@@ -1,5 +1,7 @@
 #include "Runtime/Reflection/DProperty.h"
 
+#include "Serialization/AssetArchive.h"
+
 #include "SimpleMath.h"
 #include <DirectXMath.h>
 #include <DirectXPackedVector.h>
@@ -43,6 +45,11 @@ EPropertyType DFloatProperty::GetPropertyType() const
     return EPropertyType::Float;
 }
 
+void DFloatProperty::Serialize(AssetArchive& ar, void* objectPtr)
+{
+    ar.Serialize(GetName(), *static_cast<float*>(GetValue(objectPtr)));
+}
+
 // ---------------------------------------------------------------------------
 // DIntProperty
 // ---------------------------------------------------------------------------
@@ -55,6 +62,11 @@ DIntProperty::DIntProperty(std::string name, uint32_t offset)
 EPropertyType DIntProperty::GetPropertyType() const
 {
     return EPropertyType::Int;
+}
+
+void DIntProperty::Serialize(AssetArchive& ar, void* objectPtr)
+{
+    ar.Serialize(GetName(), *static_cast<int*>(GetValue(objectPtr)));
 }
 
 // ---------------------------------------------------------------------------
@@ -71,6 +83,11 @@ EPropertyType DBoolProperty::GetPropertyType() const
     return EPropertyType::Bool;
 }
 
+void DBoolProperty::Serialize(AssetArchive& ar, void* objectPtr)
+{
+    ar.Serialize(GetName(), *static_cast<bool*>(GetValue(objectPtr)));
+}
+
 // ---------------------------------------------------------------------------
 // DDoubleProperty
 // ---------------------------------------------------------------------------
@@ -83,6 +100,11 @@ DDoubleProperty::DDoubleProperty(std::string name, uint32_t offset)
 EPropertyType DDoubleProperty::GetPropertyType() const
 {
     return EPropertyType::Double;
+}
+
+void DDoubleProperty::Serialize(AssetArchive& ar, void* objectPtr)
+{
+    ar.Serialize(GetName(), *static_cast<double*>(GetValue(objectPtr)));
 }
 
 // ---------------------------------------------------------------------------
@@ -135,6 +157,11 @@ std::string DStringProperty::ToString(const void* address) const
 EPropertyType DStringProperty::GetPropertyType() const
 {
     return EPropertyType::String;
+}
+
+void DStringProperty::Serialize(AssetArchive& ar, void* objectPtr)
+{
+    ar.Serialize(GetName(), *static_cast<std::string*>(GetValue(objectPtr)));
 }
 
 // ---------------------------------------------------------------------------
@@ -191,6 +218,11 @@ std::string DVector3Property::ToString(const void* address) const
 EPropertyType DVector3Property::GetPropertyType() const
 {
     return EPropertyType::Vector3;
+}
+
+void DVector3Property::Serialize(AssetArchive& ar, void* objectPtr)
+{
+    ar.Serialize(GetName(), *static_cast<Vector3*>(GetValue(objectPtr)));
 }
 
 // ---------------------------------------------------------------------------
@@ -250,6 +282,11 @@ EPropertyType DQuaternionProperty::GetPropertyType() const
     return EPropertyType::Quaternion;
 }
 
+void DQuaternionProperty::Serialize(AssetArchive& ar, void* objectPtr)
+{
+    ar.Serialize(GetName(), *static_cast<Quaternion*>(GetValue(objectPtr)));
+}
+
 // ---------------------------------------------------------------------------
 // DWStringProperty
 // ---------------------------------------------------------------------------
@@ -301,6 +338,11 @@ std::string DWStringProperty::ToString(const void* address) const
 EPropertyType DWStringProperty::GetPropertyType() const
 {
     return EPropertyType::WString;
+}
+
+void DWStringProperty::Serialize(AssetArchive& ar, void* objectPtr)
+{
+    ar.Serialize(GetName(), *static_cast<std::wstring*>(GetValue(objectPtr)));
 }
 
 // ---------------------------------------------------------------------------
@@ -361,6 +403,11 @@ EPropertyType DFloat4Property::GetPropertyType() const
     return EPropertyType::Float4;
 }
 
+void DFloat4Property::Serialize(AssetArchive& ar, void* objectPtr)
+{
+    ar.Serialize(GetName(), *static_cast<XMFLOAT4*>(GetValue(objectPtr)));
+}
+
 // ---------------------------------------------------------------------------
 // DFloat4x4Property  (stores as XMFLOAT4X4 in memory)
 // ---------------------------------------------------------------------------
@@ -411,4 +458,40 @@ std::string DFloat4x4Property::ToString(const void* address) const
 EPropertyType DFloat4x4Property::GetPropertyType() const
 {
     return EPropertyType::Float4x4;
+}
+
+void DFloat4x4Property::Serialize(AssetArchive& ar, void* objectPtr)
+{
+    ar.Serialize(GetName(), *static_cast<XMFLOAT4X4*>(GetValue(objectPtr)));
+}
+
+// ---------------------------------------------------------------------------
+// DObjectPtrPropertyBase
+// ---------------------------------------------------------------------------
+
+void DObjectPtrPropertyBase::Serialize(AssetArchive& ar, void* objectPtr)
+{
+    if (ar.IsSaving()) {
+        DObject* target = GetRawPointer(objectPtr);
+        ScriptPointer sp;
+        if (target) {
+            sp.m_objectId = target->GetObjectId();
+        }
+        ar.Serialize(GetName(), sp);
+    } else {
+        ScriptPointer sp;
+        ar.Serialize(GetName(), sp);
+        m_unresolvedPointers[objectPtr] = sp;
+    }
+}
+
+void DObjectPtrPropertyBase::SetUnresolvedPointer(void* objectPtr, const ScriptPointer& sp)
+{
+    m_unresolvedPointers[objectPtr] = sp;
+}
+
+ScriptPointer DObjectPtrPropertyBase::GetUnresolvedPointer(void* objectPtr) const
+{
+    auto it = m_unresolvedPointers.find(objectPtr);
+    return (it != m_unresolvedPointers.end()) ? it->second : ScriptPointer{};
 }

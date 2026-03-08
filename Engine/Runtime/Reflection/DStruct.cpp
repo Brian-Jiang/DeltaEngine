@@ -1,6 +1,8 @@
 #include "Runtime/Reflection/DStruct.h"
 
 #include "Runtime/Reflection/DProperty.h"
+#include "Serialization/AssetArchive.h"
+#include "Core/DObject.h"
 
 using namespace DeltaEngine;
 
@@ -49,3 +51,12 @@ size_t DStruct::GetStructSize() const { return m_structSize; }
 size_t DStruct::GetMinAlignment() const { return m_minAlignment; }
 DProperty* DStruct::GetProperties() const { return m_properties; }
 DProperty* DStruct::GetOwnProperties() const { return m_ownProperties; }
+
+void DStruct::Serialize(AssetArchive& ar, DObject& obj)
+{
+    if (DStruct* parent = GetSuper())
+        parent->Serialize(ar, obj);
+
+    for (DProperty* prop = m_ownProperties; prop; prop = prop->GetNext())
+        prop->Serialize(ar, &obj);
+}

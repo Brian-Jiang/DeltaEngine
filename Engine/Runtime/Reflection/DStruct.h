@@ -8,6 +8,8 @@ DELTA_ENGINE_NS_BEGIN
 
 class DProperty;
 class ReflectionRegistry;
+class AssetArchive;
+class DObject;
 
 class DStruct
 {
@@ -33,6 +35,8 @@ public:
     DELTAENGINE_API size_t GetMinAlignment() const;
     DELTAENGINE_API DProperty* GetProperties() const;
     DELTAENGINE_API DProperty* GetOwnProperties() const;
+
+    DELTAENGINE_API void Serialize(AssetArchive& ar, DObject& obj);
 
 protected:
     std::string m_name;
