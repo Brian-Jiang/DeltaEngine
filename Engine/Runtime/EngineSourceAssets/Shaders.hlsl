@@ -114,8 +114,9 @@ float DoDiffuse(float3 N, float3 L)
 
 float DoSpecular(float3 V, float3 N, float3 L, float specularPower)
 {
-    float3 R = normalize(reflect(-L, N));
-    float RdotV = max(0, dot(R, V));
+    float3 H = normalize(L + V);
+    //float3 R = normalize(reflect(-L, N));
+    float RdotV = max(0, dot(N, H));
 
     return pow(RdotV, specularPower);
 }
@@ -220,7 +221,7 @@ float4 PSMain(PSInput input) : SV_TARGET
     float3 V = normalize(CameraCB.position.xyz - input.worldPosition);
     float3 P = input.worldPosition;
     float3 N = normalize(input.normal);
-    float specularPower = 32.0f;
+    float specularPower = 128.0f;
 
     LightResult totalResult = (LightResult)0;
 
