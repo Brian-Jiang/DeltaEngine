@@ -26,7 +26,7 @@ class ReflectionRegistry
 public:
     void RegisterDStruct(DStruct* dstruct);
     void RegisterDClass(DClass* dclass);
-    void FinalizeRegistration();
+    DELTAENGINE_API void FinalizeRegistration();
 
     DELTAENGINE_API DStruct* FindStructByName(const std::string& name) const;
     DELTAENGINE_API DClass* FindClassByName(const std::string& name) const;

@@ -21,7 +21,7 @@ void EditorAssetDatabase::ScanAssetsFolder(const std::filesystem::path& root)
         if (!entry.is_regular_file())
             continue;
 
-        auto path = entry.path();
+        auto& path = entry.path();
         auto ext  = path.extension().string();
         auto stem = path.stem().string();
 
@@ -188,6 +188,25 @@ void EditorAssetDatabase::LoadAssetRecursive(const AssetId& id)
 
 void EditorAssetDatabase::ResolvePendingBatch()
 {
+    auto resolveProps = [&](auto& self, DStruct* ds, DObject* obj) -> void {
+        if (!ds) return;
+        if (DStruct* parent = ds->GetSuper())
+            self(self, parent, obj);
+        for (DProperty* prop = ds->GetOwnProperties(); prop; prop = prop->GetNext())
+        {
+            auto* ptrProp = dynamic_cast<DObjectPtrPropertyBase*>(prop);
+            if (!ptrProp)
+                continue;
+
+            ScriptPointer sp = ptrProp->GetUnresolvedPointer(obj);
+            if (sp.IsNull())
+                continue;
+
+            DObject* resolved = FindObject(sp.m_assetId, sp.m_objectId);
+            ptrProp->ResolvePointer(obj, resolved);
+        }
+    };
+
     for (const auto& assetId : m_newlyLoadedBatch)
     {
         auto it = m_assets.find(assetId);
@@ -196,22 +215,7 @@ void EditorAssetDatabase::ResolvePendingBatch()
 
         auto& asset = it->second.m_instance;
         for (auto& obj : asset->GetObjects())
-        {
-            DClass* cls = obj->GetClass();
-            for (DProperty* prop = cls->GetProperties(); prop; prop = prop->GetNext())
-            {
-                auto* ptrProp = dynamic_cast<DObjectPtrPropertyBase*>(prop);
-                if (!ptrProp)
-                    continue;
-
-                ScriptPointer sp = ptrProp->GetUnresolvedPointer(obj.get());
-                if (sp.IsNull())
-                    continue;
-
-                DObject* resolved = FindObject(sp.m_assetId, sp.m_objectId);
-                ptrProp->ResolvePointer(obj.get(), resolved);
-            }
-        }
+            resolveProps(resolveProps, obj->GetClass(), obj.get());
     }
     m_newlyLoadedBatch.clear();
 }

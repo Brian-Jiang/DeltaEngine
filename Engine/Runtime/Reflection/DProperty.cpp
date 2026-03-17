@@ -1,6 +1,7 @@
 #include "Runtime/Reflection/DProperty.h"
 
 #include "Serialization/AssetArchive.h"
+#include "Assets/DPrimaryAsset.h"
 
 #include "SimpleMath.h"
 #include <DirectXMath.h>
@@ -132,6 +133,7 @@ void DStringProperty::SetValue(void* instance, const void* field_value) const
     *static_cast<std::string*>(addr) = field_value
         ? *static_cast<const std::string*>(field_value)
         : std::string{};
+    static_cast<DObject*>(instance)->MarkDirty();
 }
 
 void* DStringProperty::GetValue(const void* instance) const
@@ -190,6 +192,7 @@ void DVector3Property::SetValue(void* instance, const void* field_value) const
     *static_cast<Vector3*>(addr) = field_value
         ? *static_cast<const Vector3*>(field_value)
         : Vector3{};
+    static_cast<DObject*>(instance)->MarkDirty();
 }
 
 void* DVector3Property::GetValue(const void* instance) const
@@ -251,6 +254,7 @@ void DQuaternionProperty::SetValue(void* instance, const void* field_value) cons
     *static_cast<Quaternion*>(addr) = field_value
         ? *static_cast<const Quaternion*>(field_value)
         : Quaternion{};
+    static_cast<DObject*>(instance)->MarkDirty();
 }
 
 void* DQuaternionProperty::GetValue(const void* instance) const
@@ -312,6 +316,7 @@ void DWStringProperty::SetValue(void* instance, const void* field_value) const
     *static_cast<std::wstring*>(addr) = field_value
         ? *static_cast<const std::wstring*>(field_value)
         : std::wstring{};
+    static_cast<DObject*>(instance)->MarkDirty();
 }
 
 void* DWStringProperty::GetValue(const void* instance) const
@@ -372,6 +377,7 @@ void DFloat4Property::SetValue(void* instance, const void* field_value) const
         XMStoreFloat4(static_cast<XMFLOAT4*>(addr), *static_cast<const XMVECTOR*>(field_value));
     else
         *static_cast<XMFLOAT4*>(addr) = XMFLOAT4(0.f, 0.f, 0.f, 0.f);
+    static_cast<DObject*>(instance)->MarkDirty();
 }
 
 void* DFloat4Property::GetValue(const void* instance) const
@@ -433,6 +439,7 @@ void DFloat4x4Property::SetValue(void* instance, const void* field_value) const
         XMStoreFloat4x4(static_cast<XMFLOAT4X4*>(addr), *static_cast<const XMMATRIX*>(field_value));
     else
         XMStoreFloat4x4(static_cast<XMFLOAT4X4*>(addr), XMMatrixIdentity());
+    static_cast<DObject*>(instance)->MarkDirty();
 }
 
 void* DFloat4x4Property::GetValue(const void* instance) const
@@ -476,6 +483,8 @@ void DObjectPtrPropertyBase::Serialize(AssetArchive& ar, void* objectPtr)
         ScriptPointer sp;
         if (target) {
             sp.m_objectId = target->GetObjectId();
+            if (DPrimaryAsset* owningAsset = target->GetOwningAsset())
+                sp.m_assetId = owningAsset->GetAssetId();
         }
         ar.Serialize(GetName(), sp);
     } else {

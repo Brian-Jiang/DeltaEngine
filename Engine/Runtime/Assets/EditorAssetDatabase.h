@@ -12,7 +12,7 @@
 namespace DeltaEngine
 {
 
-class EditorAssetDatabase
+class DELTAENGINE_API EditorAssetDatabase
 {
 public:
     enum class AssetState

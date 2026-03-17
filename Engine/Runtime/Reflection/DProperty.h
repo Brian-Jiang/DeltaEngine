@@ -111,6 +111,7 @@ public:
     {
         void* addr = static_cast<uint8_t*>(instance) + m_offset;
         *static_cast<T*>(addr) = field_value ? *static_cast<const T*>(field_value) : T {};
+        static_cast<DObject*>(instance)->MarkDirty();
     }
 
     void* GetValue(const void* instance) const override

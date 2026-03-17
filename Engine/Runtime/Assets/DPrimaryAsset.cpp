@@ -143,19 +143,24 @@ void DPrimaryAsset::DeserializeBody(AssetArchive& ar)
 std::vector<ScriptPointer> DPrimaryAsset::CollectExternalReferences() const
 {
     std::vector<ScriptPointer> refs;
-    for (auto& obj : m_objects)
-    {
-        DClass* cls = obj->GetClass();
-        for (DProperty* prop = cls->GetProperties(); prop; prop = prop->GetNext())
+
+    auto walkProps = [&](auto& self, DStruct* ds, DObject* obj) -> void {
+        if (!ds) return;
+        if (DStruct* parent = ds->GetSuper())
+            self(self, parent, obj);
+        for (DProperty* prop = ds->GetOwnProperties(); prop; prop = prop->GetNext())
         {
             auto* ptrProp = dynamic_cast<DObjectPtrPropertyBase*>(prop);
             if (!ptrProp)
                 continue;
-
-            ScriptPointer sp = ptrProp->GetUnresolvedPointer(obj.get());
+            ScriptPointer sp = ptrProp->GetUnresolvedPointer(obj);
             if (!sp.IsNull() && sp.IsExternal(GetAssetId()))
                 refs.push_back(sp);
         }
-    }
+    };
+
+    for (auto& obj : m_objects)
+        walkProps(walkProps, obj->GetClass(), obj.get());
+
     return refs;
 }

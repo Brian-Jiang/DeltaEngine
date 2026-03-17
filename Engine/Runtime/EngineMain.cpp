@@ -91,7 +91,7 @@ void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std:
 
         DShader* shader = CreateDObject<DShader>();
         shader->Initialize(
-            L"Shaders.hlsl",
+            L"ToonShader.hlsl",
             L"VSMain", L"PSMain",
             L"vs_6_0", L"ps_6_0");
 
