@@ -1,5 +1,7 @@
 #pragma once
 
+#include "EditorIncludes.h"
+
 #include "Runtime/Core/UUID.h"
 #include "Runtime/Assets/DPrimaryAsset.h"
 
@@ -9,10 +11,9 @@
 #include <unordered_set>
 #include <vector>
 
-namespace DeltaEngine
-{
+DELTA_ENGINE_NS_BEGIN
 
-class DELTAENGINE_API EditorAssetDatabase
+class DELTAEDITOR_API EditorAssetDatabase
 {
 public:
     enum class AssetState
@@ -58,4 +59,4 @@ private:
     std::vector<AssetId>                    m_newlyLoadedBatch;
 };
 
-} // namespace DeltaEngine
+DELTA_ENGINE_NS_END

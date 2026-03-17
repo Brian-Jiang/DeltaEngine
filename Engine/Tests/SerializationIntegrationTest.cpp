@@ -1,5 +1,5 @@
 #include "Runtime/Tests/SerializationTestTypes.h"
-#include "Runtime/Assets/EditorAssetDatabase.h"
+#include "Editor/Assets/EditorAssetDatabase.h"
 #include "Runtime/Serialization/JsonAssetArchive.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
 #include "Runtime/Reflection/DClass.h"

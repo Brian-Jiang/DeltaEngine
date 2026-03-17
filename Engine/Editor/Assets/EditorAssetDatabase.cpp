@@ -1,4 +1,4 @@
-#include "Assets/EditorAssetDatabase.h"
+#include "Editor/Assets/EditorAssetDatabase.h"
 
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DProperty.h"
