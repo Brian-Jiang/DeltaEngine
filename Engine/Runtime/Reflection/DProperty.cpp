@@ -2,6 +2,7 @@
 
 #include "Serialization/AssetArchive.h"
 #include "Assets/DPrimaryAsset.h"
+#include "Runtime/Utils/StringUtils.h"
 
 #include "SimpleMath.h"
 #include <DirectXMath.h>
@@ -337,7 +338,7 @@ bool DWStringProperty::Identical(const void* a, const void* b) const
 std::string DWStringProperty::ToString(const void* address) const
 {
     const auto& ws = *static_cast<const std::wstring*>(address);
-    return std::string(ws.begin(), ws.end());
+    return StringUtils::WStringToUtf8(ws);
 }
 
 EPropertyType DWStringProperty::GetPropertyType() const

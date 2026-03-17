@@ -8,6 +8,7 @@
 #include "Runtime/Core/DComponent.h"
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DProperty.h"
+#include "Runtime/Utils/StringUtils.h"
 
 #include "SimpleMath.h"
 #include <DirectXMath.h>
@@ -373,7 +374,7 @@ bool EditorWindow_Details::DrawWStringProperty(DObject* instance, DProperty* pro
     const auto&  c     = theme->colors;
 
     const std::wstring& ws  = *static_cast<const std::wstring*>(prop->GetValue(instance));
-    std::string         utf8(ws.begin(), ws.end());
+    std::string utf8 = StringUtils::WStringToUtf8(ws);
 
     BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
     ImGui::PushStyleColor(ImGuiCol_Text, c.TDim);

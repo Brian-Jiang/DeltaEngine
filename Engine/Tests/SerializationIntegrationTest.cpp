@@ -1,4 +1,4 @@
-#include "Runtime/Tests/SerializationTestTypes.h"
+#include "Runtime/Test/SerializationTestTypes.h"
 #include "Editor/Assets/EditorAssetDatabase.h"
 #include "Runtime/Serialization/JsonAssetArchive.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
