@@ -1,6 +1,6 @@
 #pragma once
 
-#include "EngineIncludes.h"
+#include "EditorIncludes.h"
 
 #include <memory>
 #include <vector>
@@ -24,10 +24,10 @@ extern EditorMain* g_editor;
 class EditorMain
 {
 public:
-    EditorMain();
-    ~EditorMain();
+    DELTAEDITOR_API EditorMain();
+    DELTAEDITOR_API ~EditorMain();
 
-    int Run();
+    DELTAEDITOR_API int Run();
 
     template <typename T>
         requires IsEditorWindow<T>
@@ -53,16 +53,16 @@ public:
         return nullptr;
     }
 
-    void RenderEditorWindows();
+    DELTAEDITOR_API void RenderEditorWindows();
 
-    EngineMain* GetEngine() { return m_engine.get(); }
-    ImTextureID GetSceneTextureId() const { return m_renderManager->GetSceneTextureId(); }
+    DELTAEDITOR_API EngineMain* GetEngine() { return m_engine.get(); }
+    DELTAEDITOR_API ImTextureID GetSceneTextureId() const { return m_renderManager->GetSceneTextureId(); }
 
     /// Set scene render target size (driven by viewport settings). Syncs to EngineMain camera aspect.
-    void SetSceneRenderSize(UINT width, UINT height);
-    void GetSceneRenderSize(UINT& width, UINT& height) const;
-    EditorSelectionState* GetSelectionState() { return m_selectionState.get(); }
-    EditorTheme* GetEditorTheme() { return m_editorTheme.get(); }
+    DELTAEDITOR_API void SetSceneRenderSize(UINT width, UINT height);
+    DELTAEDITOR_API void GetSceneRenderSize(UINT& width, UINT& height) const;
+    DELTAEDITOR_API EditorSelectionState* GetSelectionState() { return m_selectionState.get(); }
+    DELTAEDITOR_API EditorTheme* GetEditorTheme() { return m_editorTheme.get(); }
 
 private:
     void ProcessEvents();

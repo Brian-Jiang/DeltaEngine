@@ -9,8 +9,6 @@
 
 #include <algorithm>
 
-#include <algorithm>
-
 using namespace DeltaEngine;
 
 void DPrimaryAsset::AddObject(std::shared_ptr<DObject> obj)
