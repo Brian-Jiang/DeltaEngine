@@ -14,3 +14,5 @@ target_include_directories(dxheaders SYSTEM INTERFACE
 )
 
 set_target_properties(dxheaders PROPERTIES FOLDER ${third_party_folder})
+
+# set(THIRD_PARTY_INCLUDES ${THIRD_PARTY_INCLUDES} "${dxheaders_SOURCE_DIR}/include" "${dxheaders_SOURCE_DIR}/include/directx" CACHE INTERNAL "Third party include directories")

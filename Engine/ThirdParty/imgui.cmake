@@ -19,4 +19,6 @@ add_library(imgui STATIC ${imgui_sources} ${imgui_impl})
 target_include_directories(imgui PUBLIC $<BUILD_INTERFACE:${imgui_SOURCE_DIR_}>)
 target_link_libraries(imgui PRIVATE SDL3::SDL3)
 
+# set(THIRD_PARTY_INCLUDES ${THIRD_PARTY_INCLUDES} "${imgui_SOURCE_DIR_}" "${imgui_SOURCE_DIR_}/backends" CACHE INTERNAL "Third party include directories")
+
 set_target_properties(imgui PROPERTIES FOLDER ${third_party_folder})

@@ -11,3 +11,5 @@ SET(ASSIMP_BUILD_ASSIMP_VIEW OFF)
 add_subdirectory(assimp)
 
 set_target_properties(assimp PROPERTIES FOLDER ${third_party_folder})
+
+set(THIRD_PARTY_INCLUDES ${THIRD_PARTY_INCLUDES} "${CMAKE_CURRENT_SOURCE_DIR}/assimp/include" CACHE INTERNAL "Third party include directories")
