@@ -130,6 +130,7 @@ class MeshRenderProxy;
 class EngineMain;
 struct MeshRendererSettings {};
 struct Vertex { float x; };
+struct TBulkData;
 }
 
 // --- Reflection macros (redefine to annotate form for libclang) ---

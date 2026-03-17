@@ -46,6 +46,34 @@ static void SaveAssetToFile(
     out << output.dump(2);
 }
 
+static void SaveAssetWithBulkData(
+    const std::shared_ptr<DPrimaryAsset>& asset,
+    const std::filesystem::path& filePath)
+{
+    const auto assetDir  = filePath.parent_path();
+    const auto assetStem = filePath.stem().stem().string();
+
+    JsonAssetArchive bulkAr(assetDir, assetStem);
+    asset->SerializeBulkData(bulkAr);
+
+    JsonAssetArchive headerAr;
+    asset->SerializeHeader(headerAr);
+
+    JsonAssetArchive bodyAr;
+    asset->SerializeBody(bodyAr);
+
+    nlohmann::json output;
+    output["header"] = headerAr.GetRoot();
+    const auto& bulkRoot = bulkAr.GetRoot();
+    if (bulkRoot.contains("header") && bulkRoot["header"].contains("bulkDataMap"))
+        output["header"]["bulkDataMap"] = bulkRoot["header"]["bulkDataMap"];
+    for (auto& [key, val] : bodyAr.GetRoot().items())
+        output[key] = val;
+
+    std::ofstream out(filePath);
+    out << output.dump(2);
+}
+
 // ---------------------------------------------------------------------------
 // Test 1: Single-asset round-trip with mixed properties
 // ---------------------------------------------------------------------------
@@ -523,6 +551,74 @@ static void TestBrokenReferenceIsNullptr()
 }
 
 // ---------------------------------------------------------------------------
+// Test 9: Bulk data round-trip
+// ---------------------------------------------------------------------------
+
+static void TestBulkDataRoundTrip()
+{
+    auto tempDir = MakeTempDir("DeltaBulkTest");
+
+    auto asset = std::make_shared<PA_TestMesh>();
+    AssetId assetId = UUID::Generate();
+    asset->GetHeader().m_persistentId = assetId;
+    asset->GetHeader().m_className    = "PA_TestMesh";
+
+    auto* rawMesh = new DTestMeshData();
+    ObjectId meshId = UUID::Generate();
+    rawMesh->SetObjectId(meshId);
+    rawMesh->m_vertexCount = 100;
+    rawMesh->m_indexCount  = 300;
+
+    std::vector<uint8_t> verts(400);
+    for (int i = 0; i < 400; ++i) verts[i] = static_cast<uint8_t>(i % 256);
+    rawMesh->m_vertexBuffer.Set(verts.data(), static_cast<uint64_t>(verts.size()));
+
+    std::vector<uint8_t> indices(600);
+    for (int i = 0; i < 600; ++i) indices[i] = static_cast<uint8_t>((i * 7) % 256);
+    rawMesh->m_indexBuffer.Set(indices.data(), static_cast<uint64_t>(indices.size()));
+
+    asset->AddObject(std::shared_ptr<DObject>(rawMesh));
+
+    auto filePath = tempDir / "TestMesh.dasset.json";
+    SaveAssetWithBulkData(asset, filePath);
+
+    assert(std::filesystem::exists(tempDir / "TestMesh_Bulk0.bin"));
+    assert(std::filesystem::exists(tempDir / "TestMesh_Bulk1.bin"));
+    assert(std::filesystem::file_size(tempDir / "TestMesh_Bulk0.bin") == 400);
+    assert(std::filesystem::file_size(tempDir / "TestMesh_Bulk1.bin") == 600);
+
+    {
+        std::ifstream in(filePath);
+        auto j = nlohmann::json::parse(in);
+        assert(j["objects"][0]["m_vertexBuffer"]["_bulk"] == 0);
+        assert(j["objects"][0]["m_vertexBuffer"]["size"]  == 400);
+        assert(j["objects"][0]["m_indexBuffer"]["_bulk"]  == 1);
+        assert(j["objects"][0]["m_indexBuffer"]["size"]   == 600);
+        assert(j["header"]["bulkDataMap"]["0"]["size"]    == 400);
+        assert(j["header"]["bulkDataMap"]["1"]["size"]    == 600);
+    }
+
+    EditorAssetDatabase db;
+    db.ScanAssetsFolder(tempDir);
+    auto loaded = db.LoadAsset(assetId);
+    assert(loaded != nullptr);
+
+    auto* lm = dynamic_cast<DTestMeshData*>(loaded->FindObject(meshId));
+    assert(lm != nullptr);
+    assert(lm->m_vertexCount == 100);
+    assert(lm->m_indexCount  == 300);
+    assert(lm->m_vertexBuffer.m_size == 400);
+    for (int i = 0; i < 400; ++i)
+        assert(lm->m_vertexBuffer.m_data[i] == static_cast<uint8_t>(i % 256));
+    assert(lm->m_indexBuffer.m_size == 600);
+    for (int i = 0; i < 600; ++i)
+        assert(lm->m_indexBuffer.m_data[i] == static_cast<uint8_t>((i * 7) % 256));
+
+    std::filesystem::remove_all(tempDir);
+    std::cout << "[PASS] TestBulkDataRoundTrip\n";
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 
@@ -538,6 +634,7 @@ int main()
     TestCyclicDependency();
     TestDirtyFlagPropagation();
     TestBrokenReferenceIsNullptr();
+    TestBulkDataRoundTrip();
 
     std::cout << "\nAll serialization integration tests passed!\n";
     return 0;

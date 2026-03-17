@@ -167,6 +167,10 @@ void EditorAssetDatabase::LoadAssetRecursive(const AssetId& id)
         JsonAssetArchive bodyAr(root, entry.m_filePath.parent_path());
         asset->SerializeBody(bodyAr);
 
+        // Phase 2: load bulk data payloads (handles were read from JSON by SerializeBody)
+        JsonAssetArchive bulkAr(root, entry.m_filePath.parent_path());
+        asset->SerializeBulkData(bulkAr);
+
         auto refs = asset->CollectExternalReferences();
         for (const auto& sp : refs)
         {
@@ -264,6 +268,14 @@ void EditorAssetDatabase::SaveAsset(const AssetId& id)
 
     if (isJson)
     {
+        const auto assetDir  = entry.m_filePath.parent_path();
+        const auto assetStem = entry.m_filePath.stem().stem().string();
+
+        // Phase 1: assign bulk IDs and write sidecar .bin files
+        JsonAssetArchive bulkAr(assetDir, assetStem);
+        asset->SerializeBulkData(bulkAr);
+
+        // Phase 2: serialize header and body JSON (bulk handles now have correct IDs)
         JsonAssetArchive headerAr;
         asset->SerializeHeader(headerAr);
 
@@ -272,6 +284,9 @@ void EditorAssetDatabase::SaveAsset(const AssetId& id)
 
         nlohmann::json output;
         output["header"] = headerAr.GetRoot();
+        const auto& bulkRoot = bulkAr.GetRoot();
+        if (bulkRoot.contains("header") && bulkRoot["header"].contains("bulkDataMap"))
+            output["header"]["bulkDataMap"] = bulkRoot["header"]["bulkDataMap"];
         for (auto& [key, val] : bodyAr.GetRoot().items())
             output[key] = val;
 

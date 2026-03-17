@@ -30,6 +30,7 @@ enum class EPropertyType
     Float4x4,
     ObjectPtr,
     SharedObjectPtr,
+    BulkData,
 };
 
 class DProperty

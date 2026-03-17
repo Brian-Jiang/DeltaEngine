@@ -15,8 +15,11 @@ DELTA_ENGINE_NS_BEGIN
 class DELTAENGINE_API JsonAssetArchive : public AssetArchive
 {
 public:
-    // Saving constructor — no asset directory (bulk data is skipped if m_assetDir is empty)
+    // Saving constructor — no asset directory (bulk data is skipped)
     explicit JsonAssetArchive();
+
+    // Saving constructor — with asset directory for bulk data sidecar writes
+    explicit JsonAssetArchive(const std::filesystem::path& assetDir, const std::string& assetName);
 
     // Loading constructor
     explicit JsonAssetArchive(const nlohmann::json& root, const std::filesystem::path& assetDir);

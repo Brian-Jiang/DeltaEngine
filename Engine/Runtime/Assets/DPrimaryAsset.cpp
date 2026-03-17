@@ -2,8 +2,12 @@
 
 #include "Reflection/DClass.h"
 #include "Reflection/DProperty.h"
+#include "Reflection/DBulkDataProperty.h"
 #include "Reflection/ReflectionRegistry.h"
 #include "Serialization/AssetArchive.h"
+#include "Serialization/TBulkData.h"
+
+#include <algorithm>
 
 #include <algorithm>
 
@@ -138,6 +142,52 @@ void DPrimaryAsset::DeserializeBody(AssetArchive& ar)
         m_objects.push_back(std::move(obj));
     }
     ar.EndArray();
+}
+
+std::vector<std::pair<DBulkDataProperty*, DObject*>> DPrimaryAsset::CollectBulkProperties() const
+{
+    std::vector<std::pair<DBulkDataProperty*, DObject*>> result;
+
+    auto walkProps = [&](auto& self, DStruct* ds, DObject* obj) -> void {
+        if (!ds) return;
+        if (DStruct* parent = ds->GetSuper())
+            self(self, parent, obj);
+        // AddProperty prepends, so the list is in reverse declaration order.
+        // Collect into a local vector and reverse to restore declaration order.
+        std::vector<std::pair<DBulkDataProperty*, DObject*>> local;
+        for (DProperty* prop = ds->GetOwnProperties(); prop; prop = prop->GetNext())
+        {
+            if (auto* bp = dynamic_cast<DBulkDataProperty*>(prop))
+                local.emplace_back(bp, obj);
+        }
+        std::reverse(local.begin(), local.end());
+        result.insert(result.end(), local.begin(), local.end());
+    };
+
+    for (auto& obj : m_objects)
+        walkProps(walkProps, obj->GetClass(), obj.get());
+
+    return result;
+}
+
+void DPrimaryAsset::SerializeBulkData(AssetArchive& ar)
+{
+    auto bulkProps = CollectBulkProperties();
+
+    if (ar.IsSaving())
+    {
+        uint32_t nextId = 0;
+        for (auto& [prop, obj] : bulkProps)
+            static_cast<TBulkData*>(prop->GetValue(obj))->m_bulkId = nextId++;
+
+        for (auto& [prop, obj] : bulkProps)
+            prop->SerializeBulkPayload(ar, obj);
+    }
+    else
+    {
+        for (auto& [prop, obj] : bulkProps)
+            prop->SerializeBulkPayload(ar, obj);
+    }
 }
 
 std::vector<ScriptPointer> DPrimaryAsset::CollectExternalReferences() const

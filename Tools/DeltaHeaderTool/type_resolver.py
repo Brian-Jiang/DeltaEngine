@@ -22,6 +22,8 @@ TYPE_MAP = {
     "DirectX::SimpleMath::Quaternion":    "DQuaternionProperty",
     "DirectX::XMMATRIX":                  "DFloat4x4Property",
     "DirectX::XMVECTOR":                  "DFloat4Property",
+    "TBulkData":                          "DBulkDataProperty",
+    "DeltaEngine::TBulkData":             "DBulkDataProperty",
 }
 
 _SHARED_PTR_RE = re.compile(r"^std::shared_ptr<(.+)>$")

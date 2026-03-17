@@ -7,6 +7,7 @@
 #include "SimpleMath.h"
 #include "Runtime/Core/DObject.h"
 #include "Runtime/Assets/DPrimaryAsset.h"
+#include "Runtime/Serialization/TBulkData.h"
 
 #include "SerializationTestTypes.generated.h"
 
@@ -60,6 +61,42 @@ DCLASS()
 class PA_TestAsset : public DPrimaryAsset
 {
     DGENERATED_BODY(PA_TestAsset)
+};
+
+
+DCLASS()
+class DTestMeshData : public DObject
+{
+    DGENERATED_BODY(DTestMeshData)
+
+public:
+    DTestMeshData() = default;
+    DTestMeshData(const DTestMeshData& other)
+    {
+        m_vertexCount = other.m_vertexCount;
+        m_indexCount  = other.m_indexCount;
+        m_vertexBuffer.Set(other.m_vertexBuffer.m_data, other.m_vertexBuffer.m_size);
+        m_indexBuffer.Set(other.m_indexBuffer.m_data, other.m_indexBuffer.m_size);
+    }
+
+    DPROPERTY()
+    int m_vertexCount = 0;
+
+    DPROPERTY()
+    int m_indexCount = 0;
+
+    DPROPERTY()
+    TBulkData m_vertexBuffer;
+
+    DPROPERTY()
+    TBulkData m_indexBuffer;
+};
+
+
+DCLASS()
+class PA_TestMesh : public DPrimaryAsset
+{
+    DGENERATED_BODY(PA_TestMesh)
 };
 
 DELTA_ENGINE_NS_END

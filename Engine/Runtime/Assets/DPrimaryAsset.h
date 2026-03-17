@@ -18,6 +18,7 @@ DELTA_ENGINE_NS_BEGIN
 
 class AssetArchive;
 class DObjectPtrPropertyBase;
+class DBulkDataProperty;
 
 DCLASS()
 class DELTAENGINE_API DPrimaryAsset : public DObject
@@ -50,6 +51,9 @@ public:
     void ClearDirty()     { m_dirty = false; }
 
     std::vector<ScriptPointer> CollectExternalReferences() const;
+
+    std::vector<std::pair<DBulkDataProperty*, DObject*>> CollectBulkProperties() const;
+    void SerializeBulkData(AssetArchive& ar);
 
 private:
     void DeserializeBody(AssetArchive& ar);

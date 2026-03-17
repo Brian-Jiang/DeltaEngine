@@ -73,6 +73,15 @@ JsonAssetArchive::JsonAssetArchive()
     m_stack.push_back(&m_root);
 }
 
+JsonAssetArchive::JsonAssetArchive(const std::filesystem::path& assetDir, const std::string& assetName)
+    : AssetArchive(Mode::Saving)
+    , m_root(nlohmann::json::object())
+    , m_assetDir(assetDir)
+    , m_assetName(assetName)
+{
+    m_stack.push_back(&m_root);
+}
+
 JsonAssetArchive::JsonAssetArchive(const nlohmann::json& root, const std::filesystem::path& assetDir)
     : AssetArchive(Mode::Loading)
     , m_root(root)

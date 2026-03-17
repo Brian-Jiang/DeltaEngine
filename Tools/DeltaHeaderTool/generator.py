@@ -37,6 +37,10 @@ from templates import (
 _SHARED_PTR_PROP_RE = re.compile(r"^DSharedObjectPtrProperty<(.+)>$")
 _OBJECT_PTR_PROP_RE = re.compile(r"^DObjectPtrProperty<(.+)>$")
 
+EXTRA_PROPERTY_HEADERS = {
+    "DBulkDataProperty": "Runtime/Reflection/DBulkDataProperty.h",
+}
+
 
 def _format_meta_init(metadata: dict) -> str:
     """Format a Python dict as a C++ unordered_map initializer list."""
@@ -410,6 +414,10 @@ def generate_source_file(classes: list[ClassInfo], header_stem: str, type_to_hea
     source_header_include = "\n".join(sorted(source_includes))
 
     cpp_full_includes = _collect_cpp_full_includes(classes, header_stem, type_to_header)
+    for cls in classes:
+        for prop in cls.properties:
+            if prop.property_class in EXTRA_PROPERTY_HEADERS:
+                cpp_full_includes.add(EXTRA_PROPERTY_HEADERS[prop.property_class])
     cpp_full_includes_block = "\n".join(sorted(f'#include "{p}"' for p in cpp_full_includes))
     if cpp_full_includes_block:
         cpp_full_includes_block += "\n"
