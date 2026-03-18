@@ -44,8 +44,8 @@ Tools/Scripts/delta_header_force_generate.bat
 
 The project is split into two CMake targets:
 
-- **DeltaEngine** (`Engine/Runtime/`) — shared library: core, graphics, assets, importers, reflection
-- **DeltaEditor** (`Engine/Editor/`) — executable: editor app, ImGui windows, selection state
+- **DeltaEngine** (`Engine/Runtime/`) — shared library: core, graphics, assets, reflection, serialization
+- **DeltaEditor** (`Engine/Editor/`) — executable: editor app, fixed chrome panels, docked editor windows, selection state
 
 ### Frame Loop
 
@@ -54,11 +54,14 @@ EditorMain::Run()
   ├── EngineMain::PreTick()          // update Time
   ├── EngineMain::Tick()             // game logic
   ├── EngineMain::ProcessEvent()     // SDL input
-  ├── EditorRenderManager::BeginFrame()
-  │     └── DXRenderManager::RecordSceneDraws(context)
-  │           └── DWorld → GameObjects → Renderers → GatherDrawCalls()
-  ├── EditorRenderManager::RenderImGui()  // all editor windows
-  └── EditorRenderManager::Present()
+  └── EditorRenderManager::RenderFrame()
+        ├── draw fixed editor panels + dock host
+        ├── DXRenderManager::PrepareFrame()
+        ├── EngineMain::RecordSceneDraws(context)
+        │     └── DWorld → GameObjects → Renderers → GatherDrawCalls()
+        ├── DXRenderManager::RenderFrame()
+        ├── render docked editor windows + ImGui
+        └── SwapChain::Present()
 ```
 
 The scene renders to an **offscreen render target** inside `DXRenderManager`; `EditorRenderManager` composites it into the ImGui viewport and presents to the swap chain.
@@ -77,7 +80,8 @@ DWorld
 ```
 
 - `DObject` is the base for everything. `GameObject`, `DComponent`, `SceneComponent` all inherit from it.
-- Use `enable_shared_from_this` — always hold engine objects in `shared_ptr`.
+- `DObject`-derived relationships in reflected/runtime gameplay data are represented with raw pointers (`T*`).
+- Asset ownership is centralized in `DPrimaryAsset`, which stores loaded objects as `std::shared_ptr<DObject>` and returns raw pointers for lookup/use.
 - C++20 concepts (`IsDComponent`, `IsSceneComponent`, `IsEditorWindow`) are used for type-safe template APIs.
 
 ### Graphics Layer (`Engine/Runtime/Graphics/DirectX/`)
@@ -104,9 +108,19 @@ All DirectX 12 objects are wrapped:
 
 ### Asset Pipeline
 
-- **Models:** `ModelImporter` via Assimp → `DMesh` (submeshes with vertices/indices) + `DMaterial`
-- **Textures:** `TextureImporter` via DirectXTex / stb_image → `DTexture` → `DirectX12Texture`
+- **Models:** `DMesh::Initialize(...)` currently imports directly via Assimp and builds submesh/material/texture data.
+- **Textures:** `DTexture` initialization currently goes through `TextureImporter`; the standalone importer layer exists in `Engine/Runtime/Importers/` but is not an active high-level pipeline right now.
 - **Shaders:** `DShader` compiles HLSL at runtime using DXC (`dxcompiler.dll`). Sources in `Engine/Runtime/Shaders/`.
+
+### Editor UI (`Engine/Editor/`)
+
+The editor now has a fixed-position chrome layer plus docked content windows:
+
+- **Fixed panels** (`Engine/Editor/Panels/`): `AppHeader`, `MainToolbar`, `StatusBar`
+- **Docked editor windows** (`Engine/Editor/EditorWindows/`): viewport, outliner, components hierarchy, details
+- **Reusable UI components** (`Engine/Editor/UIComponents/`): class picker popup, context menus, toggle groups, type chips, and property widgets (`ScalarField`, `StringField`, `Vec3Field`, `ColorField`, `ReferenceField`)
+
+`EditorRenderManager` draws the fixed top/bottom panels first, then hosts the main dockspace between them.
 
 ### Editor Windows (`Engine/Editor/EditorWindows/`)
 
@@ -140,7 +154,7 @@ All annotation macros expand to nothing at compile time — they are only tokens
 
 - **`DStruct`** — metadata for structs: name, super name, size, alignment, linked list of `DProperty`
 - **`DClass`** — extends `DStruct` for classes: adds `DFunction` map, constructor/destructor/copy lambdas, abstract flag
-- **`DProperty`** — abstract base for field metadata; offset-based access; concrete subclasses: `DFloatProperty`, `DIntProperty`, `DBoolProperty`, `DDoubleProperty`, `DStringProperty`, `DVector3Property`, `DQuaternionProperty`, `DWStringProperty`, `DFloat4Property`, `DFloat4x4Property`, `DObjectPtrProperty<T>`, `DSharedObjectPtrProperty<T>`
+- **`DProperty`** — abstract base for field metadata; offset-based access; concrete subclasses include scalar/string/math types plus `DObjectPtrProperty<T>`, `DSharedObjectPtrProperty<T>`, `DBulkDataProperty`, and `DVectorProperty<T>`
 - **`DFunction`** — method metadata: name, native thunk pointer, param list (`DProperty*`), optional return property; `Invoke(DObject*, void*)` dispatches via thunk
 - **`ReflectionRegistry`** — singleton (`GetReflectionRegistry()`); maps name → `DStruct*` / `DClass*`; `CreateObject(name)` and `DestroyObject()` for runtime instantiation
 
@@ -164,16 +178,17 @@ Generated:  Intermediate/DeltaHeaderTool/Generated/Foo.generated.h
 
 `Foo.generated.h` is `#include`d at the top of `Foo.h` (before the class body) to expose forward declarations required by `DGENERATED_BODY`. The generated `.cpp` files are compiled as part of `DeltaEngine` via the manifest.
 
-### Currently Reflected Classes (18)
+### Currently Reflected Classes (24)
 
-Core: `DObject`, `GameObject`, `DComponent`, `SceneComponent`, `DWorld`, `Camera`, `Renderer`, `MeshRenderer`
-Assets: `DMesh`, `DMaterial`, `DTexture`, `DShader`
+Core / Scene: `DObject`, `GameObject`, `DComponent`, `SceneComponent`, `DWorld`, `Camera`
+Rendering / Assets: `Renderer`, `MeshRenderer`, `DMesh`, `DMaterial`, `DTexture`, `DShader`, `DPrimaryAsset`
 Lighting: `LightComponent`, `DirectionalLight`, `PointLight`, `SpotLight`
-Test: `TestComponent`, `TestComponent2`
+Test / Serialization: `TestComponent`, `TestComponent2`, `DTestObjectA`, `DTestObjectB`, `PA_TestAsset`, `DTestMeshData`, `PA_TestMesh`
 
 ### Reflection Limitations
 
-- `std::vector` and other container types are **not** supported as properties (generator warns and skips).
+- `std::vector<T>` properties are supported, including nested vectors such as `std::vector<std::vector<float>>`.
+- Vector elements may be value types, reflected raw pointers (`T*`), shared pointers, or nested vectors.
 - Template class reflection is **not** supported.
 - Nested class reflection is **not** supported.
 - Method overloads are tracked by index but discrimination is limited.
@@ -233,8 +248,8 @@ Python is **build-time only**. The bundled `Tools/Python/python.exe` runs `Delta
 ## Key Conventions
 
 - **Headers only for declarations/implementations split:** most files use `.h` + `.cpp` pairs under the same directory.
-- **Smart pointers everywhere:** `shared_ptr`/`weak_ptr` for scene objects, `unique_ptr` for owned subsystems.
-- **No raw `new`/`delete`** for engine objects — use `CreateDObject<T>()` for reflected types.
+- **Mixed ownership model:** subsystems use RAII smart pointers, while reflected `DObject` relationships and scene/component links are typically raw pointers.
+- **No raw `new`/`delete`** for reflected engine objects — use `CreateDObject<T>()`; asset ownership/lifetime is handled by reflection registry + `DPrimaryAsset`.
 - **HLSL shaders** live alongside engine source in `Engine/Runtime/Shaders/` and are compiled at runtime (not offline). The `StandardObject.hlsl` / `StandardLighting.hlsl` / `StandardConstantStructs.hlsl` trio forms the standard material shader.
 - **`DXGraphicsContext`** is the primary way to pass rendering state down the call stack — do not add global graphics state.
 - **Adding a new reflected class:** annotate with `DCLASS()` + `DGENERATED_BODY(Name)`, add `DPROPERTY()`/`DFUNCTION()` annotations, then build (or run `delta_header_generate.bat`) — the tool regenerates the `.generated.h/.cpp` pair automatically.
