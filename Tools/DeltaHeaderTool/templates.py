@@ -186,6 +186,26 @@ DPROPERTY_VECTOR = Template("""\
     }
 """)
 
+DPROPERTY_VECTOR_OBJECT_PTR = Template("""\
+    {
+        auto* _innerProp = new DObjectPtrProperty<${pointee_type}>("${field_name}_elem", "${pointee_type}", 0);
+        cls->AddProperty(new DVectorProperty<${pointee_type}*>(
+            "${field_name}",
+            offsetof(${class_name}, ${field_name}),
+            std::unique_ptr<DProperty>(_innerProp)));
+    }
+""")
+
+DPROPERTY_VECTOR_SHARED_PTR = Template("""\
+    {
+        auto* _innerProp = new DSharedObjectPtrProperty<${pointee_type}>("${field_name}_elem", "${pointee_type}", 0);
+        cls->AddProperty(new DVectorProperty<std::shared_ptr<${pointee_type}>>(
+            "${field_name}",
+            offsetof(${class_name}, ${field_name}),
+            std::unique_ptr<DProperty>(_innerProp)));
+    }
+""")
+
 # ============================================================
 # DFUNCTION REGISTRATION
 # ============================================================

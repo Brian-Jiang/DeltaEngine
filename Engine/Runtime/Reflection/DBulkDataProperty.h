@@ -73,6 +73,8 @@ public:
         return EPropertyType::BulkData;
     }
 
+    void SerializeElement(AssetArchive& /*ar*/, void* /*elementAddr*/) override {}
+
     // ── Phase 1: serialize the handle (bulkId + size) into JSON ──
 
     void Serialize(AssetArchive& ar, void* objectPtr) override

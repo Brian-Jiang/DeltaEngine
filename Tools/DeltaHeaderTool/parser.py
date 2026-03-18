@@ -180,6 +180,8 @@ class PropertyInfo:
     is_vector: bool = False
     inner_cpp_type: str = ""
     inner_property_class: str = ""
+    inner_is_object_ptr: bool = False
+    inner_pointee_type: str = ""
 
 
 @dataclass
@@ -584,6 +586,8 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
             is_vec = len(resolved) >= 5
             inner_cpp = resolved[3] if is_vec else ""
             inner_prop = resolved[4] if is_vec else ""
+            inner_is_obj_ptr = resolved[5] if len(resolved) >= 7 else False
+            inner_pointee = resolved[6] if len(resolved) >= 7 else ""
             offset_bits = class_cursor.type.get_offset(child.spelling)
             offset_bytes = offset_bits // 8 if offset_bits >= 0 else -1
             dprop_args = _extract_macro_args(tu, child, "DPROPERTY") or ""
@@ -599,6 +603,8 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
                 is_vector=is_vec,
                 inner_cpp_type=inner_cpp,
                 inner_property_class=inner_prop,
+                inner_is_object_ptr=inner_is_obj_ptr,
+                inner_pointee_type=inner_pointee,
             ))
 
         elif child.kind == ci.CursorKind.FUNCTION_TEMPLATE:
@@ -667,6 +673,8 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
                 is_vec = len(resolved) >= 5
                 inner_cpp = resolved[3] if is_vec else ""
                 inner_prop = resolved[4] if is_vec else ""
+                inner_is_obj_ptr = resolved[5] if len(resolved) >= 7 else False
+                inner_pointee = resolved[6] if len(resolved) >= 7 else ""
                 info.properties.append(PropertyInfo(
                     name=field_name,
                     cpp_type=type_str,
@@ -677,6 +685,8 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
                     is_vector=is_vec,
                     inner_cpp_type=inner_cpp,
                     inner_property_class=inner_prop,
+                    inner_is_object_ptr=inner_is_obj_ptr,
+                    inner_pointee_type=inner_pointee,
                 ))
                 existing_names.add(field_name)
     except Exception:

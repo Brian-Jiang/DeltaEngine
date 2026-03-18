@@ -22,6 +22,8 @@ from templates import (
     DPROPERTY_OBJECT_PTR,
     DPROPERTY_SHARED_PTR,
     DPROPERTY_VECTOR,
+    DPROPERTY_VECTOR_OBJECT_PTR,
+    DPROPERTY_VECTOR_SHARED_PTR,
     DFUNCTION_VOID_NO_PARAMS,
     DFUNCTION_WITH_PARAMS,
     DFUNCTION_PARAM,
@@ -68,6 +70,12 @@ def _collect_cpp_full_includes(
         for prop in cls.properties:
             if prop.is_object_ptr and prop.pointee_type:
                 pointee = _strip_namespaces(prop.pointee_type)
+                path = type_to_header.get(pointee)
+                if path and path != source_include:
+                    cpp_full_includes.add(path)
+            # Include headers for object-pointer inner types of vector properties
+            if prop.is_vector and prop.inner_is_object_ptr and prop.inner_pointee_type:
+                pointee = _strip_namespaces(prop.inner_pointee_type)
                 path = type_to_header.get(pointee)
                 if path and path != source_include:
                     cpp_full_includes.add(path)
@@ -336,6 +344,60 @@ def _is_shared_ptr_property(prop_class: str) -> bool:
     return prop_class.startswith("DSharedObjectPtrProperty<")
 
 
+def _generate_vector_prop_code(prop, class_name: str) -> str:
+    """Generate the AddProperty block for a DVectorProperty field.
+
+    Handles three inner-type categories:
+      - Simple value types (DFloatProperty, etc.)
+      - Object pointer types (DObjectPtrProperty / DSharedObjectPtrProperty)
+      - Nested vector types (DVectorProperty, recursively)
+    """
+    if prop.inner_is_object_ptr:
+        if _is_shared_ptr_property(prop.inner_property_class):
+            return DPROPERTY_VECTOR_SHARED_PTR.substitute(
+                pointee_type=prop.inner_pointee_type,
+                field_name=prop.name,
+                class_name=class_name,
+            )
+        else:
+            return DPROPERTY_VECTOR_OBJECT_PTR.substitute(
+                pointee_type=prop.inner_pointee_type,
+                field_name=prop.name,
+                class_name=class_name,
+            )
+    elif prop.inner_property_class == "DVectorProperty":
+        # Nested vector: the inner_cpp_type is std::vector<U>.
+        # We need an inner DVectorProperty with its own simple inner prop.
+        # Extract U from "std::vector<U>".
+        import re as _re
+        m = _re.match(r'^std::vector<(.+)>$', prop.inner_cpp_type)
+        inner_u = m.group(1) if m else prop.inner_cpp_type
+        # Build the inner-inner property type name from INNER_TYPE_TO_CPP reverse map.
+        from type_resolver import INNER_TYPE_TO_CPP as _INNER_MAP
+        _cpp_to_prop = {v: k for k, v in _INNER_MAP.items()}
+        inner_inner_prop_class = _cpp_to_prop.get(inner_u, "")
+        if not inner_inner_prop_class:
+            return ""
+        return (
+            f"    {{\n"
+            f'        auto* _innerInnerProp = new {inner_inner_prop_class}("{prop.name}_elem_elem", 0);\n'
+            f'        auto* _innerProp = new DVectorProperty<{inner_u}>("{prop.name}_elem", 0,\n'
+            f'            std::unique_ptr<DProperty>(_innerInnerProp));\n'
+            f'        cls->AddProperty(new DVectorProperty<{prop.inner_cpp_type}>(\n'
+            f'            "{prop.name}",\n'
+            f'            offsetof({class_name}, {prop.name}),\n'
+            f'            std::unique_ptr<DProperty>(_innerProp)));\n'
+            f"    }}\n"
+        )
+    else:
+        return DPROPERTY_VECTOR.substitute(
+            inner_property_type=prop.inner_property_class,
+            inner_cpp_type=prop.inner_cpp_type,
+            field_name=prop.name,
+            class_name=class_name,
+        )
+
+
 def _generate_class_registration(cls: ClassInfo) -> str:
     """Generate the registration function body for one class/struct."""
     parts: list[str] = []
@@ -361,12 +423,9 @@ def _generate_class_registration(cls: ClassInfo) -> str:
 
     for prop in cls.properties:
         if prop.is_vector:
-            parts.append(DPROPERTY_VECTOR.substitute(
-                inner_property_type=prop.inner_property_class,
-                inner_cpp_type=prop.inner_cpp_type,
-                field_name=prop.name,
-                class_name=cls.name,
-            ))
+            code = _generate_vector_prop_code(prop, cls.name)
+            if code:
+                parts.append(code)
         elif prop.is_object_ptr and _is_shared_ptr_property(prop.property_class):
             parts.append(DPROPERTY_SHARED_PTR.substitute(
                 pointee_type=prop.pointee_type,

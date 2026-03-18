@@ -52,6 +52,11 @@ void DFloatProperty::Serialize(AssetArchive& ar, void* objectPtr)
     ar.Serialize(GetName(), *static_cast<float*>(GetValue(objectPtr)));
 }
 
+void DFloatProperty::SerializeElement(AssetArchive& ar, void* elementAddr)
+{
+    ar.SerializeElement(*static_cast<float*>(elementAddr));
+}
+
 // ---------------------------------------------------------------------------
 // DIntProperty
 // ---------------------------------------------------------------------------
@@ -69,6 +74,11 @@ EPropertyType DIntProperty::GetPropertyType() const
 void DIntProperty::Serialize(AssetArchive& ar, void* objectPtr)
 {
     ar.Serialize(GetName(), *static_cast<int*>(GetValue(objectPtr)));
+}
+
+void DIntProperty::SerializeElement(AssetArchive& ar, void* elementAddr)
+{
+    ar.SerializeElement(*static_cast<int*>(elementAddr));
 }
 
 // ---------------------------------------------------------------------------
@@ -90,6 +100,11 @@ void DBoolProperty::Serialize(AssetArchive& ar, void* objectPtr)
     ar.Serialize(GetName(), *static_cast<bool*>(GetValue(objectPtr)));
 }
 
+void DBoolProperty::SerializeElement(AssetArchive& ar, void* elementAddr)
+{
+    ar.SerializeElement(*static_cast<bool*>(elementAddr));
+}
+
 // ---------------------------------------------------------------------------
 // DDoubleProperty
 // ---------------------------------------------------------------------------
@@ -107,6 +122,11 @@ EPropertyType DDoubleProperty::GetPropertyType() const
 void DDoubleProperty::Serialize(AssetArchive& ar, void* objectPtr)
 {
     ar.Serialize(GetName(), *static_cast<double*>(GetValue(objectPtr)));
+}
+
+void DDoubleProperty::SerializeElement(AssetArchive& ar, void* elementAddr)
+{
+    ar.SerializeElement(*static_cast<double*>(elementAddr));
 }
 
 // ---------------------------------------------------------------------------
@@ -165,6 +185,11 @@ EPropertyType DStringProperty::GetPropertyType() const
 void DStringProperty::Serialize(AssetArchive& ar, void* objectPtr)
 {
     ar.Serialize(GetName(), *static_cast<std::string*>(GetValue(objectPtr)));
+}
+
+void DStringProperty::SerializeElement(AssetArchive& ar, void* elementAddr)
+{
+    ar.SerializeElement(*static_cast<std::string*>(elementAddr));
 }
 
 // ---------------------------------------------------------------------------
@@ -227,6 +252,11 @@ EPropertyType DVector3Property::GetPropertyType() const
 void DVector3Property::Serialize(AssetArchive& ar, void* objectPtr)
 {
     ar.Serialize(GetName(), *static_cast<Vector3*>(GetValue(objectPtr)));
+}
+
+void DVector3Property::SerializeElement(AssetArchive& ar, void* elementAddr)
+{
+    ar.SerializeElement(*static_cast<Vector3*>(elementAddr));
 }
 
 // ---------------------------------------------------------------------------
@@ -292,6 +322,11 @@ void DQuaternionProperty::Serialize(AssetArchive& ar, void* objectPtr)
     ar.Serialize(GetName(), *static_cast<Quaternion*>(GetValue(objectPtr)));
 }
 
+void DQuaternionProperty::SerializeElement(AssetArchive& ar, void* elementAddr)
+{
+    ar.SerializeElement(*static_cast<Quaternion*>(elementAddr));
+}
+
 // ---------------------------------------------------------------------------
 // DWStringProperty
 // ---------------------------------------------------------------------------
@@ -349,6 +384,11 @@ EPropertyType DWStringProperty::GetPropertyType() const
 void DWStringProperty::Serialize(AssetArchive& ar, void* objectPtr)
 {
     ar.Serialize(GetName(), *static_cast<std::wstring*>(GetValue(objectPtr)));
+}
+
+void DWStringProperty::SerializeElement(AssetArchive& ar, void* elementAddr)
+{
+    ar.SerializeElement(*static_cast<std::wstring*>(elementAddr));
 }
 
 // ---------------------------------------------------------------------------
@@ -415,6 +455,11 @@ void DFloat4Property::Serialize(AssetArchive& ar, void* objectPtr)
     ar.Serialize(GetName(), *static_cast<XMFLOAT4*>(GetValue(objectPtr)));
 }
 
+void DFloat4Property::SerializeElement(AssetArchive& ar, void* elementAddr)
+{
+    ar.SerializeElement(*static_cast<XMFLOAT4*>(elementAddr));
+}
+
 // ---------------------------------------------------------------------------
 // DFloat4x4Property  (stores as XMFLOAT4X4 in memory)
 // ---------------------------------------------------------------------------
@@ -473,6 +518,11 @@ void DFloat4x4Property::Serialize(AssetArchive& ar, void* objectPtr)
     ar.Serialize(GetName(), *static_cast<XMFLOAT4X4*>(GetValue(objectPtr)));
 }
 
+void DFloat4x4Property::SerializeElement(AssetArchive& ar, void* elementAddr)
+{
+    ar.SerializeElement(*static_cast<XMFLOAT4X4*>(elementAddr));
+}
+
 // ---------------------------------------------------------------------------
 // DObjectPtrPropertyBase
 // ---------------------------------------------------------------------------
@@ -492,6 +542,24 @@ void DObjectPtrPropertyBase::Serialize(AssetArchive& ar, void* objectPtr)
         ScriptPointer sp;
         ar.Serialize(GetName(), sp);
         m_unresolvedPointers[objectPtr] = sp;
+    }
+}
+
+void DObjectPtrPropertyBase::SerializeElement(AssetArchive& ar, void* elementAddr)
+{
+    if (ar.IsSaving()) {
+        DObject* target = GetRawPointer(elementAddr);
+        ScriptPointer sp;
+        if (target) {
+            sp.m_objectId = target->GetObjectId();
+            if (DPrimaryAsset* owningAsset = target->GetOwningAsset())
+                sp.m_assetId = owningAsset->GetAssetId();
+        }
+        ar.SerializeElement(sp);
+    } else {
+        ScriptPointer sp;
+        ar.SerializeElement(sp);
+        m_unresolvedPointers[elementAddr] = sp;
     }
 }
 

@@ -31,6 +31,7 @@ VECTOR_ELEMENT_PROPERTY_CLASSES = {
     "DStringProperty", "DWStringProperty",
     "DVector3Property", "DQuaternionProperty",
     "DFloat4Property", "DFloat4x4Property",
+    # Object pointer and nested vector types are also valid — handled separately
 }
 
 INNER_TYPE_TO_CPP = {
@@ -73,25 +74,61 @@ def _extract_vector_inner_type(spelling: str) -> str | None:
     return None
 
 
-def _resolve_vector_inner(inner_type: str) -> tuple[str, str] | None:
-    """Resolve a vector inner type string to (inner_property_class, inner_cpp_type).
-    Returns None if the inner type is not supported as a vector element."""
+def _resolve_vector_inner(inner_type: str) -> tuple | None:
+    """Resolve a vector inner type string.
+
+    Returns a 4-tuple:
+      (inner_property_class, inner_cpp_type, is_inner_obj_ptr, inner_pointee_type)
+
+    For nested vector inner types, inner_property_class is "DVectorProperty" and
+    inner_cpp_type is the canonical std::vector<U> spelling.
+
+    Returns None if the inner type is not supported as a vector element.
+    """
     s = _strip_elaborated(_strip_const(inner_type.strip()))
 
+    # Value types: direct TYPE_MAP lookup
     prop = TYPE_MAP.get(s)
     if prop and prop in VECTOR_ELEMENT_PROPERTY_CLASSES:
-        return (prop, INNER_TYPE_TO_CPP.get(prop, s))
+        return (prop, INNER_TYPE_TO_CPP.get(prop, s), False, "")
 
     if _STRING_RE.match(s):
-        return ("DStringProperty", "std::string")
+        return ("DStringProperty", "std::string", False, "")
     if _WSTRING_RE.match(s):
-        return ("DWStringProperty", "std::wstring")
+        return ("DWStringProperty", "std::wstring", False, "")
+
+    # Raw pointer T* → DObjectPtrProperty<T>
+    if s.endswith("*"):
+        pointee_raw = s[:-1].strip()
+        pointee = _strip_namespaces(_strip_elaborated(pointee_raw))
+        return (f"DObjectPtrProperty<{pointee}>", s, True, pointee)
+
+    # std::shared_ptr<T> → DSharedObjectPtrProperty<T>
+    m = _SHARED_PTR_RE.match(s)
+    if m:
+        pointee_raw = m.group(1)
+        pointee = _strip_namespaces(_strip_elaborated(pointee_raw.strip()))
+        return (f"DSharedObjectPtrProperty<{pointee}>", f"std::shared_ptr<{pointee}>", True, pointee)
+
+    # Nested std::vector<T> → DVectorProperty (recursive)
+    if _VECTOR_RE.match(s):
+        nested_inner = _extract_vector_inner_type(s)
+        if nested_inner is not None:
+            nested = _resolve_vector_inner(nested_inner)
+            if nested is not None:
+                nested_inner_prop, nested_inner_cpp, _, _ = nested
+                return ("DVectorProperty", f"std::vector<{nested_inner_cpp}>", False, "")
 
     return None
 
 
 def _try_resolve_vector(spelling, field_name, class_name, *, diag=None, source_file="", line=0):
-    """Try to resolve a std::vector<T> type. Returns (property_class, False, "", inner_cpp, inner_prop) or None."""
+    """Try to resolve a std::vector<T> type.
+
+    Returns a 7-tuple:
+      (property_class, False, "", inner_cpp, inner_prop_class, inner_is_obj_ptr, inner_pointee_type)
+    or None on failure.
+    """
     inner_type = _extract_vector_inner_type(spelling)
     if inner_type is None:
         return None
@@ -100,15 +137,15 @@ def _try_resolve_vector(spelling, field_name, class_name, *, diag=None, source_f
     if resolved is None:
         msg = (f"std::vector<{inner_type}> on property '{field_name}' — "
                f"inner type '{inner_type}' has no supported DProperty subclass. "
-               f"Only value types (float, int, bool, double, string, Vector3, etc.) are supported.")
+               f"Supported: value types, T*, shared_ptr<T>, std::vector<T>.")
         if diag:
             diag.warn(source_file, line, msg)
         else:
             print(f"WARNING: {msg} in '{class_name}' — skipping", file=sys.stderr)
         return None
 
-    inner_prop_class, inner_cpp = resolved
-    return ("DVectorProperty", False, "", inner_cpp, inner_prop_class)
+    inner_prop_class, inner_cpp, is_inner_obj_ptr, inner_pointee = resolved
+    return ("DVectorProperty", False, "", inner_cpp, inner_prop_class, is_inner_obj_ptr, inner_pointee)
 
 
 def _strip_elaborated(spelling: str) -> str:
@@ -190,7 +227,7 @@ def resolve_type(cursor_type, field_name="", class_name="", *,
 
 def resolve_type_from_string(type_str: str, field_name: str = "", class_name: str = "") -> tuple | None:
     """Resolve a type string (from source text) to (property_class, is_object_ptr, pointee_type).
-    For vectors returns 5-tuple: (property_class, False, "", inner_cpp, inner_prop_class).
+    For vectors returns 7-tuple: (property_class, False, "", inner_cpp, inner_prop_class, inner_is_obj_ptr, inner_pointee).
     Used as fallback when AST misses fields (e.g. std::string with stub types)."""
     s = _strip_const(type_str.strip())
     for prefix in ("class ", "struct "):

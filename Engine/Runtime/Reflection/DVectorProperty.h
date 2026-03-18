@@ -89,21 +89,13 @@ public:
     void Serialize(AssetArchive& ar, void* objectPtr) override
     {
         auto& vec = *static_cast<std::vector<T>*>(GetValue(objectPtr));
-        if (ar.IsSaving())
-        {
-            ar.BeginArray(GetName(), vec.size());
-            for (size_t i = 0; i < vec.size(); ++i)
-                ar.SerializeElement(vec[i]);
-            ar.EndArray();
-        }
-        else
-        {
-            size_t count = ar.BeginArrayLoad(GetName());
-            vec.resize(count);
-            for (size_t i = 0; i < count; ++i)
-                ar.SerializeElement(vec[i]);
-            ar.EndArray();
-        }
+        ar.Serialize(GetName(), vec, *m_innerProperty);
+    }
+
+    void SerializeElement(AssetArchive& ar, void* elementAddr) override
+    {
+        auto& vec = *static_cast<std::vector<T>*>(elementAddr);
+        ar.SerializeNested(vec, *m_innerProperty);
     }
 
     DProperty* GetInnerProperty() const { return m_innerProperty.get(); }

@@ -5,6 +5,7 @@
 #include "Core/UUID.h"
 #include "Serialization/ScriptPointer.h"
 #include "Serialization/BulkDataHandle.h"
+#include "Reflection/DProperty.h"
 
 #include "SimpleMath.h"
 #include <DirectXMath.h>
@@ -40,6 +41,10 @@ public:
     virtual size_t BeginArrayLoad(const std::string& key)           = 0;
     virtual void   EndArray()                                        = 0;
 
+    // Keyless array begin/end for nested vectors (element of an outer array).
+    virtual void   BeginNestedArray(size_t count) = 0;
+    virtual size_t BeginNestedArrayLoad()         = 0;
+
     // --- Primitive serialization ---
 
     virtual void Serialize(const std::string& key, float&       value) = 0;
@@ -62,7 +67,7 @@ public:
     virtual void Serialize(const std::string& key, UUID&           value) = 0;
     virtual void Serialize(const std::string& key, BulkDataHandle& value) = 0;
 
-    // --- Array element serialization (keyless, for DVectorProperty) ---
+    // --- Array element serialization (keyless, advances array cursor) ---
 
     virtual void SerializeElement(float&       value) = 0;
     virtual void SerializeElement(double&      value) = 0;
@@ -74,6 +79,49 @@ public:
     virtual void SerializeElement(DirectX::SimpleMath::Quaternion& value) = 0;
     virtual void SerializeElement(DirectX::XMFLOAT4&               value) = 0;
     virtual void SerializeElement(DirectX::XMFLOAT4X4&             value) = 0;
+    virtual void SerializeElement(ScriptPointer&                    value) = 0;
+
+    // --- Vector helpers (non-virtual; own the Begin/loop/End pattern) ---
+
+    template <typename T>
+    void Serialize(const std::string& key, std::vector<T>& vec, DProperty& innerProp)
+    {
+        if (IsSaving())
+        {
+            BeginArray(key, vec.size());
+            for (size_t i = 0; i < vec.size(); ++i)
+                innerProp.SerializeElement(*this, &vec[i]);
+            EndArray();
+        }
+        else
+        {
+            size_t count = BeginArrayLoad(key);
+            vec.resize(count);
+            for (size_t i = 0; i < count; ++i)
+                innerProp.SerializeElement(*this, &vec[i]);
+            EndArray();
+        }
+    }
+
+    template <typename T>
+    void SerializeNested(std::vector<T>& vec, DProperty& innerProp)
+    {
+        if (IsSaving())
+        {
+            BeginNestedArray(vec.size());
+            for (size_t i = 0; i < vec.size(); ++i)
+                innerProp.SerializeElement(*this, &vec[i]);
+            EndArray();
+        }
+        else
+        {
+            size_t count = BeginNestedArrayLoad();
+            vec.resize(count);
+            for (size_t i = 0; i < count; ++i)
+                innerProp.SerializeElement(*this, &vec[i]);
+            EndArray();
+        }
+    }
 
     // --- Bulk data I/O ---
 

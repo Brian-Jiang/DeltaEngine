@@ -42,6 +42,9 @@ class DTestObjectA : public DObject
 
     DPROPERTY()
     std::vector<float> m_weights;
+
+    DPROPERTY()
+    std::vector<std::vector<float>> m_weightMatrix;
 };
 
 
@@ -58,6 +61,12 @@ class DTestObjectB : public DObject
 
     DPROPERTY()
     DTestObjectA* m_targetRef = nullptr;
+
+    DPROPERTY()
+    std::vector<DTestObjectA*> m_refs;
+
+    DPROPERTY()
+    std::vector<std::shared_ptr<DTestObjectA>> m_sharedRefs;
 };
 
 

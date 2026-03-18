@@ -183,6 +183,23 @@ void JsonAssetArchive::EndArray()
         m_arrayIndex.pop_back();
 }
 
+void JsonAssetArchive::BeginNestedArray(size_t /*count*/)
+{
+    auto& cur = *m_stack.back();
+    cur.push_back(nlohmann::json::array());
+    m_stack.push_back(&cur.back());
+}
+
+size_t JsonAssetArchive::BeginNestedArrayLoad()
+{
+    auto& cur = *m_stack.back();
+    size_t idx = m_arrayIndex.back()++;
+    nlohmann::json& elem = cur[idx];
+    m_stack.push_back(&elem);
+    m_arrayIndex.push_back(0);
+    return elem.is_array() ? elem.size() : 0;
+}
+
 // ---------------------------------------------------------------------------
 // Primitive serialization
 // ---------------------------------------------------------------------------
@@ -577,6 +594,32 @@ void JsonAssetArchive::SerializeElement(DirectX::XMFLOAT4X4& value)
                 for (int r = 0; r < 4; ++r)
                     for (int c = 0; c < 4; ++c)
                         value.m[r][c] = arr[static_cast<size_t>(r * 4 + c)].get<float>();
+            }
+            catch (...) {}
+        }
+    }
+}
+
+void JsonAssetArchive::SerializeElement(ScriptPointer& value)
+{
+    auto& cur = *m_stack.back();
+    if (IsSaving())
+    {
+        cur.push_back(nlohmann::json{
+            { "assetId",  value.m_assetId.ToString()  },
+            { "objectId", value.m_objectId.ToString() }
+        });
+    }
+    else if (!m_arrayIndex.empty())
+    {
+        size_t idx = m_arrayIndex.back()++;
+        if (idx < cur.size())
+        {
+            try
+            {
+                auto& sp         = cur[idx];
+                value.m_assetId  = UUID::FromString(sp["assetId"].get<std::string>());
+                value.m_objectId = UUID::FromString(sp["objectId"].get<std::string>());
             }
             catch (...) {}
         }

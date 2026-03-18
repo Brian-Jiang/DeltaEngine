@@ -61,6 +61,10 @@ public:
 
     virtual void Serialize(AssetArchive& ar, void* objectPtr) = 0;
 
+    /// Serialize the value at elementAddr directly (no GetValue / GetName).
+    /// Used by DVectorProperty to serialize each element.
+    virtual void SerializeElement(AssetArchive& ar, void* elementAddr) = 0;
+
     const std::string& GetName() const { return m_name; }
     const std::string& GetType() const { return m_type; }
     uint32_t GetOffset() const { return m_offset; }
@@ -154,6 +158,7 @@ public:
     DFloatProperty(std::string name, uint32_t offset);
     EPropertyType GetPropertyType() const override;
     void Serialize(AssetArchive& ar, void* objectPtr) override;
+    void SerializeElement(AssetArchive& ar, void* elementAddr) override;
 };
 
 
@@ -163,6 +168,7 @@ public:
     DIntProperty(std::string name, uint32_t offset);
     EPropertyType GetPropertyType() const override;
     void Serialize(AssetArchive& ar, void* objectPtr) override;
+    void SerializeElement(AssetArchive& ar, void* elementAddr) override;
 };
 
 
@@ -172,6 +178,7 @@ public:
     DBoolProperty(std::string name, uint32_t offset);
     EPropertyType GetPropertyType() const override;
     void Serialize(AssetArchive& ar, void* objectPtr) override;
+    void SerializeElement(AssetArchive& ar, void* elementAddr) override;
 };
 
 
@@ -181,6 +188,7 @@ public:
     DDoubleProperty(std::string name, uint32_t offset);
     EPropertyType GetPropertyType() const override;
     void Serialize(AssetArchive& ar, void* objectPtr) override;
+    void SerializeElement(AssetArchive& ar, void* elementAddr) override;
 };
 
 
@@ -198,6 +206,7 @@ public:
     std::string ToString(const void* address) const override;
     EPropertyType GetPropertyType() const override;
     void Serialize(AssetArchive& ar, void* objectPtr) override;
+    void SerializeElement(AssetArchive& ar, void* elementAddr) override;
 };
 
 
@@ -215,6 +224,7 @@ public:
     std::string ToString(const void* address) const override;
     EPropertyType GetPropertyType() const override;
     void Serialize(AssetArchive& ar, void* objectPtr) override;
+    void SerializeElement(AssetArchive& ar, void* elementAddr) override;
 };
 
 
@@ -232,6 +242,7 @@ public:
     std::string ToString(const void* address) const override;
     EPropertyType GetPropertyType() const override;
     void Serialize(AssetArchive& ar, void* objectPtr) override;
+    void SerializeElement(AssetArchive& ar, void* elementAddr) override;
 };
 
 
@@ -242,6 +253,7 @@ public:
         : DProperty(std::move(name), std::move(type), offset, size) {}
 
     void Serialize(AssetArchive& ar, void* objectPtr) override;
+    void SerializeElement(AssetArchive& ar, void* elementAddr) override;
 
     virtual void ResolvePointer(void* objectPtr, DObject* resolved) = 0;
 
@@ -429,6 +441,7 @@ public:
     std::string ToString(const void* address) const override;
     EPropertyType GetPropertyType() const override;
     void Serialize(AssetArchive& ar, void* objectPtr) override;
+    void SerializeElement(AssetArchive& ar, void* elementAddr) override;
 };
 
 
@@ -446,6 +459,7 @@ public:
     std::string ToString(const void* address) const override;
     EPropertyType GetPropertyType() const override;
     void Serialize(AssetArchive& ar, void* objectPtr) override;
+    void SerializeElement(AssetArchive& ar, void* elementAddr) override;
 };
 
 
@@ -463,6 +477,7 @@ public:
     std::string ToString(const void* address) const override;
     EPropertyType GetPropertyType() const override;
     void Serialize(AssetArchive& ar, void* objectPtr) override;
+    void SerializeElement(AssetArchive& ar, void* elementAddr) override;
 };
 
 DELTA_ENGINE_NS_END

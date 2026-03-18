@@ -39,6 +39,8 @@ public:
     void   BeginArray(const std::string& key, size_t count) override;
     size_t BeginArrayLoad(const std::string& key)           override;
     void   EndArray()                                        override;
+    void   BeginNestedArray(size_t count)                    override;
+    size_t BeginNestedArrayLoad()                            override;
 
     // --- Primitive serialization overrides ---
 
@@ -74,6 +76,7 @@ public:
     void SerializeElement(DirectX::SimpleMath::Quaternion& value) override;
     void SerializeElement(DirectX::XMFLOAT4&               value) override;
     void SerializeElement(DirectX::XMFLOAT4X4&             value) override;
+    void SerializeElement(ScriptPointer&                    value) override;
 
     // --- Bulk data I/O overrides ---
 
