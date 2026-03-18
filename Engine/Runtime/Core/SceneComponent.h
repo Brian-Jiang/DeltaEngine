@@ -90,9 +90,13 @@ protected:
     virtual void OnTransformChanged() {}
 
 private:
+    DPROPERTY()
     DirectX::XMMATRIX m_localTransform;
+
     DirectX::XMMATRIX m_worldTransform;
     SceneComponent* m_parent;
+
+    DPROPERTY()
     std::vector<SceneComponent*> m_children;
     DirectX::SimpleMath::Vector3 m_eulerRotationCache;
 

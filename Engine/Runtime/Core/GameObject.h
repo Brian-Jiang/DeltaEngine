@@ -91,9 +91,15 @@ private:
     DPROPERTY()
     std::string m_name;
 
+    DPROPERTY()
     SceneComponent* m_rootSceneComponent;
+
+    DPROPERTY()
     std::vector<SceneComponent*> m_sceneComponents;
+
+    DPROPERTY()
     std::vector<DComponent*> m_components;
+
     DWorld* m_currentWorld;
 };
 
