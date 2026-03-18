@@ -28,8 +28,14 @@ from templates import (
     DFUNCTION_WITH_PARAMS,
     DFUNCTION_PARAM,
     DFUNCTION_PARAM_SHARED_PTR,
+    DFUNCTION_PARAM_VECTOR,
+    DFUNCTION_PARAM_VECTOR_OBJECT_PTR,
+    DFUNCTION_PARAM_VECTOR_SHARED_PTR,
     DFUNCTION_RETURN,
     DFUNCTION_RETURN_SHARED_PTR,
+    DFUNCTION_RETURN_VECTOR,
+    DFUNCTION_RETURN_VECTOR_OBJECT_PTR,
+    DFUNCTION_RETURN_VECTOR_SHARED_PTR,
     GENERATED_HEADER_FILE,
     GENERATED_HEADER_PARAMS_STRUCT,
     GENERATED_HEADER_PARAMS_FIELD,
@@ -93,6 +99,22 @@ def _collect_cpp_full_includes(
                 if m:
                     pointee = _strip_namespaces(m.group(1))
                     path = type_to_header.get(pointee)
+                    if path and path != source_include:
+                        cpp_full_includes.add(path)
+            dv = EXTRA_PROPERTY_HEADERS["DVectorProperty"]
+            for p in fn.params:
+                if p.is_vector:
+                    cpp_full_includes.add(dv)
+                    if p.inner_is_object_ptr and p.inner_pointee_type:
+                        pt = _strip_namespaces(p.inner_pointee_type)
+                        path = type_to_header.get(pt)
+                        if path and path != source_include:
+                            cpp_full_includes.add(path)
+            if fn.return_is_vector:
+                cpp_full_includes.add(dv)
+                if fn.return_inner_is_object_ptr and fn.return_inner_pointee_type:
+                    pt = _strip_namespaces(fn.return_inner_pointee_type)
+                    path = type_to_header.get(pt)
                     if path and path != source_include:
                         cpp_full_includes.add(path)
 
@@ -260,6 +282,97 @@ def _generate_thunk(cls: ClassInfo, fn: FunctionInfo) -> str:
     return THUNK_WITH_PARAMS_WITH_RETURN.substitute(d)
 
 
+def _dfunction_vector_param_code(p, class_name: str, func_name: str, suffix: str) -> str:
+    off = f"offsetof({class_name}_{func_name}_Params{suffix}, {p.name})"
+    if p.inner_is_object_ptr:
+        if _is_shared_ptr_property(p.inner_property_class):
+            return DFUNCTION_PARAM_VECTOR_SHARED_PTR.substitute(
+                pointee_type=p.inner_pointee_type,
+                param_name=p.name,
+                class_name=class_name,
+                func_name=func_name,
+                params_struct_suffix=suffix,
+            )
+        return DFUNCTION_PARAM_VECTOR_OBJECT_PTR.substitute(
+            pointee_type=p.inner_pointee_type,
+            param_name=p.name,
+            class_name=class_name,
+            func_name=func_name,
+            params_struct_suffix=suffix,
+        )
+    if p.inner_property_class == "DVectorProperty":
+        m = re.match(r"^std::vector<(.+)>$", p.inner_cpp_type)
+        inner_u = m.group(1) if m else p.inner_cpp_type
+        from type_resolver import INNER_TYPE_TO_CPP as _INNER_MAP
+        _cpp_to_prop = {v: k for k, v in _INNER_MAP.items()}
+        inner_inner = _cpp_to_prop.get(inner_u, "")
+        if not inner_inner:
+            return ""
+        return (
+            "        {\n"
+            f'            auto* _innerInnerProp = new {inner_inner}("{p.name}_elem_elem", 0);\n'
+            f'            auto* _innerProp = new DVectorProperty<{inner_u}>("{p.name}_elem", 0,\n'
+            f"                std::unique_ptr<DProperty>(_innerInnerProp));\n"
+            f"            fn->AddParam(new DVectorProperty<{p.inner_cpp_type}>(\n"
+            f'                "{p.name}",\n'
+            f"                {off},\n"
+            f"                std::unique_ptr<DProperty>(_innerProp)));\n"
+            "        }\n"
+        )
+    return DFUNCTION_PARAM_VECTOR.substitute(
+        inner_property_type=p.inner_property_class,
+        inner_cpp_type=p.inner_cpp_type,
+        param_name=p.name,
+        class_name=class_name,
+        func_name=func_name,
+        params_struct_suffix=suffix,
+    )
+
+
+def _dfunction_vector_return_code(fn: FunctionInfo, class_name: str, func_name: str, suffix: str) -> str:
+    off = f"offsetof({class_name}_{func_name}_Params{suffix}, returnValue)"
+    if fn.return_inner_is_object_ptr:
+        if _is_shared_ptr_property(fn.return_inner_property_class):
+            return DFUNCTION_RETURN_VECTOR_SHARED_PTR.substitute(
+                pointee_type=fn.return_inner_pointee_type,
+                class_name=class_name,
+                func_name=func_name,
+                params_struct_suffix=suffix,
+            )
+        return DFUNCTION_RETURN_VECTOR_OBJECT_PTR.substitute(
+            pointee_type=fn.return_inner_pointee_type,
+            class_name=class_name,
+            func_name=func_name,
+            params_struct_suffix=suffix,
+        )
+    if fn.return_inner_property_class == "DVectorProperty":
+        m = re.match(r"^std::vector<(.+)>$", fn.return_inner_cpp_type)
+        inner_u = m.group(1) if m else fn.return_inner_cpp_type
+        from type_resolver import INNER_TYPE_TO_CPP as _INNER_MAP
+        _cpp_to_prop = {v: k for k, v in _INNER_MAP.items()}
+        inner_inner = _cpp_to_prop.get(inner_u, "")
+        if not inner_inner:
+            return ""
+        return (
+            "        {\n"
+            f'            auto* _innerInnerProp = new {inner_inner}("returnValue_elem_elem", 0);\n'
+            f'            auto* _innerProp = new DVectorProperty<{inner_u}>("returnValue_elem", 0,\n'
+            f"                std::unique_ptr<DProperty>(_innerInnerProp));\n"
+            f"            fn->SetReturnProperty(new DVectorProperty<{fn.return_inner_cpp_type}>(\n"
+            f'                "ReturnValue",\n'
+            f"                {off},\n"
+            f"                std::unique_ptr<DProperty>(_innerProp)));\n"
+            "        }\n"
+        )
+    return DFUNCTION_RETURN_VECTOR.substitute(
+        inner_property_type=fn.return_inner_property_class,
+        inner_cpp_type=fn.return_inner_cpp_type,
+        class_name=class_name,
+        func_name=func_name,
+        params_struct_suffix=suffix,
+    )
+
+
 def _generate_function_registration(cls: ClassInfo, fn: FunctionInfo) -> str:
     thunk_suffix = _overload_suffix(fn.overload_index)
     params_struct_suffix = _overload_suffix(fn.overload_index)
@@ -274,6 +387,10 @@ def _generate_function_registration(cls: ClassInfo, fn: FunctionInfo) -> str:
 
     param_registrations = ""
     for p in fn.params:
+        if p.is_vector:
+            param_registrations += _dfunction_vector_param_code(
+                p, cls.name, fn.name, params_struct_suffix)
+            continue
         m_shared = _SHARED_PTR_PROP_RE.match(p.property_class)
         m_obj = _OBJECT_PTR_PROP_RE.match(p.property_class)
         if m_shared or m_obj:
@@ -309,7 +426,10 @@ def _generate_function_registration(cls: ClassInfo, fn: FunctionInfo) -> str:
         return "\n".join(lines) + "\n"
 
     return_registration = ""
-    if not is_void and fn.return_property_class:
+    if not is_void and fn.return_is_vector:
+        return_registration = _dfunction_vector_return_code(
+            fn, cls.name, fn.name, params_struct_suffix)
+    elif not is_void and fn.return_property_class:
         m_shared = _SHARED_PTR_PROP_RE.match(fn.return_property_class)
         m_obj = _OBJECT_PTR_PROP_RE.match(fn.return_property_class)
         if m_shared or m_obj:

@@ -189,6 +189,11 @@ class ParamInfo:
     name: str
     cpp_type: str
     property_class: str
+    is_vector: bool = False
+    inner_cpp_type: str = ""
+    inner_property_class: str = ""
+    inner_is_object_ptr: bool = False
+    inner_pointee_type: str = ""
 
 
 @dataclass
@@ -198,6 +203,11 @@ class FunctionInfo:
     return_property_class: str
     params: list[ParamInfo] = field(default_factory=list)
     overload_index: int = 1  # 1-based; _2, _3, ... for overloads
+    return_is_vector: bool = False
+    return_inner_cpp_type: str = ""
+    return_inner_property_class: str = ""
+    return_inner_is_object_ptr: bool = False
+    return_inner_pointee_type: str = ""
 
     @property
     def has_params_struct(self) -> bool:
@@ -500,14 +510,23 @@ def _parse_function(tu, method_cursor, class_name, diag=None, source_file=""):
     ret_emission = _type_spelling_for_emission(ret_type) if not is_void else "void"
 
     ret_prop_class = ""
+    ret_is_vec = False
+    ret_inner_cpp = ""
+    ret_inner_prop = ""
+    ret_inner_obj = False
+    ret_inner_pt = ""
     if not is_void:
         resolved = resolve_type(ret_type, "returnValue", class_name,
                                 diag=diag, source_file=source_file,
                                 line=method_cursor.location.line - _PREAMBLE_LINE_COUNT)
         if resolved:
             ret_prop_class = resolved[0]
-        else:
-            ret_prop_class = ""
+            if len(resolved) >= 5:
+                ret_is_vec = True
+                ret_inner_cpp = resolved[3]
+                ret_inner_prop = resolved[4]
+                ret_inner_obj = resolved[5]
+                ret_inner_pt = resolved[6]
 
     params: list[ParamInfo] = []
     expected_param_count = sum(
@@ -521,11 +540,23 @@ def _parse_function(tu, method_cursor, class_name, diag=None, source_file=""):
                                       line=child.location.line - _PREAMBLE_LINE_COUNT)
             if p_resolved is None:
                 continue
-            params.append(ParamInfo(
-                name=child.spelling,
-                cpp_type=_type_spelling_for_emission(child.type),
-                property_class=p_resolved[0],
-            ))
+            if len(p_resolved) >= 5:
+                params.append(ParamInfo(
+                    name=child.spelling,
+                    cpp_type=_type_spelling_for_emission(child.type),
+                    property_class=p_resolved[0],
+                    is_vector=True,
+                    inner_cpp_type=p_resolved[3],
+                    inner_property_class=p_resolved[4],
+                    inner_is_object_ptr=p_resolved[5],
+                    inner_pointee_type=p_resolved[6],
+                ))
+            else:
+                params.append(ParamInfo(
+                    name=child.spelling,
+                    cpp_type=_type_spelling_for_emission(child.type),
+                    property_class=p_resolved[0],
+                ))
 
     if len(params) != expected_param_count:
         return None
@@ -535,6 +566,11 @@ def _parse_function(tu, method_cursor, class_name, diag=None, source_file=""):
         return_type=ret_emission if not is_void else "void",
         return_property_class=ret_prop_class,
         params=params,
+        return_is_vector=ret_is_vec,
+        return_inner_cpp_type=ret_inner_cpp,
+        return_inner_property_class=ret_inner_prop,
+        return_inner_is_object_ptr=ret_inner_obj,
+        return_inner_pointee_type=ret_inner_pt,
     )
 
 
