@@ -97,6 +97,7 @@ static void TestSingleAssetRoundTrip()
     rawA->m_name     = "TestHero";
     rawA->m_position = { 1.0f, 2.0f, 3.0f };
     rawA->m_rotation = { 0.0f, 0.707f, 0.0f, 0.707f };
+    rawA->m_weights  = { 1.0f, 2.0f, 3.0f };
     asset->AddObject(std::shared_ptr<DObject>(rawA));
 
     auto* rawB = new DTestObjectB();
@@ -134,6 +135,10 @@ static void TestSingleAssetRoundTrip()
     assert(std::abs(loadedA->m_rotation.y - 0.707f)  < 1e-3f);
     assert(std::abs(loadedA->m_rotation.z - 0.0f)   < 1e-5f);
     assert(std::abs(loadedA->m_rotation.w - 0.707f)  < 1e-3f);
+    assert(loadedA->m_weights.size() == 3);
+    assert(loadedA->m_weights[0] == 1.0f);
+    assert(loadedA->m_weights[1] == 2.0f);
+    assert(loadedA->m_weights[2] == 3.0f);
 
     auto* loadedB = dynamic_cast<DTestObjectB*>(loaded->FindObject(objBId));
     assert(loadedB != nullptr);

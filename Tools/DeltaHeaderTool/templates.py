@@ -176,6 +176,16 @@ DPROPERTY_SHARED_PTR = Template("""\
         offsetof(${class_name}, ${field_name})));
 """)
 
+DPROPERTY_VECTOR = Template("""\
+    {
+        auto* _innerProp = new ${inner_property_type}("${field_name}_elem", 0);
+        cls->AddProperty(new DVectorProperty<${inner_cpp_type}>(
+            "${field_name}",
+            offsetof(${class_name}, ${field_name}),
+            std::unique_ptr<DProperty>(_innerProp)));
+    }
+""")
+
 # ============================================================
 # DFUNCTION REGISTRATION
 # ============================================================

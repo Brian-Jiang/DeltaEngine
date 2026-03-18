@@ -26,10 +26,89 @@ TYPE_MAP = {
     "DeltaEngine::TBulkData":             "DBulkDataProperty",
 }
 
+VECTOR_ELEMENT_PROPERTY_CLASSES = {
+    "DFloatProperty", "DIntProperty", "DBoolProperty", "DDoubleProperty",
+    "DStringProperty", "DWStringProperty",
+    "DVector3Property", "DQuaternionProperty",
+    "DFloat4Property", "DFloat4x4Property",
+}
+
+INNER_TYPE_TO_CPP = {
+    "DFloatProperty":      "float",
+    "DIntProperty":        "int",
+    "DBoolProperty":       "bool",
+    "DDoubleProperty":     "double",
+    "DStringProperty":     "std::string",
+    "DWStringProperty":    "std::wstring",
+    "DVector3Property":    "DirectX::SimpleMath::Vector3",
+    "DQuaternionProperty": "DirectX::SimpleMath::Quaternion",
+    "DFloat4Property":     "DirectX::XMFLOAT4",
+    "DFloat4x4Property":   "DirectX::XMFLOAT4X4",
+}
+
 _SHARED_PTR_RE = re.compile(r"^std::shared_ptr<(.+)>$")
 _STRING_RE = re.compile(r"^std::(?:string|basic_string\s*<\s*char\b)")
 _WSTRING_RE = re.compile(r"^std::(?:wstring|basic_string\s*<\s*wchar_t\b)")
 _VECTOR_RE = re.compile(r"^std::vector\s*<")
+
+
+def _extract_vector_inner_type(spelling: str) -> str | None:
+    """Extract the first template argument from std::vector<T, ...>.
+    Uses bracket-aware parsing to handle nested templates correctly."""
+    m = re.match(r'^(?:std::)?vector\s*<\s*', spelling)
+    if not m:
+        return None
+    start = m.end()
+    depth = 0
+    for i in range(start, len(spelling)):
+        ch = spelling[i]
+        if ch == '<':
+            depth += 1
+        elif ch == '>':
+            if depth == 0:
+                return spelling[start:i].strip()
+            depth -= 1
+        elif ch == ',' and depth == 0:
+            return spelling[start:i].strip()
+    return None
+
+
+def _resolve_vector_inner(inner_type: str) -> tuple[str, str] | None:
+    """Resolve a vector inner type string to (inner_property_class, inner_cpp_type).
+    Returns None if the inner type is not supported as a vector element."""
+    s = _strip_elaborated(_strip_const(inner_type.strip()))
+
+    prop = TYPE_MAP.get(s)
+    if prop and prop in VECTOR_ELEMENT_PROPERTY_CLASSES:
+        return (prop, INNER_TYPE_TO_CPP.get(prop, s))
+
+    if _STRING_RE.match(s):
+        return ("DStringProperty", "std::string")
+    if _WSTRING_RE.match(s):
+        return ("DWStringProperty", "std::wstring")
+
+    return None
+
+
+def _try_resolve_vector(spelling, field_name, class_name, *, diag=None, source_file="", line=0):
+    """Try to resolve a std::vector<T> type. Returns (property_class, False, "", inner_cpp, inner_prop) or None."""
+    inner_type = _extract_vector_inner_type(spelling)
+    if inner_type is None:
+        return None
+
+    resolved = _resolve_vector_inner(inner_type)
+    if resolved is None:
+        msg = (f"std::vector<{inner_type}> on property '{field_name}' — "
+               f"inner type '{inner_type}' has no supported DProperty subclass. "
+               f"Only value types (float, int, bool, double, string, Vector3, etc.) are supported.")
+        if diag:
+            diag.warn(source_file, line, msg)
+        else:
+            print(f"WARNING: {msg} in '{class_name}' — skipping", file=sys.stderr)
+        return None
+
+    inner_prop_class, inner_cpp = resolved
+    return ("DVectorProperty", False, "", inner_cpp, inner_prop_class)
 
 
 def _strip_elaborated(spelling: str) -> str:
@@ -45,6 +124,7 @@ def resolve_type(cursor_type, field_name="", class_name="", *,
                   diag=None, source_file="", line=0):
     """Resolve a clang Type to (property_class, is_object_ptr, pointee_type).
 
+    For vector types returns (property_class, False, "", inner_cpp_type, inner_property_class).
     Returns None if the type is unrecognized.
     """
     if cursor_type.kind == TypeKind.LVALUEREFERENCE:
@@ -73,17 +153,8 @@ def resolve_type(cursor_type, field_name="", class_name="", *,
         return ("DWStringProperty", False, "")
 
     if _VECTOR_RE.match(spelling):
-        if diag:
-            diag.warn(source_file, line,
-                      f"std::vector is not supported for reflection on property '{field_name}'; "
-                      "use GetX/SetX accessors instead.")
-        else:
-            print(
-                f"WARNING: std::vector is not supported for reflection on property "
-                f"'{field_name}' in '{class_name}' — skipping",
-                file=sys.stderr,
-            )
-        return None
+        return _try_resolve_vector(spelling, field_name, class_name,
+                                   diag=diag, source_file=source_file, line=line)
 
     canonical = _strip_elaborated(_strip_const(cursor_type.get_canonical().spelling))
     prop = TYPE_MAP.get(canonical)
@@ -101,17 +172,8 @@ def resolve_type(cursor_type, field_name="", class_name="", *,
         return ("DWStringProperty", False, "")
 
     if _VECTOR_RE.match(canonical):
-        if diag:
-            diag.warn(source_file, line,
-                      f"std::vector is not supported for reflection on property '{field_name}'; "
-                      "use GetX/SetX accessors instead.")
-        else:
-            print(
-                f"WARNING: std::vector is not supported for reflection on property "
-                f"'{field_name}' in '{class_name}' — skipping",
-                file=sys.stderr,
-            )
-        return None
+        return _try_resolve_vector(canonical, field_name, class_name,
+                                   diag=diag, source_file=source_file, line=line)
 
     if diag:
         diag.warn(source_file, line,
@@ -126,8 +188,9 @@ def resolve_type(cursor_type, field_name="", class_name="", *,
     return None
 
 
-def resolve_type_from_string(type_str: str, field_name: str = "", class_name: str = "") -> tuple[str, bool, str] | None:
+def resolve_type_from_string(type_str: str, field_name: str = "", class_name: str = "") -> tuple | None:
     """Resolve a type string (from source text) to (property_class, is_object_ptr, pointee_type).
+    For vectors returns 5-tuple: (property_class, False, "", inner_cpp, inner_prop_class).
     Used as fallback when AST misses fields (e.g. std::string with stub types)."""
     s = _strip_const(type_str.strip())
     for prefix in ("class ", "struct "):
@@ -155,7 +218,7 @@ def resolve_type_from_string(type_str: str, field_name: str = "", class_name: st
         return ("DWStringProperty", False, "")
 
     if _VECTOR_RE.match(s):
-        return None
+        return _try_resolve_vector(s, field_name, class_name)
 
     return None
 

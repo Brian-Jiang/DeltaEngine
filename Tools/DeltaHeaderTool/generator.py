@@ -21,6 +21,7 @@ from templates import (
     DPROPERTY_WITH_META,
     DPROPERTY_OBJECT_PTR,
     DPROPERTY_SHARED_PTR,
+    DPROPERTY_VECTOR,
     DFUNCTION_VOID_NO_PARAMS,
     DFUNCTION_WITH_PARAMS,
     DFUNCTION_PARAM,
@@ -39,6 +40,7 @@ _OBJECT_PTR_PROP_RE = re.compile(r"^DObjectPtrProperty<(.+)>$")
 
 EXTRA_PROPERTY_HEADERS = {
     "DBulkDataProperty": "Runtime/Reflection/DBulkDataProperty.h",
+    "DVectorProperty": "Runtime/Reflection/DVectorProperty.h",
 }
 
 
@@ -358,7 +360,14 @@ def _generate_class_registration(cls: ClassInfo) -> str:
         ))
 
     for prop in cls.properties:
-        if prop.is_object_ptr and _is_shared_ptr_property(prop.property_class):
+        if prop.is_vector:
+            parts.append(DPROPERTY_VECTOR.substitute(
+                inner_property_type=prop.inner_property_class,
+                inner_cpp_type=prop.inner_cpp_type,
+                field_name=prop.name,
+                class_name=cls.name,
+            ))
+        elif prop.is_object_ptr and _is_shared_ptr_property(prop.property_class):
             parts.append(DPROPERTY_SHARED_PTR.substitute(
                 pointee_type=prop.pointee_type,
                 field_name=prop.name,

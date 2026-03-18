@@ -13,6 +13,7 @@
 #include "Editor/Assets/EditorAssetDatabase.h"
 #include "Runtime/IO/IOManager.h"
 #include "Runtime/Core/DShader.h"
+#include "Runtime/Core/DMesh.h"
 
 #include "imgui.h"
 #include "backends/imgui_impl_sdl3.h"
@@ -192,6 +193,27 @@ void EditorMain::CreateAssets()
         });
 
         m_assetDatabase->CreateAsset(IOManager::GetEngineImportedAssetFullPath("DefaultShader"), shader);
+    }
+
+    {
+        DMesh* mesh = CreateDObject<DMesh>();
+        mesh->Initialize(std::wstring(L"home/source/home.fbx"));
+        //std::vector<DTexture*> textures = mesh->GetTextures();
+        //std::vector<DMaterial*> materials;
+        //for (int i = 0; i < mesh->GetSubMeshCount(); i++) {
+        //    DMaterial* material = CreateDObject<DMaterial>();
+        //    material->Initialize(shader);
+        //    if (i < textures.size()) {
+        //        material->AddTexture(textures[i]);
+        //    }
+        //    materials.push_back(material);
+        //}
+
+        //mesh->SetMaterials(materials);
+
+        mesh->m_testFloats = { 0.5f, 1.0f, 2.0f };
+
+        m_assetDatabase->CreateAsset(IOManager::GetEngineImportedAssetFullPath("HomeMesh"), mesh);
     }
 }
 

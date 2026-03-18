@@ -3,6 +3,7 @@
 #include "EngineIncludes.h"
 
 #include <string>
+#include <vector>
 
 #include "SimpleMath.h"
 #include "Runtime/Core/DObject.h"
@@ -38,6 +39,9 @@ class DTestObjectA : public DObject
 
     DPROPERTY()
     DirectX::SimpleMath::Quaternion m_rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+    DPROPERTY()
+    std::vector<float> m_weights;
 };
 
 

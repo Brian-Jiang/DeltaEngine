@@ -62,6 +62,19 @@ public:
     virtual void Serialize(const std::string& key, UUID&           value) = 0;
     virtual void Serialize(const std::string& key, BulkDataHandle& value) = 0;
 
+    // --- Array element serialization (keyless, for DVectorProperty) ---
+
+    virtual void SerializeElement(float&       value) = 0;
+    virtual void SerializeElement(double&      value) = 0;
+    virtual void SerializeElement(int&         value) = 0;
+    virtual void SerializeElement(bool&        value) = 0;
+    virtual void SerializeElement(std::string& value) = 0;
+    virtual void SerializeElement(std::wstring& value) = 0;
+    virtual void SerializeElement(DirectX::SimpleMath::Vector3&    value) = 0;
+    virtual void SerializeElement(DirectX::SimpleMath::Quaternion& value) = 0;
+    virtual void SerializeElement(DirectX::XMFLOAT4&               value) = 0;
+    virtual void SerializeElement(DirectX::XMFLOAT4X4&             value) = 0;
+
     // --- Bulk data I/O ---
 
     virtual void                  WriteBulkData(uint32_t bulkId, const void* data, uint64_t size) = 0;

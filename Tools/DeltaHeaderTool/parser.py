@@ -177,6 +177,9 @@ class PropertyInfo:
     is_object_ptr: bool = False
     pointee_type: str = ""
     metadata: dict = field(default_factory=dict)
+    is_vector: bool = False
+    inner_cpp_type: str = ""
+    inner_property_class: str = ""
 
 
 @dataclass
@@ -577,7 +580,10 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
                                     line=child.location.line - _PREAMBLE_LINE_COUNT)
             if resolved is None:
                 continue
-            prop_class, is_obj_ptr, pointee = resolved
+            prop_class, is_obj_ptr, pointee = resolved[0], resolved[1], resolved[2]
+            is_vec = len(resolved) >= 5
+            inner_cpp = resolved[3] if is_vec else ""
+            inner_prop = resolved[4] if is_vec else ""
             offset_bits = class_cursor.type.get_offset(child.spelling)
             offset_bytes = offset_bits // 8 if offset_bits >= 0 else -1
             dprop_args = _extract_macro_args(tu, child, "DPROPERTY") or ""
@@ -590,6 +596,9 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
                 is_object_ptr=is_obj_ptr,
                 pointee_type=pointee,
                 metadata=prop_metadata,
+                is_vector=is_vec,
+                inner_cpp_type=inner_cpp,
+                inner_property_class=inner_prop,
             ))
 
         elif child.kind == ci.CursorKind.FUNCTION_TEMPLATE:
@@ -654,7 +663,10 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
                 continue
             resolved = resolve_type_from_string(type_str, field_name, class_name)
             if resolved is not None:
-                prop_class, is_obj_ptr, pointee = resolved
+                prop_class, is_obj_ptr, pointee = resolved[0], resolved[1], resolved[2]
+                is_vec = len(resolved) >= 5
+                inner_cpp = resolved[3] if is_vec else ""
+                inner_prop = resolved[4] if is_vec else ""
                 info.properties.append(PropertyInfo(
                     name=field_name,
                     cpp_type=type_str,
@@ -662,6 +674,9 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
                     offset=-1,
                     is_object_ptr=is_obj_ptr,
                     pointee_type=pointee,
+                    is_vector=is_vec,
+                    inner_cpp_type=inner_cpp,
+                    inner_property_class=inner_prop,
                 ))
                 existing_names.add(field_name)
     except Exception:

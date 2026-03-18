@@ -1,0 +1,20 @@
+{
+  "header": {
+    "assetId": "903ccbaf-4026-4ecb-80a4-289606650db8",
+    "className": "DPrimaryAsset",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DMesh",
+      "_objectId": "9726ef21-d0a5-4137-8fa8-2964518fe9e6",
+      "m_sourcePath": "home/source/home.fbx",
+      "m_testFloats": [
+        0.5,
+        1.0,
+        2.0
+      ]
+    }
+  ]
+}

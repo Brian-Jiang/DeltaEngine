@@ -171,6 +171,8 @@ size_t JsonAssetArchive::BeginArrayLoad(const std::string& key)
         m_arrayIndex.push_back(0);
         return cur[key].size();
     }
+    m_stack.push_back(m_stack.back());
+    m_arrayIndex.push_back(0);
     return 0;
 }
 
@@ -394,6 +396,190 @@ void JsonAssetArchive::Serialize(const std::string& key, BulkDataHandle& value)
             value.m_dataSize = cur[key]["size"].get<uint64_t>();
         }
         catch (...) {}
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Array element serialization
+// ---------------------------------------------------------------------------
+
+void JsonAssetArchive::SerializeElement(float& value)
+{
+    auto& cur = *m_stack.back();
+    if (IsSaving())
+        cur.push_back(value);
+    else if (!m_arrayIndex.empty())
+    {
+        size_t idx = m_arrayIndex.back()++;
+        if (idx < cur.size())
+            try { value = cur[idx].get<float>(); } catch (...) {}
+    }
+}
+
+void JsonAssetArchive::SerializeElement(double& value)
+{
+    auto& cur = *m_stack.back();
+    if (IsSaving())
+        cur.push_back(value);
+    else if (!m_arrayIndex.empty())
+    {
+        size_t idx = m_arrayIndex.back()++;
+        if (idx < cur.size())
+            try { value = cur[idx].get<double>(); } catch (...) {}
+    }
+}
+
+void JsonAssetArchive::SerializeElement(int& value)
+{
+    auto& cur = *m_stack.back();
+    if (IsSaving())
+        cur.push_back(value);
+    else if (!m_arrayIndex.empty())
+    {
+        size_t idx = m_arrayIndex.back()++;
+        if (idx < cur.size())
+            try { value = cur[idx].get<int>(); } catch (...) {}
+    }
+}
+
+void JsonAssetArchive::SerializeElement(bool& value)
+{
+    auto& cur = *m_stack.back();
+    if (IsSaving())
+        cur.push_back(value);
+    else if (!m_arrayIndex.empty())
+    {
+        size_t idx = m_arrayIndex.back()++;
+        if (idx < cur.size())
+            try { value = cur[idx].get<bool>(); } catch (...) {}
+    }
+}
+
+void JsonAssetArchive::SerializeElement(std::string& value)
+{
+    auto& cur = *m_stack.back();
+    if (IsSaving())
+        cur.push_back(value);
+    else if (!m_arrayIndex.empty())
+    {
+        size_t idx = m_arrayIndex.back()++;
+        if (idx < cur.size())
+            try { value = cur[idx].get<std::string>(); } catch (...) {}
+    }
+}
+
+void JsonAssetArchive::SerializeElement(std::wstring& value)
+{
+    auto& cur = *m_stack.back();
+    if (IsSaving())
+        cur.push_back(WStringToUtf8(value));
+    else if (!m_arrayIndex.empty())
+    {
+        size_t idx = m_arrayIndex.back()++;
+        if (idx < cur.size())
+            try { value = Utf8ToWString(cur[idx].get<std::string>()); } catch (...) {}
+    }
+}
+
+void JsonAssetArchive::SerializeElement(DirectX::SimpleMath::Vector3& value)
+{
+    auto& cur = *m_stack.back();
+    if (IsSaving())
+    {
+        cur.push_back(nlohmann::json::array({ value.x, value.y, value.z }));
+    }
+    else if (!m_arrayIndex.empty())
+    {
+        size_t idx = m_arrayIndex.back()++;
+        if (idx < cur.size())
+        {
+            try
+            {
+                auto& arr = cur[idx];
+                value.x = arr[0].get<float>();
+                value.y = arr[1].get<float>();
+                value.z = arr[2].get<float>();
+            }
+            catch (...) {}
+        }
+    }
+}
+
+void JsonAssetArchive::SerializeElement(DirectX::SimpleMath::Quaternion& value)
+{
+    auto& cur = *m_stack.back();
+    if (IsSaving())
+    {
+        cur.push_back(nlohmann::json::array({ value.x, value.y, value.z, value.w }));
+    }
+    else if (!m_arrayIndex.empty())
+    {
+        size_t idx = m_arrayIndex.back()++;
+        if (idx < cur.size())
+        {
+            try
+            {
+                auto& arr = cur[idx];
+                value.x = arr[0].get<float>();
+                value.y = arr[1].get<float>();
+                value.z = arr[2].get<float>();
+                value.w = arr[3].get<float>();
+            }
+            catch (...) {}
+        }
+    }
+}
+
+void JsonAssetArchive::SerializeElement(DirectX::XMFLOAT4& value)
+{
+    auto& cur = *m_stack.back();
+    if (IsSaving())
+    {
+        cur.push_back(nlohmann::json::array({ value.x, value.y, value.z, value.w }));
+    }
+    else if (!m_arrayIndex.empty())
+    {
+        size_t idx = m_arrayIndex.back()++;
+        if (idx < cur.size())
+        {
+            try
+            {
+                auto& arr = cur[idx];
+                value.x = arr[0].get<float>();
+                value.y = arr[1].get<float>();
+                value.z = arr[2].get<float>();
+                value.w = arr[3].get<float>();
+            }
+            catch (...) {}
+        }
+    }
+}
+
+void JsonAssetArchive::SerializeElement(DirectX::XMFLOAT4X4& value)
+{
+    auto& cur = *m_stack.back();
+    if (IsSaving())
+    {
+        nlohmann::json arr = nlohmann::json::array();
+        for (int r = 0; r < 4; ++r)
+            for (int c = 0; c < 4; ++c)
+                arr.push_back(value.m[r][c]);
+        cur.push_back(std::move(arr));
+    }
+    else if (!m_arrayIndex.empty())
+    {
+        size_t idx = m_arrayIndex.back()++;
+        if (idx < cur.size())
+        {
+            try
+            {
+                auto& arr = cur[idx];
+                for (int r = 0; r < 4; ++r)
+                    for (int c = 0; c < 4; ++c)
+                        value.m[r][c] = arr[static_cast<size_t>(r * 4 + c)].get<float>();
+            }
+            catch (...) {}
+        }
     }
 }
 

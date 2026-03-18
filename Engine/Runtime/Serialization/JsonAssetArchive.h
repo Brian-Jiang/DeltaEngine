@@ -62,6 +62,19 @@ public:
     void Serialize(const std::string& key, UUID&           value) override;
     void Serialize(const std::string& key, BulkDataHandle& value) override;
 
+    // --- Array element serialization overrides ---
+
+    void SerializeElement(float&       value) override;
+    void SerializeElement(double&      value) override;
+    void SerializeElement(int&         value) override;
+    void SerializeElement(bool&        value) override;
+    void SerializeElement(std::string& value) override;
+    void SerializeElement(std::wstring& value) override;
+    void SerializeElement(DirectX::SimpleMath::Vector3&    value) override;
+    void SerializeElement(DirectX::SimpleMath::Quaternion& value) override;
+    void SerializeElement(DirectX::XMFLOAT4&               value) override;
+    void SerializeElement(DirectX::XMFLOAT4X4&             value) override;
+
     // --- Bulk data I/O overrides ---
 
     void                 WriteBulkData(uint32_t bulkId, const void* data, uint64_t size) override;

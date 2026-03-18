@@ -32,7 +32,7 @@ public:
     //DMesh(std::wstring sourcePath, std::shared_ptr<DMaterial> material);
     //DMesh(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices, std::shared_ptr<DMaterial>& material);
 
-    void Initialize(std::wstring sourcePath);
+    DELTAENGINE_API void Initialize(std::wstring sourcePath);
 
     DFUNCTION()
     DELTAENGINE_API void SetMaterials(std::vector<DMaterial*>& materials);
@@ -65,6 +65,10 @@ private:
 
     DPROPERTY()
     std::wstring m_sourcePath;
+
+public:
+    DPROPERTY()
+    std::vector<float> m_testFloats;
 };
 
 DELTA_ENGINE_NS_END
