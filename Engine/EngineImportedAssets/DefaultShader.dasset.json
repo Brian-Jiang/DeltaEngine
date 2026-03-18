@@ -1,0 +1,19 @@
+{
+  "header": {
+    "assetId": "080e56ab-7de7-481d-b3d3-4eb97e736c02",
+    "className": "DPrimaryAsset",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DShader",
+      "_objectId": "ac0b7898-1f3e-40f0-8325-e27d8acae9f5",
+      "m_pixelShaderEntryPoint": "PSMain",
+      "m_pixelShaderTargetProfile": "ps_6_0",
+      "m_sourcePath": "Shaders.hlsl",
+      "m_vertexShaderEntryPoint": "VSMain",
+      "m_vertexShaderTargetProfile": "vs_6_0"
+    }
+  ]
+}

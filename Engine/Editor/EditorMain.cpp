@@ -12,6 +12,7 @@
 #include "Editor/Style/EditorTheme.h"
 #include "Editor/Assets/EditorAssetDatabase.h"
 #include "Runtime/IO/IOManager.h"
+#include "Runtime/Core/DShader.h"
 
 #include "imgui.h"
 #include "backends/imgui_impl_sdl3.h"
@@ -100,8 +101,8 @@ EditorMain::EditorMain()
 
     m_assetDatabase = std::make_unique<EditorAssetDatabase>();
     m_assetDatabase->ScanAssetsFolder(IOManager::GetEngineImportedAssetsFolder());
-    m_assetDatabase->CreateAsset(IOManager::GetEngineImportedAssetFullPath("TestWorld"), m_engine->GetWorld());
     
+    CreateAssets();
 }
 
 EditorMain::~EditorMain()
@@ -170,6 +171,28 @@ void EditorMain::SetSceneRenderSize(UINT width, UINT height)
 void EditorMain::GetSceneRenderSize(UINT& width, UINT& height) const
 {
     m_renderManager->GetSceneRenderSize(width, height);
+}
+
+void EditorMain::CreateAssets()
+{
+    m_assetDatabase->CreateAsset(IOManager::GetEngineImportedAssetFullPath("TestWorld"), m_engine->GetWorld());
+
+    {
+        DShader* shader = CreateDObject<DShader>();
+        shader->Initialize(
+            L"Shaders.hlsl",
+            L"VSMain", L"PSMain",
+            L"vs_6_0", L"ps_6_0");
+
+        shader->SetInputLayout({
+            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+            { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+            { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        });
+
+        m_assetDatabase->CreateAsset(IOManager::GetEngineImportedAssetFullPath("DefaultShader"), shader);
+    }
 }
 
 void EditorMain::ProcessEvents()

@@ -66,6 +66,7 @@ public:
     DELTAEDITOR_API EditorTheme* GetEditorTheme() { return m_editorTheme.get(); }
 
 private:
+    void CreateAssets();
     void ProcessEvents();
     void Shutdown();
 

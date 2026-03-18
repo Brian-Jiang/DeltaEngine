@@ -28,7 +28,7 @@ public:
     //        const std::wstring& pixelShaderTargetProfile);
     ~DShader();
 
-    void Initialize(const std::wstring& sourcePath, const std::wstring& vertexShaderEntryPoint,
+    DELTAENGINE_API void Initialize(const std::wstring& sourcePath, const std::wstring& vertexShaderEntryPoint,
                     const std::wstring& pixelShaderEntryPoint, const std::wstring& vertexShaderTargetProfile,
                     const std::wstring& pixelShaderTargetProfile);
 
@@ -43,7 +43,7 @@ public:
     DFUNCTION()
     void SetPixelShaderTargetProfile(const std::wstring& targetProfile);
     
-    void SetInputLayout(const std::vector<D3D12_INPUT_ELEMENT_DESC>& inputLayout);
+    DELTAENGINE_API void SetInputLayout(const std::vector<D3D12_INPUT_ELEMENT_DESC>& inputLayout);
 
     
     inline IDxcBlob* GetVertexShaderBlob() const { return m_vertexShaderBlob.Get(); }
