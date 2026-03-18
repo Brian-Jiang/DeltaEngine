@@ -59,17 +59,12 @@ public:
 
 private:
     std::vector<std::vector<Vertex>> m_vertices;
-    DPROPERTY()
     std::vector<std::vector<unsigned int>> m_indices;
     std::vector<DMaterial*> m_materials;
     std::vector<DTexture*> m_textures;
 
     DPROPERTY()
     std::wstring m_sourcePath;
-
-public:
-    DPROPERTY()
-    std::vector<float> m_testFloats;
 };
 
 DELTA_ENGINE_NS_END

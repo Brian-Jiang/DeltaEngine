@@ -1,6 +1,6 @@
 {
   "header": {
-    "assetId": "f8fa7a6c-9659-4980-931d-cbae701d7bcd",
+    "assetId": "3afcc518-a53d-498d-9a7e-8c219e43d257",
     "className": "DPrimaryAsset",
     "magic": "DLTA",
     "version": 1
@@ -8,13 +8,8 @@
   "objects": [
     {
       "_class": "DMesh",
-      "_objectId": "9e3ca8a0-8659-4f75-8653-92c023b9eba0",
-      "m_sourcePath": "home/source/home.fbx",
-      "m_testFloats": [
-        0.5,
-        1.0,
-        2.0
-      ]
+      "_objectId": "cd0ed4f7-7279-42e7-9efb-8cd19ac77f10",
+      "m_sourcePath": "home/source/home.fbx"
     }
   ]
 }

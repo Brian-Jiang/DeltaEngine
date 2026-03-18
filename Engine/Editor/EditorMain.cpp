@@ -211,8 +211,6 @@ void EditorMain::CreateAssets()
 
         //mesh->SetMaterials(materials);
 
-        mesh->m_testFloats = { 0.5f, 1.0f, 2.0f };
-
         m_assetDatabase->CreateAsset(IOManager::GetEngineImportedAssetFullPath("HomeMesh"), mesh);
     }
 }
