@@ -30,7 +30,7 @@ public:
     //    const CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL& depthStencilState);
     ~DMaterial();
 
-    void Initialize(DShader* shader);
+    DELTAENGINE_API void Initialize(DShader* shader);
 
     DFUNCTION()
     void SetShader(DShader* shader);
@@ -40,7 +40,7 @@ public:
     void SetDepthStencilState(const CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL& depthStencilState);
 
     DFUNCTION()
-    void AddTexture(DTexture* texture);
+    DELTAENGINE_API void AddTexture(DTexture* texture);
 
     DFUNCTION()
     DTexture* GetTexture(int index) const;

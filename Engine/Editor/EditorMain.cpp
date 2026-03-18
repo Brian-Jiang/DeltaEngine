@@ -14,6 +14,7 @@
 #include "Runtime/IO/IOManager.h"
 #include "Runtime/Core/DShader.h"
 #include "Runtime/Core/DMesh.h"
+#include "Runtime/Core/DMaterial.h"
 
 #include "imgui.h"
 #include "backends/imgui_impl_sdl3.h"
@@ -178,8 +179,8 @@ void EditorMain::CreateAssets()
 {
     m_assetDatabase->CreateAsset(IOManager::GetEngineImportedAssetFullPath("TestWorld"), m_engine->GetWorld());
 
+    DShader* shader = CreateDObject<DShader>();
     {
-        DShader* shader = CreateDObject<DShader>();
         shader->Initialize(
             L"Shaders.hlsl",
             L"VSMain", L"PSMain",
@@ -198,18 +199,21 @@ void EditorMain::CreateAssets()
     {
         DMesh* mesh = CreateDObject<DMesh>();
         mesh->Initialize(std::wstring(L"home/source/home.fbx"));
-        //std::vector<DTexture*> textures = mesh->GetTextures();
-        //std::vector<DMaterial*> materials;
-        //for (int i = 0; i < mesh->GetSubMeshCount(); i++) {
-        //    DMaterial* material = CreateDObject<DMaterial>();
-        //    material->Initialize(shader);
-        //    if (i < textures.size()) {
-        //        material->AddTexture(textures[i]);
-        //    }
-        //    materials.push_back(material);
-        //}
+        std::vector<DTexture*> textures = mesh->GetTextures();
+        std::vector<DMaterial*> materials;
+        for (int i = 0; i < mesh->GetSubMeshCount(); i++) {
+            DMaterial* material = CreateDObject<DMaterial>();
+            material->Initialize(shader);
+            if (i < textures.size()) {
+                m_assetDatabase->CreateAsset(IOManager::GetEngineImportedAssetFullPath("HomeTexture_" + std::to_string(i)), textures[i]);
+                material->AddTexture(textures[i]);
+            }
+            materials.push_back(material);
 
-        //mesh->SetMaterials(materials);
+            m_assetDatabase->CreateAsset(IOManager::GetEngineImportedAssetFullPath("HomeMaterial_" + std::to_string(i)), material);
+        }
+
+        mesh->SetMaterials(materials);
 
         m_assetDatabase->CreateAsset(IOManager::GetEngineImportedAssetFullPath("HomeMesh"), mesh);
     }

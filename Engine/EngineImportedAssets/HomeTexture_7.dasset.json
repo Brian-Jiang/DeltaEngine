@@ -1,0 +1,16 @@
+{
+  "header": {
+    "assetId": "23ba1f32-dc2f-4aac-9be9-4030c8cf4444",
+    "className": "DPrimaryAsset",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DTexture",
+      "_objectId": "f11fdbd8-b966-43e9-8ba4-b240f47dc5be",
+      "m_sRGB": true,
+      "m_sourcePath": "../../../Engine/EngineSourceAssets/home\\textures\\tex_Stones.jpg"
+    }
+  ]
+}

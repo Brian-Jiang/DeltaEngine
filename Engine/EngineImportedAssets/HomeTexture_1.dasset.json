@@ -1,0 +1,16 @@
+{
+  "header": {
+    "assetId": "7fb50888-4636-40b2-a309-af8dc7940afc",
+    "className": "DPrimaryAsset",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DTexture",
+      "_objectId": "9b1accaf-cead-428f-af99-77ba26a22fdc",
+      "m_sRGB": true,
+      "m_sourcePath": "../../../Engine/EngineSourceAssets/home\\textures\\tex_Wood.jpg"
+    }
+  ]
+}
