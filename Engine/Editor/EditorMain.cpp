@@ -10,6 +10,8 @@
 #include "Editor/EditorWindows/EditorWindow_ComponentsHierarchy.h"
 #include "Editor/EditorWindows/EditorWindow_Details.h"
 #include "Editor/Style/EditorTheme.h"
+#include "Editor/Assets/EditorAssetDatabase.h"
+#include "Runtime/IO/IOManager.h"
 
 #include "imgui.h"
 #include "backends/imgui_impl_sdl3.h"
@@ -95,6 +97,11 @@ EditorMain::EditorMain()
     imguiInit.SrvDescriptorAllocFn = ImGuiDescriptorAllocate;
     imguiInit.SrvDescriptorFreeFn = ImGuiDescriptorFree;
     ImGui_ImplDX12_Init(&imguiInit);
+
+    m_assetDatabase = std::make_unique<EditorAssetDatabase>();
+    m_assetDatabase->ScanAssetsFolder(IOManager::GetEngineImportedAssetsFolder());
+    m_assetDatabase->CreateAsset(IOManager::GetEngineImportedAssetFullPath("TestWorld"), m_engine->GetWorld());
+    
 }
 
 EditorMain::~EditorMain()

@@ -16,6 +16,7 @@ DELTA_ENGINE_NS_BEGIN
 
 class EditorMain;
 class EditorTheme;
+class EditorAssetDatabase;
 
 /// Global editor instance. Set during EditorMain construction, cleared on destruction.
 extern EditorMain* g_editor;
@@ -74,6 +75,7 @@ private:
     std::shared_ptr<SDL_Window> m_window;
     std::vector<std::shared_ptr<EditorWindow>> m_editorWindows;
     std::unique_ptr<EditorTheme> m_editorTheme;
+    std::unique_ptr<EditorAssetDatabase> m_assetDatabase;
     bool m_running = true;
     int m_exitCode = 0;
 

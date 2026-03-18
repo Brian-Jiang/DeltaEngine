@@ -27,7 +27,7 @@ using namespace DeltaEngine::Reflection::Private;
 # Footer for a non-abstract DCLASS: CreateDObject specialization + static registration
 FILE_FOOTER_CLASS = Template("""\
 template <>
-${class_name}* DeltaEngine::CreateDObject<${class_name}>()
+DELTAENGINE_API ${class_name}* DeltaEngine::CreateDObject<${class_name}>()
 {
     return GetReflectionRegistry().CreateObject<${class_name}>("${class_name}");
 }

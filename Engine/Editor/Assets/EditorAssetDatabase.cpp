@@ -100,7 +100,7 @@ DPrimaryAsset::Header EditorAssetDatabase::ReadAssetHeaderFromFile(
 // LoadAsset (public)
 // ---------------------------------------------------------------------------
 
-std::shared_ptr<DPrimaryAsset> EditorAssetDatabase::LoadAsset(const AssetId& id)
+DPrimaryAsset* EditorAssetDatabase::LoadAsset(const AssetId& id)
 {
     auto it = m_assets.find(id);
     if (it == m_assets.end())
@@ -156,7 +156,7 @@ void EditorAssetDatabase::LoadAssetRecursive(const AssetId& id)
             return;
         }
 
-        auto asset = std::make_shared<DPrimaryAsset>();
+        auto asset = CreateDObject<DPrimaryAsset>();
 
         if (root.contains("header"))
         {
@@ -295,6 +295,42 @@ void EditorAssetDatabase::SaveAsset(const AssetId& id)
     }
 
     asset->ClearDirty();
+}
+
+void EditorAssetDatabase::CreateAsset(const std::filesystem::path& filePath, DPrimaryAsset* asset)
+{
+    if (!asset)
+        return;
+
+    AssetId newId = asset->GetAssetId();
+    if (newId.IsNull())
+    {
+        newId = UUID::Generate();
+        asset->GetHeader().m_persistentId = newId;
+    }
+    
+    m_assets[newId] = AssetEntry
+    {
+        .m_header   = asset->GetHeader(),
+        .m_filePath = filePath,
+        .m_state    = AssetState::Loaded,
+        .m_instance = asset,
+    };
+
+    SaveAsset(newId);
+}
+
+void EditorAssetDatabase::CreateAsset(const std::filesystem::path& filePath, DObject* object)
+{
+    if (!object)
+        return;
+
+    auto asset = CreateDObject<DPrimaryAsset>();
+    asset->GetHeader().m_persistentId = UUID::Generate();
+    asset->GetHeader().m_className = "DPrimaryAsset";
+    asset->AddObject(std::shared_ptr<DObject>(object));
+    object->SetOwningAsset(asset);
+    CreateAsset(filePath, asset);
 }
 
 // ---------------------------------------------------------------------------

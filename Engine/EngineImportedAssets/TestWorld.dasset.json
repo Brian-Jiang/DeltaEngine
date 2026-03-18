@@ -1,0 +1,14 @@
+{
+  "header": {
+    "assetId": "27233ed9-9cbf-42f2-ac00-a7e857d90708",
+    "className": "DPrimaryAsset",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DWorld",
+      "_objectId": "7a9a7ad2-32cf-4279-9a22-e171d2cb9ea3"
+    }
+  ]
+}

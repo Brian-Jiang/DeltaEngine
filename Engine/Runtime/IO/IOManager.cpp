@@ -52,3 +52,15 @@ std::string IOManager::GetEditorSourceAssetFullPath(std::string assetName)
     std::string prefix = "../../../Engine/EditorSourceAssets/";
     return prefix + assetName;
 }
+
+std::string IOManager::GetEngineImportedAssetsFolder()
+{
+    return "../../../Engine/EngineImportedAssets/";
+}
+
+std::string IOManager::GetEngineImportedAssetFullPath(std::string assetName, bool isJson)
+{
+    std::string prefix = GetEngineImportedAssetsFolder();
+    std::string extension = isJson ? ".dasset.json" : ".dasset";
+    return prefix + assetName + extension;
+}

@@ -130,6 +130,8 @@ DObject* ReflectionRegistry::CreateObject(const std::string& className) const
         handle.m_ptr = memory;
         DObject* obj = static_cast<DObject*>(memory);
         obj->SetHandle(handle);
+        obj->SetObjectId(ObjectId::Generate());
+        obj->SetOwningAsset(nullptr);
         return obj;
     }
 

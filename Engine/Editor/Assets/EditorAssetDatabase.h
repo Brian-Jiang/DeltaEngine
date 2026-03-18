@@ -29,12 +29,15 @@ public:
     const DPrimaryAsset::Header* GetAssetHeader(const AssetId& id) const;
     std::filesystem::path        GetAssetPath(const AssetId& id) const;
 
-    std::shared_ptr<DPrimaryAsset> LoadAsset(const AssetId& id);
+    DPrimaryAsset* LoadAsset(const AssetId& id);
 
     DObject* FindObject(const AssetId& assetId, const ObjectId& objId) const;
 
     void SaveDirtyAssets();
     void SaveAsset(const AssetId& id);
+
+    void CreateAsset(const std::filesystem::path& filePath, DPrimaryAsset* asset);
+    void CreateAsset(const std::filesystem::path& filePath, DObject* object);
 
     bool       IsLoaded(const AssetId& id) const;
     AssetState GetState(const AssetId& id) const;
@@ -51,7 +54,7 @@ private:
         DPrimaryAsset::Header          m_header;
         std::filesystem::path          m_filePath;
         AssetState                     m_state = AssetState::HeaderOnly;
-        std::shared_ptr<DPrimaryAsset> m_instance;
+        DPrimaryAsset*                 m_instance;
     };
 
     std::unordered_map<AssetId, AssetEntry> m_assets;
