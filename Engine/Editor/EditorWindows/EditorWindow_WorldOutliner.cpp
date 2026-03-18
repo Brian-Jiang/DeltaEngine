@@ -11,6 +11,7 @@
 #include "Editor/Style/EditorTheme.h"
 #include "Runtime/EngineMain.h"
 #include "Runtime/Core/DWorld.h"
+#include "Runtime/Core/DScene.h"
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
 #include "Runtime/Reflection/DClass.h"
@@ -168,7 +169,10 @@ void EditorWindow_WorldOutliner::Render()
     // Draw the picker popup (must be called every frame in same window)
     if (const DClass* picked = m_addGoPicker.Draw(c))
     {
-        world->CreateGameObjectByClass(picked);
+        // Create the GO in the active scene so it is persisted on save.
+        // Fall back to a temporary (non-scene) GO if no scene is active.
+        DScene* activeScene = world->GetActiveScene();
+        world->CreateGameObjectInScene(activeScene, picked);
     }
 
     // --- Filter bar ---

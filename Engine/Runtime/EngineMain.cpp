@@ -14,6 +14,10 @@
 #include "Core/DShader.h"
 #include "Core/DMaterial.h"
 #include "Core/Camera.h"
+#include "Core/DScene.h"
+#include "Assets/PA_DScene.h"
+#include "Assets/DPrimaryAsset.h"
+#include "Assets/AssetDatabaseLocator.h"
 #include "Reflection/ReflectionRegistry.h"
 #include "Reflection/DFunction.h"
 #include "Reflection/DClass.h"
@@ -34,18 +38,29 @@ EngineMain::EngineMain()
     GetReflectionRegistry().FinalizeRegistration();
 }
 
+DWorld* EngineMain::GetWorld() const
+{
+    for (const WorldContext& ctx : m_worldContextList)
+    {
+        if (ctx.type == WorldType::Editor && ctx.world)
+            return ctx.world;
+    }
+    return nullptr;
+}
+
 void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std::shared_ptr<SDL_Window> window)
 {
     dxRenderManager = std::move(sceneRenderer);
     m_window = window;
 
-    // ---- Build the scene world and add renderers ----
-    m_world = CreateDObject<DWorld>();
+    // ---- Build the editor world ----
+    DWorld* world = CreateDObject<DWorld>();
+    m_worldContextList.push_back(WorldContext{ WorldType::Editor, world });
 
 
     // ---------- game object: star mesh renderer
     {
-        GameObject* go = m_world->CreateGameObject("MeshRenderer");
+        GameObject* go = world->CreateGameObject("MeshRenderer");
         MeshRenderer* meshRenderer = go->AddSceneComponent<MeshRenderer>();
         meshRenderer->SetLocalPosition(2.0f, 0.0f, 5.0f);
 
@@ -85,7 +100,7 @@ void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std:
 
     // ---------- game object: home mesh renderer
     {
-        GameObject* go = m_world->CreateGameObject("HomeMeshRenderer");
+        GameObject* go = world->CreateGameObject("HomeMeshRenderer");
         MeshRenderer* meshRenderer = go->AddSceneComponent<MeshRenderer>();
         meshRenderer->SetLocalPosition(0.0f, 0.0f, 0.0f);
 
@@ -125,7 +140,7 @@ void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std:
 
 
     // ---------- game object: camera
-    GameObject* cameraGo = m_world->CreateGameObject("Camera");
+    GameObject* cameraGo = world->CreateGameObject("Camera");
     m_cameraGameObject = cameraGo;
     Camera* camera = cameraGo->AddSceneComponent<Camera>();
     camera->SetLocalPosition(0.0f, 50.0f, -400.0f);
@@ -133,19 +148,19 @@ void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std:
 
 
     // ---------- game object: directional light (sun)
-    GameObject* directionalLightGo = m_world->CreateGameObject("DirectionalLight");
+    GameObject* directionalLightGo = world->CreateGameObject("DirectionalLight");
     DirectionalLight* directionalLight = directionalLightGo->AddSceneComponent<DirectionalLight>();
     directionalLight->SetLocalRotation(DirectX::SimpleMath::Quaternion::CreateFromAxisAngle(DirectX::SimpleMath::Vector3::UnitX, XM_PIDIV4));
     directionalLight->UpdateParameters(XMVectorSet(0, -1, 0, 0), XMVectorSet(1.0f, 1.0f, 0.95f, 1.0f), 0.7f);
 
     // ---------- game object: point light
-    GameObject* pointLightGo = m_world->CreateGameObject("PointLight");
+    GameObject* pointLightGo = world->CreateGameObject("PointLight");
     PointLight* pointLight = pointLightGo->AddSceneComponent<PointLight>();
     pointLight->SetLocalPosition(0.0f, 3.0f, 2.0f);
     pointLight->UpdateParameters(XMVectorSet(1.0f, 0.4f, 0.2f, 1.0f), 2.0f, 15.0f);
 
     // ---------- game object: spot light
-    GameObject* spotLightGo = m_world->CreateGameObject("SpotLight");
+    GameObject* spotLightGo = world->CreateGameObject("SpotLight");
     SpotLight* spotLight = spotLightGo->AddSceneComponent<SpotLight>();
     spotLight->SetLocalPosition(-2.0f, 4.0f, 0.0f);
     spotLight->SetLocalRotation(DirectX::SimpleMath::Quaternion::CreateFromAxisAngle(DirectX::SimpleMath::Vector3::UnitZ, -XM_PIDIV4));
@@ -218,14 +233,15 @@ void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std:
     //spriteRenderer->Start(2.0f, 2.0f, "Assets/logo.png");
 
 
-    dxRenderManager->InitWorldRenderers(*m_world);
+    dxRenderManager->InitWorldRenderers(*world);
 
     //atexit(&Device::ReportLiveObjects);
 }
 
 void DeltaEngine::EngineMain::PreTick()
 {
-    m_world->PreTick(Time::deltaTime);
+    if (DWorld* world = GetWorld())
+        world->PreTick(Time::deltaTime);
 }
 
 void EngineMain::Tick()
@@ -254,19 +270,46 @@ void EngineMain::OnWindowResized(UINT width, UINT height)
 
 void EngineMain::RecordSceneDraws(std::shared_ptr<DXGraphicsContext> context)
 {
-    m_world->PreGatherDrawCalls(context);
-    context->ApplyLightBuffersToCommandList();
-    m_world->GatherDrawCalls(context);
+    if (DWorld* world = GetWorld())
+    {
+        world->PreGatherDrawCalls(context);
+        context->ApplyLightBuffersToCommandList();
+        world->GatherDrawCalls(context);
+    }
+}
+
+void EngineMain::LoadScene(const AssetId& sceneAssetId)
+{
+    DPrimaryAsset* asset = AssetDatabaseLocator::Get().LoadAsset(sceneAssetId);
+    if (!asset)
+        return;
+
+    DScene* scene = PA_DScene::GetScene(asset);
+    if (!scene)
+        return;
+
+    DWorld* world = GetWorld();
+    if (!world)
+        return;
+
+    for (GameObject* go : scene->GetGameObjects())
+        world->AddGameObjectFromScene(go);
+
+    // First scene loaded becomes the active scene.
+    if (!world->GetActiveScene())
+        world->SetActiveScene(scene);
+
+    // Re-initialise GPU state for any newly added renderers.
+    dxRenderManager->InitWorldRenderers(*world);
 }
 
 void EngineMain::Cleanup()
 {
     m_cameraGameObject = nullptr;
-    if (m_world)
-    {
-        m_world->Clear();
-        m_world = nullptr;
-    }
+    if (DWorld* world = GetWorld())
+        world->Clear();
+
+    m_worldContextList.clear();
 
     if (dxRenderManager)
     {

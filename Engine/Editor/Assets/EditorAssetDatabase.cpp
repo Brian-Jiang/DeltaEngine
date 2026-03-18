@@ -360,3 +360,13 @@ EditorAssetDatabase::AssetState EditorAssetDatabase::GetState(const AssetId& id)
     auto it = m_assets.find(id);
     return (it != m_assets.end()) ? it->second.m_state : AssetState::Unregistered;
 }
+
+AssetId EditorAssetDatabase::FindAssetIdByPath(const std::filesystem::path& path) const
+{
+    for (const auto& [id, entry] : m_assets)
+    {
+        if (entry.m_filePath == path)
+            return id;
+    }
+    return AssetId{};
+}

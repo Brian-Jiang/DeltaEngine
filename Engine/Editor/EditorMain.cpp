@@ -16,6 +16,8 @@
 #include "Runtime/Core/DShader.h"
 #include "Runtime/Core/DMesh.h"
 #include "Runtime/Core/DMaterial.h"
+#include "Runtime/Assets/PA_DScene.h"
+#include "Runtime/Assets/DPrimaryAsset.h"
 
 #include "imgui.h"
 #include "backends/imgui_impl_sdl3.h"
@@ -179,7 +181,25 @@ void EditorMain::GetSceneRenderSize(UINT& width, UINT& height) const
 
 void EditorMain::CreateAssets()
 {
-    m_assetDatabase->CreateAsset(IOManager::GetEngineImportedAssetFullPath("TestWorld"), m_engine->GetWorld());
+    // ---- Default scene ----
+    // Re-use an existing persisted scene if available; otherwise create one.
+    {
+        const std::filesystem::path scenePath =
+            IOManager::GetEngineImportedAssetFullPath("DefaultScene");
+
+        // ScanAssetsFolder already ran — look up by file path.
+        AssetId sceneId = m_assetDatabase->FindAssetIdByPath(scenePath);
+
+        if (sceneId.IsNull())
+        {
+            // No persisted scene found: create a fresh one and save it.
+            DPrimaryAsset* sceneAsset = PA_DScene::Create("DefaultScene");
+            m_assetDatabase->CreateAsset(scenePath, sceneAsset);
+            sceneId = sceneAsset->GetAssetId();
+        }
+
+        m_engine->LoadScene(sceneId);
+    }
 
     DShader* shader = CreateDObject<DShader>();
     {

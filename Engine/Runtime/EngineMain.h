@@ -12,6 +12,8 @@
 #include "Graphics/Renderer/MeshRenderer.h"
 #include "Graphics/DirectX/InstancedDrawer.h"
 #include "Runtime/Core/DWorld.h"
+#include "Runtime/Core/WorldContext.h"
+#include "Runtime/Core/UUID.h"
 #include "SDL3/SDL.h"
 #include "Core/Time.h"
 #include "Core/Camera.h"
@@ -47,6 +49,11 @@ public:
 	/// Record scene draw calls to the command list. Called by Editor during RenderFrame.
 	DELTAENGINE_API void RecordSceneDraws(std::shared_ptr<DXGraphicsContext> context);
 
+	/// Load a DScene from the asset database by asset ID.
+	/// All GameObjects in the scene are added to the Editor world.
+	/// The first scene loaded automatically becomes the active scene.
+	DELTAENGINE_API void LoadScene(const AssetId& sceneAssetId);
+
 	int exitCode;
 	GameState gameState = GameState::PLAY;
 
@@ -59,7 +66,10 @@ public:
 
 	/// Cleanup before exit. Call when shutting down.
 	DELTAENGINE_API void Cleanup();
-    inline DWorld* GetWorld() const { return m_world; }
+
+	/// Returns the first Editor world, or nullptr if none exists.
+	DELTAENGINE_API DWorld* GetWorld() const;
+
 	inline std::shared_ptr<SDL_Window> GetWindow() const { return m_window; }
 
 private:
@@ -67,7 +77,7 @@ private:
 
     std::unique_ptr<Time> time;
 
-    DWorld* m_world;
+    std::vector<WorldContext> m_worldContextList;
     GameObject* m_cameraGameObject;
 };
 
