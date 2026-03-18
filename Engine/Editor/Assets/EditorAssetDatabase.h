@@ -2,6 +2,7 @@
 
 #include "EditorIncludes.h"
 
+#include "Runtime/Assets/IAssetDatabase.h"
 #include "Runtime/Core/UUID.h"
 #include "Runtime/Assets/DPrimaryAsset.h"
 
@@ -13,7 +14,7 @@
 
 DELTA_ENGINE_NS_BEGIN
 
-class DELTAEDITOR_API EditorAssetDatabase
+class DELTAEDITOR_API EditorAssetDatabase : public IAssetDatabase
 {
 public:
     enum class AssetState
@@ -29,9 +30,9 @@ public:
     const DPrimaryAsset::Header* GetAssetHeader(const AssetId& id) const;
     std::filesystem::path        GetAssetPath(const AssetId& id) const;
 
-    DPrimaryAsset* LoadAsset(const AssetId& id);
+    DPrimaryAsset* LoadAsset(const AssetId& id) override;
 
-    DObject* FindObject(const AssetId& assetId, const ObjectId& objId) const;
+    DObject* FindObject(const AssetId& assetId, const ObjectId& objId) const override;
 
     void SaveDirtyAssets();
     void SaveAsset(const AssetId& id);
@@ -39,7 +40,7 @@ public:
     void CreateAsset(const std::filesystem::path& filePath, DPrimaryAsset* asset);
     void CreateAsset(const std::filesystem::path& filePath, DObject* object);
 
-    bool       IsLoaded(const AssetId& id) const;
+    bool       IsLoaded(const AssetId& id) const override;
     AssetState GetState(const AssetId& id) const;
 
 private:

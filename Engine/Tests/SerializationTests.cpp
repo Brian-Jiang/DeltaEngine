@@ -1,4 +1,6 @@
 #include "Core/UUID.h"
+#include "Assets/AssetDatabaseLocator.h"
+#include "Assets/NullAssetDatabase.h"
 #include "Serialization/ScriptPointer.h"
 #include "Serialization/BulkDataHandle.h"
 #include <cassert>
@@ -70,6 +72,21 @@ static void test_uuid_hash_in_map()
     assert(map[key] == 42);
 }
 
+static void test_null_asset_database_via_locator()
+{
+    NullAssetDatabase db;
+    AssetDatabaseLocator::Register(&db);
+
+    IAssetDatabase& locatorDb = AssetDatabaseLocator::Get();
+    AssetId assetId = UUID::Generate();
+    ObjectId objectId = UUID::Generate();
+
+    assert(&locatorDb == &db);
+    assert(locatorDb.LoadAsset(assetId) == nullptr);
+    assert(!locatorDb.IsLoaded(assetId));
+    assert(locatorDb.FindObject(assetId, objectId) == nullptr);
+}
+
 int main()
 {
     test_uuid_roundtrip();
@@ -79,5 +96,6 @@ int main()
     test_script_pointer();
     test_bulk_data_handle();
     test_uuid_hash_in_map();
+    test_null_asset_database_via_locator();
     return 0;
 }

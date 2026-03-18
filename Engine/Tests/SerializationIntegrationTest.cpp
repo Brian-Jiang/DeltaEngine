@@ -1,4 +1,5 @@
 #include "Runtime/Test/SerializationTestTypes.h"
+#include "Runtime/Assets/AssetDatabaseLocator.h"
 #include "Editor/Assets/EditorAssetDatabase.h"
 #include "Runtime/Serialization/JsonAssetArchive.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
@@ -74,9 +75,60 @@ static void SaveAssetWithBulkData(
     out << output.dump(2);
 }
 
+static EditorAssetDatabase& GetRegisteredEditorAssetDatabase()
+{
+    static EditorAssetDatabase db;
+    static bool registered = false;
+
+    if (!registered)
+    {
+        AssetDatabaseLocator::Register(&db);
+        registered = true;
+    }
+
+    return db;
+}
+
 // ---------------------------------------------------------------------------
 // Test 1: Single-asset round-trip with mixed properties
 // ---------------------------------------------------------------------------
+
+static void TestAssetDatabaseLocatorWithEditorAssetDatabase()
+{
+    auto tempDir = MakeTempDir("DeltaLocatorEditorDbTest");
+
+    auto asset = std::make_shared<PA_TestAsset>();
+    AssetId assetId = UUID::Generate();
+    asset->GetHeader().m_persistentId = assetId;
+    asset->GetHeader().m_className    = "PA_TestAsset";
+
+    auto* rawA = new DTestObjectA();
+    ObjectId objAId = UUID::Generate();
+    rawA->SetObjectId(objAId);
+    rawA->m_name = "LocatorHero";
+    asset->AddObject(std::shared_ptr<DObject>(rawA));
+
+    auto filePath = tempDir / "LocatorAsset.dasset.json";
+    SaveAssetToFile(asset, filePath);
+
+    EditorAssetDatabase& db = GetRegisteredEditorAssetDatabase();
+    db.ScanAssetsFolder(tempDir);
+
+    IAssetDatabase& locatorDb = AssetDatabaseLocator::Get();
+    assert(&locatorDb == &db);
+    assert(!locatorDb.IsLoaded(assetId));
+
+    auto* loaded = locatorDb.LoadAsset(assetId);
+    assert(loaded != nullptr);
+    assert(locatorDb.IsLoaded(assetId));
+
+    auto* loadedA = dynamic_cast<DTestObjectA*>(locatorDb.FindObject(assetId, objAId));
+    assert(loadedA != nullptr);
+    assert(loadedA->m_name == "LocatorHero");
+
+    std::filesystem::remove_all(tempDir);
+    std::cout << "[PASS] TestAssetDatabaseLocatorWithEditorAssetDatabase\n";
+}
 
 static void TestSingleAssetRoundTrip()
 {
@@ -631,6 +683,7 @@ int main()
 {
     GetReflectionRegistry().FinalizeRegistration();
 
+    TestAssetDatabaseLocatorWithEditorAssetDatabase();
     TestSingleAssetRoundTrip();
     TestExtraDataIgnored();
     TestMissingDataUsesDefaults();

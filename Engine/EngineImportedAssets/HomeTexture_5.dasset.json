@@ -1,6 +1,6 @@
 {
   "header": {
-    "assetId": "f48f59c0-2594-4c9b-98c8-98c966b26703",
+    "assetId": "627085b4-0f7f-474d-8f73-16f3fdc84536",
     "className": "DPrimaryAsset",
     "magic": "DLTA",
     "version": 1
@@ -8,7 +8,7 @@
   "objects": [
     {
       "_class": "DTexture",
-      "_objectId": "fdd4edeb-d2da-4e00-b3c7-b8646b13cd07",
+      "_objectId": "56bb02e8-0e16-40be-9cfe-a6583f47569e",
       "m_sRGB": true,
       "m_sourcePath": "../../../Engine/EngineSourceAssets/home\\textures\\tex_GrassFloor.jpg"
     }

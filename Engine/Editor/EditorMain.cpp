@@ -11,6 +11,7 @@
 #include "Editor/EditorWindows/EditorWindow_Details.h"
 #include "Editor/Style/EditorTheme.h"
 #include "Editor/Assets/EditorAssetDatabase.h"
+#include "Runtime/Assets/AssetDatabaseLocator.h"
 #include "Runtime/IO/IOManager.h"
 #include "Runtime/Core/DShader.h"
 #include "Runtime/Core/DMesh.h"
@@ -63,6 +64,10 @@ EditorMain::EditorMain()
     m_renderManager = std::make_unique<EditorRenderManager>(hwnd, DEFAULT_WIDTH, DEFAULT_HEIGHT);
     m_renderManager->ToggleVSync(false);
 
+    m_assetDatabase = std::make_unique<EditorAssetDatabase>();
+    AssetDatabaseLocator::Register(m_assetDatabase.get());
+    m_assetDatabase->ScanAssetsFolder(IOManager::GetEngineImportedAssetsFolder());
+
     m_engine = std::make_unique<EngineMain>();
     m_engine->Initialize(m_renderManager->GetSceneRenderer(), m_window);
 
@@ -101,9 +106,6 @@ EditorMain::EditorMain()
     imguiInit.SrvDescriptorFreeFn = ImGuiDescriptorFree;
     ImGui_ImplDX12_Init(&imguiInit);
 
-    m_assetDatabase = std::make_unique<EditorAssetDatabase>();
-    m_assetDatabase->ScanAssetsFolder(IOManager::GetEngineImportedAssetsFolder());
-    
     CreateAssets();
 }
 

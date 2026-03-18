@@ -1,6 +1,6 @@
 {
   "header": {
-    "assetId": "894984ac-0ae2-47cb-a90f-e951422297e6",
+    "assetId": "0a7f1285-c166-48b4-a20a-004e7a62f2c7",
     "className": "DPrimaryAsset",
     "magic": "DLTA",
     "version": 1
@@ -8,7 +8,7 @@
   "objects": [
     {
       "_class": "DTexture",
-      "_objectId": "2a1c1207-6c30-4e6a-90c0-274e55265d72",
+      "_objectId": "0acbfce8-7866-4b9d-b4d9-6f8eabe56ad3",
       "m_sRGB": true,
       "m_sourcePath": "../../../Engine/EngineSourceAssets/home\\textures\\tex_Folliage.jpg"
     }
