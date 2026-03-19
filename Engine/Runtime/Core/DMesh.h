@@ -9,6 +9,8 @@
 #include "Graphics/Structures/Vertex.h"
 #include "Runtime/Core/DObject.h"
 #include "assimp/material.h"
+#include "Serialization/TBulkData.h"
+#include "Serialization/ISerializationCallbackReceiver.h"
 
 #include "DMesh.generated.h"
 
@@ -22,7 +24,7 @@ DELTA_ENGINE_NS_BEGIN
 class DMaterial;
 
 DCLASS()
-class DMesh : public DObject
+class DMesh : public DObject, public ISerializationCallbackReceiver
 {
     DGENERATED_BODY(DMesh)
 
@@ -31,6 +33,7 @@ public:
     //DMesh(std::wstring sourcePath);
     //DMesh(std::wstring sourcePath, std::shared_ptr<DMaterial> material);
     //DMesh(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices, std::shared_ptr<DMaterial>& material);
+    ~DMesh();
 
     DELTAENGINE_API void Initialize(std::wstring sourcePath);
 
@@ -57,9 +60,18 @@ public:
     DFUNCTION()
     DELTAENGINE_API int GetSubMeshCount() const;
 
+    void OnBeforeSerialize() override;
+    void OnAfterDeserialize() override;
+
 private:
     std::vector<std::vector<Vertex>> m_vertices;
     std::vector<std::vector<unsigned int>> m_indices;
+
+    DPROPERTY()
+    TBulkData m_vertexData;
+
+    DPROPERTY()
+    TBulkData m_indexData;
 
     DPROPERTY()
     std::vector<DMaterial*> m_materials;

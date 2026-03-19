@@ -16,8 +16,15 @@ struct TBulkData
 
     ~TBulkData()                           { delete[] m_data; }
     TBulkData()                            = default;
-    TBulkData(const TBulkData&)            = delete;
-    TBulkData& operator=(const TBulkData&) = delete;
+
+    TBulkData(const TBulkData& other)
+    {
+        m_data = new uint8_t[other.m_size];
+        std::memcpy(m_data, other.m_data, other.m_size);
+        m_size = other.m_size;
+    }
+
+    //TBulkData& operator=(const TBulkData&) = delete;
 
     TBulkData(TBulkData&& o) noexcept
         : m_data(o.m_data), m_size(o.m_size), m_bulkId(o.m_bulkId)

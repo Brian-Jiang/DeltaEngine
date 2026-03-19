@@ -64,7 +64,7 @@ void DMesh::ImportMesh()
         // aiProcess_OptimizeGraph;
 
         // aiProcess_CalcTangentSpace |
-        // aiProcess_JoinIdenticalVertices |
+        aiProcess_JoinIdenticalVertices |
         aiProcess_Triangulate |
         // aiProcess_RemoveComponent |
         // aiProcess_GenSmoothNormals |
@@ -289,6 +289,10 @@ std::vector<DTexture*> DMesh::LoadMaterialTextures(const aiScene* scene, aiMater
     return textures;
 }
 
+DMesh::~DMesh()
+{
+}
+
 void DMesh::Initialize(std::wstring sourcePath)
 {
     m_sourcePath = sourcePath;
@@ -316,3 +320,143 @@ const std::vector<DMaterial*>& DMesh::GetMaterials() const { return m_materials;
 const std::vector<DTexture*>& DMesh::GetTextures() const { return m_textures; }
 
 int DMesh::GetSubMeshCount() const { return static_cast<int>(m_vertices.size()); }
+
+
+
+TBulkData SerializeVertices(const std::vector<std::vector<Vertex>>& vertices)
+{
+    const uint32_t submeshCount = static_cast<uint32_t>(vertices.size());
+
+    uint64_t totalSize = sizeof(uint32_t) // submeshCount
+        + sizeof(uint32_t) * submeshCount; // per-submesh counts
+    for (const auto& submesh : vertices)
+        totalSize += sizeof(Vertex) * submesh.size();
+
+    auto* buf = new uint8_t[totalSize];
+    uint8_t* cursor = buf;
+
+    std::memcpy(cursor, &submeshCount, sizeof(uint32_t));
+    cursor += sizeof(uint32_t);
+
+    for (const auto& submesh : vertices) {
+        uint32_t count = static_cast<uint32_t>(submesh.size());
+        std::memcpy(cursor, &count, sizeof(uint32_t));
+        cursor += sizeof(uint32_t);
+    }
+
+    for (const auto& submesh : vertices) {
+        uint64_t bytes = sizeof(Vertex) * submesh.size();
+        if (bytes > 0)
+            std::memcpy(cursor, submesh.data(), bytes);
+        cursor += bytes;
+    }
+
+    TBulkData bulk;
+    bulk.Set(buf, totalSize);
+    delete[] buf;
+    return bulk;
+}
+
+void DeserializeVertices(const TBulkData& bulk, std::vector<std::vector<Vertex>>& outVertices)
+{
+    if (!bulk.IsValid())
+        return;
+
+    const uint8_t* cursor = bulk.m_data;
+
+    uint32_t submeshCount = 0;
+    std::memcpy(&submeshCount, cursor, sizeof(uint32_t));
+    cursor += sizeof(uint32_t);
+
+    std::vector<uint32_t> counts(submeshCount);
+    for (uint32_t i = 0; i < submeshCount; ++i) {
+        std::memcpy(&counts[i], cursor, sizeof(uint32_t));
+        cursor += sizeof(uint32_t);
+    }
+
+    outVertices.resize(submeshCount);
+    for (uint32_t i = 0; i < submeshCount; ++i) {
+        outVertices[i].resize(counts[i]);
+        uint64_t bytes = sizeof(Vertex) * counts[i];
+        if (bytes > 0)
+            std::memcpy(outVertices[i].data(), cursor, bytes);
+        cursor += bytes;
+    }
+}
+
+// ─── Indices ───────────────────────────────────────────────────────────────
+
+TBulkData SerializeIndices(const std::vector<std::vector<unsigned int>>& indices)
+{
+    const uint32_t submeshCount = static_cast<uint32_t>(indices.size());
+
+    uint64_t totalSize = sizeof(uint32_t)
+        + sizeof(uint32_t) * submeshCount;
+    for (const auto& submesh : indices)
+        totalSize += sizeof(unsigned int) * submesh.size();
+
+    auto* buf = new uint8_t[totalSize];
+    uint8_t* cursor = buf;
+
+    std::memcpy(cursor, &submeshCount, sizeof(uint32_t));
+    cursor += sizeof(uint32_t);
+
+    for (const auto& submesh : indices) {
+        uint32_t count = static_cast<uint32_t>(submesh.size());
+        std::memcpy(cursor, &count, sizeof(uint32_t));
+        cursor += sizeof(uint32_t);
+    }
+
+    for (const auto& submesh : indices) {
+        uint64_t bytes = sizeof(unsigned int) * submesh.size();
+        if (bytes > 0)
+            std::memcpy(cursor, submesh.data(), bytes);
+        cursor += bytes;
+    }
+
+    TBulkData bulk;
+    bulk.Set(buf, totalSize);
+    delete[] buf;
+    return bulk;
+}
+
+void DeserializeIndices(const TBulkData& bulk, std::vector<std::vector<unsigned int>>& outIndices)
+{
+    if (!bulk.IsValid())
+        return;
+
+    const uint8_t* cursor = bulk.m_data;
+
+    uint32_t submeshCount = 0;
+    std::memcpy(&submeshCount, cursor, sizeof(uint32_t));
+    cursor += sizeof(uint32_t);
+
+    std::vector<uint32_t> counts(submeshCount);
+    for (uint32_t i = 0; i < submeshCount; ++i) {
+        std::memcpy(&counts[i], cursor, sizeof(uint32_t));
+        cursor += sizeof(uint32_t);
+    }
+
+    outIndices.resize(submeshCount);
+    for (uint32_t i = 0; i < submeshCount; ++i) {
+        outIndices[i].resize(counts[i]);
+        uint64_t bytes = sizeof(unsigned int) * counts[i];
+        if (bytes > 0)
+            std::memcpy(outIndices[i].data(), cursor, bytes);
+        cursor += bytes;
+    }
+}
+
+void DMesh::OnBeforeSerialize()
+{
+    // Serialize vertex and index data into bulk data
+    m_vertexData = SerializeVertices(m_vertices);
+    m_indexData = SerializeIndices(m_indices);
+}
+
+void DMesh::OnAfterDeserialize()
+{
+    // Deserialize vertex and index data from bulk data
+    DeserializeVertices(m_vertexData, m_vertices);
+    DeserializeIndices(m_indexData, m_indices);
+}

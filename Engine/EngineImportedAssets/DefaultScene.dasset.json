@@ -1,6 +1,6 @@
 {
   "header": {
-    "assetId": "2d00e515-f6a2-41a5-a35e-2fd6608c37ed",
+    "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
     "className": "DPrimaryAsset",
     "magic": "DLTA",
     "version": 1
@@ -8,7 +8,7 @@
   "objects": [
     {
       "_class": "DScene",
-      "_objectId": "ad68ac07-89ec-4969-983e-f76acf0c28ea",
+      "_objectId": "d860ed37-3c34-4546-a55d-6fe0d247c691",
       "m_components": [],
       "m_gameObjects": [
         {
@@ -76,27 +76,27 @@
           "objectId": "00000000-0000-0000-0000-000000000000"
         },
         {
-          "assetId": "00000000-0000-0000-0000-000000000000",
-          "objectId": "00000000-0000-0000-0000-000000000000"
+          "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+          "objectId": "b589bd0d-9e28-427d-b7e8-d4a795f72b1f"
         },
         {
-          "assetId": "00000000-0000-0000-0000-000000000000",
-          "objectId": "00000000-0000-0000-0000-000000000000"
+          "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+          "objectId": "85de75ab-b7cb-4c72-9086-a06f10aa989d"
         },
         {
-          "assetId": "00000000-0000-0000-0000-000000000000",
-          "objectId": "00000000-0000-0000-0000-000000000000"
+          "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+          "objectId": "5e83ed2c-3afc-406f-a815-1048c2c2ebb7"
         },
         {
-          "assetId": "00000000-0000-0000-0000-000000000000",
-          "objectId": "00000000-0000-0000-0000-000000000000"
+          "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+          "objectId": "53c68266-069d-46c5-9b4d-bcc47de29171"
         }
       ],
       "m_name": "DefaultScene"
     },
     {
       "_class": "GameObject",
-      "_objectId": "8aca3437-2bb9-4f45-99d4-f7af274b2007",
+      "_objectId": "d2ab6b6c-ec39-40a0-8c24-7552e0e9a28e",
       "m_components": [
         {
           "assetId": "00000000-0000-0000-0000-000000000000",
@@ -105,8 +105,8 @@
       ],
       "m_name": "Camera",
       "m_rootSceneComponent": {
-        "assetId": "2d00e515-f6a2-41a5-a35e-2fd6608c37ed",
-        "objectId": "488ebcf1-de10-4fb8-8f20-2e898a04decc"
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "36c686ba-4da0-4e70-9e2b-2c7885a98dcd"
       },
       "m_sceneComponents": [
         {
@@ -117,7 +117,7 @@
     },
     {
       "_class": "Camera",
-      "_objectId": "488ebcf1-de10-4fb8-8f20-2e898a04decc",
+      "_objectId": "36c686ba-4da0-4e70-9e2b-2c7885a98dcd",
       "m_aspectRatio": 1.7777777910232544,
       "m_children": [],
       "m_far": 1000.0,
@@ -145,12 +145,12 @@
     },
     {
       "_class": "GameObject",
-      "_objectId": "e515e9cd-7102-4f40-985d-74ef8ea0b430",
+      "_objectId": "cdc84715-90f1-4ede-90a9-06017e17b01a",
       "m_components": [],
       "m_name": "DirectionalLight",
       "m_rootSceneComponent": {
-        "assetId": "2d00e515-f6a2-41a5-a35e-2fd6608c37ed",
-        "objectId": "fdef4d52-6058-4c2d-b100-215cdae80660"
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "ac936ad5-45d3-43fc-bacd-e699abc3aabc"
       },
       "m_sceneComponents": [
         {
@@ -161,7 +161,7 @@
     },
     {
       "_class": "DirectionalLight",
-      "_objectId": "fdef4d52-6058-4c2d-b100-215cdae80660",
+      "_objectId": "ac936ad5-45d3-43fc-bacd-e699abc3aabc",
       "m_children": [],
       "m_color": [
         1.0,
@@ -198,12 +198,12 @@
     },
     {
       "_class": "GameObject",
-      "_objectId": "76ccb1ac-7589-4813-9dd8-64da197747d3",
+      "_objectId": "f408c25e-ffac-468e-b10e-75940baf5b29",
       "m_components": [],
       "m_name": "PointLight",
       "m_rootSceneComponent": {
-        "assetId": "2d00e515-f6a2-41a5-a35e-2fd6608c37ed",
-        "objectId": "1199c2ad-d728-4585-a93f-2cb03f51e39d"
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "bf2e87ad-8e25-464b-b83c-8703eed6312c"
       },
       "m_sceneComponents": [
         {
@@ -214,7 +214,7 @@
     },
     {
       "_class": "PointLight",
-      "_objectId": "1199c2ad-d728-4585-a93f-2cb03f51e39d",
+      "_objectId": "bf2e87ad-8e25-464b-b83c-8703eed6312c",
       "m_children": [],
       "m_color": [
         1.0,
@@ -250,12 +250,12 @@
     },
     {
       "_class": "GameObject",
-      "_objectId": "4e76342e-7147-4e19-a47a-1ec6b00e4e88",
+      "_objectId": "0954bc60-0bec-4ca9-816d-d277045a39e3",
       "m_components": [],
       "m_name": "SpotLight",
       "m_rootSceneComponent": {
-        "assetId": "2d00e515-f6a2-41a5-a35e-2fd6608c37ed",
-        "objectId": "ab05067d-a2cc-49ce-a679-98464dc35c2b"
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "07a12015-142c-4698-bfab-80b353170afa"
       },
       "m_sceneComponents": [
         {
@@ -266,7 +266,7 @@
     },
     {
       "_class": "SpotLight",
-      "_objectId": "ab05067d-a2cc-49ce-a679-98464dc35c2b",
+      "_objectId": "07a12015-142c-4698-bfab-80b353170afa",
       "m_children": [],
       "m_color": [
         0.20000000298023224,
@@ -300,7 +300,7 @@
     },
     {
       "_class": "TestComponent",
-      "_objectId": "a19a7776-94ab-4487-af33-1eb5ecc316ab",
+      "_objectId": "01ff363f-27fe-43bf-97ce-7311ba48da3c",
       "m_name": "New Component",
       "m_testBool": false,
       "m_testDouble": 0.0,
@@ -325,7 +325,7 @@
     },
     {
       "_class": "GameObject",
-      "_objectId": "883c5910-9e19-4862-96db-a017a07385b1",
+      "_objectId": "abb98f48-d61b-48c8-b3da-c30a279c930f",
       "m_components": [
         {
           "assetId": "00000000-0000-0000-0000-000000000000",
@@ -334,8 +334,8 @@
       ],
       "m_name": "Camera",
       "m_rootSceneComponent": {
-        "assetId": "2d00e515-f6a2-41a5-a35e-2fd6608c37ed",
-        "objectId": "2206bdc3-f05b-4f6f-9e88-6ca85852f9fa"
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "c51b6362-c9b9-45b0-8f0b-50ee9db59728"
       },
       "m_sceneComponents": [
         {
@@ -346,7 +346,7 @@
     },
     {
       "_class": "Camera",
-      "_objectId": "2206bdc3-f05b-4f6f-9e88-6ca85852f9fa",
+      "_objectId": "c51b6362-c9b9-45b0-8f0b-50ee9db59728",
       "m_aspectRatio": 1.7777777910232544,
       "m_children": [],
       "m_far": 1000.0,
@@ -374,12 +374,12 @@
     },
     {
       "_class": "GameObject",
-      "_objectId": "95ccbd3f-5942-4578-9b46-1a558cae92f5",
+      "_objectId": "8ee51375-d31d-4ebb-b051-765636e586a8",
       "m_components": [],
       "m_name": "DirectionalLight",
       "m_rootSceneComponent": {
-        "assetId": "2d00e515-f6a2-41a5-a35e-2fd6608c37ed",
-        "objectId": "ca29433c-1c6c-4494-87b8-ab37cefd7c7b"
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "0676c1e1-1c3e-4969-9830-32ba5f62bf57"
       },
       "m_sceneComponents": [
         {
@@ -390,7 +390,7 @@
     },
     {
       "_class": "DirectionalLight",
-      "_objectId": "ca29433c-1c6c-4494-87b8-ab37cefd7c7b",
+      "_objectId": "0676c1e1-1c3e-4969-9830-32ba5f62bf57",
       "m_children": [],
       "m_color": [
         1.0,
@@ -427,12 +427,12 @@
     },
     {
       "_class": "GameObject",
-      "_objectId": "5f28253e-ccad-439d-94a7-3012fcf9f9b9",
+      "_objectId": "633ed569-2290-4164-80c9-f613212d3428",
       "m_components": [],
       "m_name": "PointLight",
       "m_rootSceneComponent": {
-        "assetId": "2d00e515-f6a2-41a5-a35e-2fd6608c37ed",
-        "objectId": "a4d7372f-af8c-4dd2-92f0-dd87817f5153"
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "82a48a2d-be3d-4231-b735-68447ed08f74"
       },
       "m_sceneComponents": [
         {
@@ -443,7 +443,7 @@
     },
     {
       "_class": "PointLight",
-      "_objectId": "a4d7372f-af8c-4dd2-92f0-dd87817f5153",
+      "_objectId": "82a48a2d-be3d-4231-b735-68447ed08f74",
       "m_children": [],
       "m_color": [
         1.0,
@@ -479,12 +479,12 @@
     },
     {
       "_class": "GameObject",
-      "_objectId": "11c07e74-70f9-44dd-bc84-8abe3d6d93bb",
+      "_objectId": "17bf1ba0-f679-46d5-a2ed-cd449287feaa",
       "m_components": [],
       "m_name": "SpotLight",
       "m_rootSceneComponent": {
-        "assetId": "2d00e515-f6a2-41a5-a35e-2fd6608c37ed",
-        "objectId": "b81ac4fc-5acf-4beb-94bf-38acc9f3aaa6"
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "c248e086-2773-4a48-8715-4d71db21c1af"
       },
       "m_sceneComponents": [
         {
@@ -495,7 +495,7 @@
     },
     {
       "_class": "SpotLight",
-      "_objectId": "b81ac4fc-5acf-4beb-94bf-38acc9f3aaa6",
+      "_objectId": "c248e086-2773-4a48-8715-4d71db21c1af",
       "m_children": [],
       "m_color": [
         0.20000000298023224,
@@ -529,7 +529,7 @@
     },
     {
       "_class": "TestComponent",
-      "_objectId": "8e1793f8-249d-40e0-80eb-1de8baaa8b2a",
+      "_objectId": "951fa485-8d09-4fde-b502-920978530233",
       "m_name": "New Component",
       "m_testBool": false,
       "m_testDouble": 0.0,
@@ -554,7 +554,7 @@
     },
     {
       "_class": "GameObject",
-      "_objectId": "38b96f8d-7ddc-4bd1-aedf-26ef17670c51",
+      "_objectId": "4c1da51d-bd39-461b-b4d0-14a6f2db7a5a",
       "m_components": [
         {
           "assetId": "00000000-0000-0000-0000-000000000000",
@@ -563,8 +563,8 @@
       ],
       "m_name": "Camera",
       "m_rootSceneComponent": {
-        "assetId": "2d00e515-f6a2-41a5-a35e-2fd6608c37ed",
-        "objectId": "7a001e61-40ab-4b7e-82c5-3b0778f6fc3a"
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "277c02f4-7b62-4871-8875-abf640a4c477"
       },
       "m_sceneComponents": [
         {
@@ -575,7 +575,7 @@
     },
     {
       "_class": "Camera",
-      "_objectId": "7a001e61-40ab-4b7e-82c5-3b0778f6fc3a",
+      "_objectId": "277c02f4-7b62-4871-8875-abf640a4c477",
       "m_aspectRatio": 1.7777777910232544,
       "m_children": [],
       "m_far": 1000.0,
@@ -603,12 +603,12 @@
     },
     {
       "_class": "GameObject",
-      "_objectId": "b9b26cd0-6acf-44a7-bf84-6d5b232bff63",
+      "_objectId": "bd4fa11f-09dd-4eec-8d2b-57dc558f0249",
       "m_components": [],
       "m_name": "DirectionalLight",
       "m_rootSceneComponent": {
-        "assetId": "2d00e515-f6a2-41a5-a35e-2fd6608c37ed",
-        "objectId": "8cb8b9c7-4f49-42bf-9ff9-ff6019a27fd1"
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "670de967-d9ba-49e3-bb7c-9ee9a3f7a653"
       },
       "m_sceneComponents": [
         {
@@ -619,7 +619,7 @@
     },
     {
       "_class": "DirectionalLight",
-      "_objectId": "8cb8b9c7-4f49-42bf-9ff9-ff6019a27fd1",
+      "_objectId": "670de967-d9ba-49e3-bb7c-9ee9a3f7a653",
       "m_children": [],
       "m_color": [
         1.0,
@@ -656,12 +656,12 @@
     },
     {
       "_class": "GameObject",
-      "_objectId": "ccbadeb8-64ec-44e6-99eb-c91112fe2c4c",
+      "_objectId": "85625997-913e-46ae-9ea2-2f4cd59cadd1",
       "m_components": [],
       "m_name": "PointLight",
       "m_rootSceneComponent": {
-        "assetId": "2d00e515-f6a2-41a5-a35e-2fd6608c37ed",
-        "objectId": "782a40f7-bf91-49dc-91ab-4a245e520b1d"
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "e9a35c87-95b5-429f-9cfb-4d5a13524f9f"
       },
       "m_sceneComponents": [
         {
@@ -672,7 +672,7 @@
     },
     {
       "_class": "PointLight",
-      "_objectId": "782a40f7-bf91-49dc-91ab-4a245e520b1d",
+      "_objectId": "e9a35c87-95b5-429f-9cfb-4d5a13524f9f",
       "m_children": [],
       "m_color": [
         1.0,
@@ -708,12 +708,12 @@
     },
     {
       "_class": "GameObject",
-      "_objectId": "02df651b-89ac-4ddf-9b89-6420cfd55270",
+      "_objectId": "455f233d-1fe0-4b56-82e3-559e0935b422",
       "m_components": [],
       "m_name": "SpotLight",
       "m_rootSceneComponent": {
-        "assetId": "2d00e515-f6a2-41a5-a35e-2fd6608c37ed",
-        "objectId": "502b86b9-976d-48a8-9816-478f88fd8456"
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "9ccbf099-acf6-4236-b041-eb8903b39c66"
       },
       "m_sceneComponents": [
         {
@@ -724,7 +724,7 @@
     },
     {
       "_class": "SpotLight",
-      "_objectId": "502b86b9-976d-48a8-9816-478f88fd8456",
+      "_objectId": "9ccbf099-acf6-4236-b041-eb8903b39c66",
       "m_children": [],
       "m_color": [
         0.20000000298023224,
@@ -758,7 +758,7 @@
     },
     {
       "_class": "TestComponent",
-      "_objectId": "adbaf33f-cf46-4f9c-a14d-5bc74b9ff897",
+      "_objectId": "6e1a907d-f6c9-46b2-8001-1444b1959865",
       "m_name": "New Component",
       "m_testBool": false,
       "m_testDouble": 0.0,
@@ -783,7 +783,7 @@
     },
     {
       "_class": "GameObject",
-      "_objectId": "a8f983c9-08aa-4e40-baf7-d3d7d646de84",
+      "_objectId": "ae53b834-c1bd-40a3-a997-4524686e4e06",
       "m_components": [
         {
           "assetId": "00000000-0000-0000-0000-000000000000",
@@ -792,8 +792,8 @@
       ],
       "m_name": "Camera",
       "m_rootSceneComponent": {
-        "assetId": "2d00e515-f6a2-41a5-a35e-2fd6608c37ed",
-        "objectId": "712fd6d7-c409-4667-b762-7b3db376fb6f"
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "9cd1690c-75dd-4d4b-a5f1-659075a2e3ea"
       },
       "m_sceneComponents": [
         {
@@ -804,7 +804,7 @@
     },
     {
       "_class": "Camera",
-      "_objectId": "712fd6d7-c409-4667-b762-7b3db376fb6f",
+      "_objectId": "9cd1690c-75dd-4d4b-a5f1-659075a2e3ea",
       "m_aspectRatio": 1.7777777910232544,
       "m_children": [],
       "m_far": 1000.0,
@@ -832,12 +832,12 @@
     },
     {
       "_class": "GameObject",
-      "_objectId": "e311499b-b8b4-4c6d-9eb5-a6c1bdd91e38",
+      "_objectId": "3d0df4e0-5951-472d-8d5d-dd2e689a41ea",
       "m_components": [],
       "m_name": "DirectionalLight",
       "m_rootSceneComponent": {
-        "assetId": "2d00e515-f6a2-41a5-a35e-2fd6608c37ed",
-        "objectId": "eb70c008-ca18-4c3e-b313-f737c0bf6351"
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "99e94b57-e6e2-48a3-b98d-94af18a30dd3"
       },
       "m_sceneComponents": [
         {
@@ -848,7 +848,7 @@
     },
     {
       "_class": "DirectionalLight",
-      "_objectId": "eb70c008-ca18-4c3e-b313-f737c0bf6351",
+      "_objectId": "99e94b57-e6e2-48a3-b98d-94af18a30dd3",
       "m_children": [],
       "m_color": [
         1.0,
@@ -885,12 +885,12 @@
     },
     {
       "_class": "GameObject",
-      "_objectId": "d4baae85-55b0-4c46-9953-15030464f64d",
+      "_objectId": "0ded4ba7-6a40-4316-be36-35abefc95944",
       "m_components": [],
       "m_name": "PointLight",
       "m_rootSceneComponent": {
-        "assetId": "2d00e515-f6a2-41a5-a35e-2fd6608c37ed",
-        "objectId": "7f19860e-a265-4d6b-a98b-e27cbdf1eef0"
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "f5d3181b-ac95-44d9-b84d-566b032f7e98"
       },
       "m_sceneComponents": [
         {
@@ -901,7 +901,7 @@
     },
     {
       "_class": "PointLight",
-      "_objectId": "7f19860e-a265-4d6b-a98b-e27cbdf1eef0",
+      "_objectId": "f5d3181b-ac95-44d9-b84d-566b032f7e98",
       "m_children": [],
       "m_color": [
         1.0,
@@ -937,12 +937,12 @@
     },
     {
       "_class": "GameObject",
-      "_objectId": "5b15e5cb-d7ce-48a0-8c1e-5391c169d4f1",
+      "_objectId": "ec7e052f-bb73-4cb4-a887-8d672479af89",
       "m_components": [],
       "m_name": "SpotLight",
       "m_rootSceneComponent": {
-        "assetId": "2d00e515-f6a2-41a5-a35e-2fd6608c37ed",
-        "objectId": "4ab60285-aefd-4de7-b426-e07ff2239c4f"
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "5fa5b317-7267-4d61-88c5-2c5a922ee37d"
       },
       "m_sceneComponents": [
         {
@@ -953,7 +953,7 @@
     },
     {
       "_class": "SpotLight",
-      "_objectId": "4ab60285-aefd-4de7-b426-e07ff2239c4f",
+      "_objectId": "5fa5b317-7267-4d61-88c5-2c5a922ee37d",
       "m_children": [],
       "m_color": [
         0.20000000298023224,
@@ -987,7 +987,7 @@
     },
     {
       "_class": "TestComponent",
-      "_objectId": "84e422c5-22b3-4661-ae25-653a1f315705",
+      "_objectId": "3ce9962d-0fa9-4518-a561-9c87def35ca0",
       "m_name": "New Component",
       "m_testBool": false,
       "m_testDouble": 0.0,
@@ -1012,28 +1012,28 @@
     },
     {
       "_class": "GameObject",
-      "_objectId": "4422a1ce-b9bf-4a9d-be03-63838625027d",
+      "_objectId": "b589bd0d-9e28-427d-b7e8-d4a795f72b1f",
       "m_components": [
         {
-          "assetId": "00000000-0000-0000-0000-000000000000",
-          "objectId": "00000000-0000-0000-0000-000000000000"
+          "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+          "objectId": "7f81a113-eebd-4d4e-92eb-3fee9379a726"
         }
       ],
       "m_name": "Camera",
       "m_rootSceneComponent": {
-        "assetId": "2d00e515-f6a2-41a5-a35e-2fd6608c37ed",
-        "objectId": "42cb25a4-95a9-43ae-be9a-ccbd3fe942fa"
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "2cf224df-5b1e-428f-a0a3-858f1a0be660"
       },
       "m_sceneComponents": [
         {
-          "assetId": "00000000-0000-0000-0000-000000000000",
-          "objectId": "00000000-0000-0000-0000-000000000000"
+          "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+          "objectId": "2cf224df-5b1e-428f-a0a3-858f1a0be660"
         }
       ]
     },
     {
       "_class": "Camera",
-      "_objectId": "42cb25a4-95a9-43ae-be9a-ccbd3fe942fa",
+      "_objectId": "2cf224df-5b1e-428f-a0a3-858f1a0be660",
       "m_aspectRatio": 1.7777777910232544,
       "m_children": [],
       "m_far": 1000.0,
@@ -1061,23 +1061,23 @@
     },
     {
       "_class": "GameObject",
-      "_objectId": "cbef7215-4f2b-4d3d-be64-0e7cd22c816b",
+      "_objectId": "85de75ab-b7cb-4c72-9086-a06f10aa989d",
       "m_components": [],
       "m_name": "DirectionalLight",
       "m_rootSceneComponent": {
-        "assetId": "2d00e515-f6a2-41a5-a35e-2fd6608c37ed",
-        "objectId": "0b25e614-a5c2-42a3-9f86-6e52fd930815"
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "408dee01-716e-4a3b-96a6-8a023560a596"
       },
       "m_sceneComponents": [
         {
-          "assetId": "00000000-0000-0000-0000-000000000000",
-          "objectId": "00000000-0000-0000-0000-000000000000"
+          "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+          "objectId": "408dee01-716e-4a3b-96a6-8a023560a596"
         }
       ]
     },
     {
       "_class": "DirectionalLight",
-      "_objectId": "0b25e614-a5c2-42a3-9f86-6e52fd930815",
+      "_objectId": "408dee01-716e-4a3b-96a6-8a023560a596",
       "m_children": [],
       "m_color": [
         1.0,
@@ -1114,23 +1114,23 @@
     },
     {
       "_class": "GameObject",
-      "_objectId": "a29229a7-5476-48e8-b906-33274ac86230",
+      "_objectId": "5e83ed2c-3afc-406f-a815-1048c2c2ebb7",
       "m_components": [],
       "m_name": "PointLight",
       "m_rootSceneComponent": {
-        "assetId": "2d00e515-f6a2-41a5-a35e-2fd6608c37ed",
-        "objectId": "4abbd7b0-3a2d-46e7-a1ff-8d66df88edd5"
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "a3774e8c-af9e-4f8f-bda8-b39291a6a48a"
       },
       "m_sceneComponents": [
         {
-          "assetId": "00000000-0000-0000-0000-000000000000",
-          "objectId": "00000000-0000-0000-0000-000000000000"
+          "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+          "objectId": "a3774e8c-af9e-4f8f-bda8-b39291a6a48a"
         }
       ]
     },
     {
       "_class": "PointLight",
-      "_objectId": "4abbd7b0-3a2d-46e7-a1ff-8d66df88edd5",
+      "_objectId": "a3774e8c-af9e-4f8f-bda8-b39291a6a48a",
       "m_children": [],
       "m_color": [
         1.0,
@@ -1166,23 +1166,23 @@
     },
     {
       "_class": "GameObject",
-      "_objectId": "4f2119f0-71a3-4fb0-99b8-66f7c4b6c76c",
+      "_objectId": "53c68266-069d-46c5-9b4d-bcc47de29171",
       "m_components": [],
       "m_name": "SpotLight",
       "m_rootSceneComponent": {
-        "assetId": "2d00e515-f6a2-41a5-a35e-2fd6608c37ed",
-        "objectId": "d72cf9b9-b167-4fd0-82f8-1b11319b1907"
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "cf6ff728-4e94-45b6-a912-e5e32739b6e3"
       },
       "m_sceneComponents": [
         {
-          "assetId": "00000000-0000-0000-0000-000000000000",
-          "objectId": "00000000-0000-0000-0000-000000000000"
+          "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+          "objectId": "cf6ff728-4e94-45b6-a912-e5e32739b6e3"
         }
       ]
     },
     {
       "_class": "SpotLight",
-      "_objectId": "d72cf9b9-b167-4fd0-82f8-1b11319b1907",
+      "_objectId": "cf6ff728-4e94-45b6-a912-e5e32739b6e3",
       "m_children": [],
       "m_color": [
         0.20000000298023224,
@@ -1216,7 +1216,7 @@
     },
     {
       "_class": "TestComponent",
-      "_objectId": "d1d71122-912b-4ac6-9445-261fad493cb6",
+      "_objectId": "7f81a113-eebd-4d4e-92eb-3fee9379a726",
       "m_name": "New Component",
       "m_testBool": false,
       "m_testDouble": 0.0,

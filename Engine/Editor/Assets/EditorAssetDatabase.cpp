@@ -4,6 +4,7 @@
 #include "Runtime/Reflection/DProperty.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
 #include "Runtime/Serialization/JsonAssetArchive.h"
+#include "Serialization/ISerializationCallbackReceiver.h"
 
 #include <nlohmann/json.hpp>
 #include <algorithm>
@@ -204,6 +205,12 @@ void EditorAssetDatabase::LoadAssetRecursive(const AssetId& id)
 
         entry.m_state    = AssetState::Loaded;
         entry.m_instance = asset;
+
+        for (auto& obj : asset->GetObjects())
+        {
+            if (auto* callbackReceiver = dynamic_cast<ISerializationCallbackReceiver*>(obj))
+                callbackReceiver->OnAfterDeserialize();
+        }
     }
 
     m_currentlyLoading.erase(id);
@@ -287,6 +294,12 @@ void EditorAssetDatabase::SaveAsset(const AssetId& id)
     auto& asset = entry.m_instance;
     if (!asset)
         return;
+
+    for (auto& obj : asset->GetObjects())
+    {
+        if (auto* callbackReceiver = dynamic_cast<ISerializationCallbackReceiver*>(obj))
+            callbackReceiver->OnBeforeSerialize();
+    }
 
     bool isJson = entry.m_filePath.string().ends_with(".dasset.json");
 
