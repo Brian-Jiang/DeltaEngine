@@ -148,6 +148,24 @@ DPrimaryAsset* EditorAssetDatabase::LoadAsset(const AssetId& id)
 // LoadAssetRecursive (Phase 1)
 // ---------------------------------------------------------------------------
 
+DPrimaryAsset* EditorAssetDatabase::CreateAssetInstance(const std::string& className)
+{
+    if (className.empty() || className == "DPrimaryAsset")
+        return CreateDObject<DPrimaryAsset>();
+
+    DObject* object = GetReflectionRegistry().CreateObject(className);
+    if (!object)
+        return CreateDObject<DPrimaryAsset>();
+
+    DPrimaryAsset* asset = dynamic_cast<DPrimaryAsset*>(object);
+    if (!asset) {
+        GetReflectionRegistry().DestroyObject(object);
+        return CreateDObject<DPrimaryAsset>();
+    }
+
+    return asset;
+}
+
 void EditorAssetDatabase::LoadAssetRecursive(const AssetId& id)
 {
     auto it = m_assets.find(id);
@@ -186,7 +204,7 @@ void EditorAssetDatabase::LoadAssetRecursive(const AssetId& id)
             return;
         }
 
-        auto asset = CreateDObject<DPrimaryAsset>();
+        auto asset = CreateAssetInstance(entry.m_header.m_className);
 
         if (root.contains("header"))
         {

@@ -1,6 +1,6 @@
 {
   "header": {
-    "assetId": "5e51d48b-b522-4b35-a152-2f74081e2248",
+    "assetId": "98b63b8b-8b65-43bd-8918-b7d87ba89aa1",
     "bulkDataMap": {
       "0": {
         "file": "HomeMesh_Bulk0.bin",
@@ -11,101 +11,101 @@
         "size": 473084
       }
     },
-    "className": "DPrimaryAsset",
+    "className": "PA_StaticMesh",
     "magic": "DLTA",
     "version": 1
   },
   "objects": [
     {
       "_class": "DMesh",
-      "_objectId": "bf2c1205-d4fe-4a82-bd73-af29034c8b1b",
+      "_objectId": "0f2e0a37-b966-4b0d-8ba8-890ccecd4c66",
       "m_indexData": {
         "_bulk": 1,
         "size": 473084
       },
       "m_materials": [
         {
-          "assetId": "135c82df-04d1-4a95-a42e-5edfbd51d908",
-          "objectId": "9589a772-f481-453c-ac1f-aa8251ee3df4"
+          "assetId": "e0f9e6cb-3814-498f-858d-48fb9956327b",
+          "objectId": "bf8c2d22-edbc-4ca7-a23e-d8a1ea3f7171"
         },
         {
-          "assetId": "9d6fd111-9ebb-4290-b447-c7684de60adf",
-          "objectId": "fb33e05b-e071-46c0-a582-1714c3afacea"
+          "assetId": "9cd07a67-a9e7-46aa-b609-cf15a7cd20c6",
+          "objectId": "3dedb2f5-c66a-4858-a9ed-f4e809815b46"
         },
         {
-          "assetId": "13f4ab05-08cf-4da1-9103-8d5825f86e7b",
-          "objectId": "d6a6fe98-5bda-46fb-ac58-9ab4bca521f9"
+          "assetId": "76ca94c4-4fd7-4eb8-8eb5-0b32aa130d0c",
+          "objectId": "1c20a627-77c8-4752-a3aa-0d42c7504e4e"
         },
         {
-          "assetId": "9c4b9e7f-927d-4493-980d-27db043835a5",
-          "objectId": "fe272c9d-a41a-4688-a4d7-465903cb8fee"
+          "assetId": "60896a51-c92e-4503-bc61-b80ed6484eb5",
+          "objectId": "599b2818-68bb-4958-8890-cd49f8e9e103"
         },
         {
-          "assetId": "466dabf9-c2c2-4066-91ee-4c2c9fc33a1c",
-          "objectId": "efdb3a25-2a8b-468d-be65-5e62b88dde48"
+          "assetId": "f8362890-d75f-4a8a-8608-911af5ed552f",
+          "objectId": "8499750d-c5db-45c6-8be1-985585cc8daf"
         },
         {
-          "assetId": "bd2691e3-4fe7-4b0c-911b-685db41e8321",
-          "objectId": "fa323f8f-344c-4841-a4db-ac73328bffd0"
+          "assetId": "5564d3f8-7fb4-4cb8-b512-45b4455180c5",
+          "objectId": "f02d2223-912e-4338-9a76-06b77f1f8b7a"
         },
         {
-          "assetId": "897a7695-14f9-48d1-993d-23ceb1fbc1c5",
-          "objectId": "f0cc21c1-5adb-4696-8334-cf9dc849f9f2"
+          "assetId": "8055dfce-ff6b-4403-8f31-8237265905ad",
+          "objectId": "15df45dc-ceec-4d80-888e-5af29bccebde"
         },
         {
-          "assetId": "0a8b377c-5846-40b5-9206-9977a3291a3f",
-          "objectId": "bf6434b1-caba-4fa3-af43-9e7bf0a9f5ff"
+          "assetId": "4800544d-e0e9-452f-a81f-91200608d509",
+          "objectId": "a51e54d5-6f23-4088-9dbc-73aafe8bb0e5"
         },
         {
-          "assetId": "ae7f209d-7f03-415a-96fe-1cf1298e3de7",
-          "objectId": "377f9d44-d90b-4f45-a438-f67797da5502"
+          "assetId": "037e60dd-ef2c-41f2-a457-b5b75f625cdd",
+          "objectId": "526083ff-9e19-4961-83e1-b738c4075a4a"
         },
         {
-          "assetId": "c5ef9c03-8bd2-49d2-ae3d-aaffbd988356",
-          "objectId": "3b087eee-4ae1-4a5e-8058-c5f13f972f75"
+          "assetId": "3ec4b321-7f7f-43a6-979b-62865bf2028f",
+          "objectId": "238baae7-30d6-4214-813b-1162a0e77950"
         }
       ],
       "m_sourcePath": "home/source/home.fbx",
       "m_textures": [
         {
-          "assetId": "da1c6779-ca7f-4f76-af0f-00fcc0897267",
-          "objectId": "81de0372-891e-47f5-ba64-2993e2c1c237"
+          "assetId": "95408385-73c3-4df0-8f9a-7511526256e5",
+          "objectId": "3e21bb0d-b3c2-45bd-8947-ebe3132b3de6"
         },
         {
-          "assetId": "9954e798-fbfd-499d-a492-c26206b0e964",
-          "objectId": "509f02e4-8bd9-41b9-8b26-26907f2ffb8c"
+          "assetId": "c15ac7b6-d087-41f2-bea1-cd98121417dd",
+          "objectId": "824eb6e8-0a1d-42e0-99c6-76b058a525f7"
         },
         {
-          "assetId": "dcc52cc2-ffad-48fa-9088-9ee1290f3af6",
-          "objectId": "652f8d99-c41e-4008-886b-2e8a50af2ee7"
+          "assetId": "278cff80-babd-4b74-83a4-8e5c3c645934",
+          "objectId": "3fc2a584-9eb7-4349-9e88-3c5c319fd29a"
         },
         {
-          "assetId": "73d205a7-bd1b-4c56-b8c1-e293b4885df7",
-          "objectId": "6c8fa92a-9c0c-4da6-89eb-71ca77c0825e"
+          "assetId": "35294c36-4666-40b0-a6a3-981fff32dd08",
+          "objectId": "18ed0bf6-cebb-484a-b414-ca0587f793a1"
         },
         {
-          "assetId": "6e005466-a1a7-4fc7-942a-dc9d911b74cc",
-          "objectId": "96373478-3466-44a0-8578-2c2fb77bd2f8"
+          "assetId": "b88a6b85-e662-4462-8144-7e95cf218fff",
+          "objectId": "efbfc6f1-32c9-442f-8579-fe1cd234d93e"
         },
         {
-          "assetId": "b7c8cef5-d553-425a-ad61-eadae91db7f7",
-          "objectId": "5b6a8f43-d700-4983-ae79-597222983466"
+          "assetId": "0d0e5633-7341-45ea-b5d9-1d42fb1d954f",
+          "objectId": "12f549ad-0ef7-42da-8d2b-afe209eb89ac"
         },
         {
-          "assetId": "5e0ecf6f-6899-43a6-bba2-23f592d9c7b1",
-          "objectId": "3c75e389-c7f3-4530-bea8-8fcbaf3fff85"
+          "assetId": "3a95b6e0-03ad-484a-a1b1-ad33afb58eae",
+          "objectId": "5d73e55b-f9b2-4881-acf6-80e615780763"
         },
         {
-          "assetId": "22203dbb-a221-4c29-b7b7-b3f5937fb1c6",
-          "objectId": "fa2afa73-92c5-456c-8ff1-037798aa5dfe"
+          "assetId": "56bdd620-dc2d-4933-8d2a-267541546215",
+          "objectId": "e08151b2-f541-47f6-8b31-b34628d7786e"
         },
         {
-          "assetId": "bcbe3ab4-d9ca-4171-8149-d3883ee85e41",
-          "objectId": "2fb0965e-0fd2-45fc-a4a2-a21f7efed65e"
+          "assetId": "726277d0-82e7-40fe-a1c5-02a45b3ebfb9",
+          "objectId": "9f7accf1-e409-422d-8030-f7b8b820ea0f"
         },
         {
-          "assetId": "7d233d65-5fea-4bed-aeac-42c366b658ae",
-          "objectId": "655235ec-94ee-447c-87aa-7722ebb582a1"
+          "assetId": "02793d87-4022-4e84-b082-87ea984943a1",
+          "objectId": "25102b60-d5ab-43dd-ae15-5ea228a8d5db"
         }
       ],
       "m_vertexData": {

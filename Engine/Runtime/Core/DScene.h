@@ -15,7 +15,7 @@ class GameObject;
 class DComponent;
 
 /// Serializable scene data. Stores the list of GameObjects that belong to this
-/// scene. A DScene is always owned by a DPrimaryAsset (see PA_DScene helpers).
+/// scene. A DScene is typically owned by a PA_DScene primary asset.
 ///
 /// DWorld is the runtime representation; DScene is the serialized form.
 /// GameObjects loaded from a DScene are added to a DWorld at load time.

@@ -1,39 +1,30 @@
 #include "Assets/PA_DScene.h"
 
-#include "Assets/DPrimaryAsset.h"
 #include "Core/DScene.h"
 #include "Core/UUID.h"
-#include "Reflection/ReflectionRegistry.h"
 
 using namespace DeltaEngine;
 
-DPrimaryAsset* PA_DScene::Create(const std::string& sceneName)
+PA_DScene* PA_DScene::Create(const std::string& sceneName)
 {
-    DPrimaryAsset* asset = CreateDObject<DPrimaryAsset>();
+    PA_DScene* asset = CreateDObject<PA_DScene>();
     asset->GetHeader().m_persistentId = UUID::Generate();
-    asset->GetHeader().m_className    = "DPrimaryAsset";
+    asset->GetHeader().m_className = "PA_DScene";
 
     DScene* scene = CreateDObject<DScene>();
-    scene->SetObjectId(UUID::Generate());
     scene->SetName(sceneName);
-
-    // Transfer ownership to the primary asset.
-    // The shared_ptr deleter calls the reflection registry to properly
-    // destroy the object, mirroring the pattern used in DeserializeBody.
     asset->AddObject(scene);
 
     return asset;
 }
 
-DScene* PA_DScene::GetScene(DPrimaryAsset* asset)
+DScene* PA_DScene::GetScene() const
 {
-    if (!asset)
-        return nullptr;
-
-    for (const auto& obj : asset->GetObjects())
+    for (DObject* object : GetObjects())
     {
-        if (DScene* scene = dynamic_cast<DScene*>(obj))
+        if (DScene* scene = dynamic_cast<DScene*>(object))
             return scene;
     }
+
     return nullptr;
 }

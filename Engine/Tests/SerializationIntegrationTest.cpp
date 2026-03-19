@@ -1,5 +1,12 @@
 #include "Runtime/Test/SerializationTestTypes.h"
 #include "Runtime/Assets/AssetDatabaseLocator.h"
+#include "Runtime/Assets/PA_CommonAssets.h"
+#include "Runtime/Assets/PA_DScene.h"
+#include "Runtime/Core/DMaterial.h"
+#include "Runtime/Core/DMesh.h"
+#include "Runtime/Core/DScene.h"
+#include "Runtime/Core/DShader.h"
+#include "Runtime/Core/DTexture.h"
 #include "Editor/Assets/EditorAssetDatabase.h"
 #include "Runtime/Serialization/JsonAssetArchive.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
@@ -87,6 +94,12 @@ static EditorAssetDatabase& GetRegisteredEditorAssetDatabase()
     }
 
     return db;
+}
+
+static void SaveJsonToFile(const nlohmann::json& json, const std::filesystem::path& filePath)
+{
+    std::ofstream out(filePath);
+    out << json.dump(2);
 }
 
 // ---------------------------------------------------------------------------
@@ -200,6 +213,173 @@ static void TestSingleAssetRoundTrip()
 
     std::filesystem::remove_all(tempDir);
     std::cout << "[PASS] TestSingleAssetRoundTrip\n";
+}
+
+static void TestTypedScenePrimaryAssetRoundTrip()
+{
+    auto tempDir = MakeTempDir("DeltaTypedSceneAssetTest");
+
+    PA_DScene* asset = PA_DScene::Create("TypedScene");
+    const AssetId assetId = asset->GetAssetId();
+    DScene* scene = asset->GetScene();
+    assert(scene != nullptr);
+    const ObjectId sceneId = scene->GetObjectId();
+
+    const auto filePath = tempDir / "TypedScene.dasset.json";
+    SaveAssetToFile(asset, filePath);
+
+    EditorAssetDatabase db;
+    db.ScanAssetsFolder(tempDir);
+    DPrimaryAsset* loadedBase = db.LoadAsset(assetId);
+    assert(loadedBase != nullptr);
+
+    auto* loaded = dynamic_cast<PA_DScene*>(loadedBase);
+    assert(loaded != nullptr);
+    assert(loaded->GetClass()->GetName() == "PA_DScene");
+    assert(loaded->GetHeader().m_className == "PA_DScene");
+    assert(loaded->GetScene() != nullptr);
+    assert(loaded->GetScene()->GetObjectId() == sceneId);
+    assert(loaded->GetScene()->GetName() == "TypedScene");
+
+    std::filesystem::remove_all(tempDir);
+    std::cout << "[PASS] TestTypedScenePrimaryAssetRoundTrip\n";
+}
+
+static void TestTypedShaderPrimaryAssetRoundTrip()
+{
+    auto tempDir = MakeTempDir("DeltaTypedShaderAssetTest");
+
+    DShader* shader = CreateDObject<DShader>();
+    const ObjectId shaderId = shader->GetObjectId();
+    PA_Shader* asset = PA_Shader::Create(shader);
+    const AssetId assetId = asset->GetAssetId();
+
+    const auto filePath = tempDir / "TypedShader.dasset.json";
+    SaveAssetToFile(asset, filePath);
+
+    EditorAssetDatabase db;
+    db.ScanAssetsFolder(tempDir);
+    DPrimaryAsset* loadedBase = db.LoadAsset(assetId);
+    assert(loadedBase != nullptr);
+
+    auto* loaded = dynamic_cast<PA_Shader*>(loadedBase);
+    assert(loaded != nullptr);
+    assert(loaded->GetHeader().m_className == "PA_Shader");
+    assert(loaded->GetShader() != nullptr);
+    assert(loaded->GetShader()->GetObjectId() == shaderId);
+
+    std::filesystem::remove_all(tempDir);
+    std::cout << "[PASS] TestTypedShaderPrimaryAssetRoundTrip\n";
+}
+
+static void TestTypedMaterialPrimaryAssetRoundTrip()
+{
+    auto tempDir = MakeTempDir("DeltaTypedMaterialAssetTest");
+
+    DMaterial* material = CreateDObject<DMaterial>();
+    const ObjectId materialId = material->GetObjectId();
+    PA_Material* asset = PA_Material::Create(material);
+    const AssetId assetId = asset->GetAssetId();
+
+    const auto filePath = tempDir / "TypedMaterial.dasset.json";
+    SaveAssetToFile(asset, filePath);
+
+    EditorAssetDatabase db;
+    db.ScanAssetsFolder(tempDir);
+    DPrimaryAsset* loadedBase = db.LoadAsset(assetId);
+    assert(loadedBase != nullptr);
+
+    auto* loaded = dynamic_cast<PA_Material*>(loadedBase);
+    assert(loaded != nullptr);
+    assert(loaded->GetHeader().m_className == "PA_Material");
+    assert(loaded->GetMaterial() != nullptr);
+    assert(loaded->GetMaterial()->GetObjectId() == materialId);
+
+    std::filesystem::remove_all(tempDir);
+    std::cout << "[PASS] TestTypedMaterialPrimaryAssetRoundTrip\n";
+}
+
+static void TestTypedTexturePrimaryAssetRoundTrip()
+{
+    auto tempDir = MakeTempDir("DeltaTypedTextureAssetTest");
+
+    DTexture* texture = CreateDObject<DTexture>();
+    const ObjectId textureId = texture->GetObjectId();
+    PA_Texture* asset = PA_Texture::Create(texture);
+    const AssetId assetId = asset->GetAssetId();
+
+    const auto filePath = tempDir / "TypedTexture.dasset.json";
+    SaveAssetToFile(asset, filePath);
+
+    EditorAssetDatabase db;
+    db.ScanAssetsFolder(tempDir);
+    DPrimaryAsset* loadedBase = db.LoadAsset(assetId);
+    assert(loadedBase != nullptr);
+
+    auto* loaded = dynamic_cast<PA_Texture*>(loadedBase);
+    assert(loaded != nullptr);
+    assert(loaded->GetHeader().m_className == "PA_Texture");
+    assert(loaded->GetTexture() != nullptr);
+    assert(loaded->GetTexture()->GetObjectId() == textureId);
+
+    std::filesystem::remove_all(tempDir);
+    std::cout << "[PASS] TestTypedTexturePrimaryAssetRoundTrip\n";
+}
+
+static void TestTypedStaticMeshPrimaryAssetRoundTrip()
+{
+    auto tempDir = MakeTempDir("DeltaTypedStaticMeshAssetTest");
+
+    DMesh* mesh = CreateDObject<DMesh>();
+    const ObjectId meshId = mesh->GetObjectId();
+    PA_StaticMesh* asset = PA_StaticMesh::Create(mesh);
+    const AssetId assetId = asset->GetAssetId();
+
+    const auto filePath = tempDir / "TypedStaticMesh.dasset.json";
+    SaveAssetToFile(asset, filePath);
+
+    EditorAssetDatabase db;
+    db.ScanAssetsFolder(tempDir);
+    DPrimaryAsset* loadedBase = db.LoadAsset(assetId);
+    assert(loadedBase != nullptr);
+
+    auto* loaded = dynamic_cast<PA_StaticMesh*>(loadedBase);
+    assert(loaded != nullptr);
+    assert(loaded->GetHeader().m_className == "PA_StaticMesh");
+    assert(loaded->GetStaticMesh() != nullptr);
+    assert(loaded->GetStaticMesh()->GetObjectId() == meshId);
+
+    std::filesystem::remove_all(tempDir);
+    std::cout << "[PASS] TestTypedStaticMeshPrimaryAssetRoundTrip\n";
+}
+
+static void TestUnknownAssetClassFallsBackToBaseAsset()
+{
+    auto tempDir = MakeTempDir("DeltaUnknownAssetClassTest");
+
+    const AssetId assetId = UUID::Generate();
+    nlohmann::json file = {
+        {"header", {
+            {"magic", "DLTA"},
+            {"version", 1},
+            {"className", "PA_MissingAsset"},
+            {"assetId", assetId.ToString()}
+        }},
+        {"objects", nlohmann::json::array()}
+    };
+
+    SaveJsonToFile(file, tempDir / "UnknownAssetClass.dasset.json");
+
+    EditorAssetDatabase db;
+    db.ScanAssetsFolder(tempDir);
+    DPrimaryAsset* loaded = db.LoadAsset(assetId);
+
+    assert(loaded != nullptr);
+    assert(loaded->GetClass()->GetName() == "DPrimaryAsset");
+    assert(loaded->GetHeader().m_className == "PA_MissingAsset");
+
+    std::filesystem::remove_all(tempDir);
+    std::cout << "[PASS] TestUnknownAssetClassFallsBackToBaseAsset\n";
 }
 
 // ---------------------------------------------------------------------------
@@ -911,6 +1091,12 @@ int main()
 
     TestAssetDatabaseLocatorWithEditorAssetDatabase();
     TestSingleAssetRoundTrip();
+    TestTypedScenePrimaryAssetRoundTrip();
+    TestTypedShaderPrimaryAssetRoundTrip();
+    TestTypedMaterialPrimaryAssetRoundTrip();
+    TestTypedTexturePrimaryAssetRoundTrip();
+    TestTypedStaticMeshPrimaryAssetRoundTrip();
+    TestUnknownAssetClassFallsBackToBaseAsset();
     TestExtraDataIgnored();
     TestMissingDataUsesDefaults();
     TestUnknownClassSkipped();

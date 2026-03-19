@@ -18,7 +18,7 @@
 #include "Runtime/Core/DMesh.h"
 #include "Runtime/Core/DMaterial.h"
 #include "Runtime/Assets/PA_DScene.h"
-#include "Runtime/Assets/DPrimaryAsset.h"
+#include "Runtime/Assets/PA_CommonAssets.h"
 
 #include "imgui.h"
 #include "backends/imgui_impl_sdl3.h"
@@ -200,7 +200,7 @@ void EditorMain::CreateAssets()
     if (sceneId.IsNull())
     {
         // No persisted scene found: create a fresh one and save it.
-        DPrimaryAsset* sceneAsset = PA_DScene::Create("DefaultScene");
+        PA_DScene* sceneAsset = PA_DScene::Create("DefaultScene");
         m_assetDatabase->CreateAsset(scenePath, sceneAsset);
         sceneId = sceneAsset->GetAssetId();
     }
@@ -222,7 +222,9 @@ void EditorMain::CreateAssets()
             { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
         });
 
-        m_assetDatabase->CreateAsset(IOManager::GetEngineImportedAssetFullPath("DefaultShader"), shader);
+        m_assetDatabase->CreateAsset(
+            IOManager::GetEngineImportedAssetFullPath("DefaultShader"),
+            PA_Shader::Create(shader));
     }
 
     {
@@ -234,17 +236,23 @@ void EditorMain::CreateAssets()
             DMaterial* material = CreateDObject<DMaterial>();
             material->Initialize(shader);
             if (i < textures.size()) {
-                m_assetDatabase->CreateAsset(IOManager::GetEngineImportedAssetFullPath("HomeTexture_" + std::to_string(i)), textures[i]);
+                m_assetDatabase->CreateAsset(
+                    IOManager::GetEngineImportedAssetFullPath("HomeTexture_" + std::to_string(i)),
+                    PA_Texture::Create(textures[i]));
                 material->AddTexture(textures[i]);
             }
             materials.push_back(material);
 
-            m_assetDatabase->CreateAsset(IOManager::GetEngineImportedAssetFullPath("HomeMaterial_" + std::to_string(i)), material);
+            m_assetDatabase->CreateAsset(
+                IOManager::GetEngineImportedAssetFullPath("HomeMaterial_" + std::to_string(i)),
+                PA_Material::Create(material));
         }
 
         mesh->SetMaterials(materials);
 
-        m_assetDatabase->CreateAsset(IOManager::GetEngineImportedAssetFullPath("HomeMesh"), mesh);
+        m_assetDatabase->CreateAsset(
+            IOManager::GetEngineImportedAssetFullPath("HomeMesh"),
+            PA_StaticMesh::Create(mesh));
     }
 }
 

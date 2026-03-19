@@ -411,7 +411,22 @@ void EngineMain::LoadScene(const AssetId& sceneAssetId)
     if (!asset)
         return;
 
-    DScene* scene = PA_DScene::GetScene(asset);
+    DScene* scene = nullptr;
+    if (PA_DScene* sceneAsset = dynamic_cast<PA_DScene*>(asset))
+        scene = sceneAsset->GetScene();
+
+    //if (!scene)
+    //{
+    //    for (DObject* object : asset->GetObjects())
+    //    {
+    //        if (DScene* typedScene = dynamic_cast<DScene*>(object))
+    //        {
+    //            scene = typedScene;
+    //            break;
+    //        }
+    //    }
+    //}
+
     if (!scene)
         return;
 

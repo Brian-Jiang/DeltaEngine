@@ -63,6 +63,7 @@ public:
 private:
     void LoadAssetRecursive(const AssetId& id);
     void ResolvePendingBatch();
+    DPrimaryAsset* CreateAssetInstance(const std::string& className);
 
     static DPrimaryAsset::Header ReadAssetHeaderFromFile(
         const std::filesystem::path& path, bool isJson);

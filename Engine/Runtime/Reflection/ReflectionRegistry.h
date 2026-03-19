@@ -32,7 +32,7 @@ public:
     DELTAENGINE_API DClass* FindClassByName(const std::string& name) const;
     DELTAENGINE_API const std::unordered_map<std::string, DClass*>& GetAllClasses() const;
 
-    DObject* CreateObject(const std::string& className) const;
+    DELTAENGINE_API DObject* CreateObject(const std::string& className) const;
 
     template <typename T>
     T* CreateObject(const std::string& className) const
@@ -41,7 +41,7 @@ public:
         return static_cast<T*>(obj);
     }
 
-    void DestroyObject(DObject* obj) const;
+    DELTAENGINE_API void DestroyObject(DObject* obj) const;
 
 private:
     std::unordered_map<std::string, DStruct*> m_structMap;

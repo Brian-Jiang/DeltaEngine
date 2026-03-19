@@ -1,20 +1,20 @@
 {
   "header": {
-    "assetId": "dcc52cc2-ffad-48fa-9088-9ee1290f3af6",
+    "assetId": "278cff80-babd-4b74-83a4-8e5c3c645934",
     "bulkDataMap": {
       "0": {
         "file": "HomeTexture_2_Bulk0.bin",
         "size": 1048640
       }
     },
-    "className": "DPrimaryAsset",
+    "className": "PA_Texture",
     "magic": "DLTA",
     "version": 1
   },
   "objects": [
     {
       "_class": "DTexture",
-      "_objectId": "652f8d99-c41e-4008-886b-2e8a50af2ee7",
+      "_objectId": "3fc2a584-9eb7-4349-9e88-3c5c319fd29a",
       "m_bulkData": {
         "_bulk": 0,
         "size": 1048640
