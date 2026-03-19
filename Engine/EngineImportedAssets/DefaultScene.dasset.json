@@ -1,0 +1,102 @@
+{
+  "header": {
+    "assetId": "a8ec3e6d-ea08-4454-9058-b226c76f394e",
+    "className": "DPrimaryAsset",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DScene",
+      "_objectId": "01a7e78d-8b0f-414f-b871-9f706d5272e2",
+      "m_gameObjects": [
+        {
+          "assetId": "a8ec3e6d-ea08-4454-9058-b226c76f394e",
+          "objectId": "82e7844f-4b8e-43dd-bf87-62f3c2abc84e"
+        },
+        {
+          "assetId": "a8ec3e6d-ea08-4454-9058-b226c76f394e",
+          "objectId": "c6cef49e-93af-498f-ad08-298f6fd45e9b"
+        },
+        {
+          "assetId": "a8ec3e6d-ea08-4454-9058-b226c76f394e",
+          "objectId": "ec8f63ad-a51f-4699-81ee-836dd3ac9875"
+        },
+        {
+          "assetId": "a8ec3e6d-ea08-4454-9058-b226c76f394e",
+          "objectId": "acddb7c6-b4c4-462f-968d-0d8b3d205205"
+        }
+      ],
+      "m_name": "DefaultScene"
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "82e7844f-4b8e-43dd-bf87-62f3c2abc84e",
+      "m_components": [
+        {
+          "assetId": "00000000-0000-0000-0000-000000000000",
+          "objectId": "64f8d1fc-b2b6-4757-9210-bd3e9faab87f"
+        }
+      ],
+      "m_name": "Camera",
+      "m_rootSceneComponent": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "0f99d515-a123-480a-98de-ed0da2997733"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "00000000-0000-0000-0000-000000000000",
+          "objectId": "0f99d515-a123-480a-98de-ed0da2997733"
+        }
+      ]
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "c6cef49e-93af-498f-ad08-298f6fd45e9b",
+      "m_components": [],
+      "m_name": "DirectionalLight",
+      "m_rootSceneComponent": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "e54fdc09-5f3f-4bf7-980e-dcad48143ae6"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "00000000-0000-0000-0000-000000000000",
+          "objectId": "e54fdc09-5f3f-4bf7-980e-dcad48143ae6"
+        }
+      ]
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "ec8f63ad-a51f-4699-81ee-836dd3ac9875",
+      "m_components": [],
+      "m_name": "PointLight",
+      "m_rootSceneComponent": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "baffb41b-1a36-421c-a809-c12b4b32d90e"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "00000000-0000-0000-0000-000000000000",
+          "objectId": "baffb41b-1a36-421c-a809-c12b4b32d90e"
+        }
+      ]
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "acddb7c6-b4c4-462f-968d-0d8b3d205205",
+      "m_components": [],
+      "m_name": "SpotLight",
+      "m_rootSceneComponent": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "b5ecffee-755a-41da-bf90-b03aea76a2a3"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "00000000-0000-0000-0000-000000000000",
+          "objectId": "b5ecffee-755a-41da-bf90-b03aea76a2a3"
+        }
+      ]
+    }
+  ]
+}

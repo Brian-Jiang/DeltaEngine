@@ -53,122 +53,119 @@ void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std:
     dxRenderManager = std::move(sceneRenderer);
     m_window = window;
 
-    // ---- Build the editor world ----
-    DWorld* world = CreateDObject<DWorld>();
-    m_worldContextList.push_back(WorldContext{ WorldType::Editor, world });
+    //DWorld* world = GetWorld();
+
+    //// ---------- game object: star mesh renderer
+    //{
+    //    GameObject* go = world->CreateGameObject("MeshRenderer");
+    //    MeshRenderer* meshRenderer = go->AddSceneComponent<MeshRenderer>();
+    //    meshRenderer->SetLocalPosition(2.0f, 0.0f, 5.0f);
+
+    //    DShader* shader = CreateDObject<DShader>();
+    //    shader->Initialize(
+    //        L"Shaders.hlsl",
+    //        L"VSMain", L"PSMain",
+    //        L"vs_6_0", L"ps_6_0");
+
+    //    shader->SetInputLayout({
+    //        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    //        { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    //        { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    //        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    //    });
+
+    //    //std::shared_ptr<DMaterial> material = std::make_shared<DMaterial>(shader);
+
+    //    DMesh* mesh = CreateDObject<DMesh>();
+    //    mesh->Initialize(std::wstring(L"Star.obj"));
+    //    std::vector<DTexture*> textures = mesh->GetTextures();
+    //    std::vector<DMaterial*> materials;
+    //    for (int i = 0; i < mesh->GetSubMeshCount(); i++)
+    //    {
+    //        DMaterial* material = CreateDObject<DMaterial>();
+    //        material->Initialize(shader);
+    //        if (i < textures.size())
+    //        {
+    //            material->AddTexture(textures[i]);
+    //        }
+    //        materials.push_back(material);
+    //    }
+
+    //    mesh->SetMaterials(materials);
+    //    meshRenderer->SetMesh(mesh);
+    //}
+
+    //// ---------- game object: home mesh renderer
+    //{
+    //    GameObject* go = world->CreateGameObject("HomeMeshRenderer");
+    //    MeshRenderer* meshRenderer = go->AddSceneComponent<MeshRenderer>();
+    //    meshRenderer->SetLocalPosition(0.0f, 0.0f, 0.0f);
+
+    //    DShader* shader = CreateDObject<DShader>();
+    //    shader->Initialize(
+    //        L"ToonShader.hlsl",
+    //        L"VSMain", L"PSMain",
+    //        L"vs_6_0", L"ps_6_0");
+
+    //    shader->SetInputLayout({
+    //        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    //        { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    //        { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    //        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    //    });
+    //    //std::shared_ptr<DMaterial> material = std::make_shared<DMaterial>(shader);
+
+    //    DMesh* mesh = CreateDObject<DMesh>();
+    //    mesh->Initialize(std::wstring(L"home/source/home.fbx"));
+    //    //std::shared_ptr<DMesh> mesh = std::make_shared<DMesh>(std::wstring(L"car/source/datsun240k.fbx"));
+    //    std::vector<DTexture*> textures = mesh->GetTextures();
+    //    std::vector<DMaterial*> materials;
+    //    for (int i = 0; i < mesh->GetSubMeshCount(); i++)
+    //    {
+    //        DMaterial* material = CreateDObject<DMaterial>();
+    //        material->Initialize(shader);
+    //        if (i < textures.size())
+    //        {
+    //            material->AddTexture(textures[i]);
+    //        }
+    //        materials.push_back(material);
+    //    }
+
+    //    mesh->SetMaterials(materials);
+    //    meshRenderer->SetMesh(mesh);
+    //}
 
 
-    // ---------- game object: star mesh renderer
-    {
-        GameObject* go = world->CreateGameObject("MeshRenderer");
-        MeshRenderer* meshRenderer = go->AddSceneComponent<MeshRenderer>();
-        meshRenderer->SetLocalPosition(2.0f, 0.0f, 5.0f);
-
-        DShader* shader = CreateDObject<DShader>();
-        shader->Initialize(
-            L"Shaders.hlsl",
-            L"VSMain", L"PSMain",
-            L"vs_6_0", L"ps_6_0");
-
-        shader->SetInputLayout({
-            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-            { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-            { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        });
-
-        //std::shared_ptr<DMaterial> material = std::make_shared<DMaterial>(shader);
-
-        DMesh* mesh = CreateDObject<DMesh>();
-        mesh->Initialize(std::wstring(L"Star.obj"));
-        std::vector<DTexture*> textures = mesh->GetTextures();
-        std::vector<DMaterial*> materials;
-        for (int i = 0; i < mesh->GetSubMeshCount(); i++)
-        {
-            DMaterial* material = CreateDObject<DMaterial>();
-            material->Initialize(shader);
-            if (i < textures.size())
-            {
-                material->AddTexture(textures[i]);
-            }
-            materials.push_back(material);
-        }
-
-        mesh->SetMaterials(materials);
-        meshRenderer->SetMesh(mesh);
-    }
-
-    // ---------- game object: home mesh renderer
-    {
-        GameObject* go = world->CreateGameObject("HomeMeshRenderer");
-        MeshRenderer* meshRenderer = go->AddSceneComponent<MeshRenderer>();
-        meshRenderer->SetLocalPosition(0.0f, 0.0f, 0.0f);
-
-        DShader* shader = CreateDObject<DShader>();
-        shader->Initialize(
-            L"ToonShader.hlsl",
-            L"VSMain", L"PSMain",
-            L"vs_6_0", L"ps_6_0");
-
-        shader->SetInputLayout({
-            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-            { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-            { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        });
-        //std::shared_ptr<DMaterial> material = std::make_shared<DMaterial>(shader);
-
-        DMesh* mesh = CreateDObject<DMesh>();
-        mesh->Initialize(std::wstring(L"home/source/home.fbx"));
-        //std::shared_ptr<DMesh> mesh = std::make_shared<DMesh>(std::wstring(L"car/source/datsun240k.fbx"));
-        std::vector<DTexture*> textures = mesh->GetTextures();
-        std::vector<DMaterial*> materials;
-        for (int i = 0; i < mesh->GetSubMeshCount(); i++)
-        {
-            DMaterial* material = CreateDObject<DMaterial>();
-            material->Initialize(shader);
-            if (i < textures.size())
-            {
-                material->AddTexture(textures[i]);
-            }
-            materials.push_back(material);
-        }
-
-        mesh->SetMaterials(materials);
-        meshRenderer->SetMesh(mesh);
-    }
+    //// ---------- game object: camera
+    //GameObject* cameraGo = world->CreateGameObjectInScene(m_worldContextList[0].world->GetActiveScene(), "Camera");
+    //m_cameraGameObject = cameraGo;
+    //Camera* camera = cameraGo->AddSceneComponent<Camera>();
+    //camera->SetLocalPosition(0.0f, 50.0f, -400.0f);
+    //camera->UpdateParameters(DirectX::XM_PIDIV4, static_cast<float>(SCREEN_WIDTH) / SCREEN_HEIGHT, 0.1f, 1000.0f);
 
 
-    // ---------- game object: camera
-    GameObject* cameraGo = world->CreateGameObject("Camera");
-    m_cameraGameObject = cameraGo;
-    Camera* camera = cameraGo->AddSceneComponent<Camera>();
-    camera->SetLocalPosition(0.0f, 50.0f, -400.0f);
-    camera->UpdateParameters(DirectX::XM_PIDIV4, static_cast<float>(SCREEN_WIDTH) / SCREEN_HEIGHT, 0.1f, 1000.0f);
+    //// ---------- game object: directional light (sun)
+    //GameObject* directionalLightGo = world->CreateGameObjectInScene(m_worldContextList[0].world->GetActiveScene(), "DirectionalLight");
+    //DirectionalLight* directionalLight = directionalLightGo->AddSceneComponent<DirectionalLight>();
+    //directionalLight->SetLocalRotation(DirectX::SimpleMath::Quaternion::CreateFromAxisAngle(DirectX::SimpleMath::Vector3::UnitX, XM_PIDIV4));
+    //directionalLight->UpdateParameters(XMVectorSet(0, -1, 0, 0), XMVectorSet(1.0f, 1.0f, 0.95f, 1.0f), 0.7f);
 
+    //// ---------- game object: point light
+    //GameObject* pointLightGo = world->CreateGameObjectInScene(m_worldContextList[0].world->GetActiveScene(), "PointLight");
+    //PointLight* pointLight = pointLightGo->AddSceneComponent<PointLight>();
+    //pointLight->SetLocalPosition(0.0f, 3.0f, 2.0f);
+    //pointLight->UpdateParameters(XMVectorSet(1.0f, 0.4f, 0.2f, 1.0f), 2.0f, 15.0f);
 
-    // ---------- game object: directional light (sun)
-    GameObject* directionalLightGo = world->CreateGameObject("DirectionalLight");
-    DirectionalLight* directionalLight = directionalLightGo->AddSceneComponent<DirectionalLight>();
-    directionalLight->SetLocalRotation(DirectX::SimpleMath::Quaternion::CreateFromAxisAngle(DirectX::SimpleMath::Vector3::UnitX, XM_PIDIV4));
-    directionalLight->UpdateParameters(XMVectorSet(0, -1, 0, 0), XMVectorSet(1.0f, 1.0f, 0.95f, 1.0f), 0.7f);
+    //// ---------- game object: spot light
+    //GameObject* spotLightGo = world->CreateGameObjectInScene(m_worldContextList[0].world->GetActiveScene(), "SpotLight");
+    //SpotLight* spotLight = spotLightGo->AddSceneComponent<SpotLight>();
+    //spotLight->SetLocalPosition(-2.0f, 4.0f, 0.0f);
+    //spotLight->SetLocalRotation(DirectX::SimpleMath::Quaternion::CreateFromAxisAngle(DirectX::SimpleMath::Vector3::UnitZ, -XM_PIDIV4));
+    //spotLight->UpdateParameters(XMVectorSet(0.2f, 0.8f, 1.0f, 1.0f), 3.0f, 20.0f, XM_PI / 6.0f, XM_PI / 3.0f);
+    //
 
-    // ---------- game object: point light
-    GameObject* pointLightGo = world->CreateGameObject("PointLight");
-    PointLight* pointLight = pointLightGo->AddSceneComponent<PointLight>();
-    pointLight->SetLocalPosition(0.0f, 3.0f, 2.0f);
-    pointLight->UpdateParameters(XMVectorSet(1.0f, 0.4f, 0.2f, 1.0f), 2.0f, 15.0f);
-
-    // ---------- game object: spot light
-    GameObject* spotLightGo = world->CreateGameObject("SpotLight");
-    SpotLight* spotLight = spotLightGo->AddSceneComponent<SpotLight>();
-    spotLight->SetLocalPosition(-2.0f, 4.0f, 0.0f);
-    spotLight->SetLocalRotation(DirectX::SimpleMath::Quaternion::CreateFromAxisAngle(DirectX::SimpleMath::Vector3::UnitZ, -XM_PIDIV4));
-    spotLight->UpdateParameters(XMVectorSet(0.2f, 0.8f, 1.0f, 1.0f), 3.0f, 20.0f, XM_PI / 6.0f, XM_PI / 3.0f);
-    
-
-    //TestComponent* testComp = CreateDObject<TestComponent>();
-    cameraGo->AddComponent<TestComponent>();
+    ////TestComponent* testComp = CreateDObject<TestComponent>();
+    //cameraGo->AddComponent<TestComponent>();
 
     //DClass* testClass = GetReflectionRegistry().FindClassByName("TestComponent");
 
@@ -233,7 +230,7 @@ void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer, std:
     //spriteRenderer->Start(2.0f, 2.0f, "Assets/logo.png");
 
 
-    dxRenderManager->InitWorldRenderers(*world);
+    //dxRenderManager->InitWorldRenderers(*world);
 
     //atexit(&Device::ReportLiveObjects);
 }
@@ -276,6 +273,125 @@ void EngineMain::RecordSceneDraws(std::shared_ptr<DXGraphicsContext> context)
         context->ApplyLightBuffersToCommandList();
         world->GatherDrawCalls(context);
     }
+}
+
+void EngineMain::CreateWorld()
+{
+    // ---- Build the editor world ----
+    DWorld* world = CreateDObject<DWorld>();
+    m_worldContextList.push_back(WorldContext { WorldType::Editor, world });
+}
+
+void EngineMain::CreateGameObjects()
+{
+    DWorld* world = GetWorld();
+
+    // ---------- game object: star mesh renderer
+    {
+        GameObject* go = world->CreateGameObject("MeshRenderer");
+        MeshRenderer* meshRenderer = go->AddSceneComponent<MeshRenderer>();
+        meshRenderer->SetLocalPosition(2.0f, 0.0f, 5.0f);
+
+        DShader* shader = CreateDObject<DShader>();
+        shader->Initialize(
+            L"Shaders.hlsl",
+            L"VSMain", L"PSMain",
+            L"vs_6_0", L"ps_6_0");
+
+        shader->SetInputLayout({
+            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+            { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+            { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        });
+
+        // std::shared_ptr<DMaterial> material = std::make_shared<DMaterial>(shader);
+
+        DMesh* mesh = CreateDObject<DMesh>();
+        mesh->Initialize(std::wstring(L"Star.obj"));
+        std::vector<DTexture*> textures = mesh->GetTextures();
+        std::vector<DMaterial*> materials;
+        for (int i = 0; i < mesh->GetSubMeshCount(); i++) {
+            DMaterial* material = CreateDObject<DMaterial>();
+            material->Initialize(shader);
+            if (i < textures.size()) {
+                material->AddTexture(textures[i]);
+            }
+            materials.push_back(material);
+        }
+
+        mesh->SetMaterials(materials);
+        meshRenderer->SetMesh(mesh);
+    }
+
+    // ---------- game object: home mesh renderer
+    {
+        GameObject* go = world->CreateGameObject("HomeMeshRenderer");
+        MeshRenderer* meshRenderer = go->AddSceneComponent<MeshRenderer>();
+        meshRenderer->SetLocalPosition(0.0f, 0.0f, 0.0f);
+
+        DShader* shader = CreateDObject<DShader>();
+        shader->Initialize(
+            L"ToonShader.hlsl",
+            L"VSMain", L"PSMain",
+            L"vs_6_0", L"ps_6_0");
+
+        shader->SetInputLayout({
+            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+            { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+            { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        });
+        // std::shared_ptr<DMaterial> material = std::make_shared<DMaterial>(shader);
+
+        DMesh* mesh = CreateDObject<DMesh>();
+        mesh->Initialize(std::wstring(L"home/source/home.fbx"));
+        // std::shared_ptr<DMesh> mesh = std::make_shared<DMesh>(std::wstring(L"car/source/datsun240k.fbx"));
+        std::vector<DTexture*> textures = mesh->GetTextures();
+        std::vector<DMaterial*> materials;
+        for (int i = 0; i < mesh->GetSubMeshCount(); i++) {
+            DMaterial* material = CreateDObject<DMaterial>();
+            material->Initialize(shader);
+            if (i < textures.size()) {
+                material->AddTexture(textures[i]);
+            }
+            materials.push_back(material);
+        }
+
+        mesh->SetMaterials(materials);
+        meshRenderer->SetMesh(mesh);
+    }
+
+    // ---------- game object: camera
+    GameObject* cameraGo = world->CreateGameObjectInScene(m_worldContextList[0].world->GetActiveScene(), "Camera");
+    m_cameraGameObject = cameraGo;
+    Camera* camera = cameraGo->AddSceneComponent<Camera>();
+    camera->SetLocalPosition(0.0f, 50.0f, -400.0f);
+    camera->UpdateParameters(DirectX::XM_PIDIV4, static_cast<float>(SCREEN_WIDTH) / SCREEN_HEIGHT, 0.1f, 1000.0f);
+
+    // ---------- game object: directional light (sun)
+    GameObject* directionalLightGo = world->CreateGameObjectInScene(m_worldContextList[0].world->GetActiveScene(), "DirectionalLight");
+    DirectionalLight* directionalLight = directionalLightGo->AddSceneComponent<DirectionalLight>();
+    directionalLight->SetLocalRotation(DirectX::SimpleMath::Quaternion::CreateFromAxisAngle(DirectX::SimpleMath::Vector3::UnitX, XM_PIDIV4));
+    directionalLight->UpdateParameters(XMVectorSet(0, -1, 0, 0), XMVectorSet(1.0f, 1.0f, 0.95f, 1.0f), 0.7f);
+
+    // ---------- game object: point light
+    GameObject* pointLightGo = world->CreateGameObjectInScene(m_worldContextList[0].world->GetActiveScene(), "PointLight");
+    PointLight* pointLight = pointLightGo->AddSceneComponent<PointLight>();
+    pointLight->SetLocalPosition(0.0f, 3.0f, 2.0f);
+    pointLight->UpdateParameters(XMVectorSet(1.0f, 0.4f, 0.2f, 1.0f), 2.0f, 15.0f);
+
+    // ---------- game object: spot light
+    GameObject* spotLightGo = world->CreateGameObjectInScene(m_worldContextList[0].world->GetActiveScene(), "SpotLight");
+    SpotLight* spotLight = spotLightGo->AddSceneComponent<SpotLight>();
+    spotLight->SetLocalPosition(-2.0f, 4.0f, 0.0f);
+    spotLight->SetLocalRotation(DirectX::SimpleMath::Quaternion::CreateFromAxisAngle(DirectX::SimpleMath::Vector3::UnitZ, -XM_PIDIV4));
+    spotLight->UpdateParameters(XMVectorSet(0.2f, 0.8f, 1.0f, 1.0f), 3.0f, 20.0f, XM_PI / 6.0f, XM_PI / 3.0f);
+
+    // TestComponent* testComp = CreateDObject<TestComponent>();
+    cameraGo->AddComponent<TestComponent>();
+
+    dxRenderManager->InitWorldRenderers(*world);
 }
 
 void EngineMain::LoadScene(const AssetId& sceneAssetId)

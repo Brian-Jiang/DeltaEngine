@@ -49,6 +49,9 @@ public:
 	/// Record scene draw calls to the command list. Called by Editor during RenderFrame.
 	DELTAENGINE_API void RecordSceneDraws(std::shared_ptr<DXGraphicsContext> context);
 
+	DELTAENGINE_API void CreateWorld();
+    DELTAENGINE_API void CreateGameObjects();
+
 	/// Load a DScene from the asset database by asset ID.
 	/// All GameObjects in the scene are added to the Editor world.
 	/// The first scene loaded automatically becomes the active scene.

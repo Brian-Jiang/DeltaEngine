@@ -71,7 +71,14 @@ EditorMain::EditorMain()
     m_assetDatabase->ScanAssetsFolder(IOManager::GetEngineImportedAssetsFolder());
 
     m_engine = std::make_unique<EngineMain>();
+    m_engine->CreateWorld();
     m_engine->Initialize(m_renderManager->GetSceneRenderer(), m_window);
+
+    CreateAssets();
+    
+    m_engine->CreateGameObjects();
+
+    m_assetDatabase->SaveDirtyAssets();
 
     m_selectionState = std::make_unique<EditorSelectionState>();
 
@@ -107,8 +114,6 @@ EditorMain::EditorMain()
     imguiInit.SrvDescriptorAllocFn = ImGuiDescriptorAllocate;
     imguiInit.SrvDescriptorFreeFn = ImGuiDescriptorFree;
     ImGui_ImplDX12_Init(&imguiInit);
-
-    CreateAssets();
 }
 
 EditorMain::~EditorMain()

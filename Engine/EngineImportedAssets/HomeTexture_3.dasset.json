@@ -1,6 +1,6 @@
 {
   "header": {
-    "assetId": "8911e1de-9d0e-4cc4-923b-54c584cad5c5",
+    "assetId": "0f7f8b19-11f1-48ea-b913-2ada6751a491",
     "className": "DPrimaryAsset",
     "magic": "DLTA",
     "version": 1
@@ -8,7 +8,7 @@
   "objects": [
     {
       "_class": "DTexture",
-      "_objectId": "d33fba41-2fe2-4331-a5b2-35e277a66872",
+      "_objectId": "a3987e24-04e7-4e11-8f59-e25927b8b4e1",
       "m_sRGB": true,
       "m_sourcePath": "../../../Engine/EngineSourceAssets/home\\textures\\tex_RoofTiles.jpg"
     }

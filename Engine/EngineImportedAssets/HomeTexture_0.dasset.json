@@ -1,6 +1,6 @@
 {
   "header": {
-    "assetId": "2f4532e5-7bc4-44ce-810b-29b76e174000",
+    "assetId": "a06ab6b3-2977-4107-8004-858688fd7d3b",
     "className": "DPrimaryAsset",
     "magic": "DLTA",
     "version": 1
@@ -8,7 +8,7 @@
   "objects": [
     {
       "_class": "DTexture",
-      "_objectId": "1b2073b2-b818-4195-9c22-18c611971bd1",
+      "_objectId": "1500efa2-12d8-4a03-b504-a6661b10a24f",
       "m_sRGB": true,
       "m_sourcePath": "../../../Engine/EngineSourceAssets/home\\textures\\tex_StonseWall.jpg"
     }
