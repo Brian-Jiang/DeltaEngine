@@ -9,6 +9,7 @@ void EditorSelectionState::SelectGameObject(GameObject* gameObject)
 {
     m_selectedGameObjects.clear();
     m_selectedComponents.clear();
+    m_selectedAssetId = AssetId::Null();
     if (gameObject)
     {
         m_selectedGameObjects.push_back(gameObject);
@@ -19,14 +20,23 @@ void EditorSelectionState::SelectComponent(DComponent* component)
 {
     m_selectedComponents.clear();
     m_selectedGameObjects.clear();
+    m_selectedAssetId = AssetId::Null();
     if (component)
     {
         m_selectedComponents.push_back(component);
     }
 }
 
+void EditorSelectionState::SelectAsset(const AssetId& assetId)
+{
+    m_selectedGameObjects.clear();
+    m_selectedComponents.clear();
+    m_selectedAssetId = assetId;
+}
+
 void EditorSelectionState::AddGameObjectToSelection(GameObject* gameObject)
 {
+    m_selectedAssetId = AssetId::Null();
     if (gameObject)
     {
         m_selectedGameObjects.push_back(gameObject);
@@ -35,6 +45,7 @@ void EditorSelectionState::AddGameObjectToSelection(GameObject* gameObject)
 
 void EditorSelectionState::AddComponentToSelection(DComponent* component)
 {
+    m_selectedAssetId = AssetId::Null();
     if (component)
     {
         m_selectedComponents.push_back(component);
@@ -45,6 +56,7 @@ void EditorSelectionState::ClearSelection()
 {
     m_selectedGameObjects.clear();
     m_selectedComponents.clear();
+    m_selectedAssetId = AssetId::Null();
 }
 
 GameObject* EditorSelectionState::GetContextGameObject() const
@@ -62,5 +74,5 @@ GameObject* EditorSelectionState::GetContextGameObject() const
 
 bool EditorSelectionState::HasSelection() const
 {
-    return !m_selectedGameObjects.empty() || !m_selectedComponents.empty();
+    return !m_selectedGameObjects.empty() || !m_selectedComponents.empty() || !m_selectedAssetId.IsNull();
 }

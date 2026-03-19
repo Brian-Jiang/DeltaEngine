@@ -6,6 +6,7 @@
 #include "Runtime/Serialization/JsonAssetArchive.h"
 
 #include <nlohmann/json.hpp>
+#include <algorithm>
 #include <fstream>
 
 using namespace DeltaEngine;
@@ -37,11 +38,8 @@ void EditorAssetDatabase::ScanAssetsFolder(const std::filesystem::path& root)
         auto existingIt = m_assets.find(header.m_persistentId);
         if (existingIt != m_assets.end())
         {
-            if (isBinary)
-            {
-                existingIt->second.m_header   = header;
-                existingIt->second.m_filePath  = path;
-            }
+            existingIt->second.m_header   = header;
+            existingIt->second.m_filePath = path;
             continue;
         }
 
@@ -52,6 +50,32 @@ void EditorAssetDatabase::ScanAssetsFolder(const std::filesystem::path& root)
             .m_instance = nullptr
         };
     }
+}
+
+const std::unordered_map<AssetId, EditorAssetDatabase::AssetEntry>& EditorAssetDatabase::GetAllAssets() const
+{
+    return m_assets;
+
+    // todo sorting?
+    //std::vector<AssetInfo> assets;
+    //assets.reserve(m_assets.size());
+
+    //for (const auto& [assetId, entry] : m_assets)
+    //{
+    //    assets.push_back(AssetInfo{
+    //        .m_assetId  = assetId,
+    //        .m_header   = entry.m_header,
+    //        .m_filePath = entry.m_filePath,
+    //        .m_state    = entry.m_state,
+    //    });
+    //}
+
+    //std::sort(assets.begin(), assets.end(), [](const AssetInfo& lhs, const AssetInfo& rhs)
+    //{
+    //    return lhs.m_filePath.generic_string() < rhs.m_filePath.generic_string();
+    //});
+
+    //return assets;
 }
 
 // ---------------------------------------------------------------------------
@@ -297,6 +321,151 @@ void EditorAssetDatabase::SaveAsset(const AssetId& id)
     asset->ClearDirty();
 }
 
+AssetId EditorAssetDatabase::DuplicateAsset(const AssetId& id)
+{
+    DPrimaryAsset* asset = LoadAsset(id);
+    if (!asset)
+        return AssetId::Null();
+
+    auto it = m_assets.find(id);
+    if (it == m_assets.end())
+        return AssetId::Null();
+
+    const std::filesystem::path sourcePath = it->second.m_filePath;
+    const std::filesystem::path assetDir = sourcePath.parent_path();
+    const std::string sourceStem = sourcePath.stem().stem().string();
+
+    std::string targetStem = sourceStem + "_duplicated";
+    std::filesystem::path targetPath = assetDir / (targetStem + ".dasset.json");
+    for (int suffix = 1; std::filesystem::exists(targetPath); ++suffix)
+    {
+        targetStem = sourceStem + "_duplicated" + std::to_string(suffix);
+        targetPath = assetDir / (targetStem + ".dasset.json");
+    }
+
+    JsonAssetArchive bulkAr(assetDir, targetStem);
+    asset->SerializeBulkData(bulkAr);
+
+    JsonAssetArchive headerAr;
+    asset->SerializeHeader(headerAr);
+
+    JsonAssetArchive bodyAr;
+    asset->SerializeBody(bodyAr);
+
+    nlohmann::json output;
+    output["header"] = headerAr.GetRoot();
+    const auto& bulkRoot = bulkAr.GetRoot();
+    if (bulkRoot.contains("header") && bulkRoot["header"].contains("bulkDataMap"))
+        output["header"]["bulkDataMap"] = bulkRoot["header"]["bulkDataMap"];
+    for (auto& [key, val] : bodyAr.GetRoot().items())
+        output[key] = val;
+
+    const AssetId newAssetId = UUID::Generate();
+    output["header"]["assetId"] = newAssetId.ToString();
+
+    std::unordered_map<std::string, std::string> objectIdRemap;
+    if (output.contains("objects") && output["objects"].is_array())
+    {
+        for (auto& objectJson : output["objects"])
+        {
+            if (!objectJson.is_object() || !objectJson.contains("_objectId") || !objectJson["_objectId"].is_string())
+                continue;
+
+            const std::string oldObjectId = objectJson["_objectId"].get<std::string>();
+            const std::string newObjectId = UUID::Generate().ToString();
+            objectIdRemap[oldObjectId] = newObjectId;
+            objectJson["_objectId"] = newObjectId;
+        }
+    }
+
+    const std::string oldAssetId = id.ToString();
+    const std::string duplicatedAssetId = newAssetId.ToString();
+    auto remapScriptPointers = [&](auto& self, nlohmann::json& node) -> void
+    {
+        if (node.is_object())
+        {
+            if (node.contains("assetId") && node.contains("objectId") &&
+                node["assetId"].is_string() && node["objectId"].is_string())
+            {
+                const std::string nodeAssetId = node["assetId"].get<std::string>();
+                const std::string nodeObjectId = node["objectId"].get<std::string>();
+                if (nodeAssetId == oldAssetId)
+                {
+                    node["assetId"] = duplicatedAssetId;
+                    if (auto remapIt = objectIdRemap.find(nodeObjectId); remapIt != objectIdRemap.end())
+                        node["objectId"] = remapIt->second;
+                }
+            }
+
+            for (auto& [key, value] : node.items())
+                self(self, value);
+        }
+        else if (node.is_array())
+        {
+            for (auto& value : node)
+                self(self, value);
+        }
+    };
+    remapScriptPointers(remapScriptPointers, output);
+
+    std::ofstream out(targetPath);
+    if (!out.is_open())
+        return AssetId::Null();
+    out << output.dump(2);
+
+    DPrimaryAsset::Header header = ReadAssetHeaderFromFile(targetPath, true);
+    m_assets[newAssetId] = AssetEntry{
+        .m_header   = header,
+        .m_filePath = targetPath,
+        .m_state    = AssetState::HeaderOnly,
+        .m_instance = nullptr
+    };
+
+    return newAssetId;
+}
+
+// todo delete existing asset?
+bool EditorAssetDatabase::DeleteAsset(const AssetId& id)
+{
+    auto it = m_assets.find(id);
+    if (it == m_assets.end())
+        return false;
+
+    const std::filesystem::path assetPath = it->second.m_filePath;
+    bool deletedAnything = false;
+
+    if (assetPath.string().ends_with(".dasset.json") && std::filesystem::exists(assetPath))
+    {
+        try
+        {
+            std::ifstream file(assetPath);
+            if (file.is_open())
+            {
+                nlohmann::json root = nlohmann::json::parse(file);
+                if (root.contains("header") && root["header"].contains("bulkDataMap"))
+                {
+                    for (auto& [bulkId, bulkEntry] : root["header"]["bulkDataMap"].items())
+                    {
+                        if (!bulkEntry.is_object() || !bulkEntry.contains("file") || !bulkEntry["file"].is_string())
+                            continue;
+
+                        const std::filesystem::path bulkPath = assetPath.parent_path() / bulkEntry["file"].get<std::string>();
+                        deletedAnything |= std::filesystem::remove(bulkPath);
+                    }
+                }
+            }
+        }
+        catch (...)
+        {
+        }
+    }
+
+    deletedAnything |= std::filesystem::remove(assetPath);
+    m_assets.erase(it);
+    return deletedAnything;
+}
+
+// todo handle existing asset at filePath?
 void EditorAssetDatabase::CreateAsset(const std::filesystem::path& filePath, DPrimaryAsset* asset)
 {
     if (!asset)
@@ -347,6 +516,14 @@ std::filesystem::path EditorAssetDatabase::GetAssetPath(const AssetId& id) const
 {
     auto it = m_assets.find(id);
     return (it != m_assets.end()) ? it->second.m_filePath : std::filesystem::path{};
+}
+
+DPrimaryAsset* EditorAssetDatabase::GetLoadedAsset(const AssetId& id) const
+{
+    auto it = m_assets.find(id);
+    if (it == m_assets.end() || it->second.m_state != AssetState::Loaded)
+        return nullptr;
+    return it->second.m_instance;
 }
 
 bool EditorAssetDatabase::IsLoaded(const AssetId& id) const

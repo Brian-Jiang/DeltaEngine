@@ -24,7 +24,7 @@ public:
     virtual ~DStruct() = default;
 
     void AddProperty(DProperty* property);
-    DProperty* FindPropertyByName(const std::string& name) const;
+    DELTAENGINE_API DProperty* FindPropertyByName(const std::string& name) const;
 
     void SetSuper(DStruct* super);
 

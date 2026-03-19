@@ -2,11 +2,10 @@
 
 #include "EngineIncludes.h"
 
-#include <memory>
-
 #include "EditorWindows/EditorWindow.h"
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DProperty.h"
+#include "Runtime/Reflection/DVectorProperty.h"
 #include "Runtime/Core/DObject.h"
 #include "UIComponents/PropertyWidgets/Vec3Field.h"
 #include "UIComponents/PropertyWidgets/ScalarField.h"
@@ -32,11 +31,15 @@ public:
     bool* m_open = nullptr;
 
 private:
+    void RenderAssetDetails(const AssetId& assetId);
     void RenderGameObjectDetails(GameObject* gameObject);
     void RenderComponentDetails(DComponent* component);
     void RenderSceneComponentTransform(SceneComponent* sceneComponent);
 
     void DrawPropertyEditor(DObject* instance, DClass* dclass, int depth = 0);
+    void DrawReadOnlyProperty(const std::string& label, const std::string& value) const;
+    void DrawVectorElements(const DVectorPropertyBase* vectorProp, void* instance, int depth);
+
     bool DrawIntProperty(DObject* instance, DProperty* prop);
     bool DrawFloatProperty(DObject* instance, DProperty* prop);
     bool DrawDoubleProperty(DObject* instance, DProperty* prop);
@@ -49,6 +52,8 @@ private:
     bool DrawFloat4x4Property(DObject* instance, DProperty* prop);
     bool DrawObjectPtrProperty(DObject* instance, DProperty* prop, int depth);
     bool DrawSharedObjectPtrProperty(DObject* instance, DProperty* prop, int depth);
+    bool DrawBulkDataProperty(DObject* instance, DProperty* prop);
+    bool DrawVectorProperty(DObject* instance, DProperty* prop, int depth);
 
     Vec3Field      m_vec3Field;
     ScalarField    m_scalarField;

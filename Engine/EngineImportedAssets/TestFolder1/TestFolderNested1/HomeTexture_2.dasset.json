@@ -1,6 +1,6 @@
 {
   "header": {
-    "assetId": "ef27a96f-fe35-49dd-b965-7768ce3ab834",
+    "assetId": "ee7d26d1-e832-4b55-a582-f61c0f05bc1e",
     "className": "DPrimaryAsset",
     "magic": "DLTA",
     "version": 1
@@ -8,7 +8,7 @@
   "objects": [
     {
       "_class": "DTexture",
-      "_objectId": "6b9fa75d-a386-48be-8205-1320480030a8",
+      "_objectId": "43847364-a06f-4ada-80ac-3edcee0ec771",
       "m_sRGB": true,
       "m_sourcePath": "../../../Engine/EngineSourceAssets/home\\textures\\tex_Bark.jpg"
     }

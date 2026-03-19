@@ -1,6 +1,6 @@
 {
   "header": {
-    "assetId": "35e82af6-3d37-472f-80ea-a9351e9daecd",
+    "assetId": "7aad051d-b05d-46e2-8d36-d5edb736a69d",
     "className": "DPrimaryAsset",
     "magic": "DLTA",
     "version": 1
@@ -8,7 +8,7 @@
   "objects": [
     {
       "_class": "DShader",
-      "_objectId": "d3318ae3-6408-48c0-87de-12100b632056",
+      "_objectId": "d1dbefbf-349c-49fd-af69-61087836bcf0",
       "m_pixelShaderEntryPoint": "PSMain",
       "m_pixelShaderTargetProfile": "ps_6_0",
       "m_sourcePath": "Shaders.hlsl",

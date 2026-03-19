@@ -8,6 +8,7 @@
 
 #include <filesystem>
 #include <memory>
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -25,10 +26,20 @@ public:
         Loaded
     };
 
+    struct AssetEntry
+    {
+        DPrimaryAsset::Header m_header;
+        std::filesystem::path m_filePath;
+        AssetState m_state = AssetState::HeaderOnly;
+        DPrimaryAsset* m_instance;
+    };
+
     void ScanAssetsFolder(const std::filesystem::path& root);
+    const std::unordered_map<AssetId, AssetEntry>& GetAllAssets() const;
 
     const DPrimaryAsset::Header* GetAssetHeader(const AssetId& id) const;
     std::filesystem::path        GetAssetPath(const AssetId& id) const;
+    DPrimaryAsset*               GetLoadedAsset(const AssetId& id) const;
 
     DPrimaryAsset* LoadAsset(const AssetId& id) override;
 
@@ -36,6 +47,8 @@ public:
 
     void SaveDirtyAssets();
     void SaveAsset(const AssetId& id);
+    AssetId DuplicateAsset(const AssetId& id);
+    bool    DeleteAsset(const AssetId& id);
 
     void CreateAsset(const std::filesystem::path& filePath, DPrimaryAsset* asset);
     void CreateAsset(const std::filesystem::path& filePath, DObject* object);
@@ -53,14 +66,6 @@ private:
 
     static DPrimaryAsset::Header ReadAssetHeaderFromFile(
         const std::filesystem::path& path, bool isJson);
-
-    struct AssetEntry
-    {
-        DPrimaryAsset::Header          m_header;
-        std::filesystem::path          m_filePath;
-        AssetState                     m_state = AssetState::HeaderOnly;
-        DPrimaryAsset*                 m_instance;
-    };
 
     std::unordered_map<AssetId, AssetEntry> m_assets;
     std::unordered_set<AssetId>             m_currentlyLoading;

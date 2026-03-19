@@ -41,6 +41,7 @@ public:
         ImVec4 AxZBg;    // 0x0d1e38 — Z axis chip background (dark blue)
         ImVec4 Acc;      // 0x6B8CFF @ 0.85 — main periwinkle (left bar, selected dot)
         ImVec4 AccRim;   // 0x6B8CFF @ 0.18 — rim lines (selection top/bottom)
+        ImVec4 Warn;     // 0xf59e0b — yellow warning highlight
     };
 
     //static constexpr float kRowH = 30.f;

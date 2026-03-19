@@ -9,6 +9,7 @@
 #include "Editor/EditorWindows/EditorWindow_Viewport.h"
 #include "Editor/EditorWindows/EditorWindow_ComponentsHierarchy.h"
 #include "Editor/EditorWindows/EditorWindow_Details.h"
+#include "Editor/EditorWindows/EditorWindow_AssetBrowser.h"
 #include "Editor/Style/EditorTheme.h"
 #include "Editor/Assets/EditorAssetDatabase.h"
 #include "Runtime/Assets/AssetDatabaseLocator.h"
@@ -74,7 +75,7 @@ EditorMain::EditorMain()
     m_engine->CreateWorld();
     m_engine->Initialize(m_renderManager->GetSceneRenderer(), m_window);
 
-    CreateAssets();
+    //CreateAssets();
     
     m_engine->CreateGameObjects();
 
@@ -134,6 +135,7 @@ int EditorMain::Run()
     OpenEditorWindow<EditorWindow_Viewport>();
     OpenEditorWindow<EditorWindow_ComponentsHierarchy>();
     OpenEditorWindow<EditorWindow_Details>();
+    OpenEditorWindow<EditorWindow_AssetBrowser>();
 
     // todo check if needs redraw
     while (m_running)

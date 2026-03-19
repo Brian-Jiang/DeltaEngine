@@ -64,6 +64,7 @@ public:
     DELTAEDITOR_API void GetSceneRenderSize(UINT& width, UINT& height) const;
     DELTAEDITOR_API EditorSelectionState* GetSelectionState() { return m_selectionState.get(); }
     DELTAEDITOR_API EditorTheme* GetEditorTheme() { return m_editorTheme.get(); }
+    DELTAEDITOR_API EditorAssetDatabase* GetAssetDatabase() { return m_assetDatabase.get(); }
 
 private:
     void CreateAssets();

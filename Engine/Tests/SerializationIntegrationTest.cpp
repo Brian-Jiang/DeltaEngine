@@ -29,7 +29,7 @@ static std::filesystem::path MakeTempDir(const char* name)
 }
 
 static void SaveAssetToFile(
-    const std::shared_ptr<DPrimaryAsset>& asset,
+    DPrimaryAsset* asset,
     const std::filesystem::path& filePath)
 {
     JsonAssetArchive headerAr;
@@ -48,7 +48,7 @@ static void SaveAssetToFile(
 }
 
 static void SaveAssetWithBulkData(
-    const std::shared_ptr<DPrimaryAsset>& asset,
+    DPrimaryAsset* asset,
     const std::filesystem::path& filePath)
 {
     const auto assetDir  = filePath.parent_path();
@@ -97,7 +97,7 @@ static void TestAssetDatabaseLocatorWithEditorAssetDatabase()
 {
     auto tempDir = MakeTempDir("DeltaLocatorEditorDbTest");
 
-    auto asset = std::make_shared<PA_TestAsset>();
+    auto* asset = CreateDObject<PA_TestAsset>();
     AssetId assetId = UUID::Generate();
     asset->GetHeader().m_persistentId = assetId;
     asset->GetHeader().m_className    = "PA_TestAsset";
@@ -106,7 +106,7 @@ static void TestAssetDatabaseLocatorWithEditorAssetDatabase()
     ObjectId objAId = UUID::Generate();
     rawA->SetObjectId(objAId);
     rawA->m_name = "LocatorHero";
-    asset->AddObject(std::shared_ptr<DObject>(rawA));
+    asset->AddObject(rawA);
 
     auto filePath = tempDir / "LocatorAsset.dasset.json";
     SaveAssetToFile(asset, filePath);
@@ -134,7 +134,7 @@ static void TestSingleAssetRoundTrip()
 {
     auto tempDir = MakeTempDir("DeltaRoundTripTest");
 
-    auto asset = std::make_shared<PA_TestAsset>();
+    auto* asset = CreateDObject<PA_TestAsset>();
     AssetId assetId = UUID::Generate();
     asset->GetHeader().m_persistentId = assetId;
     asset->GetHeader().m_className    = "PA_TestAsset";
@@ -150,7 +150,7 @@ static void TestSingleAssetRoundTrip()
     rawA->m_position = { 1.0f, 2.0f, 3.0f };
     rawA->m_rotation = { 0.0f, 0.707f, 0.0f, 0.707f };
     rawA->m_weights  = { 1.0f, 2.0f, 3.0f };
-    asset->AddObject(std::shared_ptr<DObject>(rawA));
+    asset->AddObject(rawA);
 
     auto* rawB = new DTestObjectB();
     ObjectId objBId = UUID::Generate();
@@ -158,7 +158,7 @@ static void TestSingleAssetRoundTrip()
     rawB->m_label     = "Companion";
     rawB->m_weight    = 3.14f;
     rawB->m_targetRef = rawA;
-    asset->AddObject(std::shared_ptr<DObject>(rawB));
+    asset->AddObject(rawB);
 
     auto filePath = tempDir / "TestAsset.dasset.json";
     SaveAssetToFile(asset, filePath);
@@ -525,13 +525,13 @@ static void TestCyclicDependency()
 
 static void TestDirtyFlagPropagation()
 {
-    auto asset = std::make_shared<PA_TestAsset>();
+    auto* asset = CreateDObject<PA_TestAsset>();
     asset->GetHeader().m_persistentId = UUID::Generate();
     asset->GetHeader().m_className    = "PA_TestAsset";
 
     auto* rawObj = new DTestObjectA();
     rawObj->SetObjectId(UUID::Generate());
-    asset->AddObject(std::shared_ptr<DObject>(rawObj));
+    asset->AddObject(rawObj);
 
     asset->ClearDirty();
     assert(!asset->IsDirty());
@@ -615,7 +615,7 @@ static void TestBulkDataRoundTrip()
 {
     auto tempDir = MakeTempDir("DeltaBulkTest");
 
-    auto asset = std::make_shared<PA_TestMesh>();
+    auto* asset = CreateDObject<PA_TestMesh>();
     AssetId assetId = UUID::Generate();
     asset->GetHeader().m_persistentId = assetId;
     asset->GetHeader().m_className    = "PA_TestMesh";
@@ -634,7 +634,7 @@ static void TestBulkDataRoundTrip()
     for (int i = 0; i < 600; ++i) indices[i] = static_cast<uint8_t>((i * 7) % 256);
     rawMesh->m_indexBuffer.Set(indices.data(), static_cast<uint64_t>(indices.size()));
 
-    asset->AddObject(std::shared_ptr<DObject>(rawMesh));
+    asset->AddObject(rawMesh);
 
     auto filePath = tempDir / "TestMesh.dasset.json";
     SaveAssetWithBulkData(asset, filePath);
@@ -676,6 +676,232 @@ static void TestBulkDataRoundTrip()
 }
 
 // ---------------------------------------------------------------------------
+// Test 10: Asset enumeration ignores bulk sidecars
+// ---------------------------------------------------------------------------
+
+static void TestAssetEnumerationIgnoresBulkFiles()
+{
+    auto tempDir = MakeTempDir("DeltaAssetEnumerationTest");
+
+    AssetId assetId = UUID::Generate();
+    nlohmann::json file = {
+        {"header", {
+            {"magic",     "DLTA"},
+            {"version",   1},
+            {"className", "PA_TestAsset"},
+            {"assetId",   assetId.ToString()}
+        }},
+        {"objects", nlohmann::json::array()}
+    };
+
+    {
+        std::ofstream(tempDir / "Enumerated.dasset.json") << file.dump(2);
+        std::ofstream(tempDir / "Enumerated_Bulk0.bin", std::ios::binary) << "bulk";
+    }
+
+    EditorAssetDatabase db;
+    db.ScanAssetsFolder(tempDir);
+
+    const auto assets = db.GetAllAssets();
+    assert(assets.size() == 1);
+    assert(assets.begin()->first == assetId);
+    assert(assets.begin()->second.m_filePath.filename() == "Enumerated.dasset.json");
+
+    std::filesystem::remove_all(tempDir);
+    std::cout << "[PASS] TestAssetEnumerationIgnoresBulkFiles\n";
+}
+
+// ---------------------------------------------------------------------------
+// Test 11: SaveDirtyAssets persists changes and clears dirty
+// ---------------------------------------------------------------------------
+
+static void TestSaveDirtyAssetsPersistsChanges()
+{
+    auto tempDir = MakeTempDir("DeltaSaveDirtyAssetsTest");
+
+    EditorAssetDatabase db;
+
+    auto* asset = CreateDObject<PA_TestAsset>();
+    asset->GetHeader().m_persistentId = UUID::Generate();
+    asset->GetHeader().m_className = "PA_TestAsset";
+
+    auto* rawObj = new DTestObjectA();
+    rawObj->SetObjectId(UUID::Generate());
+    rawObj->m_name = "BeforeSave";
+    asset->AddObject(rawObj);
+
+    const auto filePath = tempDir / "DirtyAsset.dasset.json";
+    db.CreateAsset(filePath, asset);
+    assert(!asset->IsDirty());
+
+    DClass* dclass = rawObj->GetClass();
+    assert(dclass != nullptr);
+    DProperty* nameProp = dclass->FindPropertyByName("m_name");
+    assert(nameProp != nullptr);
+
+    const std::string newName = "AfterSave";
+    nameProp->SetValue(rawObj, &newName);
+    assert(asset->IsDirty());
+
+    db.SaveDirtyAssets();
+    assert(!asset->IsDirty());
+
+    std::ifstream in(filePath);
+    const auto json = nlohmann::json::parse(in);
+    assert(json["objects"][0]["m_name"] == "AfterSave");
+    in.close();
+
+    std::filesystem::remove_all(tempDir);
+    std::cout << "[PASS] TestSaveDirtyAssetsPersistsChanges\n";
+}
+
+// ---------------------------------------------------------------------------
+// Test 12: DuplicateAsset remaps internal refs and preserves bulk/external refs
+// ---------------------------------------------------------------------------
+
+static void TestDuplicateAsset()
+{
+    auto tempDir = MakeTempDir("DeltaDuplicateAssetTest");
+
+    auto* externalAsset = CreateDObject<PA_TestAsset>();
+    const AssetId externalAssetId = UUID::Generate();
+    externalAsset->GetHeader().m_persistentId = externalAssetId;
+    externalAsset->GetHeader().m_className = "PA_TestAsset";
+
+    auto* externalObj = new DTestObjectA();
+    const ObjectId externalObjId = UUID::Generate();
+    externalObj->SetObjectId(externalObjId);
+    externalObj->m_name = "ExternalTarget";
+    externalAsset->AddObject(externalObj);
+    SaveAssetToFile(externalAsset, tempDir / "ExternalAsset.dasset.json");
+
+    auto* sourceAsset = CreateDObject<PA_TestAsset>();
+    const AssetId sourceAssetId = UUID::Generate();
+    sourceAsset->GetHeader().m_persistentId = sourceAssetId;
+    sourceAsset->GetHeader().m_className = "PA_TestAsset";
+
+    auto* internalObj = new DTestObjectA();
+    const ObjectId internalObjId = UUID::Generate();
+    internalObj->SetObjectId(internalObjId);
+    internalObj->m_name = "InternalTarget";
+    sourceAsset->AddObject(internalObj);
+
+    auto* refObj = new DTestObjectB();
+    const ObjectId refObjId = UUID::Generate();
+    refObj->SetObjectId(refObjId);
+    refObj->m_label = "RefHolder";
+    refObj->m_targetRef = internalObj;
+    refObj->m_refs.push_back(internalObj);
+    refObj->m_refs.push_back(externalObj);
+    sourceAsset->AddObject(refObj);
+
+    auto* meshObj = new DTestMeshData();
+    meshObj->SetObjectId(UUID::Generate());
+    meshObj->m_vertexCount = 2;
+    meshObj->m_indexCount = 3;
+    const uint8_t verts[] = { 1, 2, 3, 4 };
+    const uint8_t indices[] = { 9, 8, 7, 6, 5, 4 };
+    meshObj->m_vertexBuffer.Set(verts, sizeof(verts));
+    meshObj->m_indexBuffer.Set(indices, sizeof(indices));
+    sourceAsset->AddObject(meshObj);
+
+    const auto sourceFile = tempDir / "SourceAsset.dasset.json";
+    SaveAssetWithBulkData(sourceAsset, sourceFile);
+
+    EditorAssetDatabase db;
+    db.ScanAssetsFolder(tempDir);
+
+    const AssetId duplicatedId = db.DuplicateAsset(sourceAssetId);
+    assert(!duplicatedId.IsNull());
+    assert(duplicatedId != sourceAssetId);
+
+    DPrimaryAsset* duplicatedAsset = db.LoadAsset(duplicatedId);
+    assert(duplicatedAsset != nullptr);
+    assert(duplicatedAsset->GetObjects().size() == 3);
+
+    DTestObjectA* duplicatedInternal = nullptr;
+    DTestObjectB* duplicatedRef = nullptr;
+    DTestMeshData* duplicatedMesh = nullptr;
+    for (DObject* obj : duplicatedAsset->GetObjects())
+    {
+        if (!duplicatedInternal)
+            duplicatedInternal = dynamic_cast<DTestObjectA*>(obj);
+        if (!duplicatedRef)
+            duplicatedRef = dynamic_cast<DTestObjectB*>(obj);
+        if (!duplicatedMesh)
+            duplicatedMesh = dynamic_cast<DTestMeshData*>(obj);
+    }
+
+    assert(duplicatedInternal != nullptr);
+    assert(duplicatedRef != nullptr);
+    assert(duplicatedMesh != nullptr);
+    assert(duplicatedInternal->GetObjectId() != internalObjId);
+    assert(duplicatedRef->GetObjectId() != refObjId);
+
+    assert(duplicatedRef->m_targetRef == duplicatedInternal);
+    assert(duplicatedRef->m_targetRef->GetOwningAsset()->GetAssetId() == duplicatedId);
+    assert(duplicatedRef->m_refs.size() == 2);
+    assert(duplicatedRef->m_refs[0] == duplicatedInternal);  // fixme error
+    assert(duplicatedRef->m_refs[1] != nullptr);
+    assert(duplicatedRef->m_refs[1]->GetObjectId() == externalObjId);
+    assert(duplicatedRef->m_refs[1]->GetOwningAsset()->GetAssetId() == externalAssetId);
+
+    assert(duplicatedMesh->m_vertexBuffer.m_size == sizeof(verts));
+    assert(duplicatedMesh->m_indexBuffer.m_size == sizeof(indices));
+    for (size_t i = 0; i < sizeof(verts); ++i)
+        assert(duplicatedMesh->m_vertexBuffer.m_data[i] == verts[i]);
+    for (size_t i = 0; i < sizeof(indices); ++i)
+        assert(duplicatedMesh->m_indexBuffer.m_data[i] == indices[i]);
+
+    const auto duplicatedPath = db.GetAssetPath(duplicatedId);
+    assert(std::filesystem::exists(duplicatedPath));
+    assert(std::filesystem::exists(duplicatedPath.parent_path() /
+        (duplicatedPath.stem().stem().string() + "_Bulk0.bin")));
+    assert(std::filesystem::exists(duplicatedPath.parent_path() /
+        (duplicatedPath.stem().stem().string() + "_Bulk1.bin")));
+
+    std::filesystem::remove_all(tempDir);
+    std::cout << "[PASS] TestDuplicateAsset\n";
+}
+
+// ---------------------------------------------------------------------------
+// Test 13: DeleteAsset removes json and bulk sidecars
+// ---------------------------------------------------------------------------
+
+static void TestDeleteAssetRemovesFiles()
+{
+    auto tempDir = MakeTempDir("DeltaDeleteAssetTest");
+
+    auto* asset = CreateDObject<PA_TestMesh>();
+    const AssetId assetId = UUID::Generate();
+    asset->GetHeader().m_persistentId = assetId;
+    asset->GetHeader().m_className = "PA_TestMesh";
+
+    auto* meshObj = new DTestMeshData();
+    meshObj->SetObjectId(UUID::Generate());
+    const uint8_t bytes[] = { 1, 3, 5, 7 };
+    meshObj->m_vertexBuffer.Set(bytes, sizeof(bytes));
+    meshObj->m_indexBuffer.Set(bytes, sizeof(bytes));
+    asset->AddObject(meshObj);
+
+    const auto filePath = tempDir / "DeleteMe.dasset.json";
+    SaveAssetWithBulkData(asset, filePath);
+
+    EditorAssetDatabase db;
+    db.ScanAssetsFolder(tempDir);
+    assert(db.DeleteAsset(assetId));
+
+    assert(!std::filesystem::exists(filePath));
+    assert(!std::filesystem::exists(tempDir / "DeleteMe_Bulk0.bin"));
+    assert(!std::filesystem::exists(tempDir / "DeleteMe_Bulk1.bin"));
+    assert(db.FindAssetIdByPath(filePath).IsNull());
+    assert(db.GetAllAssets().empty());
+
+    std::filesystem::remove_all(tempDir);
+    std::cout << "[PASS] TestDeleteAssetRemovesFiles\n";
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 
@@ -693,6 +919,10 @@ int main()
     TestDirtyFlagPropagation();
     TestBrokenReferenceIsNullptr();
     TestBulkDataRoundTrip();
+    TestAssetEnumerationIgnoresBulkFiles();
+    TestSaveDirtyAssetsPersistsChanges();
+    TestDuplicateAsset();
+    TestDeleteAssetRemovesFiles();
 
     std::cout << "\nAll serialization integration tests passed!\n";
     return 0;

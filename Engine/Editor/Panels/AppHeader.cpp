@@ -1,6 +1,7 @@
 #include "Panels/AppHeader.h"
 
 #include "EditorMain.h"
+#include "Assets/EditorAssetDatabase.h"
 #include "Style/EditorTheme.h"
 #include "Runtime/EngineMain.h"
 #include "Runtime/Core/DWorld.h"
@@ -105,7 +106,17 @@ void AppHeader::Draw()
 
         // ── Menu items ───────────────────────────────────────────────────────
         if (ImGui::BeginMenu("File"))
+        {
+            if (ImGui::MenuItem("Save"))
+            {
+                if (g_editor)
+                {
+                    if (EditorAssetDatabase* assetDatabase = g_editor->GetAssetDatabase())
+                        assetDatabase->SaveDirtyAssets();
+                }
+            }
             ImGui::EndMenu();
+        }
         if (ImGui::BeginMenu("Edit"))
             ImGui::EndMenu();
         if (ImGui::BeginMenu("View"))

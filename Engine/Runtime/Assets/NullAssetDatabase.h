@@ -33,6 +33,13 @@ public:
         std::cerr << "[AssetDatabase] NullAssetDatabase: no IAssetDatabase registered - FindObject returning nullptr\n";
         return nullptr;
     }
+
+    AssetId FindAssetIdByPath(const std::filesystem::path& path) const override
+    {
+        (void)path;
+        std::cerr << "[AssetDatabase] NullAssetDatabase: no IAssetDatabase registered - FindAssetIdByPath returning null AssetId\n";
+        return AssetId::Null();
+    }
 };
 
 DELTA_ENGINE_NS_END

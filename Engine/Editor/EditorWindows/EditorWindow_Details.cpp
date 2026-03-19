@@ -1,33 +1,33 @@
 #include "Editor/EditorWindows/EditorWindow_Details.h"
+
+#include "Editor/Assets/EditorAssetDatabase.h"
 #include "Editor/EditorMain.h"
 #include "Editor/EditorSelectionState.h"
 #include "Editor/Style/EditorTheme.h"
 #include "Editor/UIComponents/PropertyWidgets/PropertyWidgetUtil.h"
+#include "Runtime/Assets/DPrimaryAsset.h"
+#include "Runtime/Core/DComponent.h"
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Core/SceneComponent.h"
-#include "Runtime/Core/DComponent.h"
+#include "Runtime/Reflection/DBulkDataProperty.h"
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DProperty.h"
 #include "Runtime/Utils/StringUtils.h"
 
 #include "SimpleMath.h"
 #include <DirectXMath.h>
-#include <algorithm>
 
 #include "imgui.h"
 
+#include <algorithm>
 #include <cctype>
 #include <string>
 
 using namespace DeltaEngine;
+using namespace DirectX::SimpleMath;
 
 namespace
 {
-// Converts reflection property name to display name:
-// - Removes m_ prefix
-// - Capitalizes first letter
-// - Adds space before each word (camelCase boundaries)
-// - Consecutive capitals stay together (e.g. myHTTPURL -> "My HTTPURL")
 std::string GetPropertyDisplayName(const std::string& propName)
 {
     if (propName.empty())
@@ -47,22 +47,17 @@ std::string GetPropertyDisplayName(const std::string& propName)
 
     for (size_t i = 0; i < name.size(); ++i)
     {
-        char c = name[i];
-        bool isUpper = std::isupper(static_cast<unsigned char>(c));
-        bool isLower = std::islower(static_cast<unsigned char>(c));
+        const char c = name[i];
+        const bool isUpper = std::isupper(static_cast<unsigned char>(c));
+        const bool isLower = std::islower(static_cast<unsigned char>(c));
 
         if (i == 0)
         {
             result += static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
-            prevUpper = isUpper;
-            prevLower = isLower;
-            continue;
         }
         else if (isUpper)
         {
-            if (prevLower)
-                result += ' ';
-            else if (!prevUpper && std::isdigit(static_cast<unsigned char>(name[i - 1])))
+            if (prevLower || (!prevUpper && std::isdigit(static_cast<unsigned char>(name[i - 1]))))
                 result += ' ';
             result += c;
         }
@@ -70,21 +65,22 @@ std::string GetPropertyDisplayName(const std::string& propName)
         {
             result += c;
         }
+
         prevUpper = isUpper;
         prevLower = isLower;
     }
+
     return result;
 }
-} // namespace
-using namespace DirectX::SimpleMath;
 
-EditorWindow_Details::EditorWindow_Details()
+std::string GetAssetDisplayName(const std::filesystem::path& path)
 {
+    return path.stem().stem().string();
+}
 }
 
-EditorWindow_Details::~EditorWindow_Details()
-{
-}
+EditorWindow_Details::EditorWindow_Details() = default;
+EditorWindow_Details::~EditorWindow_Details() = default;
 
 void EditorWindow_Details::Render()
 {
@@ -101,24 +97,32 @@ void EditorWindow_Details::Render()
         return;
     }
 
-    auto selectionState = g_editor->GetSelectionState();
+    EditorSelectionState* selectionState = g_editor->GetSelectionState();
+    const AssetId selectedAssetId = selectionState->GetSelectedAssetId();
     const auto& gameObjects = selectionState->GetSelectedGameObjects();
-    const auto& components  = selectionState->GetSelectedComponents();
+    const auto& components = selectionState->GetSelectedComponents();
 
-    if (gameObjects.empty() && components.empty())
+    if (!selectedAssetId.IsNull())
     {
-        ImGui::TextDisabled("Select a GameObject or component");
+        RenderAssetDetails(selectedAssetId);
         ImGui::End();
         return;
     }
 
-    for (const auto& gameObject : gameObjects)
+    if (gameObjects.empty() && components.empty())
+    {
+        ImGui::TextDisabled("Select a GameObject, component, or asset");
+        ImGui::End();
+        return;
+    }
+
+    for (GameObject* gameObject : gameObjects)
     {
         if (gameObject)
             RenderGameObjectDetails(gameObject);
     }
 
-    for (const auto& component : components)
+    for (DComponent* component : components)
     {
         if (component)
             RenderComponentDetails(component);
@@ -127,27 +131,95 @@ void EditorWindow_Details::Render()
     ImGui::End();
 }
 
+void EditorWindow_Details::RenderAssetDetails(const AssetId& assetId)
+{
+    if (!g_editor)
+    {
+        ImGui::TextDisabled("No editor");
+        return;
+    }
+
+    EditorAssetDatabase* assetDatabase = g_editor->GetAssetDatabase();
+    if (!assetDatabase)
+    {
+        ImGui::TextDisabled("No asset database");
+        return;
+    }
+
+    DPrimaryAsset* asset = assetDatabase->GetLoadedAsset(assetId);
+    if (!asset)
+        asset = assetDatabase->LoadAsset(assetId);
+
+    if (!asset)
+    {
+        ImGui::TextDisabled("Failed to load asset");
+        return;
+    }
+
+    EditorTheme* theme = g_editor->GetEditorTheme();
+    const auto& c = theme->colors;
+    const std::filesystem::path assetPath = assetDatabase->GetAssetPath(assetId);
+
+    if (theme->GetBoldFont())
+        ImGui::PushFont(theme->GetBoldFont());
+    ImGui::PushStyleColor(ImGuiCol_Text, c.TBright);
+    ImGui::TextUnformatted(GetAssetDisplayName(assetPath).c_str());
+    ImGui::PopStyleColor();
+    if (theme->GetBoldFont())
+        ImGui::PopFont();
+
+    ImGui::SameLine(0.f, ImGui::GetStyle().ItemSpacing.x);
+    ImGui::PushStyleColor(ImGuiCol_Text, asset->IsDirty() ? c.Warn : c.TDim);
+    ImGui::TextUnformatted(asset->IsDirty() ? "Dirty" : "Saved");
+    ImGui::PopStyleColor();
+
+    ImGui::Separator();
+    DrawReadOnlyProperty("Path", assetPath.generic_string());
+    DrawReadOnlyProperty("Class", asset->GetHeader().m_className);
+    DrawReadOnlyProperty("Asset Id", asset->GetAssetId().ToString());
+    DrawReadOnlyProperty("Objects", std::to_string(asset->GetObjects().size()));
+
+    int objectIndex = 0;
+    for (DObject* object : asset->GetObjects())
+    {
+        if (!object)
+            continue;
+
+        DClass* dclass = object->GetClass();
+        const std::string title = "Object " + std::to_string(objectIndex++) + " - " +
+            (dclass ? dclass->GetName() : "Unknown");
+
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
+        if (ImGui::CollapsingHeader(title.c_str(), flags))
+        {
+            if (dclass)
+                DrawPropertyEditor(object, dclass);
+            else
+                ImGui::TextDisabled("No reflection data");
+        }
+    }
+}
+
 void EditorWindow_Details::RenderGameObjectDetails(GameObject* gameObject)
 {
     EditorTheme* theme = g_editor->GetEditorTheme();
-    const auto&  c     = theme->colors;
+    const auto& c = theme->colors;
 
-    // Object name — bold + bright
-    if (theme->GetBoldFont()) ImGui::PushFont(theme->GetBoldFont());
+    if (theme->GetBoldFont())
+        ImGui::PushFont(theme->GetBoldFont());
     ImGui::PushStyleColor(ImGuiCol_Text, c.TBright);
     ImGui::TextUnformatted(gameObject->GetName().c_str());
     ImGui::PopStyleColor();
-    if (theme->GetBoldFont()) ImGui::PopFont();
+    if (theme->GetBoldFont())
+        ImGui::PopFont();
 
-    // Class name — dim
     ImGui::SameLine(0.f, ImGui::GetStyle().ItemSpacing.x);
     ImGui::PushStyleColor(ImGuiCol_Text, c.TDim);
     DClass* dc = gameObject->GetClass();
     ImGui::TextUnformatted(dc ? dc->GetName().c_str() : "GameObject");
     ImGui::PopStyleColor();
 
-    auto rootSceneComponent = gameObject->GetRootSceneComponent();
-    if (rootSceneComponent)
+    if (SceneComponent* rootSceneComponent = gameObject->GetRootSceneComponent())
     {
         ImGui::Separator();
         ImGui::TextUnformatted("Root Scene Component");
@@ -167,24 +239,23 @@ void EditorWindow_Details::RenderGameObjectDetails(GameObject* gameObject)
 void EditorWindow_Details::RenderComponentDetails(DComponent* component)
 {
     EditorTheme* theme = g_editor->GetEditorTheme();
-    const auto&  c     = theme->colors;
+    const auto& c = theme->colors;
 
-    // Component name — bold + bright
-    if (theme->GetBoldFont()) ImGui::PushFont(theme->GetBoldFont());
+    if (theme->GetBoldFont())
+        ImGui::PushFont(theme->GetBoldFont());
     ImGui::PushStyleColor(ImGuiCol_Text, c.TBright);
     ImGui::TextUnformatted(component->GetName().c_str());
     ImGui::PopStyleColor();
-    if (theme->GetBoldFont()) ImGui::PopFont();
+    if (theme->GetBoldFont())
+        ImGui::PopFont();
 
-    // Class name — dim
     ImGui::SameLine(0.f, ImGui::GetStyle().ItemSpacing.x);
     ImGui::PushStyleColor(ImGuiCol_Text, c.TDim);
     DClass* dc = component->GetClass();
     ImGui::TextUnformatted(dc ? dc->GetName().c_str() : "Component");
     ImGui::PopStyleColor();
 
-    auto sceneComponent = dynamic_cast<SceneComponent*>(component);
-    if (sceneComponent)
+    if (SceneComponent* sceneComponent = dynamic_cast<SceneComponent*>(component))
         RenderSceneComponentTransform(sceneComponent);
 
     ImGui::Separator();
@@ -202,14 +273,14 @@ void EditorWindow_Details::RenderSceneComponentTransform(SceneComponent* sceneCo
     if (!sceneComponent)
         return;
 
-    Vector3 pos   = sceneComponent->GetLocalPosition();
+    Vector3 pos = sceneComponent->GetLocalPosition();
     Vector3 euler = sceneComponent->GetLocalRotationEulerAngles();
     Vector3 scale = sceneComponent->GetLocalScale();
 
     bool changed = false;
-    changed |= m_vec3Field.Draw("Position", &pos.x,   0.1f);
+    changed |= m_vec3Field.Draw("Position", &pos.x, 0.1f);
     changed |= m_vec3Field.Draw("Rotation", &euler.x, 1.0f);
-    changed |= m_vec3Field.Draw("Scale",    &scale.x, 0.01f);
+    changed |= m_vec3Field.Draw("Scale", &scale.x, 0.01f);
 
     if (changed)
     {
@@ -272,12 +343,15 @@ void EditorWindow_Details::DrawPropertyEditor(DObject* instance, DClass* dclass,
             case EPropertyType::SharedObjectPtr:
                 DrawSharedObjectPtrProperty(instance, prop, depth);
                 break;
+            case EPropertyType::BulkData:
+                DrawBulkDataProperty(instance, prop);
+                break;
+            case EPropertyType::Vector:
+                DrawVectorProperty(instance, prop, depth);
+                break;
             default:
-            {
-                std::string displayName = GetPropertyDisplayName(prop->GetName());
-                ImGui::Text("%s: %s", displayName.c_str(),
-                    prop->ToString(prop->GetValue(instance)).c_str());
-            }
+                DrawReadOnlyProperty(GetPropertyDisplayName(prop->GetName()),
+                    prop->ToString(prop->GetValue(instance)));
                 break;
             }
 
@@ -286,17 +360,104 @@ void EditorWindow_Details::DrawPropertyEditor(DObject* instance, DClass* dclass,
     }
 }
 
+void EditorWindow_Details::DrawReadOnlyProperty(const std::string& label, const std::string& value) const
+{
+    EditorTheme* theme = g_editor->GetEditorTheme();
+    const auto& c = theme->colors;
+
+    const float availW = BeginPropertyRow(label.c_str(), c);
+    ImGui::PushStyleColor(ImGuiCol_Text, c.TDim);
+    ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + availW);
+    ImGui::TextUnformatted(value.c_str());
+    ImGui::PopTextWrapPos();
+    ImGui::PopStyleColor();
+    EndPropertyRow();
+}
+
+void EditorWindow_Details::DrawVectorElements(const DVectorPropertyBase* vectorProp, void* instance, int depth)
+{
+    if (!vectorProp || !instance)
+        return;
+
+    constexpr int kMaxDepth = 8;
+    const DProperty* innerProp = vectorProp->GetInnerProperty();
+    if (!innerProp)
+        return;
+
+    const size_t count = vectorProp->GetSize(instance);
+    for (size_t index = 0; index < count; ++index)
+    {
+        void* elementAddr = vectorProp->GetElementAddress(instance, index);
+        if (!elementAddr)
+            continue;
+
+        const std::string label = "[" + std::to_string(index) + "]";
+        switch (innerProp->GetPropertyType())
+        {
+        case EPropertyType::Vector:
+        {
+            const auto* nestedVector = dynamic_cast<const DVectorPropertyBase*>(innerProp);
+            if (!nestedVector)
+            {
+                DrawReadOnlyProperty(label, innerProp->ToString(elementAddr));
+                break;
+            }
+
+            if (depth >= kMaxDepth)
+            {
+                DrawReadOnlyProperty(label, innerProp->ToString(elementAddr));
+                break;
+            }
+
+            if (ImGui::TreeNodeEx(label.c_str(), ImGuiTreeNodeFlags_DefaultOpen, "%s", label.c_str()))
+            {
+                DrawVectorElements(nestedVector, elementAddr, depth + 1);
+                ImGui::TreePop();
+            }
+            break;
+        }
+        case EPropertyType::ObjectPtr:
+        case EPropertyType::SharedObjectPtr:
+        {
+            DObject* child = innerProp->GetObjectPointer(elementAddr);
+            if (!child)
+            {
+                DrawReadOnlyProperty(label, "(null)");
+                break;
+            }
+
+            DClass* childClass = child->GetClass();
+            const std::string nodeLabel = label + " (" + (childClass ? childClass->GetName() : "?") + ")";
+            if (depth >= kMaxDepth)
+            {
+                DrawReadOnlyProperty(label, nodeLabel);
+                break;
+            }
+
+            if (ImGui::TreeNodeEx(nodeLabel.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                DrawPropertyEditor(child, childClass, depth + 1);
+                ImGui::TreePop();
+            }
+            break;
+        }
+        default:
+            DrawReadOnlyProperty(label, innerProp->ToString(elementAddr));
+            break;
+        }
+    }
+}
+
 bool EditorWindow_Details::DrawIntProperty(DObject* instance, DProperty* prop)
 {
     EditorTheme* theme = g_editor->GetEditorTheme();
-    const auto&  c     = theme->colors;
+    const auto& c = theme->colors;
 
-    void* addr = prop->GetValue(instance);
-    int*  val  = static_cast<int*>(addr);
+    int* val = static_cast<int*>(prop->GetValue(instance));
 
-    float availW = BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
+    const float availW = BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
     ImGui::SetNextItemWidth(availW);
-    bool changed = ImGui::DragInt("##v", val);
+    const bool changed = ImGui::DragInt("##v", val);
     EndPropertyRow();
 
     if (changed)
@@ -306,10 +467,9 @@ bool EditorWindow_Details::DrawIntProperty(DObject* instance, DProperty* prop)
 
 bool EditorWindow_Details::DrawFloatProperty(DObject* instance, DProperty* prop)
 {
-    void*  addr = prop->GetValue(instance);
-    float* val  = static_cast<float*>(addr);
+    float* val = static_cast<float*>(prop->GetValue(instance));
 
-    bool changed = m_scalarField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), val, 0.1f);
+    const bool changed = m_scalarField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), val, 0.1f);
     if (changed)
         prop->SetValue(instance, val);
     return changed;
@@ -318,14 +478,13 @@ bool EditorWindow_Details::DrawFloatProperty(DObject* instance, DProperty* prop)
 bool EditorWindow_Details::DrawDoubleProperty(DObject* instance, DProperty* prop)
 {
     EditorTheme* theme = g_editor->GetEditorTheme();
-    const auto&  c     = theme->colors;
+    const auto& c = theme->colors;
 
-    void*   addr = prop->GetValue(instance);
-    double* val  = static_cast<double*>(addr);
+    double* val = static_cast<double*>(prop->GetValue(instance));
 
-    float availW = BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
+    const float availW = BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
     ImGui::SetNextItemWidth(availW);
-    bool changed = ImGui::InputDouble("##v", val, 0.1, 1.0, "%.6f");
+    const bool changed = ImGui::InputDouble("##v", val, 0.1, 1.0, "%.6f");
     EndPropertyRow();
 
     if (changed)
@@ -336,13 +495,12 @@ bool EditorWindow_Details::DrawDoubleProperty(DObject* instance, DProperty* prop
 bool EditorWindow_Details::DrawBoolProperty(DObject* instance, DProperty* prop)
 {
     EditorTheme* theme = g_editor->GetEditorTheme();
-    const auto&  c     = theme->colors;
+    const auto& c = theme->colors;
 
-    void* addr = prop->GetValue(instance);
-    bool* val  = static_cast<bool*>(addr);
+    bool* val = static_cast<bool*>(prop->GetValue(instance));
 
     BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
-    bool changed = ImGui::Checkbox("##v", val);
+    const bool changed = ImGui::Checkbox("##v", val);
     EndPropertyRow();
 
     if (changed)
@@ -354,14 +512,14 @@ bool EditorWindow_Details::DrawStringProperty(DObject* instance, DProperty* prop
 {
     const std::string& current = *static_cast<const std::string*>(prop->GetValue(instance));
     char buf[1024];
-    size_t len = (std::min)(current.size(), sizeof(buf) - 1);
+    const size_t len = (std::min)(current.size(), sizeof(buf) - 1);
     memcpy(buf, current.c_str(), len);
     buf[len] = '\0';
     buf[sizeof(buf) - 1] = '\0';
 
     if (m_stringField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), buf, sizeof(buf)))
     {
-        std::string newVal(buf);
+        const std::string newVal(buf);
         prop->SetValue(instance, &newVal);
         return true;
     }
@@ -370,27 +528,16 @@ bool EditorWindow_Details::DrawStringProperty(DObject* instance, DProperty* prop
 
 bool EditorWindow_Details::DrawWStringProperty(DObject* instance, DProperty* prop)
 {
-    EditorTheme* theme = g_editor->GetEditorTheme();
-    const auto&  c     = theme->colors;
-
-    const std::wstring& ws  = *static_cast<const std::wstring*>(prop->GetValue(instance));
-    std::string utf8 = StringUtils::WStringToUtf8(ws);
-
-    BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
-    ImGui::PushStyleColor(ImGuiCol_Text, c.TDim);
-    ImGui::TextUnformatted(utf8.c_str());
-    ImGui::PopStyleColor();
-    EndPropertyRow();
-
+    const std::wstring& ws = *static_cast<const std::wstring*>(prop->GetValue(instance));
+    DrawReadOnlyProperty(GetPropertyDisplayName(prop->GetName()), StringUtils::WStringToUtf8(ws));
     return false;
 }
 
 bool EditorWindow_Details::DrawVector3Property(DObject* instance, DProperty* prop)
 {
-    void*    addr = prop->GetValue(instance);
-    Vector3* val  = static_cast<Vector3*>(addr);
+    Vector3* val = static_cast<Vector3*>(prop->GetValue(instance));
 
-    bool changed = m_vec3Field.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), &val->x, 0.1f);
+    const bool changed = m_vec3Field.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), &val->x, 0.1f);
     if (changed)
         prop->SetValue(instance, val);
     return changed;
@@ -399,14 +546,13 @@ bool EditorWindow_Details::DrawVector3Property(DObject* instance, DProperty* pro
 bool EditorWindow_Details::DrawQuaternionProperty(DObject* instance, DProperty* prop)
 {
     EditorTheme* theme = g_editor->GetEditorTheme();
-    const auto&  c     = theme->colors;
+    const auto& c = theme->colors;
 
-    void*       addr = prop->GetValue(instance);
-    Quaternion* val  = static_cast<Quaternion*>(addr);
+    Quaternion* val = static_cast<Quaternion*>(prop->GetValue(instance));
 
-    float availW = BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
+    const float availW = BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
     ImGui::SetNextItemWidth(availW);
-    bool changed = ImGui::DragFloat4("##v", &val->x, 0.01f);
+    const bool changed = ImGui::DragFloat4("##v", &val->x, 0.01f);
     EndPropertyRow();
 
     if (changed)
@@ -421,26 +567,26 @@ bool EditorWindow_Details::DrawFloat4Property(DObject* instance, DProperty* prop
     if (prop->GetMeta("UIType") == "Color")
     {
         float* val = static_cast<float*>(addr);
-        bool changed = m_colorField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), val, /*hasAlpha=*/true);
+        const bool changed = m_colorField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), val, true);
         if (changed)
             prop->SetValue(instance, val);
         return changed;
     }
 
     EditorTheme* theme = g_editor->GetEditorTheme();
-    const auto&  c     = theme->colors;
+    const auto& c = theme->colors;
 
-    DirectX::XMFLOAT4* val = static_cast<DirectX::XMFLOAT4*>(addr);
+    auto* val = static_cast<DirectX::XMFLOAT4*>(addr);
 
-    float availW = BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
+    const float availW = BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
     ImGui::SetNextItemWidth(availW);
-    bool changed = ImGui::DragFloat4("##v", &val->x, 0.01f);
+    const bool changed = ImGui::DragFloat4("##v", &val->x, 0.01f);
     EndPropertyRow();
 
     if (changed)
     {
-        DirectX::XMVECTOR v = DirectX::XMLoadFloat4(val);
-        prop->SetValue(instance, &v);
+        const DirectX::XMVECTOR vectorValue = DirectX::XMLoadFloat4(val);
+        prop->SetValue(instance, &vectorValue);
     }
     return changed;
 }
@@ -448,13 +594,13 @@ bool EditorWindow_Details::DrawFloat4Property(DObject* instance, DProperty* prop
 bool EditorWindow_Details::DrawFloat4x4Property(DObject* instance, DProperty* prop)
 {
     EditorTheme* theme = g_editor->GetEditorTheme();
-    const auto&  c     = theme->colors;
+    const auto& c = theme->colors;
 
-    void*                addr = prop->GetValue(instance);
-    DirectX::XMFLOAT4X4* mat = static_cast<DirectX::XMFLOAT4X4*>(addr);
+    auto* mat = static_cast<DirectX::XMFLOAT4X4*>(prop->GetValue(instance));
     bool changed = false;
 
-    if (ImGui::TreeNodeEx(GetPropertyDisplayName(prop->GetName()).c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+    const std::string displayName = GetPropertyDisplayName(prop->GetName());
+    if (ImGui::TreeNodeEx(displayName.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
     {
         float availW = BeginPropertyRow("Row 0", c);
         ImGui::SetNextItemWidth(availW);
@@ -481,19 +627,19 @@ bool EditorWindow_Details::DrawFloat4x4Property(DObject* instance, DProperty* pr
 
     if (changed)
     {
-        DirectX::XMMATRIX m = DirectX::XMLoadFloat4x4(mat);
-        prop->SetValue(instance, &m);
+        const DirectX::XMMATRIX matrixValue = DirectX::XMLoadFloat4x4(mat);
+        prop->SetValue(instance, &matrixValue);
     }
     return changed;
 }
 
 bool EditorWindow_Details::DrawObjectPtrProperty(DObject* instance, DProperty* prop, int depth)
 {
-    DObject*       child = prop->GetObjectPointer(instance);
-    std::string     displayName = GetPropertyDisplayName(prop->GetName());
-    const char*     label = displayName.c_str();
+    DObject* child = prop->GetObjectPointer(instance);
+    const std::string displayName = GetPropertyDisplayName(prop->GetName());
+    const char* label = displayName.c_str();
 
-    if (child == nullptr)
+    if (!child)
     {
         m_refField.Draw(label, "(null)", true);
         return false;
@@ -506,8 +652,8 @@ bool EditorWindow_Details::DrawObjectPtrProperty(DObject* instance, DProperty* p
         return false;
     }
 
-    DClass*     childClass = child->GetClass();
-    const char* typeName   = childClass ? childClass->GetName().c_str() : "?";
+    DClass* childClass = child->GetClass();
+    const char* typeName = childClass ? childClass->GetName().c_str() : "?";
     if (ImGui::TreeNodeEx(label, ImGuiTreeNodeFlags_DefaultOpen, "%s (%s)", label, typeName))
     {
         DrawPropertyEditor(child, childClass, depth + 1);
@@ -521,11 +667,11 @@ bool EditorWindow_Details::DrawSharedObjectPtrProperty(DObject* instance, DPrope
     ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f),
         "WARNING: SharedObjectPtr will be deprecated in a future version");
 
-    DObject*       child = prop->GetObjectPointer(instance);
-    std::string    displayName = GetPropertyDisplayName(prop->GetName());
-    const char*    label = displayName.c_str();
+    DObject* child = prop->GetObjectPointer(instance);
+    const std::string displayName = GetPropertyDisplayName(prop->GetName());
+    const char* label = displayName.c_str();
 
-    if (child == nullptr)
+    if (!child)
     {
         m_refField.Draw(label, "(null)", true);
         return false;
@@ -538,11 +684,39 @@ bool EditorWindow_Details::DrawSharedObjectPtrProperty(DObject* instance, DPrope
         return false;
     }
 
-    DClass*     childClass = child->GetClass();
-    const char* typeName   = childClass ? childClass->GetName().c_str() : "?";
+    DClass* childClass = child->GetClass();
+    const char* typeName = childClass ? childClass->GetName().c_str() : "?";
     if (ImGui::TreeNodeEx(label, ImGuiTreeNodeFlags_DefaultOpen, "%s (%s)", label, typeName))
     {
         DrawPropertyEditor(child, childClass, depth + 1);
+        ImGui::TreePop();
+    }
+    return false;
+}
+
+bool EditorWindow_Details::DrawBulkDataProperty(DObject* instance, DProperty* prop)
+{
+    const auto* bulk = static_cast<const TBulkData*>(prop->GetValue(instance));
+    DrawReadOnlyProperty(GetPropertyDisplayName(prop->GetName()),
+        "BulkData(id=" + std::to_string(bulk->m_bulkId) + ", size=" + std::to_string(bulk->m_size) + " bytes)");
+    return false;
+}
+
+bool EditorWindow_Details::DrawVectorProperty(DObject* instance, DProperty* prop, int depth)
+{
+    const auto* vectorProp = dynamic_cast<const DVectorPropertyBase*>(prop);
+    if (!vectorProp)
+    {
+        DrawReadOnlyProperty(GetPropertyDisplayName(prop->GetName()), prop->ToString(prop->GetValue(instance)));
+        return false;
+    }
+
+    const std::string displayName = GetPropertyDisplayName(prop->GetName());
+    const size_t count = vectorProp->GetSize(instance);
+    if (ImGui::TreeNodeEx(displayName.c_str(), ImGuiTreeNodeFlags_DefaultOpen,
+        "%s [%zu]", displayName.c_str(), count))
+    {
+        DrawVectorElements(vectorProp, instance, depth + 1);
         ImGui::TreePop();
     }
     return false;

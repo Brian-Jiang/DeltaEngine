@@ -12,14 +12,27 @@
 
 DELTA_ENGINE_NS_BEGIN
 
+class DVectorPropertyBase : public DProperty
+{
+public:
+    DVectorPropertyBase(std::string name, uint32_t offset, uint32_t size)
+        : DProperty(std::move(name), "std::vector", offset, size)
+    {
+    }
+
+    virtual size_t GetSize(const void* instance) const = 0;
+    virtual void* GetElementAddress(void* instance, size_t index) const = 0;
+    virtual const DProperty* GetInnerProperty() const = 0;
+};
+
 template <typename T>
-class DVectorProperty : public DProperty
+class DVectorProperty : public DVectorPropertyBase
 {
 public:
     DVectorProperty(std::string name, uint32_t offset,
                     std::unique_ptr<DProperty> innerProp)
-        : DProperty(std::move(name), "std::vector", offset,
-                    static_cast<uint32_t>(sizeof(std::vector<T>)))
+        : DVectorPropertyBase(std::move(name), offset,
+                              static_cast<uint32_t>(sizeof(std::vector<T>)))
         , m_innerProperty(std::move(innerProp))
     {
     }
@@ -98,7 +111,18 @@ public:
         ar.SerializeNested(vec, *m_innerProperty);
     }
 
-    DProperty* GetInnerProperty() const { return m_innerProperty.get(); }
+    size_t GetSize(const void* instance) const override
+    {
+        return static_cast<const std::vector<T>*>(GetValue(instance))->size();
+    }
+
+    void* GetElementAddress(void* instance, size_t index) const override
+    {
+        auto* vec = static_cast<std::vector<T>*>(GetValue(instance));
+        return (index < vec->size()) ? &(*vec)[index] : nullptr;
+    }
+
+    const DProperty* GetInnerProperty() const override { return m_innerProperty.get(); }
 
 private:
     std::unique_ptr<DProperty> m_innerProperty;
