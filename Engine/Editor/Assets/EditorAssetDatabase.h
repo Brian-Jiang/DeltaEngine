@@ -68,6 +68,8 @@ private:
         const std::filesystem::path& path, bool isJson);
 
     std::unordered_map<AssetId, AssetEntry> m_assets;
+    std::unordered_map<std::filesystem::path, AssetId> m_assetPathMap;
+
     std::unordered_set<AssetId>             m_currentlyLoading;
     std::vector<AssetId>                    m_newlyLoadedBatch;
 };

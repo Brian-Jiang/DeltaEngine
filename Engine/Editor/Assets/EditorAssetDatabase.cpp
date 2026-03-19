@@ -50,6 +50,8 @@ void EditorAssetDatabase::ScanAssetsFolder(const std::filesystem::path& root)
             .m_state    = AssetState::HeaderOnly,
             .m_instance = nullptr
         };
+
+        m_assetPathMap[path] = header.m_persistentId;
     }
 }
 
@@ -104,15 +106,16 @@ DPrimaryAsset::Header EditorAssetDatabase::ReadAssetHeaderFromFile(
                 header.m_magic       = (magic == "DLTA") ? 0x444C5441 : 0;
                 header.m_fileVersion = h.value("version", 0u);
                 header.m_className   = h.value("className", "");
-                if (h.contains("assetId"))
-                    header.m_persistentId = UUID::FromString(h["assetId"].get<std::string>());
+                header.m_persistentId = UUID::FromString(h["assetId"].get<std::string>());
             }
         }
-        catch (...)
+        catch (std::exception& e)
         {
+            printf("Failed to read asset header from JSON file '%s': %s\n", path.string().c_str(), e.what());
             header.m_magic = 0;
         }
     }
+    // todo binary header reading
     else
     {
         header.m_magic = 0;
@@ -167,6 +170,7 @@ void EditorAssetDatabase::LoadAssetRecursive(const AssetId& id)
         if (!file.is_open())
         {
             m_currentlyLoading.erase(id);
+            printf("Failed to open asset file '%s'\n", entry.m_filePath.string().c_str());
             return;
         }
 
@@ -175,9 +179,10 @@ void EditorAssetDatabase::LoadAssetRecursive(const AssetId& id)
         {
             root = nlohmann::json::parse(file);
         }
-        catch (...)
+        catch (std::exception& e)
         {
             m_currentlyLoading.erase(id);
+            printf("Failed to parse JSON file '%s': %s\n", entry.m_filePath.string().c_str(), e.what());
             return;
         }
 
@@ -187,6 +192,12 @@ void EditorAssetDatabase::LoadAssetRecursive(const AssetId& id)
         {
             JsonAssetArchive headerAr(root["header"], entry.m_filePath.parent_path());
             asset->SerializeHeader(headerAr);
+        }
+        else
+        {
+            m_currentlyLoading.erase(id);
+            printf("JSON file '%s' does not contain 'header' object\n", entry.m_filePath.string().c_str());
+            return;
         }
 
         JsonAssetArchive bodyAr(root, entry.m_filePath.parent_path());
@@ -209,9 +220,12 @@ void EditorAssetDatabase::LoadAssetRecursive(const AssetId& id)
         for (auto& obj : asset->GetObjects())
         {
             if (auto* callbackReceiver = dynamic_cast<ISerializationCallbackReceiver*>(obj))
+            {
                 callbackReceiver->OnAfterDeserialize();
+            }
         }
     }
+    // todo binary loading
 
     m_currentlyLoading.erase(id);
     m_newlyLoadedBatch.push_back(id);
@@ -246,7 +260,10 @@ void EditorAssetDatabase::ResolvePendingBatch()
     {
         auto it = m_assets.find(assetId);
         if (it == m_assets.end() || !it->second.m_instance)
+        {
+            printf("Unexpected error: asset '%s' not found during resolve phase\n", assetId.ToString().c_str());
             continue;
+        }
 
         auto& asset = it->second.m_instance;
         for (auto& obj : asset->GetObjects())
@@ -553,10 +570,9 @@ EditorAssetDatabase::AssetState EditorAssetDatabase::GetState(const AssetId& id)
 
 AssetId EditorAssetDatabase::FindAssetIdByPath(const std::filesystem::path& path) const
 {
-    for (const auto& [id, entry] : m_assets)
-    {
-        if (entry.m_filePath == path)
-            return id;
-    }
-    return AssetId{};
+    auto it = m_assetPathMap.find(path);
+    if (it != m_assetPathMap.end())
+        return it->second;
+
+    return AssetId::Null();
 }

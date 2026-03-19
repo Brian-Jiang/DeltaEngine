@@ -1,6 +1,12 @@
 {
   "header": {
-    "assetId": "492b1e0c-bf7b-4a85-9671-ad8fab2fdad6",
+    "assetId": "dcc52cc2-ffad-48fa-9088-9ee1290f3af6",
+    "bulkDataMap": {
+      "0": {
+        "file": "HomeTexture_2_Bulk0.bin",
+        "size": 1048640
+      }
+    },
     "className": "DPrimaryAsset",
     "magic": "DLTA",
     "version": 1
@@ -8,7 +14,11 @@
   "objects": [
     {
       "_class": "DTexture",
-      "_objectId": "e958e92f-0090-4e1e-9acc-0d20b75670b8",
+      "_objectId": "652f8d99-c41e-4008-886b-2e8a50af2ee7",
+      "m_bulkData": {
+        "_bulk": 0,
+        "size": 1048640
+      },
       "m_sRGB": true,
       "m_sourcePath": "../../../Engine/EngineSourceAssets/home\\textures\\tex_Bark.jpg"
     }

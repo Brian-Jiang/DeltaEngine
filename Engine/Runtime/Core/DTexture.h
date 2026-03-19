@@ -8,6 +8,8 @@
 #include <d3d12.h>
 
 #include "Core/DObject.h"
+#include "Serialization/TBulkData.h"
+#include "Serialization/ISerializationCallbackReceiver.h"
 
 #include "DTexture.generated.h"
 
@@ -21,7 +23,7 @@ namespace DirectX
 DELTA_ENGINE_NS_BEGIN
 
 DCLASS()
-class DTexture : public DObject, public std::enable_shared_from_this<DTexture>
+class DTexture : public DObject, public ISerializationCallbackReceiver
 {
     DGENERATED_BODY(DTexture)
 
@@ -46,15 +48,19 @@ public:
     DFUNCTION()
     DELTAENGINE_API std::wstring GetSourcePath() const;
 
+    void OnBeforeSerialize() override;
+    void OnAfterDeserialize() override;
+
 private:
     void LoadTexture();
     
 
 private:
-    
     std::shared_ptr<DirectX::TexMetadata> m_metadata;
-    
     std::shared_ptr<DirectX::ScratchImage> m_scratchImage;
+
+    DPROPERTY()
+    TBulkData m_bulkData;
 
     DPROPERTY()
     std::wstring m_sourcePath;

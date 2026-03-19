@@ -1,6 +1,12 @@
 {
   "header": {
-    "assetId": "d294ca25-7731-498f-a86d-3f4efaac5af2",
+    "assetId": "22203dbb-a221-4c29-b7b7-b3f5937fb1c6",
+    "bulkDataMap": {
+      "0": {
+        "file": "HomeTexture_7_Bulk0.bin",
+        "size": 1048640
+      }
+    },
     "className": "DPrimaryAsset",
     "magic": "DLTA",
     "version": 1
@@ -8,7 +14,11 @@
   "objects": [
     {
       "_class": "DTexture",
-      "_objectId": "ff1a3838-bb62-4189-9eb4-692f80fa5816",
+      "_objectId": "fa2afa73-92c5-456c-8ff1-037798aa5dfe",
+      "m_bulkData": {
+        "_bulk": 0,
+        "size": 1048640
+      },
       "m_sRGB": true,
       "m_sourcePath": "../../../Engine/EngineSourceAssets/home\\textures\\tex_Stones.jpg"
     }

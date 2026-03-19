@@ -75,7 +75,7 @@ EditorMain::EditorMain()
     m_engine->CreateWorld();
     m_engine->Initialize(m_renderManager->GetSceneRenderer(), m_window);
 
-    CreateAssets();
+    //CreateAssets();
     
     m_engine->CreateGameObjects();
 

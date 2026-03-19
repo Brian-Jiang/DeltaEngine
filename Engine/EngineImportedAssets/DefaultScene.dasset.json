@@ -76,20 +76,52 @@
           "objectId": "00000000-0000-0000-0000-000000000000"
         },
         {
-          "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
-          "objectId": "b589bd0d-9e28-427d-b7e8-d4a795f72b1f"
+          "assetId": "00000000-0000-0000-0000-000000000000",
+          "objectId": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+          "assetId": "00000000-0000-0000-0000-000000000000",
+          "objectId": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+          "assetId": "00000000-0000-0000-0000-000000000000",
+          "objectId": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+          "assetId": "00000000-0000-0000-0000-000000000000",
+          "objectId": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+          "assetId": "00000000-0000-0000-0000-000000000000",
+          "objectId": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+          "assetId": "00000000-0000-0000-0000-000000000000",
+          "objectId": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+          "assetId": "00000000-0000-0000-0000-000000000000",
+          "objectId": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+          "assetId": "00000000-0000-0000-0000-000000000000",
+          "objectId": "00000000-0000-0000-0000-000000000000"
         },
         {
           "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
-          "objectId": "85de75ab-b7cb-4c72-9086-a06f10aa989d"
+          "objectId": "3e6c9b18-d69b-4a14-ab07-987d4d4a4e55"
         },
         {
           "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
-          "objectId": "5e83ed2c-3afc-406f-a815-1048c2c2ebb7"
+          "objectId": "8805c277-1233-4c9d-ae15-a5a5e244e456"
         },
         {
           "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
-          "objectId": "53c68266-069d-46c5-9b4d-bcc47de29171"
+          "objectId": "3333f17e-6652-48ad-9006-58bfac620aee"
+        },
+        {
+          "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+          "objectId": "2deaa93d-419d-4661-a262-1aaec6f48ce2"
         }
       ],
       "m_name": "DefaultScene"
@@ -1015,8 +1047,8 @@
       "_objectId": "b589bd0d-9e28-427d-b7e8-d4a795f72b1f",
       "m_components": [
         {
-          "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
-          "objectId": "7f81a113-eebd-4d4e-92eb-3fee9379a726"
+          "assetId": "00000000-0000-0000-0000-000000000000",
+          "objectId": "00000000-0000-0000-0000-000000000000"
         }
       ],
       "m_name": "Camera",
@@ -1026,8 +1058,8 @@
       },
       "m_sceneComponents": [
         {
-          "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
-          "objectId": "2cf224df-5b1e-428f-a0a3-858f1a0be660"
+          "assetId": "00000000-0000-0000-0000-000000000000",
+          "objectId": "00000000-0000-0000-0000-000000000000"
         }
       ]
     },
@@ -1070,8 +1102,8 @@
       },
       "m_sceneComponents": [
         {
-          "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
-          "objectId": "408dee01-716e-4a3b-96a6-8a023560a596"
+          "assetId": "00000000-0000-0000-0000-000000000000",
+          "objectId": "00000000-0000-0000-0000-000000000000"
         }
       ]
     },
@@ -1123,8 +1155,8 @@
       },
       "m_sceneComponents": [
         {
-          "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
-          "objectId": "a3774e8c-af9e-4f8f-bda8-b39291a6a48a"
+          "assetId": "00000000-0000-0000-0000-000000000000",
+          "objectId": "00000000-0000-0000-0000-000000000000"
         }
       ]
     },
@@ -1175,8 +1207,8 @@
       },
       "m_sceneComponents": [
         {
-          "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
-          "objectId": "cf6ff728-4e94-45b6-a912-e5e32739b6e3"
+          "assetId": "00000000-0000-0000-0000-000000000000",
+          "objectId": "00000000-0000-0000-0000-000000000000"
         }
       ]
     },
@@ -1217,6 +1249,464 @@
     {
       "_class": "TestComponent",
       "_objectId": "7f81a113-eebd-4d4e-92eb-3fee9379a726",
+      "m_name": "New Component",
+      "m_testBool": false,
+      "m_testDouble": 0.0,
+      "m_testFloat": 0.0,
+      "m_testInt": 0,
+      "m_testQuaternion": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_testString": "",
+      "m_testVector3": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "m_texture": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "00000000-0000-0000-0000-000000000000"
+      }
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "719950bf-5b41-4ba8-a53f-a72b56477541",
+      "m_components": [
+        {
+          "assetId": "00000000-0000-0000-0000-000000000000",
+          "objectId": "00000000-0000-0000-0000-000000000000"
+        }
+      ],
+      "m_name": "Camera",
+      "m_rootSceneComponent": {
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "82046a94-e33b-42a0-9e40-ffd668e2de6d"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "00000000-0000-0000-0000-000000000000",
+          "objectId": "00000000-0000-0000-0000-000000000000"
+        }
+      ]
+    },
+    {
+      "_class": "Camera",
+      "_objectId": "82046a94-e33b-42a0-9e40-ffd668e2de6d",
+      "m_aspectRatio": 1.7777777910232544,
+      "m_children": [],
+      "m_far": 1000.0,
+      "m_fov": 0.7853981852531433,
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        50.0,
+        -400.0,
+        1.0
+      ],
+      "m_name": "New Scene Component",
+      "m_near": 0.10000000149011612
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "0a1cea02-8908-42ae-87bc-ea3b95714080",
+      "m_components": [],
+      "m_name": "DirectionalLight",
+      "m_rootSceneComponent": {
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "b5c5e03f-d477-4c1e-897f-e37b65705e6c"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "00000000-0000-0000-0000-000000000000",
+          "objectId": "00000000-0000-0000-0000-000000000000"
+        }
+      ]
+    },
+    {
+      "_class": "DirectionalLight",
+      "_objectId": "b5c5e03f-d477-4c1e-897f-e37b65705e6c",
+      "m_children": [],
+      "m_color": [
+        1.0,
+        1.0,
+        0.949999988079071,
+        1.0
+      ],
+      "m_direction": [
+        0.0,
+        -1.0,
+        0.0,
+        0.0
+      ],
+      "m_intensity": 0.699999988079071,
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.7071068286895752,
+        0.7071067690849304,
+        0.0,
+        0.0,
+        -0.7071067690849304,
+        0.7071068286895752,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_name": "New Scene Component"
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "405677b9-c912-4ce4-a718-e3661f60d355",
+      "m_components": [],
+      "m_name": "PointLight",
+      "m_rootSceneComponent": {
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "dc90fdc8-5bdd-4feb-9751-488c5532247b"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "00000000-0000-0000-0000-000000000000",
+          "objectId": "00000000-0000-0000-0000-000000000000"
+        }
+      ]
+    },
+    {
+      "_class": "PointLight",
+      "_objectId": "dc90fdc8-5bdd-4feb-9751-488c5532247b",
+      "m_children": [],
+      "m_color": [
+        1.0,
+        0.4000000059604645,
+        0.20000000298023224,
+        1.0
+      ],
+      "m_intensity": 2.0,
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        3.0,
+        2.0,
+        1.0
+      ],
+      "m_name": "New Scene Component",
+      "m_range": 15.0,
+      "m_renderProxy": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "00000000-0000-0000-0000-000000000000"
+      }
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "310a325b-2f5f-40d2-97ba-6dc49a3f48ec",
+      "m_components": [],
+      "m_name": "SpotLight",
+      "m_rootSceneComponent": {
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "f12410c0-6211-4ee5-8715-d811291d598f"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "00000000-0000-0000-0000-000000000000",
+          "objectId": "00000000-0000-0000-0000-000000000000"
+        }
+      ]
+    },
+    {
+      "_class": "SpotLight",
+      "_objectId": "f12410c0-6211-4ee5-8715-d811291d598f",
+      "m_children": [],
+      "m_color": [
+        0.20000000298023224,
+        0.800000011920929,
+        1.0,
+        1.0
+      ],
+      "m_innerConeAngle": 0.5235987901687622,
+      "m_intensity": 3.0,
+      "m_localTransform": [
+        0.7071068286895752,
+        -0.7071067690849304,
+        0.0,
+        0.0,
+        0.7071067690849304,
+        0.7071068286895752,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -2.0,
+        4.0,
+        0.0,
+        1.0
+      ],
+      "m_name": "New Scene Component",
+      "m_outerConeAngle": 1.0471975803375244,
+      "m_range": 20.0
+    },
+    {
+      "_class": "TestComponent",
+      "_objectId": "4a59a06b-cea3-447b-9914-aa7dcca7d934",
+      "m_name": "New Component",
+      "m_testBool": false,
+      "m_testDouble": 0.0,
+      "m_testFloat": 0.0,
+      "m_testInt": 0,
+      "m_testQuaternion": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_testString": "",
+      "m_testVector3": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "m_texture": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "00000000-0000-0000-0000-000000000000"
+      }
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "3e6c9b18-d69b-4a14-ab07-987d4d4a4e55",
+      "m_components": [
+        {
+          "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+          "objectId": "75470041-1b1b-4a55-b884-f068e4e6deab"
+        }
+      ],
+      "m_name": "Camera",
+      "m_rootSceneComponent": {
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "51967d58-89a8-4ce7-9301-cc1217f86609"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+          "objectId": "51967d58-89a8-4ce7-9301-cc1217f86609"
+        }
+      ]
+    },
+    {
+      "_class": "Camera",
+      "_objectId": "51967d58-89a8-4ce7-9301-cc1217f86609",
+      "m_aspectRatio": 1.7777777910232544,
+      "m_children": [],
+      "m_far": 1000.0,
+      "m_fov": 0.7853981852531433,
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        50.0,
+        -400.0,
+        1.0
+      ],
+      "m_name": "New Scene Component",
+      "m_near": 0.10000000149011612
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "8805c277-1233-4c9d-ae15-a5a5e244e456",
+      "m_components": [],
+      "m_name": "DirectionalLight",
+      "m_rootSceneComponent": {
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "6137ee57-de16-4dc6-8a9b-7dc6ac057c14"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+          "objectId": "6137ee57-de16-4dc6-8a9b-7dc6ac057c14"
+        }
+      ]
+    },
+    {
+      "_class": "DirectionalLight",
+      "_objectId": "6137ee57-de16-4dc6-8a9b-7dc6ac057c14",
+      "m_children": [],
+      "m_color": [
+        1.0,
+        1.0,
+        0.949999988079071,
+        1.0
+      ],
+      "m_direction": [
+        0.0,
+        -1.0,
+        0.0,
+        0.0
+      ],
+      "m_intensity": 0.699999988079071,
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.7071068286895752,
+        0.7071067690849304,
+        0.0,
+        0.0,
+        -0.7071067690849304,
+        0.7071068286895752,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_name": "New Scene Component"
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "3333f17e-6652-48ad-9006-58bfac620aee",
+      "m_components": [],
+      "m_name": "PointLight",
+      "m_rootSceneComponent": {
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "8490f035-a831-46ab-84ad-4398f147d1b9"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+          "objectId": "8490f035-a831-46ab-84ad-4398f147d1b9"
+        }
+      ]
+    },
+    {
+      "_class": "PointLight",
+      "_objectId": "8490f035-a831-46ab-84ad-4398f147d1b9",
+      "m_children": [],
+      "m_color": [
+        1.0,
+        0.4000000059604645,
+        0.20000000298023224,
+        1.0
+      ],
+      "m_intensity": 2.0,
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        3.0,
+        2.0,
+        1.0
+      ],
+      "m_name": "New Scene Component",
+      "m_range": 15.0,
+      "m_renderProxy": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "00000000-0000-0000-0000-000000000000"
+      }
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "2deaa93d-419d-4661-a262-1aaec6f48ce2",
+      "m_components": [],
+      "m_name": "SpotLight",
+      "m_rootSceneComponent": {
+        "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+        "objectId": "10bb3b31-95c1-47c0-bdef-f87faf1964ff"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "d84ddcdb-61c4-4e43-a742-00f9ee7721af",
+          "objectId": "10bb3b31-95c1-47c0-bdef-f87faf1964ff"
+        }
+      ]
+    },
+    {
+      "_class": "SpotLight",
+      "_objectId": "10bb3b31-95c1-47c0-bdef-f87faf1964ff",
+      "m_children": [],
+      "m_color": [
+        0.20000000298023224,
+        0.800000011920929,
+        1.0,
+        1.0
+      ],
+      "m_innerConeAngle": 0.5235987901687622,
+      "m_intensity": 3.0,
+      "m_localTransform": [
+        0.7071068286895752,
+        -0.7071067690849304,
+        0.0,
+        0.0,
+        0.7071067690849304,
+        0.7071068286895752,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -2.0,
+        4.0,
+        0.0,
+        1.0
+      ],
+      "m_name": "New Scene Component",
+      "m_outerConeAngle": 1.0471975803375244,
+      "m_range": 20.0
+    },
+    {
+      "_class": "TestComponent",
+      "_objectId": "75470041-1b1b-4a55-b884-f068e4e6deab",
       "m_name": "New Component",
       "m_testBool": false,
       "m_testDouble": 0.0,

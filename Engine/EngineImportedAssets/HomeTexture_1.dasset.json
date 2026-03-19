@@ -1,6 +1,12 @@
 {
   "header": {
-    "assetId": "52db0107-7b3d-4299-9373-b02ee36735d0",
+    "assetId": "9954e798-fbfd-499d-a492-c26206b0e964",
+    "bulkDataMap": {
+      "0": {
+        "file": "HomeTexture_1_Bulk0.bin",
+        "size": 1048640
+      }
+    },
     "className": "DPrimaryAsset",
     "magic": "DLTA",
     "version": 1
@@ -8,7 +14,11 @@
   "objects": [
     {
       "_class": "DTexture",
-      "_objectId": "27ee9e19-39a6-489b-879a-4c2f2587e0ab",
+      "_objectId": "509f02e4-8bd9-41b9-8b26-26907f2ffb8c",
+      "m_bulkData": {
+        "_bulk": 0,
+        "size": 1048640
+      },
       "m_sRGB": true,
       "m_sourcePath": "../../../Engine/EngineSourceAssets/home\\textures\\tex_Wood.jpg"
     }

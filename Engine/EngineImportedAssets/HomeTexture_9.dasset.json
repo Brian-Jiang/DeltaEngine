@@ -1,6 +1,12 @@
 {
   "header": {
-    "assetId": "a4c1afa7-2442-41c7-96cd-b51fb16fcac8",
+    "assetId": "7d233d65-5fea-4bed-aeac-42c366b658ae",
+    "bulkDataMap": {
+      "0": {
+        "file": "HomeTexture_9_Bulk0.bin",
+        "size": 262208
+      }
+    },
     "className": "DPrimaryAsset",
     "magic": "DLTA",
     "version": 1
@@ -8,7 +14,11 @@
   "objects": [
     {
       "_class": "DTexture",
-      "_objectId": "19525bdd-f667-47d9-b312-825d53369aa8",
+      "_objectId": "655235ec-94ee-447c-87aa-7722ebb582a1",
+      "m_bulkData": {
+        "_bulk": 0,
+        "size": 262208
+      },
       "m_sRGB": true,
       "m_sourcePath": "../../../Engine/EngineSourceAssets/home\\textures\\tex_Folliage.jpg"
     }
