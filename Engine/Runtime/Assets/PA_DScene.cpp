@@ -20,10 +20,7 @@ DPrimaryAsset* PA_DScene::Create(const std::string& sceneName)
     // Transfer ownership to the primary asset.
     // The shared_ptr deleter calls the reflection registry to properly
     // destroy the object, mirroring the pattern used in DeserializeBody.
-    asset->AddObject(std::shared_ptr<DObject>(scene, [](DObject* p)
-    {
-        GetReflectionRegistry().DestroyObject(p);
-    }));
+    asset->AddObject(scene);
 
     return asset;
 }
@@ -35,7 +32,7 @@ DScene* PA_DScene::GetScene(DPrimaryAsset* asset)
 
     for (const auto& obj : asset->GetObjects())
     {
-        if (DScene* scene = dynamic_cast<DScene*>(obj.get()))
+        if (DScene* scene = dynamic_cast<DScene*>(obj))
             return scene;
     }
     return nullptr;

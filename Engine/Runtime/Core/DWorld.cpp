@@ -199,10 +199,7 @@ GameObject* DWorld::CreateGameObjectInScene(DScene* scene, const std::string& na
     // Tie the GO to the scene's primary asset so it serializes with the scene.
     if (pa)
     {
-        pa->AddObject(std::shared_ptr<DObject>(go, [](DObject* p)
-        {
-            GetReflectionRegistry().DestroyObject(p);
-        }));
+        pa->AddObject(go);
         // AddObject also calls go->SetOwningAsset(pa) internally.
     }
 

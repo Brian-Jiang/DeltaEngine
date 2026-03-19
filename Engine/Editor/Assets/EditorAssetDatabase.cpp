@@ -219,7 +219,7 @@ void EditorAssetDatabase::ResolvePendingBatch()
 
         auto& asset = it->second.m_instance;
         for (auto& obj : asset->GetObjects())
-            resolveProps(resolveProps, obj->GetClass(), obj.get());
+            resolveProps(resolveProps, obj->GetClass(), obj);
     }
     m_newlyLoadedBatch.clear();
 }
@@ -328,7 +328,7 @@ void EditorAssetDatabase::CreateAsset(const std::filesystem::path& filePath, DOb
     auto asset = CreateDObject<DPrimaryAsset>();
     asset->GetHeader().m_persistentId = UUID::Generate();
     asset->GetHeader().m_className = "DPrimaryAsset";
-    asset->AddObject(std::shared_ptr<DObject>(object));
+    asset->AddObject(object);
     object->SetOwningAsset(asset);
     CreateAsset(filePath, asset);
 }

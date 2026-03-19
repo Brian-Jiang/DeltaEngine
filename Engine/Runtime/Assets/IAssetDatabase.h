@@ -2,6 +2,8 @@
 
 #include "EngineIncludes.h"
 
+#include <filesystem>
+
 #include "Core/UUID.h"
 
 DELTA_ENGINE_NS_BEGIN
@@ -18,6 +20,7 @@ public:
     virtual DPrimaryAsset* LoadAsset(const AssetId& id) = 0;
     virtual bool IsLoaded(const AssetId& id) const = 0;
     virtual DObject* FindObject(const AssetId& assetId, const ObjectId& objId) const = 0;
+    virtual AssetId FindAssetIdByPath(const std::filesystem::path& path) const = 0;
 };
 
 DELTA_ENGINE_NS_END

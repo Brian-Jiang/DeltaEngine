@@ -188,23 +188,23 @@ void EditorMain::CreateAssets()
 {
     // ---- Default scene ----
     // Re-use an existing persisted scene if available; otherwise create one.
+    
+    const std::filesystem::path scenePath =
+        IOManager::GetEngineImportedAssetFullPath("DefaultScene");
+
+    // ScanAssetsFolder already ran — look up by file path.
+    AssetId sceneId = m_assetDatabase->FindAssetIdByPath(scenePath);
+
+    if (sceneId.IsNull())
     {
-        const std::filesystem::path scenePath =
-            IOManager::GetEngineImportedAssetFullPath("DefaultScene");
-
-        // ScanAssetsFolder already ran — look up by file path.
-        AssetId sceneId = m_assetDatabase->FindAssetIdByPath(scenePath);
-
-        if (sceneId.IsNull())
-        {
-            // No persisted scene found: create a fresh one and save it.
-            DPrimaryAsset* sceneAsset = PA_DScene::Create("DefaultScene");
-            m_assetDatabase->CreateAsset(scenePath, sceneAsset);
-            sceneId = sceneAsset->GetAssetId();
-        }
-
-        m_engine->LoadScene(sceneId);
+        // No persisted scene found: create a fresh one and save it.
+        DPrimaryAsset* sceneAsset = PA_DScene::Create("DefaultScene");
+        m_assetDatabase->CreateAsset(scenePath, sceneAsset);
+        sceneId = sceneAsset->GetAssetId();
     }
+
+    m_engine->LoadScene(sceneId);
+    
 
     DShader* shader = CreateDObject<DShader>();
     {

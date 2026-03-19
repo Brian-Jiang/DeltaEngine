@@ -21,6 +21,7 @@
 #include "Reflection/ReflectionRegistry.h"
 #include "Reflection/DFunction.h"
 #include "Reflection/DClass.h"
+#include "IO/IOManager.h"
 
 #include "Runtime/Test/TestComponent.h"
 
@@ -33,6 +34,7 @@ using namespace DirectX;
 EngineMain::EngineMain()
     : exitCode(0)
     , gameState(GameState::PLAY)
+    , m_cameraGameObject(nullptr)
 {
     time = std::make_unique<Time>();
     GetReflectionRegistry().FinalizeRegistration();
@@ -285,12 +287,17 @@ void EngineMain::CreateWorld()
 void EngineMain::CreateGameObjects()
 {
     DWorld* world = GetWorld();
+    IAssetDatabase& assetDb = AssetDatabaseLocator::Get();
 
     // ---------- game object: star mesh renderer
     {
         GameObject* go = world->CreateGameObject("MeshRenderer");
         MeshRenderer* meshRenderer = go->AddSceneComponent<MeshRenderer>();
         meshRenderer->SetLocalPosition(2.0f, 0.0f, 5.0f);
+
+        //const std::filesystem::path shaderPath = IOManager::GetEngineImportedAssetFullPath("StarShader");
+        //DPrimaryAsset* shaderAsset = assetDb.LoadAsset(assetDb.FindAssetIdByPath(shaderPath));
+        //DShader* shader = shaderAsset->GetObjects().empty() ? nullptr : dynamic_cast<DShader*>(shaderAsset->GetObjects()[0]);
 
         DShader* shader = CreateDObject<DShader>();
         shader->Initialize(
@@ -306,6 +313,10 @@ void EngineMain::CreateGameObjects()
         });
 
         // std::shared_ptr<DMaterial> material = std::make_shared<DMaterial>(shader);
+
+        //const std::filesystem::path meshPath = IOManager::GetEngineImportedAssetFullPath("StarMesh");
+        //DPrimaryAsset* meshAsset = assetDb.LoadAsset(assetDb.FindAssetIdByPath(meshPath));
+        //DMesh* mesh = meshAsset->GetObjects().empty() ? nullptr : dynamic_cast<DMesh*>(meshAsset->GetObjects()[0]);
 
         DMesh* mesh = CreateDObject<DMesh>();
         mesh->Initialize(std::wstring(L"Star.obj"));

@@ -38,10 +38,10 @@ public:
     Header& GetHeader() { return m_header; }
     const AssetId& GetAssetId() const { return m_header.m_persistentId; }
 
-    void AddObject(std::shared_ptr<DObject> obj);
+    void AddObject(DObject* obj);
     void RemoveObject(const ObjectId& id);
     DObject* FindObject(const ObjectId& id) const;
-    const std::vector<std::shared_ptr<DObject>>& GetObjects() const;
+    const std::vector<DObject*>& GetObjects() const;
 
     void SerializeHeader(AssetArchive& ar);
     void SerializeBody(AssetArchive& ar);
@@ -59,7 +59,7 @@ private:
     void DeserializeBody(AssetArchive& ar);
 
     Header                                m_header;
-    std::vector<std::shared_ptr<DObject>> m_objects;
+    std::vector<DObject*> m_objects;
     bool                                  m_dirty = true;
 };
 

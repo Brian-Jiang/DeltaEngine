@@ -45,7 +45,7 @@ public:
 
     /// Returns the AssetId registered for the given file path,
     /// or a null UUID if no matching entry is found.
-    AssetId FindAssetIdByPath(const std::filesystem::path& path) const;
+    AssetId FindAssetIdByPath(const std::filesystem::path& path) const override;
 
 private:
     void LoadAssetRecursive(const AssetId& id);

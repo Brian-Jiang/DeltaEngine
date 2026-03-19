@@ -60,7 +60,11 @@ public:
 private:
     std::vector<std::vector<Vertex>> m_vertices;
     std::vector<std::vector<unsigned int>> m_indices;
+
+    DPROPERTY()
     std::vector<DMaterial*> m_materials;
+
+    DPROPERTY()
     std::vector<DTexture*> m_textures;
 
     DPROPERTY()

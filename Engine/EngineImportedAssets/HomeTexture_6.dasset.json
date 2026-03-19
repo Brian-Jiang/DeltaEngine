@@ -1,6 +1,6 @@
 {
   "header": {
-    "assetId": "4ef69d19-a236-4b53-8976-e36bbd5fe9cc",
+    "assetId": "70ed1e74-6c04-4687-9ad7-6941a4435859",
     "className": "DPrimaryAsset",
     "magic": "DLTA",
     "version": 1
@@ -8,7 +8,7 @@
   "objects": [
     {
       "_class": "DTexture",
-      "_objectId": "3b254662-c162-405d-b284-845dd48a82a3",
+      "_objectId": "a40d0d11-75cd-4a91-95a7-7e66eddce2eb",
       "m_sRGB": true,
       "m_sourcePath": "../../../Engine/EngineSourceAssets/home\\textures\\tex_PolesRoofBranches.jpg"
     }

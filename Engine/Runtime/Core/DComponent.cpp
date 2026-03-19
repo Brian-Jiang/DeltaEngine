@@ -1,5 +1,7 @@
 #include "Core/DComponent.h"
 
+#include "Assets/DPrimaryAsset.h"
+
 using namespace DeltaEngine;
 
 DComponent::DComponent()
@@ -30,6 +32,10 @@ void DComponent::RegisterComponent(GameObject* gameObject)
 void DComponent::MarkForDestroy()
 {
     m_gameObject = nullptr;
+    if (HasOwningAsset())
+    {
+        GetOwningAsset()->RemoveObject(GetObjectId());
+    }
 }
 
 void DeltaEngine::DComponent::SetName(const std::string& name)

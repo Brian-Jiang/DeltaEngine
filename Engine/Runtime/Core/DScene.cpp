@@ -30,3 +30,23 @@ void DScene::RemoveGameObject(GameObject* go)
         MarkDirty();
     }
 }
+
+void DScene::AddComponent(DComponent* component)
+{
+    if (!component)
+        return;
+    m_components.push_back(component);
+    MarkDirty();
+}
+
+void DScene::RemoveComponent(DComponent* component)
+{
+    if (!component)
+        return;
+    auto it = std::find(m_components.begin(), m_components.end(), component);
+    if (it != m_components.end())
+    {
+        m_components.erase(it);
+        MarkDirty();
+    }
+}

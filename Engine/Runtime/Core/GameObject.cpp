@@ -8,6 +8,7 @@
 
 #include "Core/DWorld.h"
 #include "Core/SceneComponent.h"
+#include "Assets/DPrimaryAsset.h"
 
 using namespace DeltaEngine;
 
@@ -55,6 +56,12 @@ DComponent* GameObject::AddComponentByClass(const DClass* dclass)
         SceneComponent* sc = registry.CreateObject<SceneComponent>(dclass->GetName());
         if (!sc)
             return nullptr;
+
+        if (HasOwningAsset())
+        {
+            GetOwningAsset()->AddObject(sc);
+        }
+
         sc->RegisterComponent(this);
         sc->SetName(std::format("New {}", dclass->GetName()));
         m_sceneComponents.push_back(sc);

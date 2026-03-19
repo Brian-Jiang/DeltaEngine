@@ -11,10 +11,10 @@
 
 using namespace DeltaEngine;
 
-void DPrimaryAsset::AddObject(std::shared_ptr<DObject> obj)
+void DPrimaryAsset::AddObject(DObject* obj)
 {
     obj->SetOwningAsset(this);
-    m_objects.push_back(std::move(obj));
+    m_objects.push_back(obj);
     MarkDirty();
 }
 
@@ -36,12 +36,12 @@ DObject* DPrimaryAsset::FindObject(const ObjectId& id) const
     for (auto& obj : m_objects)
     {
         if (obj->GetObjectId() == id)
-            return obj.get();
+            return obj;
     }
     return nullptr;
 }
 
-const std::vector<std::shared_ptr<DObject>>& DPrimaryAsset::GetObjects() const
+const std::vector<DObject*>& DPrimaryAsset::GetObjects() const
 {
     return m_objects;
 }
@@ -124,11 +124,7 @@ void DPrimaryAsset::DeserializeBody(AssetArchive& ar)
             continue;
         }
 
-        std::shared_ptr<DObject> obj(raw, [](DObject* p)
-        {
-            GetReflectionRegistry().DestroyObject(p);
-        });
-
+        DObject* obj = raw;
         ObjectId oid;
         ar.Serialize("_objectId", oid);
         obj->SetObjectId(oid);
@@ -163,7 +159,7 @@ std::vector<std::pair<DBulkDataProperty*, DObject*>> DPrimaryAsset::CollectBulkP
     };
 
     for (auto& obj : m_objects)
-        walkProps(walkProps, obj->GetClass(), obj.get());
+        walkProps(walkProps, obj->GetClass(), obj);
 
     return result;
 }
@@ -208,7 +204,7 @@ std::vector<ScriptPointer> DPrimaryAsset::CollectExternalReferences() const
     };
 
     for (auto& obj : m_objects)
-        walkProps(walkProps, obj->GetClass(), obj.get());
+        walkProps(walkProps, obj->GetClass(), obj);
 
     return refs;
 }

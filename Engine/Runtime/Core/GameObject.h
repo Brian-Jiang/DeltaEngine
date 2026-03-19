@@ -32,6 +32,11 @@ public:
 	T* AddComponent(std::string name = "New Component")
     {
         T* component = CreateDObject<T>();
+        if (HasOwningAsset())
+        {
+            GetOwningAsset()->AddObject(component);
+        }
+        
         component->RegisterComponent(this);
         component->SetName(name);
         m_components.push_back(component);
@@ -41,7 +46,12 @@ public:
 	template <typename T> requires IsSceneComponent<T>
     T* AddSceneComponent(std::string name = "New Scene Component")
     {
-        T* sceneComponent = CreateDObject<T>();  // alignment issue
+        T* sceneComponent = CreateDObject<T>();
+        if (HasOwningAsset())
+        {
+            GetOwningAsset()->AddObject(sceneComponent);
+        }
+
         sceneComponent->RegisterComponent(this);
         sceneComponent->SetName(name);
         m_sceneComponents.push_back(sceneComponent);
