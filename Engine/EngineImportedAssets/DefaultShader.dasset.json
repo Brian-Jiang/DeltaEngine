@@ -1,6 +1,6 @@
 {
   "header": {
-    "assetId": "794f1d93-97ba-48bc-9b72-9f7719b68d50",
+    "assetId": "be34d169-1442-40f3-885d-61a357a0ea40",
     "bulkDataMap": {
       "0": {
         "file": "DefaultShader_Bulk0.bin",
@@ -18,7 +18,7 @@
   "objects": [
     {
       "_class": "DShader",
-      "_objectId": "1218a58c-cfd6-4d13-b1fd-1ee2edbd7eb2",
+      "_objectId": "bf9eb754-d026-449f-893f-9a903bbacbb6",
       "m_pixelShaderEntryPoint": "PSMain",
       "m_pixelShaderTargetProfile": "ps_6_0",
       "m_serializedInputLayout": {

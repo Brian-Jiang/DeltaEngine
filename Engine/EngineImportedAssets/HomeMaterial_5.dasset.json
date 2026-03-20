@@ -1,6 +1,6 @@
 {
   "header": {
-    "assetId": "49f67c81-432b-400d-b8c7-60c2c18999b8",
+    "assetId": "4bbb3b66-5cfa-4f37-b290-0a5894de8870",
     "className": "PA_Material",
     "magic": "DLTA",
     "version": 1
@@ -8,15 +8,15 @@
   "objects": [
     {
       "_class": "DMaterial",
-      "_objectId": "870483be-7fe2-4239-98e7-ad008718cf37",
+      "_objectId": "b642777c-489b-4b17-a613-834820bae829",
       "m_shader": {
-        "assetId": "794f1d93-97ba-48bc-9b72-9f7719b68d50",
-        "objectId": "1218a58c-cfd6-4d13-b1fd-1ee2edbd7eb2"
+        "assetId": "be34d169-1442-40f3-885d-61a357a0ea40",
+        "objectId": "bf9eb754-d026-449f-893f-9a903bbacbb6"
       },
       "m_textures": [
         {
-          "assetId": "839a3f0b-355d-4911-a1d0-f6ff2ee502e4",
-          "objectId": "b60a4574-3fda-432c-837b-2c2fd86d8315"
+          "assetId": "f8fc79b0-9d55-4b47-ab96-7a4e84756d62",
+          "objectId": "8e25c70a-f487-4684-959e-37db85f733c9"
         }
       ]
     }
