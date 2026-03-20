@@ -22,6 +22,7 @@
 #include "Reflection/DFunction.h"
 #include "Reflection/DClass.h"
 #include "IO/IOManager.h"
+#include "Assets/PA_CommonAssets.h"
 
 #include "Runtime/Test/TestComponent.h"
 
@@ -291,7 +292,8 @@ void EngineMain::CreateGameObjects()
 
     // ---------- game object: star mesh renderer
     {
-        GameObject* go = world->CreateGameObject("MeshRenderer");
+        GameObject* go = world->CreateGameObjectInScene(m_worldContextList[0].world->GetActiveScene(), "MeshRenderer");
+
         MeshRenderer* meshRenderer = go->AddSceneComponent<MeshRenderer>();
         meshRenderer->SetLocalPosition(2.0f, 0.0f, 5.0f);
 
@@ -299,18 +301,18 @@ void EngineMain::CreateGameObjects()
         //DPrimaryAsset* shaderAsset = assetDb.LoadAsset(assetDb.FindAssetIdByPath(shaderPath));
         //DShader* shader = shaderAsset->GetObjects().empty() ? nullptr : dynamic_cast<DShader*>(shaderAsset->GetObjects()[0]);
 
-        DShader* shader = CreateDObject<DShader>();
-        shader->Initialize(
-            L"Shaders.hlsl",
-            L"VSMain", L"PSMain",
-            L"vs_6_0", L"ps_6_0");
+        //DShader* shader = CreateDObject<DShader>();
+        //shader->Initialize(
+        //    L"Shaders.hlsl",
+        //    L"VSMain", L"PSMain",
+        //    L"vs_6_0", L"ps_6_0");
 
-        shader->SetInputLayout({
-            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-            { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-            { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        });
+        //shader->SetInputLayout({
+        //    { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        //    { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        //    { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        //    { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        //});
 
         // std::shared_ptr<DMaterial> material = std::make_shared<DMaterial>(shader);
 
@@ -318,59 +320,63 @@ void EngineMain::CreateGameObjects()
         //DPrimaryAsset* meshAsset = assetDb.LoadAsset(assetDb.FindAssetIdByPath(meshPath));
         //DMesh* mesh = meshAsset->GetObjects().empty() ? nullptr : dynamic_cast<DMesh*>(meshAsset->GetObjects()[0]);
 
-        DMesh* mesh = CreateDObject<DMesh>();
-        mesh->Initialize(std::wstring(L"Star.obj"));
-        std::vector<DTexture*> textures = mesh->GetTextures();
-        std::vector<DMaterial*> materials;
-        for (int i = 0; i < mesh->GetSubMeshCount(); i++) {
-            DMaterial* material = CreateDObject<DMaterial>();
-            material->Initialize(shader);
-            if (i < textures.size()) {
-                material->AddTexture(textures[i]);
-            }
-            materials.push_back(material);
-        }
+        //DMesh* mesh = CreateDObject<DMesh>();
+        //mesh->Initialize(std::wstring(L"Star.obj"));
+        //std::vector<DTexture*> textures = mesh->GetTextures();
+        //std::vector<DMaterial*> materials;
+        //for (int i = 0; i < mesh->GetSubMeshCount(); i++) {
+        //    DMaterial* material = CreateDObject<DMaterial>();
+        //    material->Initialize(shader);
+        //    if (i < textures.size()) {
+        //        material->AddTexture(textures[i]);
+        //    }
+        //    materials.push_back(material);
+        //}
 
-        mesh->SetMaterials(materials);
-        meshRenderer->SetMesh(mesh);
+        //mesh->SetMaterials(materials);
+
+        PA_StaticMesh* paStaticMesh = assetDb.LoadAsset<PA_StaticMesh>(assetDb.FindAssetIdByPath(IOManager::GetEngineImportedAssetFullPath("StarMesh")));
+        meshRenderer->SetMesh(paStaticMesh->GetStaticMesh());
     }
 
     // ---------- game object: home mesh renderer
     {
-        GameObject* go = world->CreateGameObject("HomeMeshRenderer");
+        GameObject* go = world->CreateGameObjectInScene(m_worldContextList[0].world->GetActiveScene(), "HomeMeshRenderer");
         MeshRenderer* meshRenderer = go->AddSceneComponent<MeshRenderer>();
         meshRenderer->SetLocalPosition(0.0f, 0.0f, 0.0f);
 
-        DShader* shader = CreateDObject<DShader>();
-        shader->Initialize(
-            L"ToonShader.hlsl",
-            L"VSMain", L"PSMain",
-            L"vs_6_0", L"ps_6_0");
+        //DShader* shader = CreateDObject<DShader>();
+        //shader->Initialize(
+        //    L"ToonShader.hlsl",
+        //    L"VSMain", L"PSMain",
+        //    L"vs_6_0", L"ps_6_0");
 
-        shader->SetInputLayout({
-            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-            { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-            { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        });
+        //shader->SetInputLayout({
+        //    { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        //    { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        //    { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        //    { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        //});
         // std::shared_ptr<DMaterial> material = std::make_shared<DMaterial>(shader);
 
-        DMesh* mesh = CreateDObject<DMesh>();
-        mesh->Initialize(std::wstring(L"home/source/home.fbx"));
-        // std::shared_ptr<DMesh> mesh = std::make_shared<DMesh>(std::wstring(L"car/source/datsun240k.fbx"));
-        std::vector<DTexture*> textures = mesh->GetTextures();
-        std::vector<DMaterial*> materials;
-        for (int i = 0; i < mesh->GetSubMeshCount(); i++) {
-            DMaterial* material = CreateDObject<DMaterial>();
-            material->Initialize(shader);
-            if (i < textures.size()) {
-                material->AddTexture(textures[i]);
-            }
-            materials.push_back(material);
-        }
+        //DMesh* mesh = CreateDObject<DMesh>();
+        //mesh->Initialize(std::wstring(L"home/source/home.fbx"));
+        //// std::shared_ptr<DMesh> mesh = std::make_shared<DMesh>(std::wstring(L"car/source/datsun240k.fbx"));
+        //std::vector<DTexture*> textures = mesh->GetTextures();
+        //std::vector<DMaterial*> materials;
+        //for (int i = 0; i < mesh->GetSubMeshCount(); i++) {
+        //    DMaterial* material = CreateDObject<DMaterial>();
+        //    material->Initialize(shader);
+        //    if (i < textures.size()) {
+        //        material->AddTexture(textures[i]);
+        //    }
+        //    materials.push_back(material);
+        //}
 
-        mesh->SetMaterials(materials);
-        meshRenderer->SetMesh(mesh);
+        //mesh->SetMaterials(materials);
+
+        PA_StaticMesh* paStaticMesh = assetDb.LoadAsset<PA_StaticMesh>(assetDb.FindAssetIdByPath(IOManager::GetEngineImportedAssetFullPath("HomeMesh")));
+        meshRenderer->SetMesh(paStaticMesh->GetStaticMesh());
     }
 
     // ---------- game object: camera
@@ -440,6 +446,24 @@ void EngineMain::LoadScene(const AssetId& sceneAssetId)
     // First scene loaded becomes the active scene.
     if (!world->GetActiveScene())
         world->SetActiveScene(scene);
+
+    for (GameObject* go : scene->GetGameObjects())
+    {
+        if (Camera* cam = go->GetRootSceneComponent<Camera>())
+        {
+            m_cameraGameObject = go;
+            cam->UpdateRenderProxy();
+            break;
+        }
+    }
+
+    for (GameObject* go : scene->GetGameObjects())
+    {
+        if (Renderer* renderer = go->GetRootSceneComponent<Renderer>())
+        {
+            renderer->CreateRenderProxy();
+        }
+    }
 
     // Re-initialise GPU state for any newly added renderers.
     dxRenderManager->InitWorldRenderers(*world);

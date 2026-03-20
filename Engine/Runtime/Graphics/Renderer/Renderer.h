@@ -23,6 +23,7 @@ public:
     Renderer();
     //Renderer(std::string name);
     //Renderer(std::string name, std::shared_ptr<GameObject> gameObject);
+    virtual void CreateRenderProxy() = 0;
 
 protected:
     virtual void InitGraphicState(std::shared_ptr<DXGraphicsContext> context) = 0;

@@ -49,7 +49,7 @@ MeshRenderer::~MeshRenderer()
 void MeshRenderer::SetMesh(DMesh* mesh)
 {
     m_mesh = mesh;
-    CreateMeshRenderProxy();
+    CreateRenderProxy();
 }
 
 void MeshRenderer::InitGraphicState(std::shared_ptr<DXGraphicsContext> context)
@@ -130,7 +130,7 @@ void MeshRenderer::InitGraphicState(std::shared_ptr<DXGraphicsContext> context)
 //    ++meshCount;
 //}
 
-void DeltaEngine::MeshRenderer::CreateMeshRenderProxy()
+void MeshRenderer::CreateRenderProxy()
 {
     m_meshRenderProxy = std::make_shared<MeshRenderProxy>(m_mesh, std::make_shared<MeshRendererSettings>(m_settings));
 }

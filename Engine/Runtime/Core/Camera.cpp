@@ -47,6 +47,11 @@ void Camera::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext
     m_renderProxy->PreGatherDrawCalls(renderContext);
 }
 
+void Camera::UpdateRenderProxy()
+{
+    m_renderProxy->UpdateParameters(m_fov, m_aspectRatio, m_near, m_far);
+}
+
 void Camera::OnTransformChanged()
 {
     SceneComponent::OnTransformChanged();

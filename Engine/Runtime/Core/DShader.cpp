@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <dxcapi.h>
+#include <assert.h>
 
 #include "IO/IOManager.h"
 #include "Graphics/DXUtils.h"
@@ -196,4 +197,185 @@ void DShader::CompileShader()
         fwrite(pPDB->GetBufferPointer(), pPDB->GetBufferSize(), 1, fp);
         fclose(fp);
     }
+}
+
+TBulkData SerializeShaderBlobs(
+    const Microsoft::WRL::ComPtr<IDxcBlob>& vertexBlob,
+    const Microsoft::WRL::ComPtr<IDxcBlob>& pixelBlob)
+{
+    assert(vertexBlob && pixelBlob);
+
+    const uint64_t vertexSize = static_cast<uint64_t>(vertexBlob->GetBufferSize());
+    const uint64_t pixelSize = static_cast<uint64_t>(pixelBlob->GetBufferSize());
+
+    const uint64_t totalSize = sizeof(uint64_t) + vertexSize
+        + sizeof(uint64_t) + pixelSize;
+
+    auto* buf = new uint8_t[totalSize];
+    uint8_t* cursor = buf;
+
+    std::memcpy(cursor, &vertexSize, sizeof(uint64_t));
+    cursor += sizeof(uint64_t);
+    std::memcpy(cursor, vertexBlob->GetBufferPointer(), vertexSize);
+    cursor += vertexSize;
+
+    std::memcpy(cursor, &pixelSize, sizeof(uint64_t));
+    cursor += sizeof(uint64_t);
+    std::memcpy(cursor, pixelBlob->GetBufferPointer(), pixelSize);
+    cursor += pixelSize;
+
+    TBulkData bulk;
+    bulk.Set(buf, totalSize);
+    delete[] buf;
+    return bulk;
+}
+
+bool DeserializeShaderBlobs(
+    const TBulkData& bulk,
+    Microsoft::WRL::ComPtr<IDxcBlob>& outVertexBlob,
+    Microsoft::WRL::ComPtr<IDxcBlob>& outPixelBlob)
+{
+    if (!bulk.IsValid())
+        return false;
+
+    const uint8_t* cursor = bulk.m_data;
+
+    auto readBlob = [&](Microsoft::WRL::ComPtr<IDxcBlob>& outBlob) -> bool {
+        uint64_t size = 0;
+        std::memcpy(&size, cursor, sizeof(uint64_t));
+        cursor += sizeof(uint64_t);
+
+        // IDxcBlobEncoding is the standard concrete IDxcBlob returned by DXC utils.
+        // We create one via the DXC library so it owns its memory correctly.
+        Microsoft::WRL::ComPtr<IDxcUtils> utils;
+        HRESULT hr = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&utils));
+        if (FAILED(hr))
+            return false;
+
+        // CreateBlobFromPinned avoids a copy — points into bulk.m_data directly.
+        // The bulk buffer must outlive the blob. If that's not guaranteed,
+        // use CreateBlobOnHeap (copies internally) instead.
+        Microsoft::WRL::ComPtr<IDxcBlobEncoding> blob;
+        hr = utils->CreateBlobFromPinned(cursor, static_cast<uint32_t>(size),
+            DXC_CP_ACP, &blob);
+        if (FAILED(hr))
+            return false;
+
+        outBlob = blob;
+        cursor += size;
+        return true;
+    };
+
+    return readBlob(outVertexBlob) && readBlob(outPixelBlob);
+}
+
+TBulkData SerializeInputLayout(
+    const std::vector<D3D12_INPUT_ELEMENT_DESC>& inputLayout)
+{
+    // ── Calculate total size ───────────────────────────────────────────────
+    uint64_t totalSize = sizeof(uint32_t); // count
+
+    for (const auto& elem : inputLayout) {
+        const uint32_t nameLen = static_cast<uint32_t>(std::strlen(elem.SemanticName));
+        totalSize += sizeof(uint32_t) // nameLen
+            + nameLen // name chars
+            + sizeof(uint32_t) // SemanticIndex
+            + sizeof(uint32_t) // Format
+            + sizeof(uint32_t) // InputSlot
+            + sizeof(uint32_t) // AlignedByteOffset
+            + sizeof(uint32_t) // InputSlotClass
+            + sizeof(uint32_t); // InstanceDataStepRate
+    }
+
+    // ── Write ──────────────────────────────────────────────────────────────
+    auto* buf = new uint8_t[totalSize];
+    uint8_t* cursor = buf;
+
+    auto write = [&]<typename T>(const T& val) {
+        std::memcpy(cursor, &val, sizeof(T));
+        cursor += sizeof(T);
+    };
+
+    const uint32_t count = static_cast<uint32_t>(inputLayout.size());
+    write(count);
+
+    for (const auto& elem : inputLayout) {
+        const uint32_t nameLen = static_cast<uint32_t>(std::strlen(elem.SemanticName));
+        write(nameLen);
+        std::memcpy(cursor, elem.SemanticName, nameLen);
+        cursor += nameLen;
+
+        write(static_cast<uint32_t>(elem.SemanticIndex));
+        write(static_cast<uint32_t>(elem.Format));
+        write(static_cast<uint32_t>(elem.InputSlot));
+        write(static_cast<uint32_t>(elem.AlignedByteOffset));
+        write(static_cast<uint32_t>(elem.InputSlotClass));
+        write(static_cast<uint32_t>(elem.InstanceDataStepRate));
+    }
+
+    TBulkData bulk;
+    bulk.Set(buf, totalSize);
+    delete[] buf;
+    return bulk;
+}
+
+bool DeserializeInputLayout(
+    const TBulkData& bulk,
+    std::vector<D3D12_INPUT_ELEMENT_DESC>& outLayout,
+    std::vector<std::string>& outSemanticNames) // owns the string memory
+{
+    if (!bulk.IsValid())
+        return false;
+
+    const uint8_t* cursor = bulk.m_data;
+
+    auto read = [&]<typename T>(T& val) {
+        std::memcpy(&val, cursor, sizeof(T));
+        cursor += sizeof(T);
+    };
+
+    uint32_t count = 0;
+    read(count);
+
+    outLayout.resize(count);
+    outSemanticNames.resize(count);
+
+    for (uint32_t i = 0; i < count; ++i) {
+        uint32_t nameLen = 0;
+        read(nameLen);
+
+        outSemanticNames[i].assign(reinterpret_cast<const char*>(cursor), nameLen);
+        cursor += nameLen;
+
+        uint32_t semanticIndex, format, inputSlot, byteOffset, slotClass, stepRate;
+        read(semanticIndex);
+        read(format);
+        read(inputSlot);
+        read(byteOffset);
+        read(slotClass);
+        read(stepRate);
+
+        D3D12_INPUT_ELEMENT_DESC& desc = outLayout[i];
+        desc.SemanticName = outSemanticNames[i].c_str(); // points into stable string
+        desc.SemanticIndex = semanticIndex;
+        desc.Format = static_cast<DXGI_FORMAT>(format);
+        desc.InputSlot = inputSlot;
+        desc.AlignedByteOffset = byteOffset;
+        desc.InputSlotClass = static_cast<D3D12_INPUT_CLASSIFICATION>(slotClass);
+        desc.InstanceDataStepRate = stepRate;
+    }
+
+    return true;
+}
+
+void DShader::OnBeforeSerialize()
+{
+    m_serializedShaderBlobs = SerializeShaderBlobs(m_vertexShaderBlob, m_pixelShaderBlob);
+    m_serializedInputLayout = SerializeInputLayout(m_inputLayout);
+}
+
+void DShader::OnAfterDeserialize()
+{
+    DeserializeShaderBlobs(m_serializedShaderBlobs, m_vertexShaderBlob, m_pixelShaderBlob);
+    DeserializeInputLayout(m_serializedInputLayout, m_inputLayout, m_inputLayoutSemanticNames);
 }

@@ -42,11 +42,11 @@ protected:
     void GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) override;
     void OnTransformChanged() override;
 
-private:
+public:
     //void LoadTexture(const std::shared_ptr<DTexture>& texture, DXGraphicsContext& context);
     //void AddMesh(const Mesh* mesh, const DirectX::XMMATRIX meshTransform, DXGraphicsContext& context);
 
-    void CreateMeshRenderProxy();
+    void CreateRenderProxy() override;
 
 
 private:

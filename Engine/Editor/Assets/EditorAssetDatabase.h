@@ -34,6 +34,8 @@ public:
         DPrimaryAsset* m_instance;
     };
 
+    using IAssetDatabase::LoadAsset;
+
     void ScanAssetsFolder(const std::filesystem::path& root);
     const std::unordered_map<AssetId, AssetEntry>& GetAllAssets() const;
 

@@ -94,7 +94,7 @@ public:
     template <typename T> requires IsSceneComponent<T>
     DELTAENGINE_API inline T* GetRootSceneComponent() const
     {
-        return static_cast<T*>(m_rootSceneComponent); 
+        return dynamic_cast<T*>(m_rootSceneComponent); 
     }
 
 private:

@@ -76,10 +76,14 @@ EditorMain::EditorMain()
     m_engine->Initialize(m_renderManager->GetSceneRenderer(), m_window);
 
     //CreateAssets();
-    
-    m_engine->CreateGameObjects();
 
-    m_assetDatabase->SaveDirtyAssets();
+    PA_DScene* sceneAsset = m_assetDatabase->LoadAsset<PA_DScene>(m_assetDatabase->FindAssetIdByPath(IOManager::GetEngineImportedAssetFullPath("DefaultScene")));
+    AssetId sceneId = sceneAsset->GetAssetId();
+    m_engine->LoadScene(sceneId);
+
+    //m_engine->CreateGameObjects();
+
+    //m_assetDatabase->SaveDirtyAssets();
 
     m_selectionState = std::make_unique<EditorSelectionState>();
 
@@ -188,26 +192,17 @@ void EditorMain::GetSceneRenderSize(UINT& width, UINT& height) const
 
 void EditorMain::CreateAssets()
 {
-    // ---- Default scene ----
-    // Re-use an existing persisted scene if available; otherwise create one.
-    
+    // Default scene
     const std::filesystem::path scenePath =
         IOManager::GetEngineImportedAssetFullPath("DefaultScene");
 
-    // ScanAssetsFolder already ran — look up by file path.
-    AssetId sceneId = m_assetDatabase->FindAssetIdByPath(scenePath);
+    PA_DScene* sceneAsset = PA_DScene::Create("DefaultScene");
+    m_assetDatabase->CreateAsset(scenePath, sceneAsset);
+    AssetId sceneId = sceneAsset->GetAssetId();
 
-    if (sceneId.IsNull())
-    {
-        // No persisted scene found: create a fresh one and save it.
-        PA_DScene* sceneAsset = PA_DScene::Create("DefaultScene");
-        m_assetDatabase->CreateAsset(scenePath, sceneAsset);
-        sceneId = sceneAsset->GetAssetId();
-    }
-
-    m_engine->LoadScene(sceneId);
     
-
+    
+    // Default shader
     DShader* shader = CreateDObject<DShader>();
     {
         shader->Initialize(
@@ -227,15 +222,49 @@ void EditorMain::CreateAssets()
             PA_Shader::Create(shader));
     }
 
+    // Star mesh and material
+    {
+        DMesh* mesh = CreateDObject<DMesh>();
+        mesh->Initialize(std::wstring(L"Star.obj"));
+        std::vector<DTexture*> textures = mesh->GetTextures();
+        std::vector<DMaterial*> materials;
+        for (int i = 0; i < mesh->GetSubMeshCount(); i++)
+        {
+            DMaterial* material = CreateDObject<DMaterial>();
+            material->Initialize(shader);
+            if (i < textures.size())
+            {
+                m_assetDatabase->CreateAsset(
+                    IOManager::GetEngineImportedAssetFullPath("StarTexture_" + std::to_string(i)),
+                    PA_Texture::Create(textures[i]));
+                material->AddTexture(textures[i]);
+            }
+            materials.push_back(material);
+
+            m_assetDatabase->CreateAsset(
+                IOManager::GetEngineImportedAssetFullPath("StarMaterial_" + std::to_string(i)),
+                PA_Material::Create(material));
+        }
+
+        mesh->SetMaterials(materials);
+
+        m_assetDatabase->CreateAsset(
+            IOManager::GetEngineImportedAssetFullPath("StarMesh"),
+            PA_StaticMesh::Create(mesh));
+    }
+
+    // Home mesh and material
     {
         DMesh* mesh = CreateDObject<DMesh>();
         mesh->Initialize(std::wstring(L"home/source/home.fbx"));
         std::vector<DTexture*> textures = mesh->GetTextures();
         std::vector<DMaterial*> materials;
-        for (int i = 0; i < mesh->GetSubMeshCount(); i++) {
+        for (int i = 0; i < mesh->GetSubMeshCount(); i++)
+        {
             DMaterial* material = CreateDObject<DMaterial>();
             material->Initialize(shader);
-            if (i < textures.size()) {
+            if (i < textures.size())
+            {
                 m_assetDatabase->CreateAsset(
                     IOManager::GetEngineImportedAssetFullPath("HomeTexture_" + std::to_string(i)),
                     PA_Texture::Create(textures[i]));

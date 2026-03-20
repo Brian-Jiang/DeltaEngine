@@ -1,0 +1,40 @@
+{
+  "header": {
+    "assetId": "04338d14-2d75-4634-9164-f137b2423d76",
+    "bulkDataMap": {
+      "0": {
+        "file": "StarMesh_Bulk0.bin",
+        "size": 345608
+      },
+      "1": {
+        "file": "StarMesh_Bulk1.bin",
+        "size": 172808
+      }
+    },
+    "className": "PA_StaticMesh",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DMesh",
+      "_objectId": "394563d1-8a09-4eee-9dc4-9569c4aac9e4",
+      "m_indexData": {
+        "_bulk": 1,
+        "size": 172808
+      },
+      "m_materials": [
+        {
+          "assetId": "824dd354-2c7f-4bcf-a756-1f80a8ddc6cf",
+          "objectId": "8e0a7a2b-0a0d-4f19-97fb-aebf1630885e"
+        }
+      ],
+      "m_sourcePath": "Star.obj",
+      "m_textures": [],
+      "m_vertexData": {
+        "_bulk": 0,
+        "size": 345608
+      }
+    }
+  ]
+}

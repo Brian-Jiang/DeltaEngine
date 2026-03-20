@@ -35,6 +35,8 @@ public:
 
     DELTAENGINE_API void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext);
 
+    void UpdateRenderProxy();
+
     //inline DirectX::XMMATRIX GetViewMatrix() const { return m_viewMatrix; }
     //inline DirectX::XMMATRIX GetProjectionMatrix() const { return m_projectionMatrix; }
 

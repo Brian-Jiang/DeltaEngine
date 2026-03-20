@@ -1,6 +1,16 @@
 {
   "header": {
-    "assetId": "ccec0af7-1698-4efd-83bf-7eb80fc4c177",
+    "assetId": "ba6c6836-cf3e-4abe-9a13-0d0c02e750ff",
+    "bulkDataMap": {
+      "0": {
+        "file": "DefaultShader_Bulk0.bin",
+        "size": 15300
+      },
+      "1": {
+        "file": "DefaultShader_Bulk1.bin",
+        "size": 143
+      }
+    },
     "className": "PA_Shader",
     "magic": "DLTA",
     "version": 1
@@ -8,9 +18,17 @@
   "objects": [
     {
       "_class": "DShader",
-      "_objectId": "c76a844d-2913-4374-80c0-c9e59dd989dc",
+      "_objectId": "4b14c335-98f5-41d7-a899-35be0095f1bd",
       "m_pixelShaderEntryPoint": "PSMain",
       "m_pixelShaderTargetProfile": "ps_6_0",
+      "m_serializedInputLayout": {
+        "_bulk": 1,
+        "size": 143
+      },
+      "m_serializedShaderBlobs": {
+        "_bulk": 0,
+        "size": 15300
+      },
       "m_sourcePath": "Shaders.hlsl",
       "m_vertexShaderEntryPoint": "VSMain",
       "m_vertexShaderTargetProfile": "vs_6_0"

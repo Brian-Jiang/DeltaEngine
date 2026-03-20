@@ -1,6 +1,6 @@
 {
   "header": {
-    "assetId": "278cff80-babd-4b74-83a4-8e5c3c645934",
+    "assetId": "9d083171-2548-4a54-a7d9-77441f1fd5c5",
     "bulkDataMap": {
       "0": {
         "file": "HomeTexture_2_Bulk0.bin",
@@ -14,7 +14,7 @@
   "objects": [
     {
       "_class": "DTexture",
-      "_objectId": "3fc2a584-9eb7-4349-9e88-3c5c319fd29a",
+      "_objectId": "3b941cd2-9aa2-4ce4-af11-2ce5ce6152ea",
       "m_bulkData": {
         "_bulk": 0,
         "size": 1048640

@@ -9,6 +9,8 @@
 #include <vector>
 
 #include "Runtime/Core/DObject.h"
+#include "Runtime/Serialization/TBulkData.h"
+#include "Runtime/Serialization/ISerializationCallbackReceiver.h"
 
 #include <dxcapi.h>
 
@@ -17,7 +19,7 @@
 DELTA_ENGINE_NS_BEGIN
 
 DCLASS()
-class DShader : public DObject
+class DShader : public DObject, public ISerializationCallbackReceiver
 {
     DGENERATED_BODY(DShader)
 
@@ -45,6 +47,9 @@ public:
     
     DELTAENGINE_API void SetInputLayout(const std::vector<D3D12_INPUT_ELEMENT_DESC>& inputLayout);
 
+    void OnBeforeSerialize() override;
+    void OnAfterDeserialize() override;
+
     
     inline IDxcBlob* GetVertexShaderBlob() const { return m_vertexShaderBlob.Get(); }
     
@@ -58,6 +63,8 @@ private:
 private:
     Microsoft::WRL::ComPtr<IDxcBlob> m_vertexShaderBlob;
     Microsoft::WRL::ComPtr<IDxcBlob> m_pixelShaderBlob;
+    std::vector<D3D12_INPUT_ELEMENT_DESC> m_inputLayout;
+    std::vector<std::string> m_inputLayoutSemanticNames;
 
     DPROPERTY()
     std::wstring m_sourcePath;
@@ -69,8 +76,10 @@ private:
     std::wstring m_vertexShaderTargetProfile;
     DPROPERTY()
     std::wstring m_pixelShaderTargetProfile;
-    
-    std::vector<D3D12_INPUT_ELEMENT_DESC> m_inputLayout;
+    DPROPERTY()
+    TBulkData m_serializedShaderBlobs;
+    DPROPERTY()
+    TBulkData m_serializedInputLayout;
 };
 
 DELTA_ENGINE_NS_END
