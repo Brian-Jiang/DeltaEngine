@@ -171,6 +171,7 @@ static void TestSingleAssetRoundTrip()
     rawB->m_label     = "Companion";
     rawB->m_weight    = 3.14f;
     rawB->m_targetRef = rawA;
+    rawB->m_refs.push_back(rawA);
     asset->AddObject(rawB);
 
     auto filePath = tempDir / "TestAsset.dasset.json";
@@ -210,6 +211,8 @@ static void TestSingleAssetRoundTrip()
     assert(loadedB->m_label == "Companion");
     assert(std::abs(loadedB->m_weight - 3.14f) < 1e-5f);
     assert(loadedB->m_targetRef == loadedA);
+    assert(loadedB->m_refs.size() == 1);
+    assert(loadedB->m_refs[0] == loadedA);
 
     std::filesystem::remove_all(tempDir);
     std::cout << "[PASS] TestSingleAssetRoundTrip\n";
@@ -619,7 +622,90 @@ static void TestCrossAssetPointerResolution()
 }
 
 // ---------------------------------------------------------------------------
-// Test 6: Cyclic dependency loads without infinite recursion
+// Test 6: Cross-asset vector pointer resolution
+// ---------------------------------------------------------------------------
+
+static void TestCrossAssetVectorPointerResolution()
+{
+    auto tempDir = MakeTempDir("DeltaCrossAssetVectorTest");
+
+    AssetId idA     = UUID::Generate();
+    ObjectId objIdA = UUID::Generate();
+
+    AssetId idB     = UUID::Generate();
+    ObjectId objIdB = UUID::Generate();
+
+    nlohmann::json fileA = {
+        {"header", {
+            {"magic",     "DLTA"},
+            {"version",   1},
+            {"className", "PA_TestAsset"},
+            {"assetId",   idA.ToString()}
+        }},
+        {"objects", nlohmann::json::array({
+            nlohmann::json{
+                {"_class",    "DTestObjectA"},
+                {"_objectId", objIdA.ToString()},
+                {"m_health",  90.0f},
+                {"m_name",    "VectorTargetObj"}
+            }
+        })}
+    };
+
+    nlohmann::json fileB = {
+        {"header", {
+            {"magic",     "DLTA"},
+            {"version",   1},
+            {"className", "PA_TestAsset"},
+            {"assetId",   idB.ToString()}
+        }},
+        {"objects", nlohmann::json::array({
+            nlohmann::json{
+                {"_class",    "DTestObjectB"},
+                {"_objectId", objIdB.ToString()},
+                {"m_label",   "VectorOwnerObj"},
+                {"m_weight",  4.0f},
+                {"m_refs", nlohmann::json::array({
+                    nlohmann::json{
+                        {"assetId",  idA.ToString()},
+                        {"objectId", objIdA.ToString()}
+                    }
+                })}
+            }
+        })}
+    };
+
+    {
+        std::ofstream(tempDir / "VectorAssetA.dasset.json") << fileA.dump(2);
+        std::ofstream(tempDir / "VectorAssetB.dasset.json") << fileB.dump(2);
+    }
+
+    EditorAssetDatabase db;
+    db.ScanAssetsFolder(tempDir);
+
+    auto loadedB = db.LoadAsset(idB);
+    assert(loadedB != nullptr);
+    assert(db.IsLoaded(idA));
+    assert(db.IsLoaded(idB));
+
+    auto* objB = dynamic_cast<DTestObjectB*>(loadedB->FindObject(objIdB));
+    assert(objB != nullptr);
+    assert(objB->m_label == "VectorOwnerObj");
+    assert(objB->m_targetRef == nullptr);
+    assert(objB->m_refs.size() == 1);
+    assert(objB->m_refs[0] != nullptr);
+    assert(objB->m_refs[0]->GetObjectId() == objIdA);
+
+    auto* objA = dynamic_cast<DTestObjectA*>(objB->m_refs[0]);
+    assert(objA != nullptr);
+    assert(objA->m_name == "VectorTargetObj");
+
+    std::filesystem::remove_all(tempDir);
+    std::cout << "[PASS] TestCrossAssetVectorPointerResolution\n";
+}
+
+// ---------------------------------------------------------------------------
+// Test 7: Cyclic dependency loads without infinite recursion
 // ---------------------------------------------------------------------------
 
 static void TestCyclicDependency()
@@ -1021,7 +1107,7 @@ static void TestDuplicateAsset()
     assert(duplicatedRef->m_targetRef == duplicatedInternal);
     assert(duplicatedRef->m_targetRef->GetOwningAsset()->GetAssetId() == duplicatedId);
     assert(duplicatedRef->m_refs.size() == 2);
-    assert(duplicatedRef->m_refs[0] == duplicatedInternal);  // fixme error
+    assert(duplicatedRef->m_refs[0] == duplicatedInternal);
     assert(duplicatedRef->m_refs[1] != nullptr);
     assert(duplicatedRef->m_refs[1]->GetObjectId() == externalObjId);
     assert(duplicatedRef->m_refs[1]->GetOwningAsset()->GetAssetId() == externalAssetId);
@@ -1101,6 +1187,7 @@ int main()
     TestMissingDataUsesDefaults();
     TestUnknownClassSkipped();
     TestCrossAssetPointerResolution();
+    TestCrossAssetVectorPointerResolution();
     TestCyclicDependency();
     TestDirtyFlagPropagation();
     TestBrokenReferenceIsNullptr();

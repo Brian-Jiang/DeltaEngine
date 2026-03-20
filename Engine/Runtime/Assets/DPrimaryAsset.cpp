@@ -1,6 +1,7 @@
 #include "Assets/DPrimaryAsset.h"
 
 #include "Reflection/DClass.h"
+#include "Reflection/DObjectReferenceTraversal.h"
 #include "Reflection/DProperty.h"
 #include "Reflection/DBulkDataProperty.h"
 #include "Reflection/ReflectionRegistry.h"
@@ -188,23 +189,15 @@ std::vector<ScriptPointer> DPrimaryAsset::CollectExternalReferences() const
 {
     std::vector<ScriptPointer> refs;
 
-    auto walkProps = [&](auto& self, DStruct* ds, DObject* obj) -> void {
-        if (!ds) return;
-        if (DStruct* parent = ds->GetSuper())
-            self(self, parent, obj);
-        for (DProperty* prop = ds->GetOwnProperties(); prop; prop = prop->GetNext())
-        {
-            auto* ptrProp = dynamic_cast<DObjectPtrPropertyBase*>(prop);
-            if (!ptrProp)
-                continue;
-            ScriptPointer sp = ptrProp->GetUnresolvedPointer(obj);
-            if (!sp.IsNull() && sp.IsExternal(GetAssetId()))
-                refs.push_back(sp);
-        }
-    };
-
     for (auto& obj : m_objects)
-        walkProps(walkProps, obj->GetClass(), obj);
+    {
+        VisitUnresolvedObjectReferencesInStruct(obj->GetClass(), obj,
+            [&](DObjectPtrPropertyBase* /*ptrProp*/, void* /*valueAddress*/, const ScriptPointer& sp)
+            {
+                if (sp.IsExternal(GetAssetId()))
+                    refs.push_back(sp);
+            });
+    }
 
     return refs;
 }

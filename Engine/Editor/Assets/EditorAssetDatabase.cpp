@@ -1,6 +1,7 @@
 #include "Editor/Assets/EditorAssetDatabase.h"
 
 #include "Runtime/Reflection/DClass.h"
+#include "Runtime/Reflection/DObjectReferenceTraversal.h"
 #include "Runtime/Reflection/DProperty.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
 #include "Runtime/Serialization/JsonAssetArchive.h"
@@ -255,25 +256,6 @@ void EditorAssetDatabase::LoadAssetRecursive(const AssetId& id)
 
 void EditorAssetDatabase::ResolvePendingBatch()
 {
-    auto resolveProps = [&](auto& self, DStruct* ds, DObject* obj) -> void {
-        if (!ds) return;
-        if (DStruct* parent = ds->GetSuper())
-            self(self, parent, obj);
-        for (DProperty* prop = ds->GetOwnProperties(); prop; prop = prop->GetNext())
-        {
-            auto* ptrProp = dynamic_cast<DObjectPtrPropertyBase*>(prop);
-            if (!ptrProp)
-                continue;
-
-            ScriptPointer sp = ptrProp->GetUnresolvedPointer(obj);
-            if (sp.IsNull())
-                continue;
-
-            DObject* resolved = FindObject(sp.m_assetId, sp.m_objectId);
-            ptrProp->ResolvePointer(obj, resolved);
-        }
-    };
-
     for (const auto& assetId : m_newlyLoadedBatch)
     {
         auto it = m_assets.find(assetId);
@@ -285,7 +267,14 @@ void EditorAssetDatabase::ResolvePendingBatch()
 
         auto& asset = it->second.m_instance;
         for (auto& obj : asset->GetObjects())
-            resolveProps(resolveProps, obj->GetClass(), obj);
+        {
+            VisitUnresolvedObjectReferencesInStruct(obj->GetClass(), obj,
+                [&](DObjectPtrPropertyBase* ptrProp, void* valueAddress, const ScriptPointer& sp)
+                {
+                    DObject* resolved = FindObject(sp.m_assetId, sp.m_objectId);
+                    ptrProp->ResolvePointer(valueAddress, resolved);
+                });
+        }
     }
     m_newlyLoadedBatch.clear();
 }
@@ -469,6 +458,8 @@ AssetId EditorAssetDatabase::DuplicateAsset(const AssetId& id)
         .m_instance = nullptr
     };
 
+    m_assetPathMap[targetPath] = newAssetId;
+
     return newAssetId;
 }
 
@@ -509,7 +500,9 @@ bool EditorAssetDatabase::DeleteAsset(const AssetId& id)
     }
 
     deletedAnything |= std::filesystem::remove(assetPath);
+    m_assetPathMap.erase(it->second.m_filePath);
     m_assets.erase(it);
+
     return deletedAnything;
 }
 
@@ -533,6 +526,8 @@ void EditorAssetDatabase::CreateAsset(const std::filesystem::path& filePath, DPr
         .m_state    = AssetState::Loaded,
         .m_instance = asset,
     };
+
+    m_assetPathMap[filePath] = newId;
 
     SaveAsset(newId);
 }
