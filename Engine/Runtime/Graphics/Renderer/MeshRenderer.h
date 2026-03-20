@@ -17,15 +17,14 @@ class EngineMain;
 class MeshRenderProxy;
 class DMesh;
 
-//DSTRUCT()
-struct MeshRendererSettings : public DObject
+DSTRUCT()
+struct MeshRendererSettings
 {
-    //DGENERATED_BODY(MeshRendererSettings)
-    // Future settings for mesh rendering (e.g., culling mode, shadow casting, etc.) can be added here.
+    DGENERATED_BODY_STRUCT(MeshRendererSettings)
 };
 
 DCLASS()
-class MeshRenderer: public Renderer
+class MeshRenderer : public Renderer
 {
     DGENERATED_BODY(MeshRenderer)
 

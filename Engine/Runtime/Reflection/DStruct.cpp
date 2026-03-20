@@ -52,11 +52,16 @@ size_t DStruct::GetMinAlignment() const { return m_minAlignment; }
 DProperty* DStruct::GetProperties() const { return m_properties; }
 DProperty* DStruct::GetOwnProperties() const { return m_ownProperties; }
 
-void DStruct::Serialize(AssetArchive& ar, DObject& obj)
+void DStruct::SerializeFields(AssetArchive& ar, void* basePtr)
 {
     if (DStruct* parent = GetSuper())
-        parent->Serialize(ar, obj);
+        parent->SerializeFields(ar, basePtr);
 
     for (DProperty* prop = m_ownProperties; prop; prop = prop->GetNext())
-        prop->Serialize(ar, &obj);
+        prop->Serialize(ar, basePtr);
+}
+
+void DStruct::Serialize(AssetArchive& ar, DObject& obj)
+{
+    SerializeFields(ar, &obj);
 }

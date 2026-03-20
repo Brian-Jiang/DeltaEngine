@@ -24,6 +24,8 @@ from templates import (
     DPROPERTY_VECTOR,
     DPROPERTY_VECTOR_OBJECT_PTR,
     DPROPERTY_VECTOR_SHARED_PTR,
+    DPROPERTY_DSTRUCT,
+    DPROPERTY_VECTOR_DSTRUCT,
     DFUNCTION_VOID_NO_PARAMS,
     DFUNCTION_WITH_PARAMS,
     DFUNCTION_PARAM,
@@ -485,6 +487,13 @@ def _generate_vector_prop_code(prop, class_name: str) -> str:
                 field_name=prop.name,
                 class_name=class_name,
             )
+    elif prop.inner_property_class == "DStructProperty":
+        return DPROPERTY_VECTOR_DSTRUCT.substitute(
+            field_name=prop.name,
+            class_name=class_name,
+            inner_cpp_type=prop.inner_cpp_type,
+            dstruct_type_name=prop.inner_pointee_type or prop.inner_cpp_type,
+        )
     elif prop.inner_property_class == "DVectorProperty":
         # Nested vector: the inner_cpp_type is std::vector<U>.
         # We need an inner DVectorProperty with its own simple inner prop.
@@ -546,6 +555,12 @@ def _generate_class_registration(cls: ClassInfo) -> str:
             code = _generate_vector_prop_code(prop, cls.name)
             if code:
                 parts.append(code)
+        elif prop.is_dstruct:
+            parts.append(DPROPERTY_DSTRUCT.substitute(
+                field_name=prop.name,
+                class_name=cls.name,
+                dstruct_type_name=prop.dstruct_type_name,
+            ))
         elif prop.is_object_ptr and _is_shared_ptr_property(prop.property_class):
             parts.append(DPROPERTY_SHARED_PTR.substitute(
                 pointee_type=prop.pointee_type,

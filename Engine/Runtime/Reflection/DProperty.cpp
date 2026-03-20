@@ -1,5 +1,7 @@
 #include "Runtime/Reflection/DProperty.h"
 
+#include "Runtime/Reflection/DStruct.h"
+#include "Reflection/ReflectionRegistry.h"
 #include "Serialization/AssetArchive.h"
 #include "Assets/DPrimaryAsset.h"
 #include "Runtime/Utils/StringUtils.h"
@@ -7,6 +9,8 @@
 #include "SimpleMath.h"
 #include <DirectXMath.h>
 #include <DirectXPackedVector.h>
+#include <cstring>
+#include <vector>
 
 using namespace DeltaEngine;
 
@@ -521,6 +525,141 @@ void DFloat4x4Property::Serialize(AssetArchive& ar, void* objectPtr)
 void DFloat4x4Property::SerializeElement(AssetArchive& ar, void* elementAddr)
 {
     ar.SerializeElement(*static_cast<XMFLOAT4X4*>(elementAddr));
+}
+
+// ---------------------------------------------------------------------------
+// DStructProperty
+// ---------------------------------------------------------------------------
+
+namespace
+{
+void CollectStructProps(DStruct* ds, void* base, std::vector<std::pair<DProperty*, void*>>& out)
+{
+    if (DStruct* p = ds->GetSuper())
+        CollectStructProps(p, base, out);
+    for (DProperty* prop = ds->GetOwnProperties(); prop; prop = prop->GetNext())
+        out.emplace_back(prop, static_cast<uint8_t*>(base) + prop->GetOffset());
+}
+} // namespace
+
+DStructProperty::DStructProperty(std::string name, uint32_t offset, uint32_t fieldSize, std::string structTypeName)
+    : DProperty(std::move(name), structTypeName, offset, fieldSize)
+    , m_structTypeName(std::move(structTypeName))
+    , m_fieldSize(fieldSize)
+{
+}
+
+DStruct* DStructProperty::GetSchema() const
+{
+    if (!m_cachedSchema)
+        m_cachedSchema = GetReflectionRegistry().FindStructByName(m_structTypeName);
+    return m_cachedSchema;
+}
+
+void DStructProperty::InitializeValue(void* address) const
+{
+    DStruct* ds = GetSchema();
+    if (!ds)
+        return;
+    std::vector<std::pair<DProperty*, void*>> pairs;
+    CollectStructProps(ds, address, pairs);
+    for (auto& [prop, addr] : pairs)
+        prop->InitializeValue(addr);
+}
+
+void DStructProperty::DestroyValue(void* address) const
+{
+    DStruct* ds = GetSchema();
+    if (!ds)
+        return;
+    std::vector<std::pair<DProperty*, void*>> pairs;
+    CollectStructProps(ds, address, pairs);
+    for (auto it = pairs.rbegin(); it != pairs.rend(); ++it)
+        it->first->DestroyValue(it->second);
+}
+
+void DStructProperty::SetValue(void* instance, const void* field_value) const
+{
+    void* addr = static_cast<uint8_t*>(instance) + m_offset;
+    if (field_value)
+        CopyValue(addr, field_value);
+    else
+        InitializeValue(addr);
+    static_cast<DObject*>(instance)->MarkDirty();
+}
+
+void* DStructProperty::GetValue(const void* instance) const
+{
+    return static_cast<uint8_t*>(const_cast<void*>(instance)) + m_offset;
+}
+
+void DStructProperty::CopyValue(void* dest, const void* src) const
+{
+    DStruct* ds = GetSchema();
+    if (!ds)
+        return;
+    std::vector<std::pair<DProperty*, void*>> pairs;
+    CollectStructProps(ds, dest, pairs);
+    std::vector<std::pair<DProperty*, void*>> srcPairs;
+    CollectStructProps(ds, const_cast<void*>(src), srcPairs);
+    for (size_t i = 0; i < pairs.size() && i < srcPairs.size(); ++i)
+        pairs[i].first->CopyValue(pairs[i].second, srcPairs[i].second);
+}
+
+bool DStructProperty::Identical(const void* a, const void* b) const
+{
+    return std::memcmp(a, b, m_fieldSize) == 0;
+}
+
+std::string DStructProperty::ToString(const void* /*address*/) const
+{
+    return "{ " + m_structTypeName + " }";
+}
+
+EPropertyType DStructProperty::GetPropertyType() const
+{
+    return EPropertyType::Struct;
+}
+
+void DStructProperty::Serialize(AssetArchive& ar, void* objectPtr)
+{
+    DStruct* s = GetSchema();
+    if (!s)
+        return;
+    void* fieldPtr = static_cast<uint8_t*>(objectPtr) + m_offset;
+    if (ar.IsSaving())
+    {
+        ar.BeginNestedObject(GetName());
+        s->SerializeFields(ar, fieldPtr);
+        ar.EndNestedObject();
+    }
+    else
+    {
+        if (ar.BeginNestedObjectLoad(GetName()))
+        {
+            s->SerializeFields(ar, fieldPtr);
+            ar.EndNestedObject();
+        }
+    }
+}
+
+void DStructProperty::SerializeElement(AssetArchive& ar, void* elementAddr)
+{
+    DStruct* s = GetSchema();
+    if (!s)
+        return;
+    if (ar.IsSaving())
+    {
+        ar.BeginObject(s->GetName());
+        s->SerializeFields(ar, elementAddr);
+        ar.EndObject();
+    }
+    else
+    {
+        (void)ar.BeginObjectLoad();
+        s->SerializeFields(ar, elementAddr);
+        ar.EndObject();
+    }
 }
 
 // ---------------------------------------------------------------------------

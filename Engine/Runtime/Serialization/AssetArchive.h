@@ -45,6 +45,10 @@ public:
     virtual void   BeginNestedArray(size_t count) = 0;
     virtual size_t BeginNestedArrayLoad()         = 0;
 
+    virtual void BeginNestedObject(const std::string& key) {}
+    virtual bool BeginNestedObjectLoad(const std::string& key) { return false; }
+    virtual void EndNestedObject() {}
+
     // --- Primitive serialization ---
 
     virtual void Serialize(const std::string& key, float&       value) = 0;

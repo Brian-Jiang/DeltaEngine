@@ -206,6 +206,28 @@ DPROPERTY_VECTOR_SHARED_PTR = Template("""\
     }
 """)
 
+DPROPERTY_DSTRUCT = Template("""\
+    cls->AddProperty(new DStructProperty(
+        "${field_name}",
+        offsetof(${class_name}, ${field_name}),
+        sizeof(${dstruct_type_name}),
+        "${dstruct_type_name}"));
+""")
+
+DPROPERTY_VECTOR_DSTRUCT = Template("""\
+    {
+        auto* _innerProp = new DStructProperty(
+            "${field_name}_elem",
+            0,
+            sizeof(${dstruct_type_name}),
+            "${dstruct_type_name}");
+        cls->AddProperty(new DVectorProperty<${inner_cpp_type}>(
+            "${field_name}",
+            offsetof(${class_name}, ${field_name}),
+            std::unique_ptr<DProperty>(_innerProp)));
+    }
+""")
+
 # ============================================================
 # DFUNCTION REGISTRATION
 # ============================================================

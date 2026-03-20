@@ -18,3 +18,4 @@
 #define DELTAENGINE_API(...)
 #define DSTRUCT(__VA_ARGS__)
 #define DELTAEDITOR_API(...)
+#define DGENERATED_BODY_STRUCT(StructName)

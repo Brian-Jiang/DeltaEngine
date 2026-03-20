@@ -36,6 +36,7 @@ public:
     DELTAENGINE_API DProperty* GetProperties() const;
     DELTAENGINE_API DProperty* GetOwnProperties() const;
 
+    DELTAENGINE_API void SerializeFields(AssetArchive& ar, void* basePtr);
     DELTAENGINE_API void Serialize(AssetArchive& ar, DObject& obj);
 
 protected:

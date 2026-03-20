@@ -349,6 +349,10 @@ void EditorWindow_Details::DrawPropertyEditor(DObject* instance, DClass* dclass,
             case EPropertyType::Vector:
                 DrawVectorProperty(instance, prop, depth);
                 break;
+            case EPropertyType::Struct:
+                DrawReadOnlyProperty(GetPropertyDisplayName(prop->GetName()),
+                    prop->ToString(prop->GetValue(instance)));
+                break;
             default:
                 DrawReadOnlyProperty(GetPropertyDisplayName(prop->GetName()),
                     prop->ToString(prop->GetValue(instance)));

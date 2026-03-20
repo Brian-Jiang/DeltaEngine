@@ -42,6 +42,10 @@ public:
     void   BeginNestedArray(size_t count)                    override;
     size_t BeginNestedArrayLoad()                            override;
 
+    void BeginNestedObject(const std::string& key) override;
+    bool BeginNestedObjectLoad(const std::string& key) override;
+    void EndNestedObject() override;
+
     // --- Primitive serialization overrides ---
 
     void Serialize(const std::string& key, float&        value) override;

@@ -200,6 +200,28 @@ size_t JsonAssetArchive::BeginNestedArrayLoad()
     return elem.is_array() ? elem.size() : 0;
 }
 
+void JsonAssetArchive::BeginNestedObject(const std::string& key)
+{
+    auto& cur = *m_stack.back();
+    cur[key]  = nlohmann::json::object();
+    m_stack.push_back(&cur[key]);
+}
+
+bool JsonAssetArchive::BeginNestedObjectLoad(const std::string& key)
+{
+    auto& cur = *m_stack.back();
+    if (!cur.contains(key) || !cur[key].is_object())
+        return false;
+    m_stack.push_back(&cur[key]);
+    return true;
+}
+
+void JsonAssetArchive::EndNestedObject()
+{
+    if (m_stack.size() > 1)
+        m_stack.pop_back();
+}
+
 // ---------------------------------------------------------------------------
 // Primitive serialization
 // ---------------------------------------------------------------------------

@@ -32,6 +32,7 @@ enum class EPropertyType
     SharedObjectPtr,
     BulkData,
     Vector,
+    Struct,
 };
 
 class DProperty
@@ -478,6 +479,31 @@ public:
     EPropertyType GetPropertyType() const override;
     void Serialize(AssetArchive& ar, void* objectPtr) override;
     void SerializeElement(AssetArchive& ar, void* elementAddr) override;
+};
+
+
+class DELTAENGINE_API DStructProperty : public DProperty
+{
+public:
+    DStructProperty(std::string name, uint32_t offset, uint32_t fieldSize, std::string structTypeName);
+
+    void InitializeValue(void* address) const override;
+    void DestroyValue(void* address) const override;
+    void SetValue(void* instance, const void* field_value) const override;
+    void* GetValue(const void* instance) const override;
+    void CopyValue(void* dest, const void* src) const override;
+    bool Identical(const void* a, const void* b) const override;
+    std::string ToString(const void* address) const override;
+    EPropertyType GetPropertyType() const override;
+    void Serialize(AssetArchive& ar, void* objectPtr) override;
+    void SerializeElement(AssetArchive& ar, void* elementAddr) override;
+
+    DStruct* GetSchema() const;
+
+private:
+    std::string m_structTypeName;
+    uint32_t m_fieldSize = 0;
+    mutable DStruct* m_cachedSchema = nullptr;
 };
 
 DELTA_ENGINE_NS_END

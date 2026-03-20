@@ -45,17 +45,26 @@ void VisitUnresolvedObjectReferencesInProperty(
 template <typename Visitor>
 void VisitUnresolvedObjectReferencesInStruct(
     DStruct* ds,
-    DObject* obj,
+    void* basePtr,
     Visitor&& visitor)
 {
-    if (!ds || !obj)
+    if (!ds || !basePtr)
         return;
 
     if (DStruct* parent = ds->GetSuper())
-        VisitUnresolvedObjectReferencesInStruct(parent, obj, visitor);
+        VisitUnresolvedObjectReferencesInStruct(parent, basePtr, visitor);
 
     for (DProperty* prop = ds->GetOwnProperties(); prop; prop = prop->GetNext())
-        VisitUnresolvedObjectReferencesInProperty(prop, obj, visitor);
+    {
+        if (auto* dsp = dynamic_cast<DStructProperty*>(prop))
+        {
+            void* nested = static_cast<uint8_t*>(basePtr) + dsp->GetOffset();
+            if (DStruct* inner = dsp->GetSchema())
+                VisitUnresolvedObjectReferencesInStruct(inner, nested, visitor);
+            continue;
+        }
+        VisitUnresolvedObjectReferencesInProperty(prop, basePtr, visitor);
+    }
 }
 
 DELTA_ENGINE_NS_END

@@ -1,6 +1,8 @@
 import re
 import sys
-from clang.cindex import TypeKind
+from clang.cindex import CursorKind, TypeKind
+
+from macro_utils import is_annotated
 
 
 TYPE_MAP = {
@@ -31,7 +33,6 @@ VECTOR_ELEMENT_PROPERTY_CLASSES = {
     "DStringProperty", "DWStringProperty",
     "DVector3Property", "DQuaternionProperty",
     "DFloat4Property", "DFloat4x4Property",
-    # Object pointer and nested vector types are also valid — handled separately
 }
 
 INNER_TYPE_TO_CPP = {
@@ -54,8 +55,6 @@ _VECTOR_RE = re.compile(r"^std::vector\s*<")
 
 
 def _extract_vector_inner_type(spelling: str) -> str | None:
-    """Extract the first template argument from std::vector<T, ...>.
-    Uses bracket-aware parsing to handle nested templates correctly."""
     m = re.match(r'^(?:std::)?vector\s*<\s*', spelling)
     if not m:
         return None
@@ -74,20 +73,35 @@ def _extract_vector_inner_type(spelling: str) -> str | None:
     return None
 
 
+def _is_anonymous_name(name: str) -> bool:
+    if not name or not name.strip():
+        return True
+    s = name.strip()
+    return s.startswith("(anonymous") or s.startswith("(unnamed")
+
+
+def _record_derives_from_dobject(decl_cursor):
+    import clang.cindex as ci
+    for child in decl_cursor.get_children():
+        if child.kind != ci.CursorKind.CXX_BASE_SPECIFIER:
+            continue
+        t = child.type
+        if t.kind == TypeKind.INVALID:
+            continue
+        sp = _strip_elaborated(_strip_const(t.spelling))
+        base_name = _strip_namespaces(sp)
+        if base_name == "DObject":
+            return True
+        base_decl = t.get_declaration()
+        if base_decl and base_decl.kind in (ci.CursorKind.CLASS_DECL, ci.CursorKind.STRUCT_DECL):
+            if _record_derives_from_dobject(base_decl):
+                return True
+    return False
+
+
 def _resolve_vector_inner(inner_type: str) -> tuple | None:
-    """Resolve a vector inner type string.
-
-    Returns a 4-tuple:
-      (inner_property_class, inner_cpp_type, is_inner_obj_ptr, inner_pointee_type)
-
-    For nested vector inner types, inner_property_class is "DVectorProperty" and
-    inner_cpp_type is the canonical std::vector<U> spelling.
-
-    Returns None if the inner type is not supported as a vector element.
-    """
     s = _strip_elaborated(_strip_const(inner_type.strip()))
 
-    # Value types: direct TYPE_MAP lookup
     prop = TYPE_MAP.get(s)
     if prop and prop in VECTOR_ELEMENT_PROPERTY_CLASSES:
         return (prop, INNER_TYPE_TO_CPP.get(prop, s), False, "")
@@ -97,20 +111,17 @@ def _resolve_vector_inner(inner_type: str) -> tuple | None:
     if _WSTRING_RE.match(s):
         return ("DWStringProperty", "std::wstring", False, "")
 
-    # Raw pointer T* → DObjectPtrProperty<T>
     if s.endswith("*"):
         pointee_raw = s[:-1].strip()
         pointee = _strip_namespaces(_strip_elaborated(pointee_raw))
         return (f"DObjectPtrProperty<{pointee}>", s, True, pointee)
 
-    # std::shared_ptr<T> → DSharedObjectPtrProperty<T>
     m = _SHARED_PTR_RE.match(s)
     if m:
         pointee_raw = m.group(1)
         pointee = _strip_namespaces(_strip_elaborated(pointee_raw.strip()))
         return (f"DSharedObjectPtrProperty<{pointee}>", f"std::shared_ptr<{pointee}>", True, pointee)
 
-    # Nested std::vector<T> → DVectorProperty (recursive)
     if _VECTOR_RE.match(s):
         nested_inner = _extract_vector_inner_type(s)
         if nested_inner is not None:
@@ -122,22 +133,54 @@ def _resolve_vector_inner(inner_type: str) -> tuple | None:
     return None
 
 
-def _try_resolve_vector(spelling, field_name, class_name, *, diag=None, source_file="", line=0):
-    """Try to resolve a std::vector<T> type.
+def _resolve_vector_inner_from_type(tu, inner_t, field_name, class_name, diag, source_file, line):
+    import clang.cindex as ci
+    if inner_t.kind == TypeKind.POINTER:
+        pointee = inner_t.get_pointee()
+        decl = pointee.get_declaration()
+        if decl.kind in (ci.CursorKind.CLASS_DECL, ci.CursorKind.STRUCT_DECL):
+            if is_annotated(tu, decl, "DSTRUCT"):
+                msg = (f"std::vector<{inner_t.spelling}> — DSTRUCT types cannot be used as pointers "
+                       f"in DPROPERTY; use value type or remove DPROPERTY.")
+                if diag:
+                    diag.warn(source_file, line, msg)
+                return None
+        return _resolve_vector_inner(inner_t.spelling)
 
-    Returns a 7-tuple:
-      (property_class, False, "", inner_cpp, inner_prop_class, inner_is_obj_ptr, inner_pointee_type)
-    or None on failure.
-    """
+    decl = inner_t.get_declaration()
+    if decl.kind in (ci.CursorKind.CLASS_DECL, ci.CursorKind.STRUCT_DECL):
+        if is_annotated(tu, decl, "DSTRUCT"):
+            name = decl.spelling or ""
+            if _is_anonymous_name(name):
+                return None
+            return ("DStructProperty", name, False, name)  # inner prop, cpp, obj_ptr, pt
+
+    return _resolve_vector_inner(inner_t.spelling)
+
+
+def _try_resolve_vector(spelling, field_name, class_name, *, diag=None, source_file="", line=0,
+                        tu=None, cursor_type=None):
     inner_type = _extract_vector_inner_type(spelling)
     if inner_type is None:
         return None
 
-    resolved = _resolve_vector_inner(inner_type)
+    resolved = None
+    if tu is not None and cursor_type is not None:
+        try:
+            n = cursor_type.get_num_template_arguments()
+            if n > 0:
+                inner_t = cursor_type.get_template_argument_type(0)
+                resolved = _resolve_vector_inner_from_type(
+                    tu, inner_t, field_name, class_name, diag, source_file, line)
+        except Exception:
+            resolved = None
+
+    if resolved is None:
+        resolved = _resolve_vector_inner(inner_type)
     if resolved is None:
         msg = (f"std::vector<{inner_type}> on property '{field_name}' — "
                f"inner type '{inner_type}' has no supported DProperty subclass. "
-               f"Supported: value types, T*, shared_ptr<T>, std::vector<T>.")
+               f"Supported: value types, T*, shared_ptr<T>, std::vector<T>, DSTRUCT.")
         if diag:
             diag.warn(source_file, line, msg)
         else:
@@ -149,7 +192,6 @@ def _try_resolve_vector(spelling, field_name, class_name, *, diag=None, source_f
 
 
 def _strip_elaborated(spelling: str) -> str:
-    """Remove leading 'class ' and 'struct ' qualifiers from type spelling."""
     s = spelling.strip()
     for prefix in ("class ", "struct "):
         if s.startswith(prefix):
@@ -158,18 +200,29 @@ def _strip_elaborated(spelling: str) -> str:
 
 
 def resolve_type(cursor_type, field_name="", class_name="", *,
-                  diag=None, source_file="", line=0):
+                  diag=None, source_file="", line=0, tu=None):
     """Resolve a clang Type to (property_class, is_object_ptr, pointee_type).
 
-    For vector types returns (property_class, False, "", inner_cpp_type, inner_property_class).
-    Returns None if the type is unrecognized.
+    For DStruct value fields: 4-tuple (DStructProperty, False, "", struct_name).
+    For vector: 7-tuple with inner types.
     """
+    import clang.cindex as ci
     if cursor_type.kind == TypeKind.LVALUEREFERENCE:
         return resolve_type(cursor_type.get_pointee(), field_name, class_name,
-                            diag=diag, source_file=source_file, line=line)
+                            diag=diag, source_file=source_file, line=line, tu=tu)
 
     if cursor_type.kind == TypeKind.POINTER:
         pointee = cursor_type.get_pointee()
+        decl = pointee.get_declaration()
+        if tu is not None and decl.kind in (CursorKind.CLASS_DECL, CursorKind.STRUCT_DECL):
+            if is_annotated(tu, decl, "DSTRUCT"):
+                msg = (f"DPROPERTY '{field_name}' cannot use pointer to DSTRUCT type "
+                       f"'{decl.spelling}' — use value type.")
+                if diag:
+                    diag.warn(source_file, line, msg)
+                else:
+                    print(f"WARNING: {msg}", file=sys.stderr)
+                return None
         pointee_name = _strip_namespaces(pointee.spelling)
         return (f"DObjectPtrProperty<{pointee_name}>", True, pointee_name)
 
@@ -178,6 +231,23 @@ def resolve_type(cursor_type, field_name="", class_name="", *,
     m = _SHARED_PTR_RE.match(spelling)
     if m:
         inner = _strip_namespaces(m.group(1))
+        if tu is not None:
+            try:
+                can = cursor_type.get_canonical()
+                n = can.get_num_template_arguments()
+                if n > 0:
+                    inner_decl = can.get_template_argument_type(0).get_declaration()
+                    if inner_decl.kind in (CursorKind.CLASS_DECL, CursorKind.STRUCT_DECL):
+                        if is_annotated(tu, inner_decl, "DSTRUCT"):
+                            msg = (f"DPROPERTY '{field_name}' cannot use std::shared_ptr to DSTRUCT type "
+                                   f"'{inner_decl.spelling}' — use value type.")
+                            if diag:
+                                diag.warn(source_file, line, msg)
+                            else:
+                                print(f"WARNING: {msg}", file=sys.stderr)
+                            return None
+            except Exception:
+                pass
         return (f"DSharedObjectPtrProperty<{inner}>", True, inner)
 
     prop = TYPE_MAP.get(spelling)
@@ -191,7 +261,8 @@ def resolve_type(cursor_type, field_name="", class_name="", *,
 
     if _VECTOR_RE.match(spelling):
         return _try_resolve_vector(spelling, field_name, class_name,
-                                   diag=diag, source_file=source_file, line=line)
+                                   diag=diag, source_file=source_file, line=line,
+                                   tu=tu, cursor_type=cursor_type)
 
     canonical = _strip_elaborated(_strip_const(cursor_type.get_canonical().spelling))
     prop = TYPE_MAP.get(canonical)
@@ -210,7 +281,27 @@ def resolve_type(cursor_type, field_name="", class_name="", *,
 
     if _VECTOR_RE.match(canonical):
         return _try_resolve_vector(canonical, field_name, class_name,
-                                   diag=diag, source_file=source_file, line=line)
+                                   diag=diag, source_file=source_file, line=line,
+                                   tu=tu, cursor_type=cursor_type)
+
+    decl = cursor_type.get_declaration()
+    if decl.kind in (CursorKind.CLASS_DECL, CursorKind.STRUCT_DECL) and tu is not None:
+        name = decl.spelling or ""
+        if _is_anonymous_name(name):
+            if diag:
+                diag.warn(source_file, line,
+                          f"Cannot reflect anonymous type on property '{field_name}'")
+            return None
+        if is_annotated(tu, decl, "DSTRUCT"):
+            return ("DStructProperty", False, "", name)
+        if _record_derives_from_dobject(decl):
+            msg = (f"DPROPERTY '{field_name}' cannot use DObject-derived type '{name}' "
+                   f"by value — use a pointer or shared_ptr.")
+            if diag:
+                diag.warn(source_file, line, msg)
+            else:
+                print(f"WARNING: {msg}", file=sys.stderr)
+            return None
 
     if diag:
         diag.warn(source_file, line,
@@ -226,9 +317,6 @@ def resolve_type(cursor_type, field_name="", class_name="", *,
 
 
 def resolve_type_from_string(type_str: str, field_name: str = "", class_name: str = "") -> tuple | None:
-    """Resolve a type string (from source text) to (property_class, is_object_ptr, pointee_type).
-    For vectors returns 7-tuple: (property_class, False, "", inner_cpp, inner_prop_class, inner_is_obj_ptr, inner_pointee).
-    Used as fallback when AST misses fields (e.g. std::string with stub types)."""
     s = _strip_const(type_str.strip())
     for prefix in ("class ", "struct "):
         if s.startswith(prefix):
@@ -261,12 +349,10 @@ def resolve_type_from_string(type_str: str, field_name: str = "", class_name: st
 
 
 def _strip_const(spelling: str) -> str:
-    """Remove leading 'const ' qualifier from a type spelling."""
     if spelling.startswith("const "):
         return spelling[6:]
     return spelling
 
 
 def _strip_namespaces(name):
-    """Strip all namespace qualifiers: 'A::B::C' -> 'C'."""
     return name.rsplit("::", 1)[-1] if "::" in name else name

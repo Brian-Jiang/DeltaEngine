@@ -7,6 +7,8 @@ from pathlib import Path
 
 import clang.cindex as ci
 
+from macro_utils import get_tokens_before_cursor as _get_tokens_before_cursor
+from macro_utils import is_annotated as _is_annotated
 from type_resolver import resolve_type, resolve_type_from_string
 from diagnostics import DiagnosticCollector
 
@@ -128,7 +130,7 @@ class PointLightRenderProxy;
 class SpotLightRenderProxy;
 class MeshRenderProxy;
 class EngineMain;
-struct MeshRendererSettings {};
+struct MeshRendererSettings;
 struct Vertex { float x; };
 struct TBulkData;
 }
@@ -182,6 +184,8 @@ class PropertyInfo:
     inner_property_class: str = ""
     inner_is_object_ptr: bool = False
     inner_pointee_type: str = ""
+    is_dstruct: bool = False
+    dstruct_type_name: str = ""
 
 
 @dataclass
@@ -422,27 +426,6 @@ def _collect_forward_decls(tu, file_str: str, source_line_start: int) -> list[Fo
 # ── token-based macro detection ──────────────────────────────
 
 
-def _get_tokens_before_cursor(tu, cursor, lookback_lines=5):
-    start_line = max(1, cursor.location.line - lookback_lines)
-    extent = tu.get_extent(
-        cursor.location.file.name,
-        ((start_line, 1), (cursor.location.line, cursor.location.column)),
-    )
-    return list(tu.get_tokens(extent=extent))
-
-
-def _is_annotated(tu, cursor, macro_name):
-    tokens = _get_tokens_before_cursor(tu, cursor)
-    for tok in reversed(tokens):
-        if tok.spelling == macro_name:
-            return True
-        # A semicolon means we've crossed the end of a prior declaration;
-        # any macro before it was already consumed by that declaration.
-        if tok.spelling == ";":
-            return False
-    return False
-
-
 def _extract_macro_args(tu, cursor, macro_name) -> str | None:
     """Extract the argument string from a macro invocation like DCLASS(abstract).
     Returns the text between parentheses, or None if not found."""
@@ -615,15 +598,29 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
                 continue
             resolved = resolve_type(child.type, child.spelling, class_name,
                                     diag=diag, source_file=file_name,
-                                    line=child.location.line - _PREAMBLE_LINE_COUNT)
+                                    line=child.location.line - _PREAMBLE_LINE_COUNT,
+                                    tu=tu)
             if resolved is None:
                 continue
-            prop_class, is_obj_ptr, pointee = resolved[0], resolved[1], resolved[2]
-            is_vec = len(resolved) >= 5
-            inner_cpp = resolved[3] if is_vec else ""
-            inner_prop = resolved[4] if is_vec else ""
-            inner_is_obj_ptr = resolved[5] if len(resolved) >= 7 else False
-            inner_pointee = resolved[6] if len(resolved) >= 7 else ""
+            is_dstruct_field = len(resolved) == 4 and resolved[0] == "DStructProperty"
+            if is_dstruct_field:
+                prop_class = resolved[0]
+                is_obj_ptr = False
+                pointee = ""
+                dstruct_type_name = resolved[3]
+                is_vec = False
+                inner_cpp = ""
+                inner_prop = ""
+                inner_is_obj_ptr = False
+                inner_pointee = ""
+            else:
+                prop_class, is_obj_ptr, pointee = resolved[0], resolved[1], resolved[2]
+                is_vec = len(resolved) >= 5
+                inner_cpp = resolved[3] if is_vec else ""
+                inner_prop = resolved[4] if is_vec else ""
+                inner_is_obj_ptr = resolved[5] if len(resolved) >= 7 else False
+                inner_pointee = resolved[6] if len(resolved) >= 7 else ""
+                dstruct_type_name = ""
             offset_bits = class_cursor.type.get_offset(child.spelling)
             offset_bytes = offset_bits // 8 if offset_bits >= 0 else -1
             dprop_args = _extract_macro_args(tu, child, "DPROPERTY") or ""
@@ -641,6 +638,8 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
                 inner_property_class=inner_prop,
                 inner_is_object_ptr=inner_is_obj_ptr,
                 inner_pointee_type=inner_pointee,
+                is_dstruct=is_dstruct_field,
+                dstruct_type_name=dstruct_type_name,
             ))
 
         elif child.kind == ci.CursorKind.FUNCTION_TEMPLATE:
@@ -795,6 +794,8 @@ def parse_header(
         if cursor.kind not in (ci.CursorKind.CLASS_DECL, ci.CursorKind.STRUCT_DECL):
             continue
         if not cursor.is_definition():
+            continue
+        if _is_anonymous_or_invalid(cursor.spelling or ""):
             continue
 
         is_dclass = _is_annotated(tu, cursor, "DCLASS")
