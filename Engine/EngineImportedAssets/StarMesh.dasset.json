@@ -1,6 +1,6 @@
 {
   "header": {
-    "assetId": "04338d14-2d75-4634-9164-f137b2423d76",
+    "assetId": "39ed9875-557a-4afb-8be8-c26cccd5c6f9",
     "bulkDataMap": {
       "0": {
         "file": "StarMesh_Bulk0.bin",
@@ -18,15 +18,15 @@
   "objects": [
     {
       "_class": "DMesh",
-      "_objectId": "394563d1-8a09-4eee-9dc4-9569c4aac9e4",
+      "_objectId": "1a646cc4-ed36-47cb-8e69-9ea894d46e60",
       "m_indexData": {
         "_bulk": 1,
         "size": 172808
       },
       "m_materials": [
         {
-          "assetId": "824dd354-2c7f-4bcf-a756-1f80a8ddc6cf",
-          "objectId": "8e0a7a2b-0a0d-4f19-97fb-aebf1630885e"
+          "assetId": "c55d8e00-b524-46d8-9b60-991dcafc04c7",
+          "objectId": "a6036b77-962c-48ef-8ad9-c86ac4b1665d"
         }
       ],
       "m_sourcePath": "Star.obj",

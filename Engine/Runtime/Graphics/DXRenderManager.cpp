@@ -86,7 +86,7 @@ void DXRenderManager::LoadAssets()
 void DXRenderManager::InitWorldRenderers(DWorld& world)
 {
     // Create a color buffer with sRGB for gamma correction.
-    DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
     DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT;
 
     // Check the best multisample quality level that can be used for the given back buffer format.

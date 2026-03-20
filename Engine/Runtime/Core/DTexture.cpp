@@ -70,6 +70,7 @@ void DeltaEngine::DTexture::LoadTexture()
     if (m_sRGB)
     {
         m_metadata->format = MakeSRGB(m_metadata->format);
+        m_scratchImage->OverrideFormat(m_metadata->format);
     }
 }
 
@@ -124,7 +125,7 @@ TBulkData SerializeTexture(
             mippedImage->GetImageCount(),
             mippedImage->GetMetadata(),
             //DXGI_FORMAT_BC7_UNORM, // swap to BC7_UNORM for higher quality
-            DXGI_FORMAT_BC3_UNORM, // swap to BC7_UNORM for higher quality
+            DXGI_FORMAT_BC3_UNORM_SRGB, // swap to BC7_UNORM for higher quality
             DirectX::TEX_COMPRESS_PARALLEL,
             DirectX::TEX_THRESHOLD_DEFAULT,
             compressedStorage);
@@ -226,5 +227,10 @@ void DTexture::OnAfterDeserialize()
     {
         m_metadata = std::make_shared<TexMetadata>();
         m_scratchImage = std::make_shared<ScratchImage>();
+    }
+
+    if (m_sRGB) {
+        m_metadata->format = MakeSRGB(m_metadata->format);
+        m_scratchImage->OverrideFormat(m_metadata->format);
     }
 }
