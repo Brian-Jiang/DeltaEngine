@@ -9,22 +9,7 @@ SceneComponent::SceneComponent()
     , m_worldTransform(XMMatrixIdentity())
     , m_parent(nullptr)
 {
-
 }
-
-//SceneComponent::SceneComponent(std::string name)
-//    : DComponent(name)
-//    , m_localTransform(XMMatrixIdentity())
-//    , m_worldTransform(XMMatrixIdentity())
-//{
-//}
-//
-//SceneComponent::SceneComponent(std::string name, std::shared_ptr<GameObject> gameObject)
-//    : DComponent(name, gameObject)
-//    , m_localTransform(XMMatrixIdentity())
-//    , m_worldTransform(XMMatrixIdentity())
-//{
-//}
 
 SimpleMath::Vector3 SceneComponent::GetLocalPosition() const
 {

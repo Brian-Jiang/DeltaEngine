@@ -3,6 +3,7 @@
 #include "EngineIncludes.h"
 
 #include <vector>
+#include <memory>
 
 #include "SimpleMath.h"
 #include "Core/SceneComponent.h"

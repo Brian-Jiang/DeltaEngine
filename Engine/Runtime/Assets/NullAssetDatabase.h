@@ -6,12 +6,14 @@
 
 DELTA_ENGINE_NS_BEGIN
 
+/// Fallback asset database that logs calls and returns empty results.
 class NullAssetDatabase final : public IAssetDatabase
 {
 public:
     NullAssetDatabase() = default;
     ~NullAssetDatabase() override = default;
 
+    /// Always returns nullptr.
     DPrimaryAsset* LoadAsset(const AssetId& id) override
     {
         (void)id;
@@ -19,6 +21,7 @@ public:
         return nullptr;
     }
 
+    /// Always returns false.
     bool IsLoaded(const AssetId& id) const override
     {
         (void)id;
@@ -26,6 +29,7 @@ public:
         return false;
     }
 
+    /// Always returns nullptr.
     DObject* FindObject(const AssetId& assetId, const ObjectId& objId) const override
     {
         (void)assetId;
@@ -34,6 +38,7 @@ public:
         return nullptr;
     }
 
+    /// Always returns a null asset id.
     AssetId FindAssetIdByPath(const std::filesystem::path& path) const override
     {
         (void)path;

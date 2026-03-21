@@ -19,4 +19,5 @@ TEST(NullAssetDatabaseTests, LocatorReturnsRegisteredNullDatabase)
     EXPECT_EQ(locatorDatabase.LoadAsset(assetId), nullptr);
     EXPECT_FALSE(locatorDatabase.IsLoaded(assetId));
     EXPECT_EQ(locatorDatabase.FindObject(assetId, objectId), nullptr);
+    EXPECT_TRUE(locatorDatabase.FindAssetIdByPath("MissingAsset.dasset.json").IsNull());
 }

@@ -2,9 +2,8 @@
 
 #include "EngineIncludes.h"
 
-#include <vector>
-#include <memory>
 #include <string>
+#include <vector>
 
 #include "Core/DObject.h"
 #include "Core/DComponent.h"
@@ -25,9 +24,9 @@ class GameObject: public DObject
 
 public:
 	DELTAENGINE_API GameObject();
-	//DELTAENGINE_API GameObject(const std::string& name);
 	DELTAENGINE_API ~GameObject();
 
+    /// Creates and attaches a component of the requested type.
 	template <typename T> requires IsDComponent<T>
 	T* AddComponent(std::string name = "New Component")
     {
@@ -43,6 +42,7 @@ public:
         return component;
 	}
 
+    /// Creates and attaches a scene component of the requested type.
 	template <typename T> requires IsSceneComponent<T>
     T* AddSceneComponent(std::string name = "New Scene Component")
     {
@@ -72,22 +72,30 @@ public:
         return sceneComponent;
     }
 
+    /// Creates and attaches a reflected component instance.
     DELTAENGINE_API DComponent* AddComponentByClass(const DClass* dclass);
 
+    /// Removes and destroys a component owned by this game object.
     DELTAENGINE_API void RemoveComponent(DComponent* component);
 
+    /// Destroys this game object and its owned components.
     DFUNCTION()
     DELTAENGINE_API void Destroy();
 
+    /// Returns the game object display name.
     DFUNCTION()
     DELTAENGINE_API const std::string& GetName() const;
 
+    /// Returns the world that currently owns this game object.
     DFUNCTION()
     DELTAENGINE_API DWorld* GetCurrentWorld() const;
+    /// Returns the root scene component, if one exists.
     DFUNCTION()
     DELTAENGINE_API SceneComponent* GetRootSceneComponent() const;
+    /// Returns all attached scene components.
     DFUNCTION()
     DELTAENGINE_API const std::vector<SceneComponent*>& GetSceneComponents() const;
+    /// Returns all attached non-scene components.
     DFUNCTION()
     DELTAENGINE_API const std::vector<DComponent*>& GetComponents() const;
 

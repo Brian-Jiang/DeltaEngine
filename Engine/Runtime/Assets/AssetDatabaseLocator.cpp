@@ -6,19 +6,33 @@
 
 using namespace DeltaEngine;
 
+namespace
+{
+[[noreturn]] void FailFast(const char* message)
+{
+    std::cerr << "[AssetDatabase] " << message << '\n';
+    assert(false && "AssetDatabaseLocator contract violation");
+    std::abort();
+}
+}
+
 IAssetDatabase* AssetDatabaseLocator::s_instance = nullptr;
 
 void AssetDatabaseLocator::Register(IAssetDatabase* db)
 {
-    assert(db != nullptr, "AssetDatabaseLocator::Register() called with nullptr");
-    assert(s_instance == nullptr, "AssetDatabaseLocator: already registered");
+    if (db == nullptr)
+        FailFast("AssetDatabaseLocator::Register() called with nullptr.");
+
+    if (s_instance != nullptr)
+        FailFast("AssetDatabaseLocator::Register() called more than once.");
+
     s_instance = db;
 }
 
 IAssetDatabase& AssetDatabaseLocator::Get()
 {
-    assert(s_instance != nullptr,
-        "AssetDatabaseLocator::Get() called before Register() - call Register() before EngineMain::Initialize()");
+    if (s_instance == nullptr)
+        FailFast("AssetDatabaseLocator::Get() called before Register().");
 
     return *s_instance;
 }

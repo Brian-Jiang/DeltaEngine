@@ -25,6 +25,7 @@ target_include_directories(DeltaEditorTests PRIVATE
 target_link_libraries(DeltaEditorTests PRIVATE DeltaEditor ThirdParty::gtest_main)
 target_compile_options(DeltaEditorTests PRIVATE
     "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->"
+    "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/EHsc>"
     "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/WX->"
 )
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${DELTA_EDITOR_TEST_SOURCES})

@@ -1,4 +1,6 @@
 set(DELTA_ENGINE_TEST_SOURCES
+    Assets/DPrimaryAssetTests.cpp
+    Assets/SceneAssetIntegrationTests.cpp
     Serialization/Core/UuidTests.cpp
     Serialization/Core/ScriptPointerTests.cpp
     Serialization/Core/BulkDataHandleTests.cpp

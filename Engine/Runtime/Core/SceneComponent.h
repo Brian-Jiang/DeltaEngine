@@ -3,11 +3,9 @@
 #include "EngineIncludes.h"
 
 #include <DirectXMath.h>
-#include <memory>
 #include <vector>
 
 #include "SimpleMath.h"
-#include "Runtime/Core/DObject.h"
 #include "Runtime/Core/DComponent.h"
 
 #include "SceneComponent.generated.h"
@@ -24,8 +22,6 @@ class SceneComponent : public DComponent
 
 public:
     DELTAENGINE_API SceneComponent();
-    //DELTAENGINE_API SceneComponent(std::string name);
-    //DELTAENGINE_API SceneComponent(std::string name, std::shared_ptr<GameObject> gameObject);
 
     DFUNCTION()
     DELTAENGINE_API DirectX::SimpleMath::Vector3 GetLocalPosition() const;
@@ -82,8 +78,10 @@ public:
     
     DFUNCTION()
     DELTAENGINE_API SceneComponent* GetParent() const;
+    /// Returns the child scene components in attachment order.
     DFUNCTION()
     DELTAENGINE_API const std::vector<SceneComponent*>& GetChildren() const;
+    /// Reparents this component while preventing cycles.
     DFUNCTION()
     DELTAENGINE_API void SetParent(SceneComponent* parent);
 protected:

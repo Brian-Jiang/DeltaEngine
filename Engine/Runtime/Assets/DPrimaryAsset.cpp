@@ -80,28 +80,27 @@ void DPrimaryAsset::SerializeHeader(AssetArchive& ar)
 
 void DPrimaryAsset::SerializeBody(AssetArchive& ar)
 {
-    if (ar.IsSaving())
-    {
-        ar.BeginArray("objects", m_objects.size());
-        for (auto& obj : m_objects)
-        {
-            DClass* cls = obj->GetClass();
-            std::string className = cls->GetName();
-            ar.BeginObject(className);
-
-            UUID oid = obj->GetObjectId();
-            ar.Serialize("_objectId", oid);
-
-            cls->Serialize(ar, *obj);
-
-            ar.EndObject();
-        }
-        ar.EndArray();
-    }
-    else
+    if (!ar.IsSaving())
     {
         DeserializeBody(ar);
+        return;
     }
+
+    ar.BeginArray("objects", m_objects.size());
+    for (DObject* obj : m_objects)
+    {
+        DClass* cls = obj->GetClass();
+        std::string className = cls->GetName();
+        ar.BeginObject(className);
+
+        UUID oid = obj->GetObjectId();
+        ar.Serialize("_objectId", oid);
+
+        cls->Serialize(ar, *obj);
+
+        ar.EndObject();
+    }
+    ar.EndArray();
 }
 
 void DPrimaryAsset::DeserializeBody(AssetArchive& ar)
@@ -118,14 +117,13 @@ void DPrimaryAsset::DeserializeBody(AssetArchive& ar)
             continue;
         }
 
-        DObject* raw = GetReflectionRegistry().CreateObject(className);
-        if (!raw)
+        DObject* obj = GetReflectionRegistry().CreateObject(className);
+        if (!obj)
         {
             ar.EndObject();
             continue;
         }
 
-        DObject* obj = raw;
         ObjectId oid;
         ar.Serialize("_objectId", oid);
         obj->SetObjectId(oid);
@@ -134,7 +132,7 @@ void DPrimaryAsset::DeserializeBody(AssetArchive& ar)
         dclass->Serialize(ar, *obj);
 
         ar.EndObject();
-        m_objects.push_back(std::move(obj));
+        m_objects.push_back(obj);
     }
     ar.EndArray();
 }
@@ -174,22 +172,17 @@ void DPrimaryAsset::SerializeBulkData(AssetArchive& ar)
         uint32_t nextId = 0;
         for (auto& [prop, obj] : bulkProps)
             static_cast<TBulkData*>(prop->GetValue(obj))->m_bulkId = nextId++;
+    }
 
-        for (auto& [prop, obj] : bulkProps)
-            prop->SerializeBulkPayload(ar, obj);
-    }
-    else
-    {
-        for (auto& [prop, obj] : bulkProps)
-            prop->SerializeBulkPayload(ar, obj);
-    }
+    for (auto& [prop, obj] : bulkProps)
+        prop->SerializeBulkPayload(ar, obj);
 }
 
 std::vector<ScriptPointer> DPrimaryAsset::CollectExternalReferences() const
 {
     std::vector<ScriptPointer> refs;
 
-    for (auto& obj : m_objects)
+    for (DObject* obj : m_objects)
     {
         VisitUnresolvedObjectReferencesInStruct(obj->GetClass(), obj,
             [&](DObjectPtrPropertyBase* /*ptrProp*/, void* /*valueAddress*/, const ScriptPointer& sp)

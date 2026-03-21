@@ -1,8 +1,9 @@
 #include "Core/DWorld.h"
 
-#include <stack>
+#include <algorithm>
 #include <format>
 #include <functional>
+#include <stack>
 
 #include "Core/SceneComponent.h"
 #include "Core/Camera.h"
@@ -102,13 +103,11 @@ void DeltaEngine::DWorld::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> 
         SceneComponent* current = stack.top();
         stack.pop();
 
-        // Gather draw calls.
         if (!hasCamera)
         {
             if (Camera* camera = dynamic_cast<Camera*>(current))
             {
                 camera->PreGatherDrawCalls(context);
-                // todo support multiple cameras and render targets in the future.
                 hasCamera = true;
             }
         }
@@ -137,7 +136,6 @@ void DeltaEngine::DWorld::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> con
         SceneComponent* current = stack.top();
         stack.pop();
 
-        // Gather draw calls.
         if (Renderer* renderer = dynamic_cast<Renderer*>(current))
         {
             renderer->GatherDrawCalls(context);
@@ -154,6 +152,7 @@ void DeltaEngine::DWorld::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> con
 
 void DeltaEngine::DWorld::PreTick(float deltaTime)
 {
+    (void)deltaTime;
     m_gameObjectsChanged = false;
 }
 
@@ -175,33 +174,23 @@ bool DeltaEngine::DWorld::IsGameObjectsChanged() const { return m_gameObjectsCha
 
 DWorld* DeltaEngine::DWorld::CreateWorld()
 {
-    DWorld* world = CreateDObject<DWorld>();
-    return world;
+    return CreateDObject<DWorld>();
 }
-
-// ---------------------------------------------------------------------------
-// Scene integration
-// ---------------------------------------------------------------------------
 
 GameObject* DWorld::CreateGameObjectInScene(DScene* scene, const std::string& name)
 {
-    // If no scene provided, create a temporary (non-persisted) GameObject.
     if (!scene)
         return CreateGameObject(name);
 
     DPrimaryAsset* pa = scene->GetOwningAsset();
 
     GameObject* go = CreateDObject<GameObject>();
-    go->m_name        = name;
+    go->m_name = name;
     go->m_currentWorld = this;
     go->SetObjectId(UUID::Generate());
 
-    // Tie the GO to the scene's primary asset so it serializes with the scene.
     if (pa)
-    {
         pa->AddObject(go);
-        // AddObject also calls go->SetOwningAsset(pa) internally.
-    }
 
     scene->AddGameObject(go);
 
@@ -228,18 +217,13 @@ void DWorld::AddGameObjectFromScene(GameObject* go)
     go->m_currentWorld = this;
     m_gameObjects.push_back(go);
 
-    // Attach the GO's root SceneComponent to the world root, then reconstruct
-    // the parent links for the full SC sub-tree (m_children was deserialized,
-    // but m_parent was not — it must be derived from the children list).
     SceneComponent* rootSC = go->GetRootSceneComponent();
     if (rootSC && m_rootSceneComponent)
     {
-        // Direct assignment bypasses SetParent to avoid double-inserting into
-        // m_children (which is already populated from deserialization).
+        // The child lists were deserialized, so re-link parents without duplicating children.
         rootSC->m_parent = m_rootSceneComponent;
         m_rootSceneComponent->m_children.push_back(rootSC);
 
-        // Walk the sub-tree and set m_parent on every descendant.
         std::function<void(SceneComponent*)> reconstructLinks =
             [&](SceneComponent* sc)
         {
@@ -254,8 +238,6 @@ void DWorld::AddGameObjectFromScene(GameObject* go)
         };
         reconstructLinks(rootSC);
 
-        // Recompute world transforms for the whole sub-tree now that the
-        // hierarchy is fully connected.
         rootSC->UpdateTransform();
     }
 

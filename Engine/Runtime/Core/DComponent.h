@@ -2,7 +2,6 @@
 
 #include "EngineIncludes.h"
 
-#include <memory>
 #include <string>
 #include <type_traits>
 
@@ -21,20 +20,23 @@ class DComponent: public DObject
 
 public:
     DELTAENGINE_API DComponent();
-    //DELTAENGINE_API DComponent(std::string name);
-    //DELTAENGINE_API DComponent(std::string name, std::shared_ptr<GameObject> gameObject);
     DELTAENGINE_API virtual ~DComponent();
 
+    /// Registers the owning game object for this component.
     virtual void RegisterComponent(GameObject* gameObject);
+    /// Removes the component from its owner and asset.
     void MarkForDestroy();
 
 public:
+    /// Sets the component display name.
     DFUNCTION()
     DELTAENGINE_API void SetName(const std::string& name);
 
+    /// Returns the owning game object.
     DFUNCTION()
     DELTAENGINE_API GameObject* GetGameObject() const;
 
+    /// Returns the component display name.
     DFUNCTION()
     DELTAENGINE_API const std::string& GetName() const;
 

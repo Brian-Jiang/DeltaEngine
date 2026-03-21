@@ -14,7 +14,7 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_C_COMPILER": "cl",
         "CMAKE_CXX_COMPILER": "cl",
-        "CMAKE_CXX_FLAGS": "/W4 /external:anglebrackets /external:W0 /analyze:external-"
+        "CMAKE_CXX_FLAGS": "/EHsc /external:anglebrackets /external:W0 /analyze:external-"
       },
       "vendor": {
         "microsoft.com/VisualStudioSettings/CMake/1.0": {

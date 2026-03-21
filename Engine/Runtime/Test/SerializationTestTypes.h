@@ -4,6 +4,7 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 
 #include "SimpleMath.h"
 #include "Runtime/Core/DObject.h"

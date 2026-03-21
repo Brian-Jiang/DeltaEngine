@@ -7,10 +7,10 @@ DELTA_ENGINE_NS_BEGIN
 class DELTAENGINE_API AssetDatabaseLocator
 {
 public:
-    // Must be called before EngineMain::Initialize().
+    /// Registers the process-wide asset database instance.
     static void Register(IAssetDatabase* db);
 
-    // Fails fast if no database has been registered.
+    /// Returns the registered asset database instance.
     static IAssetDatabase& Get();
 
 private:

@@ -1,14 +1,12 @@
 #include "Core/GameObject.h"
 
+#include <algorithm>
 #include <format>
 #include <queue>
 
-#include "Reflection/ReflectionRegistry.h"
-#include "Reflection/DClass.h"
-
-#include "Core/DWorld.h"
-#include "Core/SceneComponent.h"
 #include "Assets/DPrimaryAsset.h"
+#include "Reflection/DClass.h"
+#include "Reflection/ReflectionRegistry.h"
 
 using namespace DeltaEngine;
 
@@ -17,17 +15,10 @@ GameObject::GameObject()
     , m_rootSceneComponent(nullptr)
     , m_currentWorld(nullptr)
 {
-	//AddComponent<Transform>();
 }
-
-//DeltaEngine::GameObject::GameObject(const std::string& name)
-//    : m_name(name)
-//{
-//}
 
 GameObject::~GameObject()
 {
-	
 }
 
 void GameObject::Destroy()
@@ -81,16 +72,15 @@ DComponent* GameObject::AddComponentByClass(const DClass* dclass)
         }
         return sc;
     }
-    else
-    {
-        DComponent* comp = registry.CreateObject<DComponent>(dclass->GetName());
-        if (!comp)
-            return nullptr;
-        comp->RegisterComponent(this);
-        comp->SetName(std::format("New {}", dclass->GetName()));
-        m_components.push_back(comp);
-        return comp;
-    }
+
+    DComponent* comp = registry.CreateObject<DComponent>(dclass->GetName());
+    if (!comp)
+        return nullptr;
+
+    comp->RegisterComponent(this);
+    comp->SetName(std::format("New {}", dclass->GetName()));
+    m_components.push_back(comp);
+    return comp;
 }
 
 void GameObject::RemoveComponent(DComponent* component)

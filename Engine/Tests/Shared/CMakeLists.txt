@@ -32,6 +32,7 @@ target_include_directories(DeltaEditorSerializationTestSupport PRIVATE ${DELTA_T
 target_link_libraries(DeltaEditorSerializationTestSupport PRIVATE DeltaEditor ThirdParty::gtest ThirdParty::nlohmann_json)
 target_compile_options(DeltaEditorSerializationTestSupport PRIVATE
     "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->"
+    "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/WX->"
 )
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES
     SerializationTestSupport.cpp
