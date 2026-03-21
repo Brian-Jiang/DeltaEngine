@@ -11,6 +11,7 @@
 DELTA_ENGINE_NS_BEGIN
 
 class SpotLightRenderProxy;
+struct DXGraphicsContext;
 
 DCLASS()
 class SpotLight : public LightComponent
@@ -19,14 +20,14 @@ class SpotLight : public LightComponent
 
 public:
     SpotLight();
-    //SpotLight(std::string name);
-    //SpotLight(std::string name, std::shared_ptr<GameObject> gameObject);
     ~SpotLight();
 
     DFUNCTION()
+    /// Updates the light parameters used for draw submission.
     void UpdateParameters(DirectX::XMVECTOR color, float intensity, float range,
         float innerConeAngle, float outerConeAngle);
 
+    /// Uploads the current light data to the graphics context.
     void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) override;
 
 private:

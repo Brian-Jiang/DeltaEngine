@@ -3,46 +3,82 @@
 #include "EngineIncludes.h"
 
 #include <DirectXMath.h>
+#include <minwindef.h>
 
 DELTA_ENGINE_NS_BEGIN
 
 struct alignas(16) LightCB
 {
+    /// Number of directional lights uploaded this frame.
     UINT numDirectionalLights;
+
+    /// Number of point lights uploaded this frame.
     UINT numPointLights;
+
+    /// Number of spot lights uploaded this frame.
     UINT numSpotLights;
 };
 
 struct alignas(16) DirectionalLightBuffer
 {
+    /// Normalized light direction.
     DirectX::XMVECTOR direction;
+
+    /// Light color in linear space.
     DirectX::XMVECTOR color;
+
+    /// Light intensity multiplier.
     float intensity;
 };
 
 struct alignas(16) PointLightBuffer
 {
+    /// Light world position.
     DirectX::XMVECTOR position;
+
+    /// Light color in linear space.
     DirectX::XMVECTOR color;
+
+    /// Light intensity multiplier.
     float intensity;
+
+    /// Maximum light range.
     float range;
 };
 
 struct alignas(16) SpotLightBuffer
 {
+    /// Light world position.
     DirectX::XMVECTOR position;
+
+    /// Normalized light direction.
     DirectX::XMVECTOR direction;
+
+    /// Light color in linear space.
     DirectX::XMVECTOR color;
+
+    /// Light intensity multiplier.
     float intensity;
+
+    /// Maximum light range.
     float range;
-    float innerConeAngle; // in radians
-    float outerConeAngle; // in radians
+
+    /// Inner cone angle in radians.
+    float innerConeAngle;
+
+    /// Outer cone angle in radians.
+    float outerConeAngle;
 };
 
 struct alignas(16) Light
 {
+    /// Light world position.
     DirectX::XMVECTOR position;
+
+    /// Light color in linear space.
     DirectX::XMVECTOR color;
+
+    /// Light intensity multiplier.
     float intensity;
 };
 

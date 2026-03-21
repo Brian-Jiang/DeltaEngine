@@ -2,18 +2,12 @@
 
 #include "EngineIncludes.h"
 
-#include <d3d12.h>
-#include <DirectXMath.h>
-#include <wrl/client.h>
-
-#include "Runtime/Core/DTexture.h"
 #include "Runtime/Graphics/Renderer/Renderer.h"
 
 #include "MeshRenderer.generated.h"
 
 DELTA_ENGINE_NS_BEGIN
 
-class EngineMain;
 class MeshRenderProxy;
 class DMesh;
 
@@ -30,11 +24,10 @@ class MeshRenderer : public Renderer
 
 public:
     MeshRenderer();
-    //MeshRenderer(std::string name);
-    //MeshRenderer(std::string name, std::shared_ptr<GameObject> gameObject);
     ~MeshRenderer();
 
     DFUNCTION()
+    /// Sets the mesh rendered by this component.
     void SetMesh(DMesh* mesh);
 
 protected:
@@ -43,28 +36,10 @@ protected:
     void OnTransformChanged() override;
 
 public:
-    //void LoadTexture(const std::shared_ptr<DTexture>& texture, DXGraphicsContext& context);
-    //void AddMesh(const Mesh* mesh, const DirectX::XMMATRIX meshTransform, DXGraphicsContext& context);
-
+    /// Rebuilds the mesh render proxy from the current mesh and settings.
     void CreateRenderProxy() override;
 
-
 private:
-    //std::vector<D3D12_VERTEX_BUFFER_VIEW> vertexBufferViews;
-    //std::vector<D3D12_INDEX_BUFFER_VIEW> indexBufferViews;
-
-    DPROPERTY()
-    std::vector<DTexture*> loadedTextures;
-
-    //Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
-
-    /// Per-object constant buffer (world matrix + color), root parameter [2].
-    //Microsoft::WRL::ComPtr<ID3D12Resource> m_objectCb;
-
-	//std::vector<Mesh*> meshes;
-    DPROPERTY()
-    std::vector<DirectX::XMMATRIX> meshTransforms;
-
     DPROPERTY()
     DMesh* m_mesh;
 
@@ -72,14 +47,6 @@ private:
 
     DPROPERTY()
     MeshRendererSettings m_settings;
-
-    DPROPERTY()
-	int loadedTextureCount;
-    DPROPERTY()
-	int meshCount;
-
-    DPROPERTY()
-    bool m_dirty;
 };
 
 DELTA_ENGINE_NS_END

@@ -15,28 +15,6 @@ SpotLight::SpotLight()
     m_renderProxy = std::make_shared<SpotLightRenderProxy>();
 }
 
-//SpotLight::SpotLight(std::string name)
-//    : LightComponent(name)
-//    , m_color(1.0f, 1.0f, 1.0f, 1.0f)
-//    , m_intensity(1.0f)
-//    , m_range(10.0f)
-//    , m_innerConeAngle(DirectX::XM_PIDIV4)   // 45 degrees
-//    , m_outerConeAngle(DirectX::XM_PIDIV2)   // 90 degrees
-//{
-//    m_renderProxy = std::make_shared<SpotLightRenderProxy>();
-//}
-//
-//SpotLight::SpotLight(std::string name, std::shared_ptr<GameObject> gameObject)
-//    : LightComponent(name, gameObject)
-//    , m_color(1.0f, 1.0f, 1.0f, 1.0f)
-//    , m_intensity(1.0f)
-//    , m_range(10.0f)
-//    , m_innerConeAngle(DirectX::XM_PIDIV4)   // 45 degrees
-//    , m_outerConeAngle(DirectX::XM_PIDIV2)   // 90 degrees
-//{
-//    m_renderProxy = std::make_shared<SpotLightRenderProxy>();
-//}
-
 SpotLight::~SpotLight()
 {
 }

@@ -5,13 +5,13 @@
 #include <memory>
 
 #include "Runtime/Core/SceneComponent.h"
-#include "Runtime/Graphics/DXGraphicsContext.h"
 
 #include "Renderer.generated.h"
 
 DELTA_ENGINE_NS_BEGIN
 
 class DWorld;
+struct DXGraphicsContext;
 
 DCLASS()
 class Renderer : public SceneComponent
@@ -21,8 +21,8 @@ class Renderer : public SceneComponent
 
 public:
     Renderer();
-    //Renderer(std::string name);
-    //Renderer(std::string name, std::shared_ptr<GameObject> gameObject);
+
+    /// Rebuilds the render proxy used by the renderer for draw submission.
     virtual void CreateRenderProxy() = 0;
 
 protected:

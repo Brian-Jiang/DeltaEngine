@@ -22,14 +22,25 @@ class DXRenderManager;
 /// each renderer uses this plus its own model matrix for per-draw MVP.
 struct DXGraphicsContext
 {
+    /// Render manager that owns the frame resources.
     std::shared_ptr<DXRenderManager> renderManager;
+
+    /// Device used to allocate graphics resources.
     std::shared_ptr<Device> device;
+
+    /// Command list receiving renderer draw calls for the frame.
     std::shared_ptr<CommandList> commandList;
 
+    /// Directional lights gathered for the frame.
     std::vector<DirectionalLightBuffer> directionalLights;
+
+    /// Point lights gathered for the frame.
     std::vector<PointLightBuffer> pointLights;
+
+    /// Spot lights gathered for the frame.
     std::vector<SpotLightBuffer> spotLights;
 
+    /// Uploads the gathered light buffers to the command list.
     void ApplyLightBuffersToCommandList();
 };
 

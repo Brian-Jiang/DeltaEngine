@@ -19,13 +19,13 @@ class DirectionalLight : public LightComponent
 
 public:
     DirectionalLight();
-    //DirectionalLight(std::string name);
-    //DirectionalLight(std::string name, std::shared_ptr<GameObject> gameObject);
     ~DirectionalLight();
 
     DFUNCTION()
+    /// Updates the light parameters used for draw submission.
     void UpdateParameters(DirectX::XMVECTOR direction, DirectX::XMVECTOR color, float intensity);
 
+    /// Uploads the current light data to the graphics context.
     void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) override;
 
 private:

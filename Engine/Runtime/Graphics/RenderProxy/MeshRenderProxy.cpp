@@ -4,24 +4,24 @@
 #include <dxcapi.h>
 
 #include "Graphics/DXGraphicsContext.h"
-#include "Graphics/DirectX/Device.h"
-#include "Graphics/DirectX/RootSignature.h"
-#include "Graphics/DirectX/CommandQueue.h"
-#include "Graphics/DirectX/CommandList.h"
-#include "Graphics/DirectX/IndexBuffer.h"
-#include "Graphics/DirectX/VertexBuffer.h"
-#include "Graphics/Structures/Camera.h"
-#include "Graphics/Structures/Light.h"
 #include "Graphics/DXRenderManager.h"
+#include "Graphics/DirectX/CommandList.h"
+#include "Graphics/DirectX/Device.h"
+#include "Graphics/DirectX/IndexBuffer.h"
+#include "Graphics/DirectX/RootSignature.h"
+#include "Graphics/DirectX/VertexBuffer.h"
 #include "Graphics/Structures/RootParameterType.h"
-#include "Core/DMesh.h"
 #include "Core/DMaterial.h"
+#include "Core/DMesh.h"
 #include "Core/DShader.h"
 
 using namespace DeltaEngine;
 
 MeshRenderProxy::MeshRenderProxy()
-    : m_PrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_UNDEFINED)
+    : m_mesh(nullptr)
+    , m_PrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_UNDEFINED)
+    , m_worldMatrix(DirectX::XMMatrixIdentity())
+    , m_meshDirty(true)
 {
 }
 
@@ -29,6 +29,8 @@ DeltaEngine::MeshRenderProxy::MeshRenderProxy(DMesh* mesh, std::shared_ptr<MeshR
     : m_mesh(mesh)
     , m_settings(settings)
     , m_PrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST) // todo : get primitive topology from mesh
+    , m_worldMatrix(DirectX::XMMatrixIdentity())
+    , m_meshDirty(true)
 {
 }
 
@@ -39,6 +41,10 @@ DeltaEngine::MeshRenderProxy::~MeshRenderProxy()
 void DeltaEngine::MeshRenderProxy::SetMesh(DMesh* mesh)
 {
     m_mesh = mesh;
+    m_VertexBuffers.clear();
+    m_IndexBuffers.clear();
+    m_textures.clear();
+    m_pipelineStateObjects.clear();
     m_meshDirty = true;
 }
 
@@ -49,6 +55,9 @@ void DeltaEngine::MeshRenderProxy::UpdateWorldTransform(DirectX::XMMATRIX worldM
 
 void DeltaEngine::MeshRenderProxy::BuildPipelineStateObject(std::shared_ptr<DXGraphicsContext> renderContext)
 {
+    if (!m_mesh)
+        return;
+
     std::shared_ptr<Device> device = renderContext->device;
 
     // Setup the pipeline state.
@@ -66,11 +75,8 @@ void DeltaEngine::MeshRenderProxy::BuildPipelineStateObject(std::shared_ptr<DXGr
         CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_DESC SampleDesc;
     } pipelineStateStream;
 
-    // Create a color buffer with sRGB for gamma correction.
     DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
     DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT;
-
-    // Check the best multisample quality level that can be used for the given back buffer format.
     DXGI_SAMPLE_DESC sampleDesc = device->GetMultisampleQualityLevels(backBufferFormat);
 
     D3D12_RT_FORMAT_ARRAY rtvFormats = {};
@@ -78,11 +84,8 @@ void DeltaEngine::MeshRenderProxy::BuildPipelineStateObject(std::shared_ptr<DXGr
     rtvFormats.RTFormats[0] = backBufferFormat;
 
     CD3DX12_RASTERIZER_DESC rasterizerState(D3D12_DEFAULT);
-    //if (m_EnableDecal) {
-    //    // Disable backface culling on decal geometry.
-    //    rasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-    //}
 
+    m_textures.clear();
     m_pipelineStateObjects.clear();
     for (int i = 0; i < m_mesh->GetSubMeshCount(); ++i)
     {
@@ -116,19 +119,23 @@ void DeltaEngine::MeshRenderProxy::BuildPipelineStateObject(std::shared_ptr<DXGr
             m_textures.insert({ i, std::unordered_map<uint32_t, std::shared_ptr<DirectX12Texture>>() });
             auto texture = material->GetTexture(0);
             if (texture)
-            {
                 m_textures[i][0] = renderContext->commandList->LoadTexture(texture);
-            }
         }
     }
 }
 
 void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext)
 {
+    if (!m_mesh)
+        return;
+
     std::shared_ptr<CommandList> commandList = renderContext->commandList;
 
     if (m_meshDirty)
     {
+        m_VertexBuffers.clear();
+        m_IndexBuffers.clear();
+
         int submeshCount = m_mesh->GetSubMeshCount();
         for (int i = 0; i < submeshCount; ++i)
         {
@@ -136,17 +143,14 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
             m_VertexBuffers.push_back(vertexBuffer);
             std::shared_ptr<IndexBuffer> indexBuffer = commandList->CopyIndexBuffer(m_mesh->GetIndices()[i]);
             m_IndexBuffers.push_back(indexBuffer);
-            
-            // m_PrimitiveTopology = m_mesh->GetPrimitiveTopology();
-            // m_AABB = m_mesh->GetAABB();
         }
-        
-        BuildPipelineStateObject(renderContext);
+
+        if (m_pipelineStateObjects.empty())
+            BuildPipelineStateObject(renderContext);
 
         m_meshDirty = false;
     }
 
-    // todo where to set object cb?
     struct ObjectData
     {
         DirectX::XMMATRIX worldMatrix;
@@ -164,25 +168,20 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
     {
         commandList->SetPipelineState(m_pipelineStateObjects[i]);
         commandList->SetPrimitiveTopology(m_PrimitiveTopology);
-
-        
         commandList->SetShaderResourceView(static_cast<uint32_t>(RootParameterType::Texture), 0, m_textures[i][0],
             D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
-        //for (auto vertexBuffer : m_VertexBuffers)
-        //{
-        //    commandList->SetVertexBuffer(0, vertexBuffer);
-        //}
-
         commandList->SetVertexBuffer(0, m_VertexBuffers[i]);
 
         auto indexCount = m_IndexBuffers[i]->GetNumIndices();
         auto vertexCount = m_VertexBuffers[i]->GetNumVertices();
 
-        if (indexCount > 0) {
+        if (indexCount > 0)
+        {
             commandList->SetIndexBuffer(m_IndexBuffers[i]);
             commandList->DrawIndexed(indexCount, 1u, 0u, 0u, 0u);
-        } else if (vertexCount > 0) {
+        }
+        else if (vertexCount > 0)
+        {
             commandList->Draw(vertexCount, 1u, 0u, 0u);
         }
     }
@@ -191,9 +190,8 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
 size_t DeltaEngine::MeshRenderProxy::GetIndexCount() const
 {
     size_t indexCount = 0;
-    if (!m_IndexBuffers.empty()) {
+    if (!m_IndexBuffers.empty())
         indexCount = m_IndexBuffers[0]->GetNumIndices();
-    }
 
     return indexCount;
 }
@@ -201,11 +199,8 @@ size_t DeltaEngine::MeshRenderProxy::GetIndexCount() const
 size_t DeltaEngine::MeshRenderProxy::GetVertexCount() const
 {
     size_t vertexCount = 0;
-
-    // To count the number of vertices in the mesh, just take the number of vertices in the first vertex buffer.
-    if (!m_VertexBuffers.empty()) {
+    if (!m_VertexBuffers.empty())
         vertexCount = m_VertexBuffers[0]->GetNumVertices();
-    }
 
     return vertexCount;
 }

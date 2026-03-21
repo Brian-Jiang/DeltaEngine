@@ -2,18 +2,15 @@
 
 #include "EngineIncludes.h"
 
-#include <vector>
-#include <map>
-#include <unordered_map>
-#include <string>
-#include <memory>
 #include <d3d12.h>
-#include <DirectXCollision.h>
+#include <DirectXMath.h>
+#include <memory>
+#include <unordered_map>
+#include <vector>
 
 DELTA_ENGINE_NS_BEGIN
 
 class PipelineStateObject;
-class RootSignature;
 struct DXGraphicsContext;
 class DMesh;
 struct MeshRendererSettings;
@@ -28,36 +25,32 @@ public:
     MeshRenderProxy(DMesh* mesh, std::shared_ptr<MeshRendererSettings> settings);
     ~MeshRenderProxy();
 
+    /// Replaces the mesh used by the render proxy.
     void SetMesh(DMesh* mesh);
+
+    /// Updates the world transform used for the next draw submission.
     void UpdateWorldTransform(DirectX::XMMATRIX worldMatrix);
-    
+
+    /// Builds pipeline state objects and uploads textures for the current mesh.
     void BuildPipelineStateObject(std::shared_ptr<DXGraphicsContext> renderContext);
+
+    /// Records draw calls for the current mesh into the active command list.
     void GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext);
 
-    /**
-    * Get the number if indices in the index buffer.
-    * If no index buffer is bound to the mesh, this function returns 0.
-    */
+    /// Returns the number of indices in the first index buffer.
     size_t GetIndexCount() const;
 
-    /**
-    * Get the number of vertices in the mesh.
-    * If this mesh does not have a vertex buffer, the function returns 0.
-    */
+    /// Returns the number of vertices in the first vertex buffer.
     size_t GetVertexCount() const;
 
 private:
     DMesh* m_mesh;
     std::shared_ptr<MeshRendererSettings> m_settings;
 
-    //using BufferMap = std::map<uint32_t, std::shared_ptr<VertexBuffer>>;
-    //BufferMap m_VertexBuffers;
-
     std::vector<std::shared_ptr<VertexBuffer>> m_VertexBuffers;
     std::vector<std::shared_ptr<IndexBuffer>> m_IndexBuffers;
     std::unordered_map<uint32_t, std::unordered_map<uint32_t, std::shared_ptr<DirectX12Texture>>> m_textures;
     D3D12_PRIMITIVE_TOPOLOGY m_PrimitiveTopology;
-    DirectX::BoundingBox m_AABB;
     DirectX::XMMATRIX m_worldMatrix;
 
     // todo: use a pso manager to manage PSOs and avoid creating a PSO for each mesh render proxy.

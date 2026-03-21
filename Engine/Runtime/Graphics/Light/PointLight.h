@@ -11,6 +11,7 @@
 DELTA_ENGINE_NS_BEGIN
 
 class PointLightRenderProxy;
+struct DXGraphicsContext;
 
 DCLASS()
 class PointLight : public LightComponent
@@ -19,13 +20,13 @@ class PointLight : public LightComponent
 
 public:
     PointLight();
-    //PointLight(std::string name);
-    //PointLight(std::string name, std::shared_ptr<GameObject> gameObject);
     ~PointLight();
 
     DFUNCTION()
+    /// Updates the light parameters used for draw submission.
     void UpdateParameters(DirectX::XMVECTOR color, float intensity, float range);
 
+    /// Uploads the current light data to the graphics context.
     void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) override;
 
 private:
