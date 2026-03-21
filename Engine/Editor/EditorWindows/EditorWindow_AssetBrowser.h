@@ -19,9 +19,12 @@ public:
     EditorWindow_AssetBrowser();
     ~EditorWindow_AssetBrowser();
 
+    /// Folder tree of imported assets with select / duplicate / delete actions.
     void Render() override;
 
+    /// ImGui window title.
     const char* m_title = "Asset Browser";
+    /// Optional open flag for ImGui::Begin.
     bool* m_open = nullptr;
 
 private:

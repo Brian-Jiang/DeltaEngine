@@ -7,7 +7,6 @@
 
 #include "Editor/EditorMain.h"
 #include "Editor/EditorSelectionState.h"
-#include "Editor/UIComponents/ContextMenuPopup.h"
 #include "Editor/Style/EditorTheme.h"
 #include "Runtime/EngineMain.h"
 #include "Runtime/Core/DWorld.h"
@@ -40,7 +39,6 @@ void EditorWindow_WorldOutliner::RebuildFilter()
         return;
     }
 
-    // Case-insensitive substring match
     auto toLower = [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); };
     std::string needle;
     needle.reserve(std::strlen(m_filterBuf));
@@ -90,7 +88,6 @@ void EditorWindow_WorldOutliner::Render()
     }
     const EditorTheme::ThemeColors& c = theme->colors;
 
-    // --- Build entries from live game objects ---
     const auto& gameObjects = world->GetGameObjects();
     m_entries.clear();
     m_entries.reserve(gameObjects.size());
@@ -105,7 +102,6 @@ void EditorWindow_WorldOutliner::Render()
         m_entries.push_back(std::move(e));
     }
 
-    // --- Sync selected index from selection state ---
     m_selectedIndex = -1;
     if (auto* sel = g_editor->GetSelectionState())
     {
@@ -127,7 +123,6 @@ void EditorWindow_WorldOutliner::Render()
 
     RebuildFilter();
 
-    // --- "+ Add" button (right-aligned) ---
     {
         const float btnPadX = 10.f;
         const float btnPadY = 4.f;
@@ -166,16 +161,12 @@ void EditorWindow_WorldOutliner::Render()
         ImGui::PopStyleColor(4);
     }
 
-    // Draw the picker popup (must be called every frame in same window)
     if (const DClass* picked = m_addGoPicker.Draw(c))
     {
-        // Create the GO in the active scene so it is persisted on save.
-        // Fall back to a temporary (non-scene) GO if no scene is active.
         DScene* activeScene = world->GetActiveScene();
         world->CreateGameObjectInScene(activeScene, picked);
     }
 
-    // --- Filter bar ---
     ImGui::PushStyleColor(ImGuiCol_FrameBg,        c.DInput);
     ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, c.DHover);
     ImGui::PushStyleColor(ImGuiCol_Border,         c.BLight);
@@ -199,7 +190,6 @@ void EditorWindow_WorldOutliner::Render()
     ImGui::PopStyleVar(3);
     ImGui::PopStyleColor(3);
 
-    // --- Object list ---
     ImGui::BeginChild("##OutlinerList", ImVec2(0.f, 0.f), ImGuiChildFlags_None,
         ImGuiWindowFlags_NoScrollbar);
 
@@ -211,7 +201,6 @@ void EditorWindow_WorldOutliner::Render()
                                rowMin.y + EditorTheme::RowH());
         bool isSelected = (entry->index == m_selectedIndex);
 
-        // Invisible full-row selectable
         ImGui::PushStyleColor(ImGuiCol_Header,        ImVec4(0.f, 0.f, 0.f, 0.f));
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, c.DHover);
         ImGui::PushStyleColor(ImGuiCol_HeaderActive,  c.DHover);
@@ -225,7 +214,6 @@ void EditorWindow_WorldOutliner::Render()
             if (auto* sel = g_editor->GetSelectionState())
                 sel->SelectGameObject(entry->go);
         }
-        bool isHovered = ImGui::IsItemHovered();
         ImGui::PopStyleColor(3);
 
         if (ImGui::BeginPopupContextItem())
@@ -242,34 +230,27 @@ void EditorWindow_WorldOutliner::Render()
             ImGui::EndPopup();
         }
 
-        // DrawList decorations for selected state
         ImDrawList* dl = ImGui::GetWindowDrawList();
         if (isSelected)
         {
-            // Gradient bg tint — periwinkle left-to-right fade
             dl->AddRectFilledMultiColor(rowMin, rowMax,
                 ImGui::ColorConvertFloat4ToU32(ImVec4(0.42f, 0.55f, 1.f, 0.08f)),
                 ImGui::ColorConvertFloat4ToU32(ImVec4(0.42f, 0.55f, 1.f, 0.04f)),
                 ImGui::ColorConvertFloat4ToU32(ImVec4(0.42f, 0.55f, 1.f, 0.04f)),
                 ImGui::ColorConvertFloat4ToU32(ImVec4(0.42f, 0.55f, 1.f, 0.08f)));
-            // Top AccRim line
             dl->AddLine(rowMin, ImVec2(rowMax.x, rowMin.y),
                 ImGui::ColorConvertFloat4ToU32(c.AccRim), 1.f);
-            // Bottom AccRim line
             dl->AddLine(ImVec2(rowMin.x, rowMax.y - 1.f),
                         ImVec2(rowMax.x, rowMax.y - 1.f),
                 ImGui::ColorConvertFloat4ToU32(c.AccRim), 1.f);
-            // 2px left accent bar
             dl->AddRectFilled(rowMin, ImVec2(rowMin.x + 2.f, rowMax.y),
                 ImGui::ColorConvertFloat4ToU32(c.Acc));
         }
 
-        // Rewind cursor onto the selectable for row content
         const float textLineH = ImGui::GetTextLineHeight();
         const float contentY  = rowMin.y + (EditorTheme::RowH() - textLineH) * 0.5f;
         ImGui::SetCursorScreenPos(ImVec2(rowMin.x + 5.f, contentY));
 
-        // a) Index — mono font, TGhost color
         ImFont* monoFont = theme->GetMonoFont();
         if (monoFont) ImGui::PushFont(monoFont);
         ImGui::PushStyleColor(ImGuiCol_Text, c.TGhost);
@@ -277,12 +258,10 @@ void EditorWindow_WorldOutliner::Render()
         ImGui::PopStyleColor();
         if (monoFont) ImGui::PopFont();
 
-        // b) Type chip
         ImGui::SameLine(0.f, 10.f);
         m_typeChip.Draw(c);
         ImGui::SameLine(0.f, 15.f);
 
-        // c) Name — clipped, bold+bright when selected
         float nameMaxW = rowMax.x - ImGui::GetCursorScreenPos().x - 21.f;
         ImVec2 nameStart = ImGui::GetCursorScreenPos();
         ImGui::PushClipRect(nameStart,
@@ -297,15 +276,6 @@ void EditorWindow_WorldOutliner::Render()
 
         ImGui::PopClipRect();
 
-        // d) Visibility dot — right-aligned, shown on hover or selection
-        //if (isHovered || isSelected)
-        //{
-        //    ImGui::SetCursorScreenPos(
-        //        ImVec2(rowMax.x - 14.f, contentY));
-        //    ImGui::PushStyleColor(ImGuiCol_Text, isSelected ? c.Acc : c.TLabel);
-        //    ImGui::TextUnformatted("\xe2\x97\x8f");
-        //    ImGui::PopStyleColor();
-        //}
         ImGui::PopID();
     }
 

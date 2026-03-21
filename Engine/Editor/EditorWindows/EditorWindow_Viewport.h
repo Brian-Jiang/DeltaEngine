@@ -2,39 +2,28 @@
 
 #include "EngineIncludes.h"
 
-#include <memory>
-
 #include "EditorWindows/EditorWindow.h"
+#include "EditorWindows/EditorWindow_ViewportPresets.h"
 #include "imgui.h"
 
 DELTA_ENGINE_NS_BEGIN
 
-class Device;
-class CommandList;
-class RenderTarget;
-
-enum class ViewportResolution
-{
-    FreeAspect,
-    Resolution_1280x720,
-    Resolution_1920x1080,
-    Resolution_3840x2160,
-    Count
-};
-
 class EditorWindow_Viewport : public EditorWindow
 {
 public:
+    /// Captures the current scene ImGui texture id from the editor singleton.
     EditorWindow_Viewport();
     ~EditorWindow_Viewport();
 
-    /// Renders the viewport window. If sceneTextureId is valid, displays the game rendering via ImGui::Image.
-    /// When using blit path, commandList is used for resolve/copy; transition and descriptor copy happen in EditorRenderManager.
+    /// Draws the viewport toolbar, scene image, and fly-camera input when applicable.
     void Render() override;
 
+    /// ImGui texture id for the scene color target shown in the viewport.
     void SetSceneTexture(ImTextureID textureId) { m_sceneTextureId = textureId; }
 
+    /// ImGui window title.
     const char* m_title = "Viewport";
+    /// If non-null, ImGui shows a collapse/close widget and writes open state here.
     bool* m_open = nullptr;
 
 private:
@@ -47,7 +36,6 @@ private:
     float m_zoom = 1.0f;
     ViewportResolution m_lastResolution = ViewportResolution::FreeAspect;
 
-    // Unreal-style viewport fly mode: right-mouse drag to rotate, WASD to move (camera space), Q/E up/down (world)
     bool m_flyModeActive = false;
     float m_rotationSensitivity = 0.15f;
     float m_movementSpeed = 150.0f;

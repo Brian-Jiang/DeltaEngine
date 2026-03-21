@@ -1,14 +1,9 @@
 #include "Editor/EditorWindows/EditorWindow_Viewport.h"
 
 #include <algorithm>
-#include <d3dx12.h>
 #include <SDL3/SDL.h>
 #include <DirectXMath.h>
 
-#include "Runtime/Graphics/DirectX/Device.h"
-#include "Runtime/Graphics/DirectX/DirectX12Texture.h"
-#include "Runtime/Graphics/DirectX/RenderTarget.h"
-#include "Runtime/Graphics/DirectX/CommandList.h"
 #include "Runtime/EngineMain.h"
 #include "Runtime/Core/Camera.h"
 #include "Runtime/Core/Time.h"
@@ -17,32 +12,6 @@
 
 using namespace DeltaEngine;
 using namespace DirectX;
-
-namespace
-{
-    void GetResolutionPresetSize(ViewportResolution preset, int& outW, int& outH)
-    {
-        switch (preset)
-        {
-        case ViewportResolution::Resolution_1280x720:  outW = 1280;  outH = 720;  break;
-        case ViewportResolution::Resolution_1920x1080: outW = 1920;  outH = 1080; break;
-        case ViewportResolution::Resolution_3840x2160: outW = 3840;  outH = 2160; break;
-        default: outW = 0; outH = 0; break;
-        }
-    }
-
-    const char* GetResolutionPresetLabel(ViewportResolution preset)
-    {
-        switch (preset)
-        {
-        case ViewportResolution::FreeAspect:           return "Free Aspect";
-        case ViewportResolution::Resolution_1280x720:   return "1280 x 720";
-        case ViewportResolution::Resolution_1920x1080: return "1920 x 1080";
-        case ViewportResolution::Resolution_3840x2160: return "3840 x 2160 (4K)";
-        default: return "Unknown";
-        }
-    }
-}
 
 EditorWindow_Viewport::EditorWindow_Viewport()
 {
@@ -85,17 +54,14 @@ void EditorWindow_Viewport::UpdateViewportFlyMode(bool viewportImageHovered)
 
     const bool rightMouseDown = ImGui::IsMouseDown(ImGuiMouseButton_Right);
 
-    // Enter fly mode: right-click on viewport image
     if (!m_flyModeActive && viewportImageHovered && rightMouseDown)
     {
         m_flyModeActive = true;
         SDL_SetWindowRelativeMouseMode(window, true);
-        // Flush initial mouse delta to avoid jump when cursor is captured
         float discardX, discardY;
         SDL_GetRelativeMouseState(&discardX, &discardY);
     }
 
-    // Exit fly mode: release right mouse button
     if (m_flyModeActive && !rightMouseDown)
     {
         m_flyModeActive = false;
@@ -106,27 +72,24 @@ void EditorWindow_Viewport::UpdateViewportFlyMode(bool viewportImageHovered)
     if (!m_flyModeActive)
         return;
 
-    // --- Mouse rotation ---
     float relX = 0.0f, relY = 0.0f;
     SDL_GetRelativeMouseState(&relX, &relY);
 
     if (relX != 0.0f || relY != 0.0f)
     {
-        // Use yaw/pitch only (roll=0) to prevent camera tilting around view axis
-        SimpleMath::Vector3 euler = camera->GetWorldRotation().ToEuler(); // (pitch, yaw, roll) in radians
+        SimpleMath::Vector3 euler = camera->GetWorldRotation().ToEuler();
         float yawDelta = relX * m_rotationSensitivity * (XM_PI / 180.0f);
         float pitchDelta = relY * m_rotationSensitivity * (XM_PI / 180.0f);
 
         float newYaw = euler.y + yawDelta;
         float newPitch = euler.x + pitchDelta;
-        const float pitchLimit = 89.0f * (XM_PI / 180.0f); // Prevent gimbal lock at poles
+        const float pitchLimit = 89.0f * (XM_PI / 180.0f);
         newPitch = std::clamp(newPitch, -pitchLimit, pitchLimit);
 
         SimpleMath::Quaternion newRot = SimpleMath::Quaternion::CreateFromYawPitchRoll(newYaw, newPitch, 0.0f);
         camera->SetWorldRotation(newRot);
     }
 
-    // --- Keyboard movement (WASD camera space, Q/E world up/down) ---
     float dt = Time::deltaTime;
     float move = m_movementSpeed * dt;
     XMFLOAT3 positionVector = camera->GetWorldPosition();
@@ -162,7 +125,6 @@ void EditorWindow_Viewport::Render()
         return;
     }
 
-    // --- Resolution dropdown and Zoom slider ---
     const char* comboPreview = GetResolutionPresetLabel(m_resolution);
     bool resolutionChanged = false;
     ImGui::PushItemWidth(300);
@@ -180,12 +142,10 @@ void EditorWindow_Viewport::Render()
         ImGui::EndCombo();
     }
 
-    // --- Get available size for the scene image (below the toolbar) ---
     ImVec2 availSize = ImGui::GetContentRegionAvail();
     float imageAreaW = availSize.x;
     float imageAreaH = std::max(1.0f, availSize.y);
 
-    // Determine render size
     int renderW, renderH;
     if (m_resolution == ViewportResolution::FreeAspect)
     {
@@ -193,7 +153,6 @@ void EditorWindow_Viewport::Render()
         renderH = static_cast<int>(imageAreaH);
         renderW = std::max(1, renderW);
         renderH = std::max(1, renderH);
-        // Free aspect: viewport resize causes render size change
         UpdateSceneRenderSize(renderW, renderH);
     }
     else
@@ -202,13 +161,11 @@ void EditorWindow_Viewport::Render()
         UpdateSceneRenderSize(renderW, renderH);
     }
 
-    // Refresh render size from editor (in case UpdateSceneRenderSize changed it)
     UINT actualRenderW, actualRenderH;
     g_editor->GetSceneRenderSize(actualRenderW, actualRenderH);
     float texW = static_cast<float>(actualRenderW);
     float texH = static_cast<float>(actualRenderH);
 
-    // Zoom slider: min = fit to viewport, max = 5
     float fitZoom = 1.0f;
     if (imageAreaW > 0 && imageAreaH > 0 && texW > 0 && texH > 0)
     {
@@ -220,14 +177,12 @@ void EditorWindow_Viewport::Render()
     const float minZoom = fitZoom;
     const float maxZoom = 5.0f;
 
-    // After resolution preset change, set zoom to fit
     if (resolutionChanged || m_lastResolution != m_resolution)
     {
         m_zoom = minZoom;
         m_lastResolution = m_resolution;
     }
 
-    // Clamp zoom to valid range
     if (m_zoom < minZoom)
         m_zoom = minZoom;
     if (m_zoom > maxZoom)
@@ -238,7 +193,6 @@ void EditorWindow_Viewport::Render()
     ImGui::SliderFloat("Zoom", &m_zoom, minZoom, maxZoom, "%.2fx", ImGuiSliderFlags_AlwaysClamp);
     ImGui::PopItemWidth();
 
-    // Display the scene texture and handle viewport fly mode (Unreal-style)
     bool viewportImageHovered = false;
     if (m_sceneTextureId && texW > 0 && texH > 0 && availSize.x > 0 && availSize.y > 0)
     {

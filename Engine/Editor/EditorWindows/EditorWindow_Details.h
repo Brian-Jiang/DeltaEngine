@@ -25,9 +25,12 @@ public:
     EditorWindow_Details();
     ~EditorWindow_Details();
 
+    /// Property inspector for the current selection (asset, GameObject, or component).
     void Render() override;
 
+    /// ImGui window title.
     const char* m_title = "Details";
+    /// Optional open flag for ImGui::Begin.
     bool* m_open = nullptr;
 
 private:

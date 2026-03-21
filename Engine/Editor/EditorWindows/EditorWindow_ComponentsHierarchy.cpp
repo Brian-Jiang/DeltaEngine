@@ -2,7 +2,6 @@
 
 #include "Editor/EditorMain.h"
 #include "Editor/EditorSelectionState.h"
-#include "Editor/UIComponents/ContextMenuPopup.h"
 #include "Editor/Style/EditorTheme.h"
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Core/SceneComponent.h"
@@ -15,7 +14,6 @@
 
 using namespace DeltaEngine;
 
-// UTF-8 for FA cube glyph U+F1B2 — same as TypeChip
 static constexpr const char* kCompIcon   = "\xef\x86\xb2";
 static constexpr float       kCompIconSz = 18.f;
 
@@ -52,13 +50,11 @@ void EditorWindow_ComponentsHierarchy::Render()
     {
         ImGui::TextDisabled("Select a GameObject to view its components");
 
-        // Still need to draw the popup (it may be open)
         m_addCompPicker.Draw(c);
         ImGui::End();
         return;
     }
 
-    // ── GameObject name header ───────────────────────────────────────────────
     ImGui::TextUnformatted(contextGameObject->GetName().c_str());
     ImGui::Separator();
 
@@ -81,7 +77,6 @@ void EditorWindow_ComponentsHierarchy::Render()
     if (!rootSceneComponent && regularComponents.empty())
         ImGui::TextDisabled("No components");
 
-    // ── "+ Add Component" button ─────────────────────────────────────────────
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
@@ -123,9 +118,7 @@ void EditorWindow_ComponentsHierarchy::Render()
         ImGui::PopStyleVar(2);
         ImGui::PopStyleColor(4);
     }
-    //ImGui::BeginPopupContextItem
 
-    // Draw the component picker popup
     if (const DClass* picked = m_addCompPicker.Draw(c))
     {
         contextGameObject->AddComponentByClass(picked);
@@ -160,7 +153,6 @@ void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(SceneComponent* 
     if (isSelected)
         flags |= ImGuiTreeNodeFlags_Selected | ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_OpenOnArrow;
 
-    // Icon drawn before the tree node label via DrawList
     {
         ImDrawList* dl = ImGui::GetWindowDrawList();
         ImVec2 cursorPos = ImGui::GetCursorScreenPos();
@@ -169,7 +161,6 @@ void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(SceneComponent* 
         dl->AddText(ImGui::GetFont(), kCompIconSz,
             ImVec2(cursorPos.x, cursorPos.y + iconOffY),
             ImGui::ColorConvertFloat4ToU32(c.CMesh), kCompIcon);
-        // Indent cursor past the icon
         ImGui::SetCursorScreenPos(ImVec2(cursorPos.x + kCompIconSz + 6.f, cursorPos.y));
     }
 
@@ -231,7 +222,6 @@ void EditorWindow_ComponentsHierarchy::RenderRegularComponents(const std::vector
         if (isSelected)
             flags |= ImGuiTreeNodeFlags_Selected;
 
-        // Icon drawn before the tree node label via DrawList
         {
             ImDrawList* dl = ImGui::GetWindowDrawList();
             ImVec2 cursorPos = ImGui::GetCursorScreenPos();

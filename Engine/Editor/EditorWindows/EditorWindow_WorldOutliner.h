@@ -17,10 +17,14 @@ class GameObject;
 
 struct OutlinerEntry
 {
-    int          index   = 0;
-    std::string  name;
-    bool         visible = true;
-    GameObject*  go      = nullptr;
+    /// Index in the world's game object list for this row.
+    int index = 0;
+    /// Display name (or placeholder if the pointer is null).
+    std::string name;
+    /// Reserved for future visibility UI.
+    bool visible = true;
+    /// Game object this row represents; may be null.
+    GameObject* go = nullptr;
 };
 
 class EditorWindow_WorldOutliner : public EditorWindow
@@ -29,15 +33,17 @@ public:
     EditorWindow_WorldOutliner();
     ~EditorWindow_WorldOutliner();
 
+    /// Lists world objects, filter, add/destroy via context actions.
     void Render() override;
 
+    /// ImGui window title.
     const char* m_title = "World Outliner";
+    /// Optional open flag for ImGui::Begin.
     bool* m_open = nullptr;
 
 private:
     void RebuildFilter();
 
-private:
     std::vector<OutlinerEntry>        m_entries;
     std::vector<const OutlinerEntry*> m_filtered;
     int                               m_selectedIndex = -1;

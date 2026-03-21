@@ -5,14 +5,12 @@
 
 #include "EngineIncludes.h"
 
-#include <memory>
 #include <vector>
 
 #include "EditorWindows/EditorWindow.h"
 
 DELTA_ENGINE_NS_BEGIN
 
-class GameObject;
 class SceneComponent;
 class DComponent;
 
@@ -22,9 +20,12 @@ public:
     EditorWindow_ComponentsHierarchy();
     ~EditorWindow_ComponentsHierarchy();
 
+    /// Scene tree and non-spatial components for the selection's GameObject.
     void Render() override;
 
+    /// ImGui window title.
     const char* m_title = "Components Hierarchy";
+    /// Optional open flag for ImGui::Begin.
     bool* m_open = nullptr;
 
 private:
