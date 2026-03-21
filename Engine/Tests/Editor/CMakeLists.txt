@@ -1,6 +1,7 @@
 set(DELTA_EDITOR_TEST_SOURCES
     Assets/Locator/EditorAssetDatabaseLocatorTests.cpp
     Assets/Lifecycle/EditorAssetDatabaseLifecycleTests.cpp
+    State/EditorSelectionStateTests.cpp
     Serialization/RoundTrip/SingleAssetRoundTripTests.cpp
     Serialization/RoundTrip/TypedPrimaryAssetRoundTripTests.cpp
     Serialization/Compatibility/FallbackAndDefaultsTests.cpp

@@ -2,14 +2,13 @@
 
 #include "EngineIncludes.h"
 
-#include <vector>
-#include <string>
-#include <memory>
 #include <d3d12.h>
+#include <memory>
+#include <string>
 
 #include "Core/DObject.h"
-#include "Serialization/TBulkData.h"
 #include "Serialization/ISerializationCallbackReceiver.h"
+#include "Serialization/TBulkData.h"
 
 #include "DTexture.generated.h"
 
@@ -28,34 +27,37 @@ class DTexture : public DObject, public ISerializationCallbackReceiver
     DGENERATED_BODY(DTexture)
 
 public:
-    DTexture();
-    //DTexture(const std::wstring& filePath, bool sRGB);
-    ~DTexture();
+    DELTAENGINE_API DTexture();
+    DELTAENGINE_API ~DTexture();
 
-    void Initialize(const std::wstring& filePath, bool sRGB = false);
-
+    /// Loads texture data from the given file path.
+    DELTAENGINE_API void Initialize(const std::wstring& filePath, bool sRGB = false);
+    /// Returns the texture width in pixels.
     DFUNCTION()
-    UINT GetWidth() const;
+    DELTAENGINE_API UINT GetWidth() const;
+    /// Returns the texture height in pixels.
     DFUNCTION()
-    UINT GetHeight() const;
+    DELTAENGINE_API UINT GetHeight() const;
     
-    DXGI_FORMAT GetFormat() const;
+    /// Returns the loaded texture format.
+    DELTAENGINE_API DXGI_FORMAT GetFormat() const;
 
-    
+    /// Returns the loaded DirectXTex metadata.
     inline std::shared_ptr<DirectX::TexMetadata> GetMetadata() const { return m_metadata; }
+    /// Returns the loaded DirectXTex scratch image.
     inline std::shared_ptr<DirectX::ScratchImage> GetScratchImage() const { return m_scratchImage; }
 
+    /// Returns the original texture source path.
     DFUNCTION()
     DELTAENGINE_API std::wstring GetSourcePath() const;
 
+    /// Packs texture data into bulk storage before serialization.
     void OnBeforeSerialize() override;
+    /// Restores texture data from bulk storage after deserialization.
     void OnAfterDeserialize() override;
 
 private:
     void LoadTexture();
-    
-
-private:
     std::shared_ptr<DirectX::TexMetadata> m_metadata;
     std::shared_ptr<DirectX::ScratchImage> m_scratchImage;
 
@@ -68,8 +70,8 @@ private:
     DPROPERTY()
     bool m_sRGB;
 
-
 public:
+    /// Creates and loads a texture from disk.
     static DTexture* LoadFromFile(const std::wstring& filePath, bool sRGB = false);
 };
 

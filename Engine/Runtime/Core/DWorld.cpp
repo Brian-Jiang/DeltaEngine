@@ -92,7 +92,7 @@ void DeltaEngine::DWorld::InitRenderers(std::shared_ptr<DXGraphicsContext> conte
     }
 }
 
-void DeltaEngine::DWorld::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const
+void DWorld::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const
 {
     std::stack<SceneComponent*> stack;
     stack.push(m_rootSceneComponent);
@@ -126,7 +126,7 @@ void DeltaEngine::DWorld::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> 
     }
 }
 
-void DeltaEngine::DWorld::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const
+void DWorld::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const
 {
     std::stack<SceneComponent*> stack;
     stack.push(m_rootSceneComponent);

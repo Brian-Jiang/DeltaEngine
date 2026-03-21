@@ -2,13 +2,9 @@
 
 #include "EngineIncludes.h"
 
-#include <vector>
 #include <memory>
 
-#include "SimpleMath.h"
 #include "Core/SceneComponent.h"
-#include "Graphics/Structures/Vertex.h"
-#include "Core/DComponent.h"
 
 #include "Camera.generated.h"
 
@@ -24,22 +20,21 @@ class Camera : public SceneComponent
 
 public:
     DELTAENGINE_API Camera();
-    //DELTAENGINE_API Camera(std::string name);
-    //DELTAENGINE_API Camera(std::string name, std::shared_ptr<GameObject> gameObject);
     DELTAENGINE_API ~Camera();
 
+    /// Updates the projection aspect ratio.
     DFUNCTION()
     DELTAENGINE_API void UpdateAspectRatio(float aspectRatio);
 
+    /// Updates the full projection parameter set.
     DFUNCTION()
     DELTAENGINE_API void UpdateParameters(float fov, float aspectRatio, float nearPlane, float farPlane);
 
+    /// Writes this camera's frame data to the render context.
     DELTAENGINE_API void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext);
 
+    /// Syncs cached camera settings to the render proxy.
     void UpdateRenderProxy();
-
-    //inline DirectX::XMMATRIX GetViewMatrix() const { return m_viewMatrix; }
-    //inline DirectX::XMMATRIX GetProjectionMatrix() const { return m_projectionMatrix; }
 
 protected:
     void OnTransformChanged() override;

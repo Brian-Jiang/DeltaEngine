@@ -1,65 +1,74 @@
 #pragma once
 
-#include "EngineIncludes.h"
+#include "EditorIncludes.h"
 
-#include <memory>
 #include <d3d12.h>
+#include <memory>
 
-#include "Runtime/Graphics/DirectX/Device.h"
-#include "Runtime/Graphics/DirectX/SwapChain.h"
-#include "Runtime/Graphics/DirectX/RenderTarget.h"
-#include "Runtime/Graphics/DirectX/DirectX12Texture.h"
 #include "Runtime/Graphics/DirectX/ImGuiSrvDescriptorAllocator.h"
+#include "Runtime/Graphics/DirectX/SwapChain.h"
 
 #include "imgui.h"
 
 DELTA_ENGINE_NS_BEGIN
 
-class DXRenderManager;
-class CommandList;
-class EditorWindow_WorldOutliner;
-class EditorWindow_Viewport;
 class AppHeader;
+class CommandList;
+class Device;
+class DirectX12Texture;
+class DXRenderManager;
 class MainToolbar;
+class RenderTarget;
 class StatusBar;
 
-/// Editor-specific render manager. Owns window, swap chain, offscreen RT for scene, and ImGui.
-/// Resembles DXRenderManager structure but targets the actual window.
+/// Editor-specific render manager for the main window and scene viewport.
 class EditorRenderManager
 {
 public:
+    /// Creates the editor render manager for the given HWND.
     EditorRenderManager(HWND hwnd, UINT width, UINT height);
+    /// Releases render-manager owned resources.
     ~EditorRenderManager();
 
+    /// Resizes the swap chain to match the window size.
     void Resize(UINT width, UINT height);
-    /// Resize only the scene render target (not swap chain). Called by viewport when settings change.
+    /// Resizes only the scene render target.
     void SetSceneRenderSize(UINT width, UINT height);
+    /// Returns the current scene render target size.
     void GetSceneRenderSize(UINT& width, UINT& height) const;
+    /// Switches between windowed and fullscreen presentation.
     void SetFullscreen(bool fullscreen);
+    /// Enables or disables swap-chain vsync.
     void ToggleVSync(bool enable) { m_swapChain->SetVSync(enable); }
+    /// Performs any explicit shutdown work before destruction.
     void OnDestroy();
 
+    /// Returns the shared D3D12 device wrapper.
     std::shared_ptr<Device> GetDevice() const { return m_device; }
+    /// Returns the scene renderer used for offscreen rendering.
     std::shared_ptr<DXRenderManager> GetSceneRenderer() const { return m_sceneRenderer; }
+    /// Returns the descriptor allocator used by ImGui textures.
     ImGuiSrvDescriptorAllocator* GetImGuiSrvAllocator() { return &m_imGuiSrvAllocator; }
 
-    /// Returns the current back buffer render target for ImGui.
+    /// Returns the current back-buffer render target.
     const RenderTarget& GetCurrentBackBufferRTV() const;
 
-    /// Renders scene to offscreen, copies to backbuffer, renders ImGui, presents.
+    /// Renders the scene, editor UI, and presents the frame.
     void RenderFrame(class EngineMain* engine);
 
+    /// Returns the swap-chain width in pixels.
     UINT GetWidth() const { return m_width; }
+    /// Returns the swap-chain height in pixels.
     UINT GetHeight() const { return m_height; }
+    /// Returns whether fullscreen mode is active.
     bool IsFullscreen() const { return m_fullscreen; }
+    /// Returns whether vsync is enabled.
     bool IsVSync() const { return m_swapChain->GetVSync(); }
+    /// Returns the texture shown in the viewport window.
     ImTextureID GetSceneTextureId() const { return m_sceneTextureId; }
 
 private:
-    void CopyOffscreenToBackBuffer(CommandList& commandList);
-
-    /// Prepares the scene texture for viewport display. Uses copy descriptor when RT is non-MSAA,
-    /// or blits to m_viewportDisplayTexture and copies its descriptor when MSAA.
+    /// Updates the viewport texture that ImGui samples from.
     void PrepareViewportSceneTexture(CommandList& commandList);
 
     HWND m_hwnd;
@@ -74,7 +83,6 @@ private:
     std::shared_ptr<DXRenderManager> m_sceneRenderer;
     ImGuiSrvDescriptorAllocator m_imGuiSrvAllocator;
 
-    /// Texture for blit path when offscreen RT is multisampled. Resolves MSAA RT to this for ImGui display.
     std::shared_ptr<DirectX12Texture> m_viewportDisplayTexture;
 
     D3D12_CPU_DESCRIPTOR_HANDLE m_imguiSrvCpuHandle;

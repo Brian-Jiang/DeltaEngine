@@ -77,7 +77,9 @@ void EditorWindow_Viewport::UpdateViewportFlyMode(bool viewportImageHovered)
     if (!camera)
         return;
 
-    std::shared_ptr<SDL_Window> window = engine->GetWindow();
+    SDL_Window* window = SDL_GetMouseFocus();
+    if (!window)
+        window = SDL_GetKeyboardFocus();
     if (!window)
         return;
 
@@ -87,7 +89,7 @@ void EditorWindow_Viewport::UpdateViewportFlyMode(bool viewportImageHovered)
     if (!m_flyModeActive && viewportImageHovered && rightMouseDown)
     {
         m_flyModeActive = true;
-        SDL_SetWindowRelativeMouseMode(window.get(), true);
+        SDL_SetWindowRelativeMouseMode(window, true);
         // Flush initial mouse delta to avoid jump when cursor is captured
         float discardX, discardY;
         SDL_GetRelativeMouseState(&discardX, &discardY);
@@ -97,7 +99,7 @@ void EditorWindow_Viewport::UpdateViewportFlyMode(bool viewportImageHovered)
     if (m_flyModeActive && !rightMouseDown)
     {
         m_flyModeActive = false;
-        SDL_SetWindowRelativeMouseMode(window.get(), false);
+        SDL_SetWindowRelativeMouseMode(window, false);
         return;
     }
 

@@ -2,13 +2,12 @@
 
 #include "Runtime/Graphics/DirectX/DynamicDescriptorHeap.h"
 
-//#include <Application.h>
-//#include <CommandList.h>
 #include "Runtime/Graphics/DirectX/RootSignature.h"
 #include "Runtime/Graphics/DirectX/CommandList.h"
 #include "Runtime/Graphics/DirectX/Device.h"
-#include "Runtime/EngineMain.h"
 #include "Runtime/Graphics/DXUtils.h"
+
+#include <assert.h>
 
 using namespace DeltaEngine;
 

@@ -9,6 +9,7 @@
 #include "Core/DComponent.h"
 #include "Core/SceneComponent.h"
 #include "Core/DWorld.h"
+#include "Runtime/Assets/DPrimaryAsset.h"
 
 #include "GameObject.generated.h"
 

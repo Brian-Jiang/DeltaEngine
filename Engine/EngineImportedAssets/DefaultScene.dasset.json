@@ -57,10 +57,7 @@
     {
       "_class": "MeshRenderer",
       "_objectId": "c401324f-d0b6-4311-ba23-4f4bb562b12a",
-      "loadedTextureCount": 0,
-      "loadedTextures": [],
       "m_children": [],
-      "m_dirty": true,
       "m_localTransform": [
         1.0,
         0.0,
@@ -84,9 +81,7 @@
         "objectId": "5c2eba86-4aa5-436f-89a8-e195a2e33126"
       },
       "m_name": "New Scene Component",
-      "m_settings": {},
-      "meshCount": 0,
-      "meshTransforms": []
+      "m_settings": {}
     },
     {
       "_class": "GameObject",
@@ -107,10 +102,7 @@
     {
       "_class": "MeshRenderer",
       "_objectId": "1f406490-21bc-45b7-8122-7c086c917735",
-      "loadedTextureCount": 0,
-      "loadedTextures": [],
       "m_children": [],
-      "m_dirty": true,
       "m_localTransform": [
         1.0,
         0.0,
@@ -134,9 +126,7 @@
         "objectId": "fabfc358-8dd6-4357-af8a-8b6575dfe6ca"
       },
       "m_name": "New Scene Component",
-      "m_settings": {},
-      "meshCount": 0,
-      "meshTransforms": []
+      "m_settings": {}
     },
     {
       "_class": "GameObject",
@@ -162,26 +152,26 @@
     {
       "_class": "Camera",
       "_objectId": "f06a1959-f14e-459a-813b-f96e6cb30528",
-      "m_aspectRatio": 1.2648178339004517,
+      "m_aspectRatio": 1.2137031555175781,
       "m_children": [],
       "m_far": 1000.0,
       "m_fov": 0.7853981852531433,
       "m_localTransform": [
-        0.9485899209976196,
+        0.8800541758537292,
+        -7.45048733818976e-09,
+        0.4748469591140747,
         0.0,
-        0.3164692521095276,
+        -0.18056805431842804,
+        0.9248700141906738,
+        0.33465445041656494,
         0.0,
-        -0.11957579851150513,
-        0.925862193107605,
-        0.35841837525367737,
+        -0.4391755163669586,
+        -0.38025954365730286,
+        0.8139427900314331,
         0.0,
-        -0.29300951957702637,
-        -0.3778374195098877,
-        0.878271222114563,
-        0.0,
-        66.7542495727539,
-        212.24789428710938,
-        -337.12872314453125,
+        117.87797546386719,
+        196.736083984375,
+        -266.6147155761719,
         0.0
       ],
       "m_name": "New Scene Component",
@@ -286,7 +276,7 @@
         1.0
       ],
       "m_name": "New Scene Component",
-      "m_range": 24.700000762939453,
+      "m_range": 25.899999618530273,
       "m_renderProxy": {
         "assetId": "00000000-0000-0000-0000-000000000000",
         "objectId": "00000000-0000-0000-0000-000000000000"

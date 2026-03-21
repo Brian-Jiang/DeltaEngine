@@ -2,9 +2,6 @@
 
 #include "EngineIncludes.h"
 
-#include <memory>
-#include <wrl/client.h>
-#include <string>
 #include <d3d12.h>
 #include <d3dx12.h>
 #include <vector>
@@ -24,31 +21,37 @@ class DMaterial : public DObject
     DGENERATED_BODY(DMaterial)
 
 public:
-    DMaterial();
-    //DMaterial(std::shared_ptr<DShader> shader);
-    //DMaterial(std::shared_ptr<DShader> shader, const CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC& blendDesc,
-    //    const CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL& depthStencilState);
-    ~DMaterial();
+    DELTAENGINE_API DMaterial();
+    DELTAENGINE_API ~DMaterial();
 
+    /// Initializes the material with a shader.
     DELTAENGINE_API void Initialize(DShader* shader);
 
+    /// Replaces the shader used by this material.
     DFUNCTION()
-    void SetShader(DShader* shader);
+    DELTAENGINE_API void SetShader(DShader* shader);
 
-    void SetBlendState(const CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC& blendDesc);
+    /// Sets the pipeline blend state used by this material.
+    DELTAENGINE_API void SetBlendState(const CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC& blendDesc);
     
-    void SetDepthStencilState(const CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL& depthStencilState);
+    /// Sets the pipeline depth-stencil state used by this material.
+    DELTAENGINE_API void SetDepthStencilState(const CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL& depthStencilState);
 
+    /// Appends a texture to the material texture list.
     DFUNCTION()
     DELTAENGINE_API void AddTexture(DTexture* texture);
 
+    /// Returns the texture at the requested slot, or nullptr.
     DFUNCTION()
-    DTexture* GetTexture(int index) const;
+    DELTAENGINE_API DTexture* GetTexture(int index) const;
 
+    /// Returns the shader currently assigned to the material.
     DFUNCTION()
     DELTAENGINE_API DShader* GetShader() const;
 
+    /// Returns the current blend state descriptor.
     DELTAENGINE_API CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC GetBlendState() const;
+    /// Returns the current depth-stencil state descriptor.
     DELTAENGINE_API CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL GetDepthStencilState() const;
 
 private:

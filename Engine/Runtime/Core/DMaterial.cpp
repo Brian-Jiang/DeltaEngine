@@ -9,24 +9,7 @@ DMaterial::DMaterial()
 {
 }
 
-//DMaterial::DMaterial(std::shared_ptr<DShader> shader)
-//    : m_shader(shader)
-//    , m_blendDesc()
-//    , m_depthStencilState()
-//{
-//}
-//
-//DMaterial::DMaterial(std::shared_ptr<DShader> shader, const CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC& blendDesc,
-//                     const CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL& depthStencilState)
-//    : m_shader(shader)
-//    , m_blendDesc(blendDesc)
-//    , m_depthStencilState(depthStencilState)
-//{
-//}
-
-DMaterial::~DMaterial()
-{
-}
+DMaterial::~DMaterial() = default;
 
 void DMaterial::Initialize(DShader* shader)
 {
@@ -48,19 +31,18 @@ void DMaterial::SetDepthStencilState(const CD3DX12_PIPELINE_STATE_STREAM_DEPTH_S
     m_depthStencilState = depthStencilState;
 }
 
-void DeltaEngine::DMaterial::AddTexture(DTexture* texture)
+void DMaterial::AddTexture(DTexture* texture)
 {
     m_textures.push_back(texture);
 }
 
 DTexture* DMaterial::GetTexture(int index) const
 {
-    if (index < 0 || index >= m_textures.size())
-    {
+    if (index < 0)
         return nullptr;
-    }
 
-    return m_textures[index];
+    const size_t textureIndex = static_cast<size_t>(index);
+    return textureIndex < m_textures.size() ? m_textures[textureIndex] : nullptr;
 }
 
 DShader* DMaterial::GetShader() const { return m_shader; }

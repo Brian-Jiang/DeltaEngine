@@ -1,155 +1,253 @@
 #include "Core/DMesh.h"
 
+#include "Core/DTexture.h"
+#include "IO/IOManager.h"
+
+#include <assimp/Importer.hpp>
+#include <assimp/postprocess.h>
+#include <assimp/scene.h>
+
+#include <cstring>
 #include <filesystem>
 #include <iostream>
+#include <utility>
 
-#include "assimp/Importer.hpp"
-#include "assimp/postprocess.h"
-#include "assimp/scene.h"
-#include "IO/IOManager.h"
-#include "Core/DMaterial.h"
+namespace
+{
+std::string GetParentDirectory(const std::string& filePath, int levelsUp)
+{
+    std::filesystem::path path(filePath);
+    for (int level = 0; level < levelsUp; ++level)
+        path = path.parent_path();
+
+    return path.string();
+}
+
+std::string FindTextureFile(const std::string& directory, const std::string& fileName)
+{
+    for (const auto& entry : std::filesystem::recursive_directory_iterator(directory))
+    {
+        if (entry.is_regular_file() && entry.path().filename() == fileName)
+            return entry.path().string();
+    }
+
+    return {};
+}
+
+DeltaEngine::TBulkData SerializeVertices(const std::vector<std::vector<Vertex>>& vertices)
+{
+    const uint32_t submeshCount = static_cast<uint32_t>(vertices.size());
+
+    uint64_t totalSize = sizeof(uint32_t) + sizeof(uint32_t) * submeshCount;
+    for (const auto& submesh : vertices)
+        totalSize += sizeof(Vertex) * submesh.size();
+
+    auto* buffer = new uint8_t[totalSize];
+    uint8_t* cursor = buffer;
+
+    std::memcpy(cursor, &submeshCount, sizeof(uint32_t));
+    cursor += sizeof(uint32_t);
+
+    for (const auto& submesh : vertices)
+    {
+        const uint32_t count = static_cast<uint32_t>(submesh.size());
+        std::memcpy(cursor, &count, sizeof(uint32_t));
+        cursor += sizeof(uint32_t);
+    }
+
+    for (const auto& submesh : vertices)
+    {
+        const uint64_t bytes = sizeof(Vertex) * submesh.size();
+        if (bytes > 0)
+            std::memcpy(cursor, submesh.data(), bytes);
+        cursor += bytes;
+    }
+
+    DeltaEngine::TBulkData bulk;
+    bulk.Set(buffer, totalSize);
+    delete[] buffer;
+    return bulk;
+}
+
+void DeserializeVertices(const DeltaEngine::TBulkData& bulk, std::vector<std::vector<Vertex>>& outVertices)
+{
+    if (!bulk.IsValid())
+        return;
+
+    const uint8_t* cursor = bulk.m_data;
+
+    uint32_t submeshCount = 0;
+    std::memcpy(&submeshCount, cursor, sizeof(uint32_t));
+    cursor += sizeof(uint32_t);
+
+    std::vector<uint32_t> counts(submeshCount);
+    for (uint32_t index = 0; index < submeshCount; ++index)
+    {
+        std::memcpy(&counts[index], cursor, sizeof(uint32_t));
+        cursor += sizeof(uint32_t);
+    }
+
+    outVertices.resize(submeshCount);
+    for (uint32_t index = 0; index < submeshCount; ++index)
+    {
+        outVertices[index].resize(counts[index]);
+        const uint64_t bytes = sizeof(Vertex) * counts[index];
+        if (bytes > 0)
+            std::memcpy(outVertices[index].data(), cursor, bytes);
+        cursor += bytes;
+    }
+}
+
+DeltaEngine::TBulkData SerializeIndices(const std::vector<std::vector<unsigned int>>& indices)
+{
+    const uint32_t submeshCount = static_cast<uint32_t>(indices.size());
+
+    uint64_t totalSize = sizeof(uint32_t) + sizeof(uint32_t) * submeshCount;
+    for (const auto& submesh : indices)
+        totalSize += sizeof(unsigned int) * submesh.size();
+
+    auto* buffer = new uint8_t[totalSize];
+    uint8_t* cursor = buffer;
+
+    std::memcpy(cursor, &submeshCount, sizeof(uint32_t));
+    cursor += sizeof(uint32_t);
+
+    for (const auto& submesh : indices)
+    {
+        const uint32_t count = static_cast<uint32_t>(submesh.size());
+        std::memcpy(cursor, &count, sizeof(uint32_t));
+        cursor += sizeof(uint32_t);
+    }
+
+    for (const auto& submesh : indices)
+    {
+        const uint64_t bytes = sizeof(unsigned int) * submesh.size();
+        if (bytes > 0)
+            std::memcpy(cursor, submesh.data(), bytes);
+        cursor += bytes;
+    }
+
+    DeltaEngine::TBulkData bulk;
+    bulk.Set(buffer, totalSize);
+    delete[] buffer;
+    return bulk;
+}
+
+void DeserializeIndices(const DeltaEngine::TBulkData& bulk, std::vector<std::vector<unsigned int>>& outIndices)
+{
+    if (!bulk.IsValid())
+        return;
+
+    const uint8_t* cursor = bulk.m_data;
+
+    uint32_t submeshCount = 0;
+    std::memcpy(&submeshCount, cursor, sizeof(uint32_t));
+    cursor += sizeof(uint32_t);
+
+    std::vector<uint32_t> counts(submeshCount);
+    for (uint32_t index = 0; index < submeshCount; ++index)
+    {
+        std::memcpy(&counts[index], cursor, sizeof(uint32_t));
+        cursor += sizeof(uint32_t);
+    }
+
+    outIndices.resize(submeshCount);
+    for (uint32_t index = 0; index < submeshCount; ++index)
+    {
+        outIndices[index].resize(counts[index]);
+        const uint64_t bytes = sizeof(unsigned int) * counts[index];
+        if (bytes > 0)
+            std::memcpy(outIndices[index].data(), cursor, bytes);
+        cursor += bytes;
+    }
+}
+}
 
 using namespace DeltaEngine;
 
-DMesh::DMesh() { }
+DMesh::DMesh() = default;
 
-//DMesh::DMesh(std::wstring sourcePath)
-//    : m_sourcePath(sourcePath)
-//{
-//    ImportMesh();
-//}
-//
-//DMesh::DMesh(std::wstring sourcePath, std::shared_ptr<DMaterial> material)
-//    : m_sourcePath(sourcePath)
-//    //, m_material(material)
-//{
-//    ImportMesh();
-//}
-
-//DMesh::DMesh(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices,
-//    std::shared_ptr<DMaterial>& material)
-//    : m_vertices(vertices)
-//    , m_indices(indices)
-//    , m_material(material)
-//{
-//    
-//}
+DMesh::~DMesh() = default;
 
 void DMesh::ImportMesh()
 {
-    // Assimp::Importer::SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, true)
     m_vertices.clear();
     m_indices.clear();
     m_textures.clear();
 
-    std::wstring fullPath = IOManager::GetEngineSourceAssetFullPath(m_sourcePath);
-    std::filesystem::path path(fullPath);
-    Assimp::Importer import;
-    import.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, true);
-    unsigned int flags =
-        // aiProcess_CalcTangentSpace |
-        // aiProcess_JoinIdenticalVertices |
-        // aiProcess_Triangulate |
-        // aiProcess_RemoveComponent |
-        // aiProcess_GenSmoothNormals |
-        // aiProcess_SplitLargeMeshes |
-        // aiProcess_ValidateDataStructure |
-        ////aiProcess_ImproveCacheLocality | // handled by optimizePostTransform()
-        // aiProcess_RemoveRedundantMaterials |
-        aiProcess_SortByPType |
-        // aiProcess_FindInvalidData |
-        // aiProcess_GenUVCoords |
-        // aiProcess_TransformUVCoords |
-        // aiProcess_OptimizeMeshes |
-        // aiProcess_OptimizeGraph;
+    const std::wstring fullPath = IOManager::GetEngineSourceAssetFullPath(m_sourcePath);
+    const std::filesystem::path path(fullPath);
+    Assimp::Importer importer;
+    importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, true);
 
-        // aiProcess_CalcTangentSpace |
+    constexpr unsigned int kImportFlags =
+        aiProcess_SortByPType |
         aiProcess_JoinIdenticalVertices |
         aiProcess_Triangulate |
-        // aiProcess_RemoveComponent |
-        // aiProcess_GenSmoothNormals |
         aiProcess_GenBoundingBoxes |
-        ////aiProcess_SplitLargeMeshes |
-        ////aiProcess_ValidateDataStructure |
-        aiProcess_FlipUVs | aiProcess_MakeLeftHanded |
-        // aiProcess_ConvertToLeftHanded |
-        aiProcess_ImproveCacheLocality | aiProcess_FlipWindingOrder |
-        // aiProcess_RemoveRedundantMaterials | // remove redundant materials
-        // aiProcess_FindDegenerates | // remove degenerated polygons from the import
-        // aiProcess_FindInvalidData | // detect invalid model data, such as invalid normal vectors
-        // aiProcess_GenUVCoords | // convert spherical, cylindrical, box and planar mapping to proper UVs
-        aiProcess_TransformUVCoords | // preprocess UV transformations (scaling, translation ...)
-        // aiProcess_OptimizeMeshes | // join small meshes, if possible;
-        aiProcess_PreTransformVertices | //-- fixes the transformation issue.
-        0;
+        aiProcess_FlipUVs |
+        aiProcess_MakeLeftHanded |
+        aiProcess_ImproveCacheLocality |
+        aiProcess_FlipWindingOrder |
+        aiProcess_TransformUVCoords |
+        aiProcess_PreTransformVertices;
 
-    const aiScene* scene = import.ReadFile(path.string(), flags);
+            //// aiProcess_CalcTangentSpace |
+            //// aiProcess_JoinIdenticalVertices |
+            //// aiProcess_Triangulate |
+            //// aiProcess_RemoveComponent |
+            //// aiProcess_GenSmoothNormals |
+            //// aiProcess_SplitLargeMeshes |
+            //// aiProcess_ValidateDataStructure |
+            //////aiProcess_ImproveCacheLocality | // handled by optimizePostTransform()
+            //// aiProcess_RemoveRedundantMaterials |
+            //aiProcess_SortByPType |
+            //// aiProcess_FindInvalidData |
+            //// aiProcess_GenUVCoords |
+            //// aiProcess_TransformUVCoords |
+            //// aiProcess_OptimizeMeshes |
+            //// aiProcess_OptimizeGraph;
 
+            //// aiProcess_CalcTangentSpace |
+            //aiProcess_JoinIdenticalVertices |
+            //aiProcess_Triangulate |
+            //// aiProcess_RemoveComponent |
+            //// aiProcess_GenSmoothNormals |
+            //aiProcess_GenBoundingBoxes |
+            //////aiProcess_SplitLargeMeshes |
+            //////aiProcess_ValidateDataStructure |
+            //aiProcess_FlipUVs | aiProcess_MakeLeftHanded |
+            //// aiProcess_ConvertToLeftHanded |
+            //aiProcess_ImproveCacheLocality | aiProcess_FlipWindingOrder |
+            //// aiProcess_RemoveRedundantMaterials | // remove redundant materials
+            //// aiProcess_FindDegenerates | // remove degenerated polygons from the import
+            //// aiProcess_FindInvalidData | // detect invalid model data, such as invalid normal vectors
+            //// aiProcess_GenUVCoords | // convert spherical, cylindrical, box and planar mapping to proper UVs
+            //aiProcess_TransformUVCoords | // preprocess UV transformations (scaling, translation ...)
+            //// aiProcess_OptimizeMeshes | // join small meshes, if possible;
+            //aiProcess_PreTransformVertices | //-- fixes the transformation issue.
+            //0;
+
+    const aiScene* scene = importer.ReadFile(path.string(), kImportFlags);
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
     {
-        // cout << "ERROR::ASSIMP::" << import.GetErrorString() << endl;
-        std::cerr << "ERROR::ASSIMP::" << import.GetErrorString() << std::endl;
+        std::cerr << "ERROR::ASSIMP::" << importer.GetErrorString() << std::endl;
         return;
     }
-    // directory = filePath.substr(0, filePath.find_last_of('/'));
 
     ProcessNode(scene->mRootNode, scene, DirectX::XMMatrixIdentity());
 }
 
 void DMesh::ProcessNode(aiNode* node, const aiScene* scene, DirectX::XMMATRIX accTransform)
 {
-    auto localTransformation = DirectX::XMMATRIX(&(node->mTransformation.a1));
+    const auto localTransformation = DirectX::XMMATRIX(&(node->mTransformation.a1));
+    accTransform = DirectX::XMMatrixMultiply(accTransform, localTransformation);
 
-    //aiVector3D scaling, position;
-    //aiQuaternion rotation;
-    //node->mTransformation.Decompose(scaling, rotation, position);
-    //DxTransform dxTransform {
-    //    DirectX::XMVectorSet(position.x, position.y, position.z, 1.0f),
-    //    DirectX::XMVectorSet(rotation.x, rotation.y, rotation.z, rotation.w),
-    //    DirectX::XMVectorSet(scaling.x, scaling.y, scaling.z, 1.0f)
-    //};
+    for (unsigned int meshIndex = 0; meshIndex < node->mNumMeshes; ++meshIndex)
+        ProcessMesh(scene->mMeshes[node->mMeshes[meshIndex]], scene);
 
-    //auto dxmTrans = DirectX::XMMatrixTransformation(
-    //    DirectX::XMVectorZero(),
-    //    DirectX::XMQuaternionIdentity(),
-    //    dxTransform.scale,
-
-    //    DirectX::XMVectorZero(),
-    //    dxTransform.rotation,
-
-    //    dxTransform.position);
-
-    accTransform = XMMatrixMultiply(accTransform, localTransformation);
-
-    // node->mTransformation
-    //  process all the node's meshes (if any)
-    //   auto nodeTransform = node->mTransformation;
-    // auto nodeLookup = node;
-    //   while (nodeLookup->mParent != nullptr) {
-    //	nodeLookup = nodeLookup->mParent;
-    //	nodeTransform = nodeLookup->mTransformation * nodeTransform;
-    //   }
-
-    // auto nodeTransform2 = DirectX::XMMATRIX(&nodeTransform.a1);
-
-    // auto transform = DirectX::XMMATRIX(&node->mTransformation.a1);
-    // accTransform = XMMatrixMultiply(transform, accTransform);
-
-    for (unsigned int i = 0; i < node->mNumMeshes; i++)
-    {
-        aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-        // if (mesh->mNumFaces > 5) continue;
-
-        ProcessMesh(mesh, scene);
-
-        //meshes.push_back(ProcessMesh(mesh, scene));
-        //meshTransforms.push_back(accTransform);
-        // meshDxTransforms.push_back(dxTransform);
-    }
-    // then do the same for each of its children
-    for (unsigned int i = 0; i < node->mNumChildren; i++) {
-        ProcessNode(node->mChildren[i], scene, accTransform);
-    }
+    for (unsigned int childIndex = 0; childIndex < node->mNumChildren; ++childIndex)
+        ProcessNode(node->mChildren[childIndex], scene, accTransform);
 }
 
 void DMesh::ProcessMesh(aiMesh* mesh, const aiScene* scene)
@@ -157,130 +255,74 @@ void DMesh::ProcessMesh(aiMesh* mesh, const aiScene* scene)
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
     std::vector<DTexture*> textures;
-    for (unsigned int i = 0; i < mesh->mNumVertices; i++)
+
+    for (unsigned int vertexIndex = 0; vertexIndex < mesh->mNumVertices; ++vertexIndex)
     {
         Vertex vertex {};
         vertex.color = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+        vertex.position = DirectX::XMFLOAT3(&mesh->mVertices[vertexIndex].x);
+        vertex.normal = DirectX::XMFLOAT3(&mesh->mNormals[vertexIndex].x);
 
-        // process vertex positions, normals and texture coordinates
-        DirectX::XMFLOAT3 position(&mesh->mVertices[i].x);
-        //DirectX::XMFLOAT3 position;
-        //position.x = mesh->mVertices[i].x;
-        //position.y = mesh->mVertices[i].y;
-        //position.z = mesh->mVertices[i].z;
-        vertex.position = position;
-
-        DirectX::XMFLOAT3 normal(&mesh->mNormals[i].x);
-        //DirectX::XMFLOAT3 vector;
-        //vector.x = mesh->mNormals[i].x;
-        //vector.y = mesh->mNormals[i].y;
-        //vector.z = mesh->mNormals[i].z;
-        vertex.normal = normal;
-
-        if (mesh->mTextureCoords[0]) // does the mesh contain texture coordinates?
+        if (mesh->mTextureCoords[0])
         {
-            DirectX::XMFLOAT2 vec;
-            vec.x = mesh->mTextureCoords[0][i].x;
-            vec.y = mesh->mTextureCoords[0][i].y;
-            // const aiVector3D* aiTextureCoordinates{ mesh->mTextureCoords[0U] };
-            // vertex.uv = DirectX::XMFLOAT2(reinterpret_cast<const float*>(&aiTextureCoordinates[i]));
-            vertex.uv = vec;
+            DirectX::XMFLOAT2 uv {};
+            uv.x = mesh->mTextureCoords[0][vertexIndex].x;
+            uv.y = mesh->mTextureCoords[0][vertexIndex].y;
+            vertex.uv = uv;
         }
-        //     else if (mesh->mTextureCoords[1]) {
-        // std::cout << "UV: " << mesh->mTextureCoords[1][i].x << ", " << mesh->mTextureCoords[1][i].y << "\n";
-        //     }
-        else 
+        else
         {
             vertex.uv = DirectX::XMFLOAT2(0.0f, 0.0f);
         }
 
         vertices.push_back(vertex);
-        // std::cout << "UV: " << vertex.uv.x << ", " << vertex.uv.y << "\n";
     }
 
-    // process indices
-    for (unsigned int i = 0; i < mesh->mNumFaces; i++)
+    for (unsigned int faceIndex = 0; faceIndex < mesh->mNumFaces; ++faceIndex)
     {
-        aiFace face = mesh->mFaces[i];
-        for (unsigned int j = 0; j < face.mNumIndices; j++)
-        {
-            indices.push_back(face.mIndices[j]);
-        }
+        const aiFace& face = mesh->mFaces[faceIndex];
+        for (unsigned int index = 0; index < face.mNumIndices; ++index)
+            indices.push_back(face.mIndices[index]);
     }
 
-    // process material
     if (mesh->mMaterialIndex >= 0)
     {
-        std::wstring fullPath = IOManager::GetEngineSourceAssetFullPath(m_sourcePath);
-        std::filesystem::path path(fullPath);
+        const std::wstring fullPath = IOManager::GetEngineSourceAssetFullPath(m_sourcePath);
+        const std::filesystem::path path(fullPath);
         aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
 
-        std::vector<DTexture*> diffuseMaps = LoadMaterialTextures(
-            scene, material, aiTextureType_DIFFUSE, "texture_diffuse", path.string());
+        std::vector<DTexture*> diffuseMaps = LoadMaterialTextures(scene, material, aiTextureType_DIFFUSE, "texture_diffuse", path.string());
         textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
 
-        std::vector<DTexture*> specularMaps = LoadMaterialTextures(scene, material,
-            aiTextureType_SPECULAR, "texture_specular", path.string());
+        std::vector<DTexture*> specularMaps = LoadMaterialTextures(scene, material, aiTextureType_SPECULAR, "texture_specular", path.string());
         textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
     }
 
-    m_vertices.push_back(vertices);
-    m_indices.push_back(indices);
+    m_vertices.push_back(std::move(vertices));
+    m_indices.push_back(std::move(indices));
     m_textures.insert(m_textures.end(), textures.begin(), textures.end());
-    //m_material = std::make_shared<DMaterial>();
-    //m_material->AddTexture(textures[0]);
-
-    //for (const auto& texture : textures)
-    //{
-    //    m_material->AddTexture(texture);
-    //}
-
-    //return std::make_shared<DMesh>(vertices, indices, textures);
-}
-
-// todo use wstring for file paths?
-std::string GetParentDirectory(const std::string& filePath, int levelsUp)
-{
-    namespace fs = std::filesystem;
-    fs::path path(filePath);
-    for (int i = 0; i < levelsUp; ++i) {
-        path = path.parent_path();
-    }
-    return path.string();
-}
-
-std::string FindTextureFile(const std::string& directory, const std::string& fileName)
-{
-    namespace fs = std::filesystem;
-    //auto fullDirectory = IOManager::GetAssetFullPath(directory);
-    for (const auto& entry : fs::recursive_directory_iterator(directory)) {
-        if (entry.is_regular_file() && entry.path().filename() == fileName) {
-            return entry.path().string();
-        }
-    }
-    return "";
 }
 
 std::vector<DTexture*> DMesh::LoadMaterialTextures(const aiScene* scene, aiMaterial* mat, aiTextureType type, std::string typeName, const std::string& filePath)
 {
-    auto folderPath = GetParentDirectory(filePath, 2);
+    (void)scene;
+    (void)typeName;
+
+    const auto folderPath = GetParentDirectory(filePath, 2);
     std::vector<DTexture*> textures;
-    for (unsigned int i = 0; i < mat->GetTextureCount(type); i++)
+    for (unsigned int textureIndex = 0; textureIndex < mat->GetTextureCount(type); ++textureIndex)
     {
         aiString str;
-        mat->GetTexture(type, i, &str);
-        std::string filePath = str.C_Str();
-        if (filePath.empty()) {
-            continue;
-        }
+        mat->GetTexture(type, textureIndex, &str);
 
-        auto fileName = filePath.substr(filePath.find_last_of("\\/") + 1);
-        auto texturePath = FindTextureFile(folderPath, fileName);
-        std::filesystem::path fileSystemPath(texturePath);
-        if (!std::filesystem::exists(fileSystemPath))
-        {
+        const std::string importedPath = str.C_Str();
+        if (importedPath.empty())
             continue;
-        }
+
+        const auto fileName = importedPath.substr(importedPath.find_last_of("\\/") + 1);
+        const auto texturePath = FindTextureFile(folderPath, fileName);
+        if (!std::filesystem::exists(texturePath))
+            continue;
 
         DTexture* texture = DTexture::LoadFromFile(std::wstring(texturePath.begin(), texturePath.end()), true);
         textures.push_back(texture);
@@ -289,26 +331,24 @@ std::vector<DTexture*> DMesh::LoadMaterialTextures(const aiScene* scene, aiMater
     return textures;
 }
 
-DMesh::~DMesh()
-{
-}
-
 void DMesh::Initialize(std::wstring sourcePath)
 {
-    m_sourcePath = sourcePath;
+    m_sourcePath = std::move(sourcePath);
     ImportMesh();
 }
 
-void DMesh::SetMaterials(std::vector<DMaterial*>& materials) { m_materials = materials; }
+void DMesh::SetMaterials(std::vector<DMaterial*>& materials)
+{
+    m_materials = materials;
+}
 
 DMaterial* DMesh::GetMaterial(int index) const
 {
-    if (index < 0 || index >= m_materials.size())
-    {
+    if (index < 0)
         return nullptr;
-    }
 
-    return m_materials[index];
+    const size_t materialIndex = static_cast<size_t>(index);
+    return materialIndex < m_materials.size() ? m_materials[materialIndex] : nullptr;
 }
 
 const std::vector<std::vector<Vertex>>& DMesh::GetVertices() const { return m_vertices; }
@@ -321,142 +361,14 @@ const std::vector<DTexture*>& DMesh::GetTextures() const { return m_textures; }
 
 int DMesh::GetSubMeshCount() const { return static_cast<int>(m_vertices.size()); }
 
-
-
-TBulkData SerializeVertices(const std::vector<std::vector<Vertex>>& vertices)
-{
-    const uint32_t submeshCount = static_cast<uint32_t>(vertices.size());
-
-    uint64_t totalSize = sizeof(uint32_t) // submeshCount
-        + sizeof(uint32_t) * submeshCount; // per-submesh counts
-    for (const auto& submesh : vertices)
-        totalSize += sizeof(Vertex) * submesh.size();
-
-    auto* buf = new uint8_t[totalSize];
-    uint8_t* cursor = buf;
-
-    std::memcpy(cursor, &submeshCount, sizeof(uint32_t));
-    cursor += sizeof(uint32_t);
-
-    for (const auto& submesh : vertices) {
-        uint32_t count = static_cast<uint32_t>(submesh.size());
-        std::memcpy(cursor, &count, sizeof(uint32_t));
-        cursor += sizeof(uint32_t);
-    }
-
-    for (const auto& submesh : vertices) {
-        uint64_t bytes = sizeof(Vertex) * submesh.size();
-        if (bytes > 0)
-            std::memcpy(cursor, submesh.data(), bytes);
-        cursor += bytes;
-    }
-
-    TBulkData bulk;
-    bulk.Set(buf, totalSize);
-    delete[] buf;
-    return bulk;
-}
-
-void DeserializeVertices(const TBulkData& bulk, std::vector<std::vector<Vertex>>& outVertices)
-{
-    if (!bulk.IsValid())
-        return;
-
-    const uint8_t* cursor = bulk.m_data;
-
-    uint32_t submeshCount = 0;
-    std::memcpy(&submeshCount, cursor, sizeof(uint32_t));
-    cursor += sizeof(uint32_t);
-
-    std::vector<uint32_t> counts(submeshCount);
-    for (uint32_t i = 0; i < submeshCount; ++i) {
-        std::memcpy(&counts[i], cursor, sizeof(uint32_t));
-        cursor += sizeof(uint32_t);
-    }
-
-    outVertices.resize(submeshCount);
-    for (uint32_t i = 0; i < submeshCount; ++i) {
-        outVertices[i].resize(counts[i]);
-        uint64_t bytes = sizeof(Vertex) * counts[i];
-        if (bytes > 0)
-            std::memcpy(outVertices[i].data(), cursor, bytes);
-        cursor += bytes;
-    }
-}
-
-// ─── Indices ───────────────────────────────────────────────────────────────
-
-TBulkData SerializeIndices(const std::vector<std::vector<unsigned int>>& indices)
-{
-    const uint32_t submeshCount = static_cast<uint32_t>(indices.size());
-
-    uint64_t totalSize = sizeof(uint32_t)
-        + sizeof(uint32_t) * submeshCount;
-    for (const auto& submesh : indices)
-        totalSize += sizeof(unsigned int) * submesh.size();
-
-    auto* buf = new uint8_t[totalSize];
-    uint8_t* cursor = buf;
-
-    std::memcpy(cursor, &submeshCount, sizeof(uint32_t));
-    cursor += sizeof(uint32_t);
-
-    for (const auto& submesh : indices) {
-        uint32_t count = static_cast<uint32_t>(submesh.size());
-        std::memcpy(cursor, &count, sizeof(uint32_t));
-        cursor += sizeof(uint32_t);
-    }
-
-    for (const auto& submesh : indices) {
-        uint64_t bytes = sizeof(unsigned int) * submesh.size();
-        if (bytes > 0)
-            std::memcpy(cursor, submesh.data(), bytes);
-        cursor += bytes;
-    }
-
-    TBulkData bulk;
-    bulk.Set(buf, totalSize);
-    delete[] buf;
-    return bulk;
-}
-
-void DeserializeIndices(const TBulkData& bulk, std::vector<std::vector<unsigned int>>& outIndices)
-{
-    if (!bulk.IsValid())
-        return;
-
-    const uint8_t* cursor = bulk.m_data;
-
-    uint32_t submeshCount = 0;
-    std::memcpy(&submeshCount, cursor, sizeof(uint32_t));
-    cursor += sizeof(uint32_t);
-
-    std::vector<uint32_t> counts(submeshCount);
-    for (uint32_t i = 0; i < submeshCount; ++i) {
-        std::memcpy(&counts[i], cursor, sizeof(uint32_t));
-        cursor += sizeof(uint32_t);
-    }
-
-    outIndices.resize(submeshCount);
-    for (uint32_t i = 0; i < submeshCount; ++i) {
-        outIndices[i].resize(counts[i]);
-        uint64_t bytes = sizeof(unsigned int) * counts[i];
-        if (bytes > 0)
-            std::memcpy(outIndices[i].data(), cursor, bytes);
-        cursor += bytes;
-    }
-}
-
 void DMesh::OnBeforeSerialize()
 {
-    // Serialize vertex and index data into bulk data
     m_vertexData = SerializeVertices(m_vertices);
     m_indexData = SerializeIndices(m_indices);
 }
 
 void DMesh::OnAfterDeserialize()
 {
-    // Deserialize vertex and index data from bulk data
     DeserializeVertices(m_vertexData, m_vertices);
     DeserializeIndices(m_indexData, m_indices);
 }
