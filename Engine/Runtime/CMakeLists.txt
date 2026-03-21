@@ -1,5 +1,7 @@
 set(TARGET_NAME DeltaEngine)
 
+include("${CMAKE_SOURCE_DIR}/Engine/CMake/DeltaThirdPartyMSVC.cmake")
+
 file(GLOB_RECURSE HEADER_FILES "*.h")
 file(GLOB_RECURSE SOURCE_FILES "*.cpp")
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${HEADER_FILES} ${SOURCE_FILES})
@@ -12,19 +14,22 @@ set_target_properties(${TARGET_NAME} PROPERTIES CXX_STANDARD 23)
 set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "Engine")
 
 target_include_directories(${TARGET_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_include_directories(${TARGET_NAME} PUBLIC "${CMAKE_SOURCE_DIR}/Engine")
 
 add_dependencies(${TARGET_NAME} CopyDxcBin)
 
 target_compile_options(${TARGET_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->")
 target_compile_options(${TARGET_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/WX->")
 
-target_link_libraries(${TARGET_NAME} PUBLIC SDL3::SDL3)
-target_link_libraries(${TARGET_NAME} PUBLIC imgui)
-target_link_libraries(${TARGET_NAME} PUBLIC assimp)
-target_link_libraries(${TARGET_NAME} PUBLIC dxheaders)
-target_link_libraries(${TARGET_NAME} PUBLIC DirectXTK12)
-target_link_libraries(${TARGET_NAME} PUBLIC DirectXTex)
-target_link_libraries(${TARGET_NAME} PUBLIC nlohmann_json)
+delta_apply_third_party_msvc_external_includes(${TARGET_NAME})
+
+target_link_libraries(${TARGET_NAME} PUBLIC ThirdParty::SDL3)
+target_link_libraries(${TARGET_NAME} PUBLIC ThirdParty::imgui)
+target_link_libraries(${TARGET_NAME} PUBLIC ThirdParty::assimp)
+target_link_libraries(${TARGET_NAME} PUBLIC ThirdParty::dxheaders)
+target_link_libraries(${TARGET_NAME} PUBLIC ThirdParty::DirectXTK12)
+target_link_libraries(${TARGET_NAME} PUBLIC ThirdParty::DirectXTex)
+target_link_libraries(${TARGET_NAME} PUBLIC ThirdParty::nlohmann_json)
 
 target_link_libraries(${TARGET_NAME} PUBLIC d3d12.lib)
 target_link_libraries(${TARGET_NAME} PUBLIC dxguid.lib dxgi.lib d3dcompiler.lib)

@@ -5,9 +5,6 @@ endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-# Set a variable to accumulate third party include directories
-set(THIRD_PARTY_INCLUDES "" CACHE INTERNAL "Third party include directories")
-
 add_subdirectory(ThirdParty)
 add_subdirectory(Runtime)
 add_subdirectory(Editor)

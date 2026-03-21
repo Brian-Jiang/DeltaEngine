@@ -13,4 +13,4 @@ add_subdirectory(SDL3 EXCLUDE_FROM_ALL)
 
 set_target_properties(SDL3-shared PROPERTIES FOLDER ${third_party_folder})
 
-set(THIRD_PARTY_INCLUDES ${THIRD_PARTY_INCLUDES} "${CMAKE_CURRENT_SOURCE_DIR}/SDL3/include" CACHE INTERNAL "Third party include directories")
+add_library(ThirdParty::SDL3 ALIAS SDL3-shared)

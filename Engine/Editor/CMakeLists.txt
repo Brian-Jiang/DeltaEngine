@@ -1,5 +1,7 @@
 set(TARGET_NAME DeltaEditor)
 
+include("${CMAKE_SOURCE_DIR}/Engine/CMake/DeltaThirdPartyMSVC.cmake")
+
 file(GLOB_RECURSE HEADER_FILES "*.h")
 file(GLOB_RECURSE SOURCE_FILES "*.cpp")
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${HEADER_FILES} ${SOURCE_FILES})
@@ -13,6 +15,8 @@ target_include_directories(${TARGET_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_compile_definitions(${TARGET_NAME} PRIVATE DELTAEDITOR_EXPORTS)
 
 target_compile_options(${TARGET_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/WX->")
+
+delta_apply_third_party_msvc_external_includes(${TARGET_NAME})
 
 target_link_libraries(${TARGET_NAME} DeltaEngine)
 

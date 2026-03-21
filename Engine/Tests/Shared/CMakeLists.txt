@@ -11,9 +11,10 @@ set_target_properties(DeltaTestEnvironmentSupport PROPERTIES
     FOLDER "Tests/Shared"
 )
 target_include_directories(DeltaTestEnvironmentSupport PRIVATE ${DELTA_TEST_INCLUDE_DIRS})
-target_link_libraries(DeltaTestEnvironmentSupport PRIVATE DeltaEngine gtest)
+target_link_libraries(DeltaTestEnvironmentSupport PRIVATE DeltaEngine ThirdParty::gtest)
 target_compile_options(DeltaTestEnvironmentSupport PRIVATE
     "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->"
+    "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/WX->"
 )
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES
     TestEnvironment.cpp
@@ -28,7 +29,7 @@ set_target_properties(DeltaEditorSerializationTestSupport PROPERTIES
     FOLDER "Tests/Shared"
 )
 target_include_directories(DeltaEditorSerializationTestSupport PRIVATE ${DELTA_TEST_INCLUDE_DIRS})
-target_link_libraries(DeltaEditorSerializationTestSupport PRIVATE DeltaEditor gtest nlohmann_json)
+target_link_libraries(DeltaEditorSerializationTestSupport PRIVATE DeltaEditor ThirdParty::gtest ThirdParty::nlohmann_json)
 target_compile_options(DeltaEditorSerializationTestSupport PRIVATE
     "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->"
 )
