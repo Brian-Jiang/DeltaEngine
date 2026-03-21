@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DProperty.h"
 #include "Runtime/Reflection/DVectorProperty.h"
 

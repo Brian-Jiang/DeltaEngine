@@ -19,6 +19,7 @@ DELTA_ENGINE_NS_BEGIN
 class DELTAENGINE_API AssetArchive
 {
 public:
+    /// Identifies whether the archive reads from or writes to its backing store.
     enum class Mode { Loading, Saving };
 
     explicit AssetArchive(Mode mode) : m_mode(mode) {}
@@ -31,25 +32,31 @@ public:
     bool IsLoading() const { return m_mode == Mode::Loading; }
     bool IsSaving()  const { return m_mode == Mode::Saving; }
 
-    // --- Structural operations ---
-
+    /// Begins an object scope for the given reflected class name.
     virtual void        BeginObject(const std::string& className) = 0;
+    /// Begins loading an object scope and returns its stored class name.
     virtual std::string BeginObjectLoad()                         = 0;
+    /// Ends the current object scope.
     virtual void        EndObject()                               = 0;
 
+    /// Begins a named array scope with the provided element count.
     virtual void   BeginArray(const std::string& key, size_t count) = 0;
+    /// Begins loading a named array scope and returns its element count.
     virtual size_t BeginArrayLoad(const std::string& key)           = 0;
+    /// Ends the current array scope.
     virtual void   EndArray()                                        = 0;
 
-    // Keyless array begin/end for nested vectors (element of an outer array).
+    /// Begins an unnamed nested array scope for an array element.
     virtual void   BeginNestedArray(size_t count) = 0;
+    /// Begins loading an unnamed nested array scope and returns its element count.
     virtual size_t BeginNestedArrayLoad()         = 0;
 
+    /// Begins a named nested object scope when the archive format supports it.
     virtual void BeginNestedObject(const std::string& key) {}
+    /// Begins loading a named nested object scope when present.
     virtual bool BeginNestedObjectLoad(const std::string& key) { return false; }
+    /// Ends the current nested object scope.
     virtual void EndNestedObject() {}
-
-    // --- Primitive serialization ---
 
     virtual void Serialize(const std::string& key, float&       value) = 0;
     virtual void Serialize(const std::string& key, double&      value) = 0;
@@ -58,21 +65,16 @@ public:
     virtual void Serialize(const std::string& key, std::string& value) = 0;
     virtual void Serialize(const std::string& key, std::wstring& value) = 0;
 
-    // --- Math type serialization ---
-
     virtual void Serialize(const std::string& key, DirectX::SimpleMath::Vector3&    value) = 0;
     virtual void Serialize(const std::string& key, DirectX::SimpleMath::Quaternion& value) = 0;
     virtual void Serialize(const std::string& key, DirectX::XMFLOAT4&               value) = 0;
     virtual void Serialize(const std::string& key, DirectX::XMFLOAT4X4&             value) = 0;
 
-    // --- Reference type serialization ---
-
     virtual void Serialize(const std::string& key, ScriptPointer&  value) = 0;
     virtual void Serialize(const std::string& key, UUID&           value) = 0;
     virtual void Serialize(const std::string& key, BulkDataHandle& value) = 0;
 
-    // --- Array element serialization (keyless, advances array cursor) ---
-
+    /// Serializes the next array element in the current array scope.
     virtual void SerializeElement(float&       value) = 0;
     virtual void SerializeElement(double&      value) = 0;
     virtual void SerializeElement(int&         value) = 0;
@@ -85,8 +87,7 @@ public:
     virtual void SerializeElement(DirectX::XMFLOAT4X4&             value) = 0;
     virtual void SerializeElement(ScriptPointer&                    value) = 0;
 
-    // --- Vector helpers (non-virtual; own the Begin/loop/End pattern) ---
-
+    /// Serializes a named reflected vector using its inner property serializer.
     template <typename T>
     void Serialize(const std::string& key, std::vector<T>& vec, DProperty& innerProp)
     {
@@ -107,6 +108,7 @@ public:
         }
     }
 
+    /// Serializes a nested reflected vector stored inside another array.
     template <typename T>
     void SerializeNested(std::vector<T>& vec, DProperty& innerProp)
     {
@@ -127,9 +129,9 @@ public:
         }
     }
 
-    // --- Bulk data I/O ---
-
+    /// Writes a binary bulk payload for the given bulk identifier.
     virtual void                  WriteBulkData(uint32_t bulkId, const void* data, uint64_t size) = 0;
+    /// Reads a binary bulk payload for the given bulk identifier.
     virtual std::vector<uint8_t>  ReadBulkData(uint32_t bulkId)                                   = 0;
 
 protected:

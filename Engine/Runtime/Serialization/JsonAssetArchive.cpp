@@ -5,17 +5,11 @@
 #include <Windows.h>
 
 #include <fstream>
-#include <stdexcept>
 
 using namespace DeltaEngine;
 
 namespace DeltaEngine
 {
-
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-
 static std::string WStringToUtf8(const std::wstring& wide)
 {
     if (wide.empty())
@@ -60,11 +54,80 @@ static std::wstring Utf8ToWString(const std::string& utf8)
     return result;
 }
 
+template <typename SaveFn, typename LoadFn>
+void StoreOrLoadNode(nlohmann::json& cur, bool isSaving, const std::string& key, SaveFn&& saveFn, LoadFn&& loadFn)
+{
+    if (isSaving)
+    {
+        cur[key] = saveFn();
+        return;
+    }
+
+    if (!cur.contains(key))
+        return;
+
+    try
+    {
+        loadFn(cur[key]);
+    }
+    catch (...)
+    {
+    }
 }
 
-// ---------------------------------------------------------------------------
-// Constructors
-// ---------------------------------------------------------------------------
+template <typename SaveFn, typename LoadFn>
+void StoreOrLoadElementNode(
+    nlohmann::json& cur,
+    bool isSaving,
+    std::vector<size_t>& arrayIndex,
+    SaveFn&& saveFn,
+    LoadFn&& loadFn)
+{
+    if (isSaving)
+    {
+        cur.push_back(saveFn());
+        return;
+    }
+
+    if (arrayIndex.empty())
+        return;
+
+    const size_t idx = arrayIndex.back()++;
+    if (idx >= cur.size())
+        return;
+
+    try
+    {
+        loadFn(cur[idx]);
+    }
+    catch (...)
+    {
+    }
+}
+
+template <typename T>
+void StoreOrLoadValue(nlohmann::json& cur, bool isSaving, const std::string& key, T& value)
+{
+    StoreOrLoadNode(
+        cur,
+        isSaving,
+        key,
+        [&]() -> nlohmann::json { return value; },
+        [&](const nlohmann::json& node) { value = node.get<T>(); });
+}
+
+template <typename T>
+void StoreOrLoadElementValue(nlohmann::json& cur, bool isSaving, std::vector<size_t>& arrayIndex, T& value)
+{
+    StoreOrLoadElementNode(
+        cur,
+        isSaving,
+        arrayIndex,
+        [&]() -> nlohmann::json { return value; },
+        [&](const nlohmann::json& node) { value = node.get<T>(); });
+}
+
+}
 
 JsonAssetArchive::JsonAssetArchive()
     : AssetArchive(Mode::Saving)
@@ -91,10 +154,6 @@ JsonAssetArchive::JsonAssetArchive(const nlohmann::json& root, const std::filesy
     m_stack.push_back(&m_root);
 }
 
-// ---------------------------------------------------------------------------
-// Output accessors
-// ---------------------------------------------------------------------------
-
 std::string JsonAssetArchive::ToJsonString(int indent) const
 {
     return m_root.dump(indent);
@@ -104,10 +163,6 @@ const nlohmann::json& JsonAssetArchive::GetRoot() const
 {
     return m_root;
 }
-
-// ---------------------------------------------------------------------------
-// Structural operations
-// ---------------------------------------------------------------------------
 
 void JsonAssetArchive::BeginObject(const std::string& className)
 {
@@ -121,7 +176,6 @@ void JsonAssetArchive::BeginObject(const std::string& className)
     }
     else
     {
-        // Root-level object scope: annotate the current node and re-push it
         cur["_class"] = className;
         m_stack.push_back(&cur);
     }
@@ -142,7 +196,6 @@ std::string JsonAssetArchive::BeginObjectLoad()
     }
     else
     {
-        // Root-level object
         m_stack.push_back(&cur);
         if (cur.contains("_class"))
             return cur["_class"].get<std::string>();
@@ -222,435 +275,307 @@ void JsonAssetArchive::EndNestedObject()
         m_stack.pop_back();
 }
 
-// ---------------------------------------------------------------------------
-// Primitive serialization
-// ---------------------------------------------------------------------------
-
 void JsonAssetArchive::Serialize(const std::string& key, float& value)
 {
     auto& cur = *m_stack.back();
-    if (IsSaving())
-        cur[key] = value;
-    else if (cur.contains(key))
-        try { value = cur[key].get<float>(); } catch (...) {}
+    StoreOrLoadValue(cur, IsSaving(), key, value);
 }
 
 void JsonAssetArchive::Serialize(const std::string& key, double& value)
 {
     auto& cur = *m_stack.back();
-    if (IsSaving())
-        cur[key] = value;
-    else if (cur.contains(key))
-        try { value = cur[key].get<double>(); } catch (...) {}
+    StoreOrLoadValue(cur, IsSaving(), key, value);
 }
 
 void JsonAssetArchive::Serialize(const std::string& key, int& value)
 {
     auto& cur = *m_stack.back();
-    if (IsSaving())
-        cur[key] = value;
-    else if (cur.contains(key))
-        try { value = cur[key].get<int>(); } catch (...) {}
+    StoreOrLoadValue(cur, IsSaving(), key, value);
 }
 
 void JsonAssetArchive::Serialize(const std::string& key, bool& value)
 {
     auto& cur = *m_stack.back();
-    if (IsSaving())
-        cur[key] = value;
-    else if (cur.contains(key))
-        try { value = cur[key].get<bool>(); } catch (...) {}
+    StoreOrLoadValue(cur, IsSaving(), key, value);
 }
 
 void JsonAssetArchive::Serialize(const std::string& key, std::string& value)
 {
     auto& cur = *m_stack.back();
-    if (IsSaving())
-        cur[key] = value;
-    else if (cur.contains(key))
-        try { value = cur[key].get<std::string>(); } catch (...) {}
+    StoreOrLoadValue(cur, IsSaving(), key, value);
 }
 
 void JsonAssetArchive::Serialize(const std::string& key, std::wstring& value)
 {
     auto& cur = *m_stack.back();
-    if (IsSaving())
-    {
-        cur[key] = WStringToUtf8(value);
-    }
-    else if (cur.contains(key))
-    {
-        try
-        {
-            value = Utf8ToWString(cur[key].get<std::string>());
-        }
-        catch (...) {}
-    }
+    StoreOrLoadNode(
+        cur,
+        IsSaving(),
+        key,
+        [&]() -> nlohmann::json { return WStringToUtf8(value); },
+        [&](const nlohmann::json& node) { value = Utf8ToWString(node.get<std::string>()); });
 }
-
-// ---------------------------------------------------------------------------
-// Math type serialization
-// ---------------------------------------------------------------------------
 
 void JsonAssetArchive::Serialize(const std::string& key, DirectX::SimpleMath::Vector3& value)
 {
     auto& cur = *m_stack.back();
-    if (IsSaving())
-    {
-        cur[key] = nlohmann::json::array({ value.x, value.y, value.z });
-    }
-    else if (cur.contains(key))
-    {
-        try
+    StoreOrLoadNode(
+        cur,
+        IsSaving(),
+        key,
+        [&]() -> nlohmann::json { return nlohmann::json::array({ value.x, value.y, value.z }); },
+        [&](const nlohmann::json& node)
         {
-            auto& arr = cur[key];
-            value.x   = arr[0].get<float>();
-            value.y   = arr[1].get<float>();
-            value.z   = arr[2].get<float>();
-        }
-        catch (...) {}
-    }
+            value.x = node[0].get<float>();
+            value.y = node[1].get<float>();
+            value.z = node[2].get<float>();
+        });
 }
 
 void JsonAssetArchive::Serialize(const std::string& key, DirectX::SimpleMath::Quaternion& value)
 {
     auto& cur = *m_stack.back();
-    if (IsSaving())
-    {
-        cur[key] = nlohmann::json::array({ value.x, value.y, value.z, value.w });
-    }
-    else if (cur.contains(key))
-    {
-        try
+    StoreOrLoadNode(
+        cur,
+        IsSaving(),
+        key,
+        [&]() -> nlohmann::json { return nlohmann::json::array({ value.x, value.y, value.z, value.w }); },
+        [&](const nlohmann::json& node)
         {
-            auto& arr = cur[key];
-            value.x   = arr[0].get<float>();
-            value.y   = arr[1].get<float>();
-            value.z   = arr[2].get<float>();
-            value.w   = arr[3].get<float>();
-        }
-        catch (...) {}
-    }
+            value.x = node[0].get<float>();
+            value.y = node[1].get<float>();
+            value.z = node[2].get<float>();
+            value.w = node[3].get<float>();
+        });
 }
 
 void JsonAssetArchive::Serialize(const std::string& key, DirectX::XMFLOAT4& value)
 {
     auto& cur = *m_stack.back();
-    if (IsSaving())
-    {
-        cur[key] = nlohmann::json::array({ value.x, value.y, value.z, value.w });
-    }
-    else if (cur.contains(key))
-    {
-        try
+    StoreOrLoadNode(
+        cur,
+        IsSaving(),
+        key,
+        [&]() -> nlohmann::json { return nlohmann::json::array({ value.x, value.y, value.z, value.w }); },
+        [&](const nlohmann::json& node)
         {
-            auto& arr = cur[key];
-            value.x   = arr[0].get<float>();
-            value.y   = arr[1].get<float>();
-            value.z   = arr[2].get<float>();
-            value.w   = arr[3].get<float>();
-        }
-        catch (...) {}
-    }
+            value.x = node[0].get<float>();
+            value.y = node[1].get<float>();
+            value.z = node[2].get<float>();
+            value.w = node[3].get<float>();
+        });
 }
 
 void JsonAssetArchive::Serialize(const std::string& key, DirectX::XMFLOAT4X4& value)
 {
     auto& cur = *m_stack.back();
-    if (IsSaving())
-    {
-        nlohmann::json arr = nlohmann::json::array();
-        for (int r = 0; r < 4; ++r)
-            for (int c = 0; c < 4; ++c)
-                arr.push_back(value.m[r][c]);
-        cur[key] = std::move(arr);
-    }
-    else if (cur.contains(key))
-    {
-        try
+    StoreOrLoadNode(
+        cur,
+        IsSaving(),
+        key,
+        [&]() -> nlohmann::json
         {
-            auto& arr = cur[key];
+            nlohmann::json arr = nlohmann::json::array();
             for (int r = 0; r < 4; ++r)
                 for (int c = 0; c < 4; ++c)
-                    value.m[r][c] = arr[static_cast<size_t>(r * 4 + c)].get<float>();
-        }
-        catch (...) {}
-    }
+                    arr.push_back(value.m[r][c]);
+            return arr;
+        },
+        [&](const nlohmann::json& node)
+        {
+            for (int r = 0; r < 4; ++r)
+                for (int c = 0; c < 4; ++c)
+                    value.m[r][c] = node[static_cast<size_t>(r * 4 + c)].get<float>();
+        });
 }
-
-// ---------------------------------------------------------------------------
-// Reference type serialization
-// ---------------------------------------------------------------------------
 
 void JsonAssetArchive::Serialize(const std::string& key, UUID& value)
 {
     auto& cur = *m_stack.back();
-    if (IsSaving())
-    {
-        cur[key] = value.ToString();
-    }
-    else if (cur.contains(key))
-    {
-        try { value = UUID::FromString(cur[key].get<std::string>()); } catch (...) {}
-    }
+    StoreOrLoadNode(
+        cur,
+        IsSaving(),
+        key,
+        [&]() -> nlohmann::json { return value.ToString(); },
+        [&](const nlohmann::json& node) { value = UUID::FromString(node.get<std::string>()); });
 }
 
 void JsonAssetArchive::Serialize(const std::string& key, ScriptPointer& value)
 {
     auto& cur = *m_stack.back();
-    if (IsSaving())
-    {
-        cur[key] = nlohmann::json{
-            { "assetId",  value.m_assetId.ToString()  },
-            { "objectId", value.m_objectId.ToString() }
-        };
-    }
-    else if (cur.contains(key))
-    {
-        try
+    StoreOrLoadNode(
+        cur,
+        IsSaving(),
+        key,
+        [&]() -> nlohmann::json
         {
-            auto& sp         = cur[key];
-            value.m_assetId  = UUID::FromString(sp["assetId"].get<std::string>());
-            value.m_objectId = UUID::FromString(sp["objectId"].get<std::string>());
-        }
-        catch (...) {}
-    }
+            return nlohmann::json{
+                { "assetId",  value.m_assetId.ToString()  },
+                { "objectId", value.m_objectId.ToString() }
+            };
+        },
+        [&](const nlohmann::json& node)
+        {
+            value.m_assetId  = UUID::FromString(node["assetId"].get<std::string>());
+            value.m_objectId = UUID::FromString(node["objectId"].get<std::string>());
+        });
 }
 
 void JsonAssetArchive::Serialize(const std::string& key, BulkDataHandle& value)
 {
     auto& cur = *m_stack.back();
-    if (IsSaving())
-    {
-        cur[key] = nlohmann::json{
-            { "_bulk", value.m_bulkId   },
-            { "size",  value.m_dataSize }
-        };
-    }
-    else if (cur.contains(key))
-    {
-        try
+    StoreOrLoadNode(
+        cur,
+        IsSaving(),
+        key,
+        [&]() -> nlohmann::json
         {
-            value.m_bulkId   = cur[key]["_bulk"].get<uint32_t>();
-            value.m_dataSize = cur[key]["size"].get<uint64_t>();
-        }
-        catch (...) {}
-    }
+            return nlohmann::json{
+                { "_bulk", value.m_bulkId   },
+                { "size",  value.m_dataSize }
+            };
+        },
+        [&](const nlohmann::json& node)
+        {
+            value.m_bulkId   = node["_bulk"].get<uint32_t>();
+            value.m_dataSize = node["size"].get<uint64_t>();
+        });
 }
-
-// ---------------------------------------------------------------------------
-// Array element serialization
-// ---------------------------------------------------------------------------
 
 void JsonAssetArchive::SerializeElement(float& value)
 {
     auto& cur = *m_stack.back();
-    if (IsSaving())
-        cur.push_back(value);
-    else if (!m_arrayIndex.empty())
-    {
-        size_t idx = m_arrayIndex.back()++;
-        if (idx < cur.size())
-            try { value = cur[idx].get<float>(); } catch (...) {}
-    }
+    StoreOrLoadElementValue(cur, IsSaving(), m_arrayIndex, value);
 }
 
 void JsonAssetArchive::SerializeElement(double& value)
 {
     auto& cur = *m_stack.back();
-    if (IsSaving())
-        cur.push_back(value);
-    else if (!m_arrayIndex.empty())
-    {
-        size_t idx = m_arrayIndex.back()++;
-        if (idx < cur.size())
-            try { value = cur[idx].get<double>(); } catch (...) {}
-    }
+    StoreOrLoadElementValue(cur, IsSaving(), m_arrayIndex, value);
 }
 
 void JsonAssetArchive::SerializeElement(int& value)
 {
     auto& cur = *m_stack.back();
-    if (IsSaving())
-        cur.push_back(value);
-    else if (!m_arrayIndex.empty())
-    {
-        size_t idx = m_arrayIndex.back()++;
-        if (idx < cur.size())
-            try { value = cur[idx].get<int>(); } catch (...) {}
-    }
+    StoreOrLoadElementValue(cur, IsSaving(), m_arrayIndex, value);
 }
 
 void JsonAssetArchive::SerializeElement(bool& value)
 {
     auto& cur = *m_stack.back();
-    if (IsSaving())
-        cur.push_back(value);
-    else if (!m_arrayIndex.empty())
-    {
-        size_t idx = m_arrayIndex.back()++;
-        if (idx < cur.size())
-            try { value = cur[idx].get<bool>(); } catch (...) {}
-    }
+    StoreOrLoadElementValue(cur, IsSaving(), m_arrayIndex, value);
 }
 
 void JsonAssetArchive::SerializeElement(std::string& value)
 {
     auto& cur = *m_stack.back();
-    if (IsSaving())
-        cur.push_back(value);
-    else if (!m_arrayIndex.empty())
-    {
-        size_t idx = m_arrayIndex.back()++;
-        if (idx < cur.size())
-            try { value = cur[idx].get<std::string>(); } catch (...) {}
-    }
+    StoreOrLoadElementValue(cur, IsSaving(), m_arrayIndex, value);
 }
 
 void JsonAssetArchive::SerializeElement(std::wstring& value)
 {
     auto& cur = *m_stack.back();
-    if (IsSaving())
-        cur.push_back(WStringToUtf8(value));
-    else if (!m_arrayIndex.empty())
-    {
-        size_t idx = m_arrayIndex.back()++;
-        if (idx < cur.size())
-            try { value = Utf8ToWString(cur[idx].get<std::string>()); } catch (...) {}
-    }
+    StoreOrLoadElementNode(
+        cur,
+        IsSaving(),
+        m_arrayIndex,
+        [&]() -> nlohmann::json { return WStringToUtf8(value); },
+        [&](const nlohmann::json& node) { value = Utf8ToWString(node.get<std::string>()); });
 }
 
 void JsonAssetArchive::SerializeElement(DirectX::SimpleMath::Vector3& value)
 {
     auto& cur = *m_stack.back();
-    if (IsSaving())
-    {
-        cur.push_back(nlohmann::json::array({ value.x, value.y, value.z }));
-    }
-    else if (!m_arrayIndex.empty())
-    {
-        size_t idx = m_arrayIndex.back()++;
-        if (idx < cur.size())
+    StoreOrLoadElementNode(
+        cur,
+        IsSaving(),
+        m_arrayIndex,
+        [&]() -> nlohmann::json { return nlohmann::json::array({ value.x, value.y, value.z }); },
+        [&](const nlohmann::json& node)
         {
-            try
-            {
-                auto& arr = cur[idx];
-                value.x = arr[0].get<float>();
-                value.y = arr[1].get<float>();
-                value.z = arr[2].get<float>();
-            }
-            catch (...) {}
-        }
-    }
+            value.x = node[0].get<float>();
+            value.y = node[1].get<float>();
+            value.z = node[2].get<float>();
+        });
 }
 
 void JsonAssetArchive::SerializeElement(DirectX::SimpleMath::Quaternion& value)
 {
     auto& cur = *m_stack.back();
-    if (IsSaving())
-    {
-        cur.push_back(nlohmann::json::array({ value.x, value.y, value.z, value.w }));
-    }
-    else if (!m_arrayIndex.empty())
-    {
-        size_t idx = m_arrayIndex.back()++;
-        if (idx < cur.size())
+    StoreOrLoadElementNode(
+        cur,
+        IsSaving(),
+        m_arrayIndex,
+        [&]() -> nlohmann::json { return nlohmann::json::array({ value.x, value.y, value.z, value.w }); },
+        [&](const nlohmann::json& node)
         {
-            try
-            {
-                auto& arr = cur[idx];
-                value.x = arr[0].get<float>();
-                value.y = arr[1].get<float>();
-                value.z = arr[2].get<float>();
-                value.w = arr[3].get<float>();
-            }
-            catch (...) {}
-        }
-    }
+            value.x = node[0].get<float>();
+            value.y = node[1].get<float>();
+            value.z = node[2].get<float>();
+            value.w = node[3].get<float>();
+        });
 }
 
 void JsonAssetArchive::SerializeElement(DirectX::XMFLOAT4& value)
 {
     auto& cur = *m_stack.back();
-    if (IsSaving())
-    {
-        cur.push_back(nlohmann::json::array({ value.x, value.y, value.z, value.w }));
-    }
-    else if (!m_arrayIndex.empty())
-    {
-        size_t idx = m_arrayIndex.back()++;
-        if (idx < cur.size())
+    StoreOrLoadElementNode(
+        cur,
+        IsSaving(),
+        m_arrayIndex,
+        [&]() -> nlohmann::json { return nlohmann::json::array({ value.x, value.y, value.z, value.w }); },
+        [&](const nlohmann::json& node)
         {
-            try
-            {
-                auto& arr = cur[idx];
-                value.x = arr[0].get<float>();
-                value.y = arr[1].get<float>();
-                value.z = arr[2].get<float>();
-                value.w = arr[3].get<float>();
-            }
-            catch (...) {}
-        }
-    }
+            value.x = node[0].get<float>();
+            value.y = node[1].get<float>();
+            value.z = node[2].get<float>();
+            value.w = node[3].get<float>();
+        });
 }
 
 void JsonAssetArchive::SerializeElement(DirectX::XMFLOAT4X4& value)
 {
     auto& cur = *m_stack.back();
-    if (IsSaving())
-    {
-        nlohmann::json arr = nlohmann::json::array();
-        for (int r = 0; r < 4; ++r)
-            for (int c = 0; c < 4; ++c)
-                arr.push_back(value.m[r][c]);
-        cur.push_back(std::move(arr));
-    }
-    else if (!m_arrayIndex.empty())
-    {
-        size_t idx = m_arrayIndex.back()++;
-        if (idx < cur.size())
+    StoreOrLoadElementNode(
+        cur,
+        IsSaving(),
+        m_arrayIndex,
+        [&]() -> nlohmann::json
         {
-            try
-            {
-                auto& arr = cur[idx];
-                for (int r = 0; r < 4; ++r)
-                    for (int c = 0; c < 4; ++c)
-                        value.m[r][c] = arr[static_cast<size_t>(r * 4 + c)].get<float>();
-            }
-            catch (...) {}
-        }
-    }
+            nlohmann::json arr = nlohmann::json::array();
+            for (int r = 0; r < 4; ++r)
+                for (int c = 0; c < 4; ++c)
+                    arr.push_back(value.m[r][c]);
+            return arr;
+        },
+        [&](const nlohmann::json& node)
+        {
+            for (int r = 0; r < 4; ++r)
+                for (int c = 0; c < 4; ++c)
+                    value.m[r][c] = node[static_cast<size_t>(r * 4 + c)].get<float>();
+        });
 }
 
 void JsonAssetArchive::SerializeElement(ScriptPointer& value)
 {
     auto& cur = *m_stack.back();
-    if (IsSaving())
-    {
-        cur.push_back(nlohmann::json{
-            { "assetId",  value.m_assetId.ToString()  },
-            { "objectId", value.m_objectId.ToString() }
-        });
-    }
-    else if (!m_arrayIndex.empty())
-    {
-        size_t idx = m_arrayIndex.back()++;
-        if (idx < cur.size())
+    StoreOrLoadElementNode(
+        cur,
+        IsSaving(),
+        m_arrayIndex,
+        [&]() -> nlohmann::json
         {
-            try
-            {
-                auto& sp         = cur[idx];
-                value.m_assetId  = UUID::FromString(sp["assetId"].get<std::string>());
-                value.m_objectId = UUID::FromString(sp["objectId"].get<std::string>());
-            }
-            catch (...) {}
-        }
-    }
+            return nlohmann::json{
+                { "assetId",  value.m_assetId.ToString()  },
+                { "objectId", value.m_objectId.ToString() }
+            };
+        },
+        [&](const nlohmann::json& node)
+        {
+            value.m_assetId  = UUID::FromString(node["assetId"].get<std::string>());
+            value.m_objectId = UUID::FromString(node["objectId"].get<std::string>());
+        });
 }
-
-// ---------------------------------------------------------------------------
-// Bulk data I/O
-// ---------------------------------------------------------------------------
 
 void JsonAssetArchive::WriteBulkData(uint32_t bulkId, const void* data, uint64_t size)
 {

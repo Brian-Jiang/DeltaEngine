@@ -19,6 +19,7 @@ class DClass : public DStruct
     friend class ReflectionRegistry;
 
 public:
+    /// Describes a reflected object type and its construction hooks.
     DClass(std::string name,
            std::string superName,
            size_t classSize,
@@ -30,14 +31,21 @@ public:
            bool isAbstract = false
     );
 
+    /// Adds a reflected function declared on this class.
     void AddFunction(DFunction* function);
-    DFunction* FindFunctionByName(const std::string& name) const;
+    /// Finds a reflected function by name on this class or one of its bases.
+    DELTAENGINE_API DFunction* FindFunctionByName(const std::string& name) const;
 
+    /// Returns true when this class is the same as or derived from `other`.
     DELTAENGINE_API bool IsChildOf(const DClass* other) const;
+    /// Returns true when the class cannot be instantiated through reflection.
     DELTAENGINE_API bool IsAbstract() const;
 
+    /// Constructs an instance in caller-provided storage.
     void ConstructObject(void* address) const;
+    /// Destroys an instance stored at the provided address.
     void DestroyObject(void* address) const;
+    /// Copy-constructs an instance into caller-provided storage.
     void CopyObject(void* dest, const void* src) const;
 
 private:

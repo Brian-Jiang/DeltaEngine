@@ -9,10 +9,10 @@ class ISerializationCallbackReceiver
 public:
     virtual ~ISerializationCallbackReceiver() = default;
 
-    // Called before serialization to prepare the object for serialization
+    /// Called before serialization to prepare derived state.
     virtual void OnBeforeSerialize() { }
 
-    // Called after deserialization to restore the object's state
+    /// Called after deserialization to restore derived state.
     virtual void OnAfterDeserialize() { }
 };
 

@@ -18,8 +18,6 @@ public:
     {
     }
 
-    // ── DProperty pure virtuals ─────────────────────────────
-
     void InitializeValue(void* address) const override
     {
         new (address) TBulkData();
@@ -75,8 +73,6 @@ public:
 
     void SerializeElement(AssetArchive& /*ar*/, void* /*elementAddr*/) override {}
 
-    // ── Phase 1: serialize the handle (bulkId + size) into JSON ──
-
     void Serialize(AssetArchive& ar, void* objectPtr) override
     {
         TBulkData& bulk = GetRef(objectPtr);
@@ -86,8 +82,7 @@ public:
             bulk.ApplyHandle(handle);
     }
 
-    // ── Phase 2: read/write the raw binary payload ──────────
-
+    /// Serializes the binary sidecar payload for this bulk-data field.
     void SerializeBulkPayload(AssetArchive& ar, void* objectPtr)
     {
         TBulkData& bulk = GetRef(objectPtr);

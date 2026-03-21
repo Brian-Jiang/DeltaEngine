@@ -8,7 +8,6 @@
 
 #include "SimpleMath.h"
 #include <DirectXMath.h>
-#include <DirectXPackedVector.h>
 #include <cstring>
 #include <vector>
 

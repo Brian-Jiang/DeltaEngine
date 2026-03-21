@@ -269,7 +269,6 @@ protected:
 
 // Only for raw pointers to DObject-derived types
 template <typename T>
-// requires std::is_base_of_v<DObject, T>
 class DObjectPtrProperty : public DObjectPtrPropertyBase
 {
 public:
@@ -285,7 +284,6 @@ public:
 
     void DestroyValue(void* address) const override
     {
-        // No-op for raw pointers
     }
 
     void SetValue(void* instance, const void* field_value) const override

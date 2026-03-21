@@ -19,25 +19,29 @@ class DFunction
 public:
     using NativeFn = void(*)(DObject*, void*);
 
+    /// Describes a reflected function and its generated parameter layout.
     DFunction(std::string name,
               NativeFn nativeFn,
               uint32_t numParams,
               uint32_t totalSize,
               uint32_t returnValueOffset);
 
-    void Invoke(DObject* context, void* params) const;
+    /// Invokes the function on the provided object using the generated params block.
+    DELTAENGINE_API void Invoke(DObject* context, void* params) const;
 
+    /// Adds a reflected input parameter in declaration order.
     void AddParam(DProperty* param);
+    /// Sets the reflected return property when the function returns a value.
     void SetReturnProperty(DProperty* prop);
 
     const std::string& GetName() const;
-    DClass* GetDeclaringClass() const;
-    uint32_t GetNumParams() const;
-    uint32_t GetTotalSize() const;
-    uint32_t GetReturnValueOffset() const;
-    const std::vector<DProperty*>& GetParams() const;
-    DProperty* GetReturnProperty() const;
-    bool HasReturnValue() const;
+    DELTAENGINE_API DClass* GetDeclaringClass() const;
+    DELTAENGINE_API uint32_t GetNumParams() const;
+    DELTAENGINE_API uint32_t GetTotalSize() const;
+    DELTAENGINE_API uint32_t GetReturnValueOffset() const;
+    DELTAENGINE_API const std::vector<DProperty*>& GetParams() const;
+    DELTAENGINE_API DProperty* GetReturnProperty() const;
+    DELTAENGINE_API bool HasReturnValue() const;
 
 private:
     std::string m_name;

@@ -29,6 +29,10 @@ TEST_F(SingleAssetRoundTripTests, RoundTripsMixedPropertiesAndObjectReferences)
     objectA->m_position = { 1.0f, 2.0f, 3.0f };
     objectA->m_rotation = { 0.0f, 0.707f, 0.0f, 0.707f };
     objectA->m_weights = { 1.0f, 2.0f, 3.0f };
+    objectA->m_weightMatrix = {
+        { 1.0f, 2.0f },
+        { 3.0f, 4.0f, 5.0f }
+    };
     asset->AddObject(objectA);
 
     auto* objectB = new DTestObjectB();
@@ -71,6 +75,14 @@ TEST_F(SingleAssetRoundTripTests, RoundTripsMixedPropertiesAndObjectReferences)
     EXPECT_FLOAT_EQ(loadedObjectA->m_weights[0], 1.0f);
     EXPECT_FLOAT_EQ(loadedObjectA->m_weights[1], 2.0f);
     EXPECT_FLOAT_EQ(loadedObjectA->m_weights[2], 3.0f);
+    ASSERT_EQ(loadedObjectA->m_weightMatrix.size(), 2u);
+    ASSERT_EQ(loadedObjectA->m_weightMatrix[0].size(), 2u);
+    EXPECT_FLOAT_EQ(loadedObjectA->m_weightMatrix[0][0], 1.0f);
+    EXPECT_FLOAT_EQ(loadedObjectA->m_weightMatrix[0][1], 2.0f);
+    ASSERT_EQ(loadedObjectA->m_weightMatrix[1].size(), 3u);
+    EXPECT_FLOAT_EQ(loadedObjectA->m_weightMatrix[1][0], 3.0f);
+    EXPECT_FLOAT_EQ(loadedObjectA->m_weightMatrix[1][1], 4.0f);
+    EXPECT_FLOAT_EQ(loadedObjectA->m_weightMatrix[1][2], 5.0f);
 
     auto* loadedObjectB = FindObjectAs<DTestObjectB>(loaded, objectBId);
     ASSERT_NE(loadedObjectB, nullptr);

@@ -16,6 +16,7 @@ class DStruct
     friend class ReflectionRegistry;
 
 public:
+    /// Describes a reflected struct or class layout.
     DStruct(std::string name,
             std::string superName,
             size_t structSize,
@@ -23,9 +24,12 @@ public:
 
     virtual ~DStruct() = default;
 
+    /// Adds a property declared directly on this type.
     void AddProperty(DProperty* property);
+    /// Finds a property by name on this type or one of its reflected bases.
     DELTAENGINE_API DProperty* FindPropertyByName(const std::string& name) const;
 
+    /// Links this type to its reflected base type.
     void SetSuper(DStruct* super);
 
     DELTAENGINE_API const std::string& GetName() const;
@@ -36,7 +40,9 @@ public:
     DELTAENGINE_API DProperty* GetProperties() const;
     DELTAENGINE_API DProperty* GetOwnProperties() const;
 
+    /// Serializes the fields declared on this type and its reflected bases.
     DELTAENGINE_API void SerializeFields(AssetArchive& ar, void* basePtr);
+    /// Serializes a reflected object instance through this type schema.
     DELTAENGINE_API void Serialize(AssetArchive& ar, DObject& obj);
 
 protected:
