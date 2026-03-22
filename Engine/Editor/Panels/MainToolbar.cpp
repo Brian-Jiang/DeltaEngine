@@ -14,8 +14,6 @@ namespace
     static const char* kProjItems[]       = { "Perspective", "Orthographic" };
     static const char* kShadingItems[]    = { "Lit", "Unlit", "Wireframe" };
 
-    // Vertical 1px divider centered on the current item row.
-    // Uses GetFrameHeight() directly so it picks up the toolbar's inflated padding.
     void DrawVerticalDivider(float height = 0.f)
     {
         const float fh  = ImGui::GetFrameHeight();
@@ -33,8 +31,6 @@ namespace
         ImGui::SameLine(0, pad);
     }
 
-    // Styled BeginCombo dropdown for the toolbar.
-    // Call SetNextItemWidth before this to control the combo width.
     void DrawTbDropdown(const char* id, const char* const* items, int count, int& selected)
     {
         EditorTheme* theme = g_editor->GetEditorTheme();
@@ -77,7 +73,6 @@ void MainToolbar::Draw()
     EditorTheme* theme = g_editor->GetEditorTheme();
     const auto& c = theme->colors;
 
-    // fs is independent of FramePadding — compute before any push
     const float fs = ImGui::GetFontSize();
 
     ImGui::SetNextWindowPos(ImVec2(0, EditorTheme::HdrH()));
@@ -93,23 +88,15 @@ void MainToolbar::Draw()
     ImGui::PopStyleColor();
     ImGui::PopStyleVar(3);
 
-    // Push extra vertical frame padding so toolbar items are visibly larger
-    // than the global default.  All fh-derived sizes below reflect this.
     {
         const auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
             ImVec2(style.FramePadding.x, style.FramePadding.y + fs * 0.25f));
     }
 
-    //const float kItemH = fs * 1.55f;   // tweak this single knob
-    const float fh  = ImGui::GetFrameHeight();   // inflated
-    //const float fh = fs + g.Style.FramePadding.y * 2.0f;
+    const float fh  = ImGui::GetFrameHeight();
     const float pad = ImGui::GetStyle().ItemSpacing.x;
 
-    //ImGui::SetCursorPosY((EditorTheme::TbH() - fh) * 0.5f);
-    //ImGui::SetCursorPosX(pad);
-
-    // ── Transform toggle ────────────────────────────────────────────────────
     static const HorizontalToggleGroup::Item transformItems[] = {
         {"\xef\x89\x96", "Select"},
         {"\xef\x82\xb2", "Move"},
@@ -121,18 +108,15 @@ void MainToolbar::Draw()
     ImGui::SameLine(0, pad);
     DrawVerticalDivider();
 
-    // ── Coord-space dropdown ─────────────────────────────────────────────────
     ImGui::SetNextItemWidth(fs * 6.5f);
     DrawTbDropdown("##space", kCoordSpaceItems, 2, m_coordSpace);
     ImGui::SameLine(0, pad * 0.5f);
 
-    // ── Pivot dropdown ───────────────────────────────────────────────────────
     ImGui::SetNextItemWidth(fs * 6.5f);
     DrawTbDropdown("##pivot", kPivotItems, 2, m_pivotMode);
     ImGui::SameLine(0, pad);
     DrawVerticalDivider();
 
-    // ── Snap widget — icon | value ───────────────────────────────────────────
     ImGui::PushStyleColor(ImGuiCol_ChildBg, c.DRaised);
     ImGui::PushStyleColor(ImGuiCol_Border,  c.BLight);
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding,    5.f);
@@ -154,7 +138,6 @@ void MainToolbar::Draw()
     if (theme->GetMonoFont())
         ImGui::PushFont(theme->GetMonoFont());
     ImGui::PushStyleColor(ImGuiCol_Text, c.CMesh);
-    //ImGui::SetCursorPos(ImVec2(fh, (fh - ImGui::GetTextLineHeight()) * 0.5f));
     ImGui::Text("%.2f", m_snapValue);
     ImGui::PopStyleColor();
     if (theme->GetMonoFont())
@@ -165,18 +148,15 @@ void MainToolbar::Draw()
     ImGui::SameLine(0, pad);
     DrawVerticalDivider();
 
-    // ── Projection dropdown ──────────────────────────────────────────────────
     ImGui::SetNextItemWidth(fs * 9.5f);
     DrawTbDropdown("##proj", kProjItems, 2, m_projMode);
     ImGui::SameLine(0, pad * 0.5f);
 
-    // ── Shading dropdown ─────────────────────────────────────────────────────
     ImGui::SetNextItemWidth(fs * 6.5f);
     DrawTbDropdown("##shading", kShadingItems, 3, m_shadingMode);
     ImGui::SameLine(0, pad);
     DrawVerticalDivider();
 
-    // ── Play toggle ──────────────────────────────────────────────────────────
     static const HorizontalToggleGroup::Item playItems[] = {
         {"\xef\x81\x8b", "Play"},
         {"\xef\x81\x8c", "Pause"},
@@ -191,7 +171,6 @@ void MainToolbar::Draw()
     ImGui::SameLine(0, pad);
     DrawVerticalDivider();
 
-    // ── FPS label ────────────────────────────────────────────────────────────
     ImVec2 fpsCursor = ImGui::GetCursorScreenPos();
     float fpsW = fs * 4.5f;
     float fpsH = fh;
@@ -211,6 +190,6 @@ void MainToolbar::Draw()
     if (theme->GetMonoFont())
         ImGui::PopFont();
 
-    ImGui::PopStyleVar();   // extra FramePadding
+    ImGui::PopStyleVar();
     ImGui::End();
 }

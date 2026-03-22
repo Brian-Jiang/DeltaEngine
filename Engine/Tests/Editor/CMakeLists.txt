@@ -1,4 +1,5 @@
 set(DELTA_EDITOR_TEST_SOURCES
+    UI/EditorThemeColorTests.cpp
     EditorWindows/EditorWindowConceptTests.cpp
     EditorWindows/ViewportPresetTests.cpp
     Assets/Locator/EditorAssetDatabaseLocatorTests.cpp

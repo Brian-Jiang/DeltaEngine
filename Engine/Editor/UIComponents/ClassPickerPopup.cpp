@@ -1,11 +1,9 @@
 #include "UIComponents/ClassPickerPopup.h"
 
-#include <algorithm>
 #include <cctype>
 #include <cstring>
 
 #include "Runtime/Reflection/DClass.h"
-#include "Style/EditorTheme.h"
 
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -59,7 +57,6 @@ const DClass* ClassPickerPopup::Draw(const EditorTheme::ThemeColors& c)
 
     const DClass* picked = nullptr;
 
-    // ── Search bar ───────────────────────────────────────────────────────────
     ImGui::PushStyleColor(ImGuiCol_FrameBg,        c.DInput);
     ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, c.DHover);
     ImGui::PushStyleColor(ImGuiCol_Border,         c.BLight);
@@ -89,11 +86,10 @@ const DClass* ClassPickerPopup::Draw(const EditorTheme::ThemeColors& c)
     if (filterChanged)
         RebuildFilter();
 
-    // ── Scrollable class list ─────────────────────────────────────────────────
     ImGui::BeginChild("##CPList", ImVec2(240.f, 280.f), ImGuiChildFlags_None,
         ImGuiWindowFlags_NoScrollbar);
 
-    constexpr const char* kIcon    = "\xef\x86\xb2"; // FA cube U+F1B2
+    constexpr const char* kIcon    = "\xef\x86\xb2";
     constexpr float       kIconSz  = 14.f;
 
     for (const DClass* cls : m_filtered)
@@ -102,7 +98,6 @@ const DClass* ClassPickerPopup::Draw(const EditorTheme::ThemeColors& c)
         float  rowH   = EditorTheme::RowH();
         float  rowW   = ImGui::GetContentRegionAvail().x;
 
-        // Invisible full-row hit area
         char btnId[64];
         std::snprintf(btnId, sizeof(btnId), "##cprow_%p", static_cast<const void*>(cls));
         ImGui::InvisibleButton(btnId, ImVec2(rowW, rowH));
@@ -118,7 +113,6 @@ const DClass* ClassPickerPopup::Draw(const EditorTheme::ThemeColors& c)
                 ImGui::ColorConvertFloat4ToU32(c.DHover));
         }
 
-        // Icon — vertically centered
         const float textLineH = ImGui::GetTextLineHeight();
         float contentY = rowMin.y + (rowH - textLineH) * 0.5f;
         float iconOffY = (textLineH - kIconSz) * 0.5f;
@@ -127,7 +121,6 @@ const DClass* ClassPickerPopup::Draw(const EditorTheme::ThemeColors& c)
         dl->AddText(ImGui::GetFont(), kIconSz, iconPos,
             ImGui::ColorConvertFloat4ToU32(c.CMesh), kIcon);
 
-        // Class name — vertically centered, left of icon
         ImVec2 textPos(iconPos.x + kIconSz + 6.f, contentY);
         dl->AddText(textPos,
             ImGui::ColorConvertFloat4ToU32(c.TPrimary),

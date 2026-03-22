@@ -9,8 +9,7 @@ DELTA_ENGINE_NS_BEGIN
 class StatusBar
 {
 public:
-    // Populated each frame by whoever owns scene state.
-    // Left as plain strings for now — replace with real data later.
+    // Status text sources; set from scene/editor code before Draw().
     std::string sceneName = "Untitled";
     int objectCount = 0;
     std::string selectedName = "";
@@ -18,6 +17,7 @@ public:
     std::string buildConfig = "Debug x64";
     std::string engineVersion = "DeltaEngine 0.1.0";
 
+    // Bottom status strip; reads the string fields above each frame.
     void Draw();
 };
 

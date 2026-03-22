@@ -13,6 +13,7 @@ void ContextMenuPopup::Open(std::vector<Item> items)
 
 void ContextMenuPopup::Draw(const EditorTheme::ThemeColors& c)
 {
+    (void)c;
     for (Item& item : m_items)
     {
         if (ImGui::MenuItem(item.label))

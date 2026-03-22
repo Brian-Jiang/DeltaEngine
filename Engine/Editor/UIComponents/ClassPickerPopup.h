@@ -13,13 +13,10 @@ class DClass;
 class ClassPickerPopup
 {
 public:
-    // Call before ImGui::OpenPopup("##ClassPicker") to supply the filtered class list.
-    // Resets the search field and requests keyboard focus for the first frame.
+    // Replaces the class list and clears the filter; call before OpenPopup("##ClassPicker").
     void Open(std::vector<const DClass*> classes);
 
-    // Call every frame after ImGui::OpenPopup("##ClassPicker").
-    // Returns a non-null DClass* on the frame the user clicks a row, nullptr otherwise.
-    // The popup closes automatically when the user clicks outside.
+    // Returns the picked class when the user confirms a row; otherwise nullptr.
     const DClass* Draw(const EditorTheme::ThemeColors& c);
 
 private:

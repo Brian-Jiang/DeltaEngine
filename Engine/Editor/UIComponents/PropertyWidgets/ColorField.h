@@ -8,9 +8,7 @@ DELTA_ENGINE_NS_BEGIN
 class ColorField
 {
 public:
-    // Draws a labeled color editor with a swatch button and inline hex/RGB edit.
-    // values — float[4] in RGBA order; hasAlpha — show/edit alpha channel.
-    // Returns true if the color was modified this frame.
+    // Labeled RGBA editor; `values` is float[4] in RGBA order.
     bool Draw(const char* label, float* values, bool hasAlpha = false);
 };
 

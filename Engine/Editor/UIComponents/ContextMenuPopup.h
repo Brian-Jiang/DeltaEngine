@@ -14,16 +14,14 @@ class ContextMenuPopup
 public:
     struct Item
     {
-        const char* label;
-        std::function<void()> action;
+        const char* label;              // MenuItem text
+        std::function<void()> action;   // Invoked on click
     };
 
-    // Call when the context popup is open (e.g. inside BeginPopupContextItem).
-    // Stores items for this popup instance.
+    // Replaces the menu entries for the next Draw().
     void Open(std::vector<Item> items);
 
-    // Renders menu items. Call from within BeginPopupContextItem.
-    // Invokes the action when a menu item is clicked.
+    // Renders queued items; call inside the active popup scope.
     void Draw(const EditorTheme::ThemeColors& c);
 
 private:

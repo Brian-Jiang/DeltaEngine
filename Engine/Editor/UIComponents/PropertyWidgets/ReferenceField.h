@@ -8,8 +8,7 @@ DELTA_ENGINE_NS_BEGIN
 class ReferenceField
 {
 public:
-    // Draws a read-only labeled reference slot showing the object display name.
-    // isNull — when true, renders "(null)" in dim text.
+    // Read-only object reference row; shows displayName or "(null)" when isNull.
     void Draw(const char* label, const char* displayName, bool isNull = false);
 };
 

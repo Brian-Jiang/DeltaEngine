@@ -1,11 +1,11 @@
 #include "Style/EditorTheme.h"
 
-#include <cstdint>
-#include <filesystem>
+#include <format>
 #include <iostream>
-#include <string.h>
 
 #include "Runtime/IO/IOManager.h"
+
+#include "imgui.h"
 
 using namespace DeltaEngine;
 
@@ -43,7 +43,6 @@ void EditorTheme::ApplyTheme()
 
     ImVec4* colors = s.Colors;
 
-    // Depth / Background
     colors[ImGuiCol_WindowBg] = HexToVec4(0x0d1019);
     colors[ImGuiCol_ChildBg] = HexToVec4(0x090c14);
     colors[ImGuiCol_PopupBg] = HexToVec4(0x121620);
@@ -55,15 +54,12 @@ void EditorTheme::ApplyTheme()
     colors[ImGuiCol_TitleBgCollapsed] = HexToVec4(0x090c14);
     colors[ImGuiCol_MenuBarBg] = HexToVec4(0x090c14);
 
-    // Borders
     colors[ImGuiCol_Border] = HexToVec4(0x191f30);
     colors[ImGuiCol_BorderShadow] = HexToVec4(0x0a0d16, 0.f);
 
-    // Text
     colors[ImGuiCol_Text] = HexToVec4(0xbcc4de);
     colors[ImGuiCol_TextDisabled] = HexToVec4(0x6c7898);
 
-    // Accent — Periwinkle Blue #6B8CFF
     colors[ImGuiCol_CheckMark] = HexToVec4(0x6B8CFF);
     colors[ImGuiCol_SliderGrab] = HexToVec4(0x6B8CFF);
     colors[ImGuiCol_SliderGrabActive] = HexToVec4(0x8FAAFF);
@@ -81,7 +77,6 @@ void EditorTheme::ApplyTheme()
     colors[ImGuiCol_DockingPreview] = HexToVec4(0x6B8CFF, 0.4f);
     colors[ImGuiCol_DockingEmptyBg] = HexToVec4(0x060709);
 
-    // Tabs
     colors[ImGuiCol_Tab] = HexToVec4(0x121620);
     colors[ImGuiCol_TabHovered] = HexToVec4(0x1c2234);
     colors[ImGuiCol_TabSelected] = HexToVec4(0x6B8CFF, 0.05f);
@@ -89,19 +84,16 @@ void EditorTheme::ApplyTheme()
     colors[ImGuiCol_TabDimmed] = HexToVec4(0x090c14);
     colors[ImGuiCol_TabDimmedSelected] = HexToVec4(0x121620);
 
-    // Scrollbar
     colors[ImGuiCol_ScrollbarBg] = HexToVec4(0x090c14);
     colors[ImGuiCol_ScrollbarGrab] = HexToVec4(0x191f30);
     colors[ImGuiCol_ScrollbarGrabHovered] = HexToVec4(0x2e3d5e);
     colors[ImGuiCol_ScrollbarGrabActive] = HexToVec4(0x6B8CFF);
 
-    // Separator / Misc
     colors[ImGuiCol_Separator] = HexToVec4(0x191f30);
     colors[ImGuiCol_TableHeaderBg] = HexToVec4(0x121620);
     colors[ImGuiCol_TableBorderStrong] = HexToVec4(0x191f30);
     colors[ImGuiCol_TableBorderLight] = HexToVec4(0x0a0d16);
 
-    // Named theme colors for chrome panels and UI components
     this->colors.DFloor = HexToVec4(0x090c14);
     this->colors.DRaised = HexToVec4(0x121620);
     this->colors.DHover = HexToVec4(0x1c2234);
@@ -145,9 +137,6 @@ void EditorTheme::LoadFonts()
 
     std::string monoFontPath = IOManager::GetEditorSourceAssetFullPath("Fonts/JetBrainsMono-Regular.ttf");
     m_monoFont = TryLoadFont(monoFontPath, false);
-
-    //std::string faSolidFontPath = IOManager::GetEditorSourceAssetFullPath("Fonts/Font Awesome 7 Free-Solid-900.otf");
-    //m_faSolidFont = TryLoadFont(faSolidFontPath);
 }
 
 ImFont* EditorTheme::TryLoadFont(std::string path, bool withFaSolid)
@@ -162,9 +151,9 @@ ImFont* EditorTheme::TryLoadFont(std::string path, bool withFaSolid)
             ImFontConfig faConfig;
             faConfig.MergeMode = true;
             faConfig.PixelSnapH = true;
-            //faConfig.FontDataOwnedByAtlas = false; // Prevent ImGui from trying to free the font data
             std::string faSolidFontPath = IOManager::GetEditorSourceAssetFullPath("Fonts/Font Awesome 7 Free-Solid-900.otf");
-            ImFont* faSolidFont = ImGui::GetIO().Fonts->AddFontFromFileTTF(faSolidFontPath.c_str(), 0.0f, &faConfig);
+            [[maybe_unused]] ImFont* merged =
+                ImGui::GetIO().Fonts->AddFontFromFileTTF(faSolidFontPath.c_str(), 0.0f, &faConfig);
         }
 
         return font;
@@ -176,23 +165,5 @@ ImFont* EditorTheme::TryLoadFont(std::string path, bool withFaSolid)
 
 ImVec4 EditorTheme::HexToVec4(uint32_t hex, float alphaOverride) const
 {
-    float r, g, b, a;
-    if ((hex >> 24) != 0)
-    {
-        // 8-digit: #RRGGBBAA
-        r = ((hex >> 24) & 0xFF) / 255.f;
-        g = ((hex >> 16) & 0xFF) / 255.f;
-        b = ((hex >> 8) & 0xFF) / 255.f;
-        a = (alphaOverride >= 0.f) ? alphaOverride : ((hex & 0xFF) / 255.f);
-    }
-    else
-    {
-        // 6-digit: #RRGGBB
-        r = ((hex >> 16) & 0xFF) / 255.f;
-        g = ((hex >> 8) & 0xFF) / 255.f;
-        b = (hex & 0xFF) / 255.f;
-        a = (alphaOverride >= 0.f) ? alphaOverride : 1.f;
-    }
-
-    return ImVec4(r, g, b, a);
+    return ColorFromHex(hex, alphaOverride);
 }

@@ -9,6 +9,7 @@ DELTA_ENGINE_NS_BEGIN
 class AppHeader
 {
 public:
+    // Top menu bar, logo, and class picker for new GameObjects.
     void Draw();
 
 private:

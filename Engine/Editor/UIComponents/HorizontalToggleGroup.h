@@ -15,14 +15,7 @@ public:
         const char* tooltip;
     };
 
-    // items     — array of Item descriptors
-    // itemCount — length of items array
-    // selected  — index of the currently active item (in/out)
-    // itemW     — width of each button (0 = auto/equal)
-    // itemH     — height of each button
-    // overrideSelectedIndex — when set and selected == *overrideSelectedIndex, use overrideSelectedColor
-    // overrideSelectedColor — color for text/border when override applies (e.g. Ok green for Play)
-    // Returns true if selection changed this frame.
+    // Returns true when `selected` changes; optional override colors the selected slot when indices match.
     bool Draw(const char* id, const Item* items, int itemCount,
               int& selected, float itemW = 0.f, float itemH = 0.f,
               const int* overrideSelectedIndex = nullptr,

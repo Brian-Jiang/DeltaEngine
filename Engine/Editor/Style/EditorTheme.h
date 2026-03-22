@@ -2,6 +2,7 @@
 
 #include "EngineIncludes.h"
 
+#include <cstdint>
 #include <string>
 
 #include "imgui.h"
@@ -11,6 +12,7 @@ DELTA_ENGINE_NS_BEGIN
 class EditorTheme
 {
 public:
+    // Named RGBA tokens for chrome, property rows, and widgets (filled by ApplyTheme).
     struct ThemeColors
     {
         ImVec4 DFloor;   // 0x090c14 — deepest bg (chrome panels)
@@ -44,12 +46,13 @@ public:
         ImVec4 Warn;     // 0xf59e0b — yellow warning highlight
     };
 
-    //static constexpr float kRowH = 30.f;
+    // Row height from current font and frame padding.
     static float RowH()
     {
         return ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.f;
     }
 
+    // App header chrome height (menu bar row with extra vertical padding).
     static float HdrH()
     {
         const float kExtra = ImGui::GetFontSize() * 0.25f;
@@ -57,17 +60,41 @@ public:
             + (ImGui::GetStyle().FramePadding.y + kExtra) * 2.f;
     }
 
+    // Main toolbar band height.
     static float TbH()
     {
         const float kItemH = ImGui::GetFontSize() * 2.0f;
         return kItemH + ImGui::GetStyle().ItemSpacing.y * 2.f;
     }
 
-    static float StH()  { return ImGui::GetFrameHeight(); }         // 1 row
+    // Status bar height (one frame row).
+    static float StH() { return ImGui::GetFrameHeight(); }
+
+    // 0xRRGGBB or 0xRRGGBBAA; alphaOverride >= 0 replaces alpha.
+    static ImVec4 ColorFromHex(uint32_t hex, float alphaOverride = -1.f)
+    {
+        float r, g, b, a;
+        if ((hex >> 24) != 0)
+        {
+            r = ((hex >> 24) & 0xFF) / 255.f;
+            g = ((hex >> 16) & 0xFF) / 255.f;
+            b = ((hex >> 8) & 0xFF) / 255.f;
+            a = (alphaOverride >= 0.f) ? alphaOverride : ((hex & 0xFF) / 255.f);
+        }
+        else
+        {
+            r = ((hex >> 16) & 0xFF) / 255.f;
+            g = ((hex >> 8) & 0xFF) / 255.f;
+            b = (hex & 0xFF) / 255.f;
+            a = (alphaOverride >= 0.f) ? alphaOverride : 1.f;
+        }
+        return ImVec4(r, g, b, a);
+    }
 
     EditorTheme();
     ~EditorTheme();
 
+    // Applies ImGui style and fills ThemeColors from the editor palette.
     void ApplyTheme();
 
     ImFont* GetRegularFont() const { return m_regularFont; }
@@ -84,7 +111,6 @@ private:
     ImFont* m_regularFont;
     ImFont* m_boldFont;
     ImFont* m_monoFont;
-    ImFont* m_faSolidFont;
 };
 
 DELTA_ENGINE_NS_END

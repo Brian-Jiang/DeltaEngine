@@ -10,9 +10,7 @@ DELTA_ENGINE_NS_BEGIN
 class StringField
 {
 public:
-    // Draws a labeled text input field.
-    // buf / bufSize — character buffer; readOnly — disallow editing.
-    // Returns true if the buffer was modified this frame.
+    // Labeled text field; returns true when the buffer changed this frame.
     bool Draw(const char* label, char* buf, size_t bufSize, bool readOnly = false);
 };
 

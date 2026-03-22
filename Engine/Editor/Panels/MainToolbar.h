@@ -9,6 +9,7 @@ DELTA_ENGINE_NS_BEGIN
 class MainToolbar
 {
 public:
+    // Transform/play controls and viewport dropdowns below the app header.
     void Draw();
 
 private:

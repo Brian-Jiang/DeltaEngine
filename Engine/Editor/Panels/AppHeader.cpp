@@ -18,29 +18,22 @@ void AppHeader::Draw()
     EditorTheme* theme = g_editor->GetEditorTheme();
     const auto& c = theme->colors;
 
-    // ── Scale units — never use raw pixel literals ──────────────────────────
-    //   fh  = one standard widget row height (font + frame padding × 2)
-    //   fs  = raw font size
-    //   pad = standard item spacing x
     const float fh = ImGui::GetFrameHeight();
     const float fs = ImGui::GetFontSize();
     const float pad = ImGui::GetStyle().ItemSpacing.x;
 
-    // Window height must match EditorTheme::HdrH() so the toolbar starts flush below.
-    
     {
         const auto& style = ImGui::GetStyle();
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
             ImVec2(style.FramePadding.x, style.FramePadding.y + fs * 0.25f));
     }
-    //const float hdrH = EditorTheme::HdrH();
     const float hdrH = ImGui::GetFrameHeight();
 
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, hdrH));
 
     ImGui::PushStyleColor(ImGuiCol_WindowBg, c.DFloor);
-    ImGui::PushStyleColor(ImGuiCol_MenuBarBg, c.DFloor); // unify colors
+    ImGui::PushStyleColor(ImGuiCol_MenuBarBg, c.DFloor);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
@@ -51,12 +44,9 @@ void AppHeader::Draw()
     ImGui::PopStyleColor(2);
     ImGui::PopStyleVar(3);
 
-    
-
     ImDrawList* dl = ImGui::GetWindowDrawList();
     ImVec2 winPos = ImGui::GetCursorScreenPos();
 
-    // ── 1 px bottom separator ────────────────────────────────────────────────
     float sepY = winPos.y + hdrH - 1.f;
     dl->AddLine(
         ImVec2(winPos.x, sepY),
@@ -64,27 +54,18 @@ void AppHeader::Draw()
         ImGui::ColorConvertFloat4ToU32(c.BDeep), 1.f);
 
     if (ImGui::BeginMenuBar()) {
-        // ── Logo: equilateral triangle ───────────────────────────────────────
-        // Side length = font size, height = side * (√3/2)
-        // GetCursorScreenPos() inside BeginMenuBar already sits at the correct
-        // Y for inline content — do NOT fight it with SetCursorPos Y.
         {
             const float side = fs;
-            const float triH = side * 0.866f; // √3/2
+            const float triH = side * 0.866f;
             ImVec2 sp = ImGui::GetCursorScreenPos();
-            //float offY = (ImGui::GetTextLineHeight() - triH) * 0.5f - ImGui::GetStyle().FramePadding.y;
-            //float offY = (ImGui::GetTextLineHeight() - triH) * 0.5f;
-            //float offY = ImGui::GetTextLineHeight();
             float offY = 13.0f;
-            ImVec2 p1(sp.x, sp.y + offY + triH); // bottom-left
-            ImVec2 p2(sp.x + side, sp.y + offY + triH); // bottom-right
-            ImVec2 p3(sp.x + side * 0.5f, sp.y + offY); // apex
+            ImVec2 p1(sp.x, sp.y + offY + triH);
+            ImVec2 p2(sp.x + side, sp.y + offY + triH);
+            ImVec2 p3(sp.x + side * 0.5f, sp.y + offY);
             dl->AddTriangleFilled(p1, p2, p3, ImGui::ColorConvertFloat4ToU32(c.AccHi));
-            // Advance cursor past the triangle without ImGui knowing about it
             ImGui::Dummy(ImVec2(side, 0.f));
         }
 
-        // ── Title ────────────────────────────────────────────────────────────
         ImGui::SameLine(0.f, pad * 1.0f);
         if (theme->GetBoldFont())
             ImGui::PushFont(theme->GetBoldFont());
@@ -92,19 +73,6 @@ void AppHeader::Draw()
         if (theme->GetBoldFont())
             ImGui::PopFont();
 
-        // ── Vertical divider ─────────────────────────────────────────────────
-        //ImGui::SameLine(0.f, pad);
-        //{
-        //    ImVec2 sp = ImGui::GetCursorScreenPos();
-        //    dl->AddLine(
-        //        ImVec2(sp.x, sp.y),
-        //        ImVec2(sp.x, sp.y + fs),
-        //        ImGui::ColorConvertFloat4ToU32(c.BMid), 1.f);
-        //    ImGui::Dummy(ImVec2(1.f, 0.f));
-        //}
-        //ImGui::SameLine(0.f, pad * 0.5f);
-
-        // ── Menu items ───────────────────────────────────────────────────────
         if (ImGui::BeginMenu("File"))
         {
             if (ImGui::MenuItem("Save"))
@@ -147,10 +115,8 @@ void AppHeader::Draw()
         if (ImGui::BeginMenu("Help"))
             ImGui::EndMenu();
 
-        // ── Right group: push to right edge ──────────────────────────────────
-        // Measure widths in font-relative units so they resize with the font
-        const float btnW = fs * 4.5f; // "Debug x64"
-        const float iconW = fh; // square gear button
+        const float btnW = fs * 4.5f;
+        const float iconW = fh;
         const float groupW = btnW + pad * 0.5f + iconW + pad;
 
         ImGui::SameLine(io.DisplaySize.x - groupW);
@@ -159,7 +125,7 @@ void AppHeader::Draw()
         ImGui::PushStyleColor(ImGuiCol_Border, c.BLight);
         ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.f);
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.f);
-        ImGui::Button("Debug x64", ImVec2(0.f, 0.f)); // 0 height = auto (fh)
+        ImGui::Button("Debug x64", ImVec2(0.f, 0.f));
         ImGui::PopStyleVar(2);
         ImGui::PopStyleColor(2);
 
@@ -173,7 +139,6 @@ void AppHeader::Draw()
         ImGui::EndMenuBar();
     }
 
-    // Draw GO picker popup — must stay inside the ##AppHeader window scope
     if (const DClass* picked = m_goPickerPopup.Draw(c))
     {
         if (g_editor && g_editor->GetEngine())

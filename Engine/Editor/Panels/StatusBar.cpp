@@ -28,7 +28,6 @@ void StatusBar::Draw()
     ImGui::PopStyleColor();
     ImGui::PopStyleVar(3);
 
-    // 1px top separator
     ImDrawList* drawList = ImGui::GetWindowDrawList();
     ImVec2 winPos = ImGui::GetWindowPos();
     drawList->AddLine(
@@ -39,18 +38,14 @@ void StatusBar::Draw()
     ImGui::SetCursorPosY((EditorTheme::StH() - fs) * 0.5f);
     ImGui::SetCursorPosX(pad);
 
-    // Left items
     ImGui::PushStyleColor(ImGuiCol_Text, c.TDim);
 
-    // Green status dot
     ImVec2 dotPos = ImGui::GetCursorScreenPos();
     drawList->AddCircleFilled(ImVec2(dotPos.x + fs * 0.2f, dotPos.y + ImGui::GetTextLineHeight() * 0.5f),
         fs * 0.2f, ImGui::ColorConvertFloat4ToU32(c.Ok));
-    ImGui::Dummy(ImVec2(fs * 0.4f, 0.f)); // Reserve space for the dot
-    //ImGui::SetCursorPosX(ImGui::GetCursorPosX() + pad);
+    ImGui::Dummy(ImVec2(fs * 0.4f, 0.f));
     ImGui::SameLine(0, pad * 0.5f);
 
-    // "Ready" (bold)
     ImGui::PopStyleColor();
     if (theme->GetBoldFont())
         ImGui::PushFont(theme->GetBoldFont());
@@ -60,7 +55,6 @@ void StatusBar::Draw()
     if (theme->GetBoldFont())
         ImGui::PopFont();
 
-    // Vertical divider
     ImGui::SameLine(0, pad);
     ImVec2 divPos = ImGui::GetCursorScreenPos();
     float divY = divPos.y + ImGui::GetTextLineHeight() * 0.5f;
@@ -69,7 +63,6 @@ void StatusBar::Draw()
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 1.f + pad * 0.5f);
     ImGui::SameLine(0, pad * 0.5f);
 
-    // Scene
     ImGui::PushStyleColor(ImGuiCol_Text, c.TDim);
     ImGui::Text("Scene");
     ImGui::PopStyleColor();
@@ -99,19 +92,14 @@ void StatusBar::Draw()
         ImGui::PopStyleColor();
     }
 
-    // Right items — right-aligned
-    // Measure right group width precisely
     char rBuf[256];
     snprintf(rBuf, sizeof(rBuf), "Renderer %s  Build %s  %s",
         rendererName.c_str(), buildConfig.c_str(), engineVersion.c_str());
     const float rightW = ImGui::CalcTextSize(rBuf).x
-        + pad * 4.f; // account for SameLine gaps between items
+        + pad * 4.f;
 
     ImGui::SetCursorPosX(io.DisplaySize.x - rightW - pad);
     ImGui::SetCursorPosY((EditorTheme::StH() - fs) * 0.5f);
-    //float rightW = fs * 17.f;
-    //ImGui::SetCursorPosX(io.DisplaySize.x - rightW - pad);
-    //ImGui::SetCursorPosY((EditorTheme::StH() - fs) * 0.5f);
 
     ImGui::PushStyleColor(ImGuiCol_Text, c.TDim);
     ImGui::Text("Renderer");
