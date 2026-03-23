@@ -20,6 +20,7 @@
 #include "Runtime/Core/GameObject.h"
 
 #include <SDL3/SDL.h>
+#include <spdlog/spdlog.h>
 
 namespace
 {
@@ -51,6 +52,7 @@ DWorld* EngineMain::GetWorld() const
 
 void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer)
 {
+    spdlog::info("Initializing EngineMain with scene renderer {}.", static_cast<void*>(sceneRenderer.get()));
     dxRenderManager = std::move(sceneRenderer);
 }
 
