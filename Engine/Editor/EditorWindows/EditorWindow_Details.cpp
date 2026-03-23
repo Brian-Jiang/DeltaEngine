@@ -1,6 +1,7 @@
 #include "Editor/EditorWindows/EditorWindow_Details.h"
 
 #include "Editor/Assets/EditorAssetDatabase.h"
+#include "Editor/EditorCore.h"
 #include "Editor/EditorMain.h"
 #include "Editor/EditorSelectionState.h"
 #include "Editor/Style/EditorTheme.h"
@@ -90,14 +91,14 @@ void EditorWindow_Details::Render()
         return;
     }
 
-    if (!g_editor || !g_editor->GetSelectionState())
+    if (!g_editorCore || !g_editorCore->GetSelectionState())
     {
         ImGui::TextDisabled("No editor");
         ImGui::End();
         return;
     }
 
-    EditorSelectionState* selectionState = g_editor->GetSelectionState();
+    EditorSelectionState* selectionState = g_editorCore->GetSelectionState();
     const AssetId selectedAssetId = selectionState->GetSelectedAssetId();
     const auto& gameObjects = selectionState->GetSelectedGameObjects();
     const auto& components = selectionState->GetSelectedComponents();
@@ -139,7 +140,7 @@ void EditorWindow_Details::RenderAssetDetails(const AssetId& assetId)
         return;
     }
 
-    EditorAssetDatabase* assetDatabase = g_editor->GetAssetDatabase();
+    EditorAssetDatabase* assetDatabase = g_editorCore->GetAssetDatabase();
     if (!assetDatabase)
     {
         ImGui::TextDisabled("No asset database");

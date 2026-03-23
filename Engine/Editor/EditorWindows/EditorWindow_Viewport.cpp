@@ -7,6 +7,7 @@
 #include "Runtime/EngineMain.h"
 #include "Runtime/Core/Camera.h"
 #include "Runtime/Core/Time.h"
+#include "Editor/EditorCore.h"
 #include "Editor/EditorMain.h"
 #include "SimpleMath.h"
 
@@ -38,7 +39,7 @@ void EditorWindow_Viewport::UpdateSceneRenderSize(int renderW, int renderH)
 
 void EditorWindow_Viewport::UpdateViewportFlyMode(bool viewportImageHovered)
 {
-    EngineMain* engine = g_editor->GetEngine();
+    EngineMain* engine = g_editorCore->GetEngine();
     if (!engine)
         return;
 

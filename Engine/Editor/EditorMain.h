@@ -14,10 +14,9 @@ struct SDL_Window;
 
 DELTA_ENGINE_NS_BEGIN
 
+class EditorCore;
 class EditorMain;
-class EditorAssetDatabase;
 class EditorRenderManager;
-class EditorSelectionState;
 class EditorTheme;
 class EngineMain;
 
@@ -70,24 +69,19 @@ public:
     DELTAEDITOR_API void SetSceneRenderSize(UINT width, UINT height);
     /// Returns the current scene render target size.
     DELTAEDITOR_API void GetSceneRenderSize(UINT& width, UINT& height) const;
-    /// Returns the shared editor selection state.
-    DELTAEDITOR_API EditorSelectionState* GetSelectionState() { return m_selectionState.get(); }
     /// Returns the active editor theme.
     DELTAEDITOR_API EditorTheme* GetEditorTheme() { return m_editorTheme.get(); }
-    /// Returns the editor asset database.
-    DELTAEDITOR_API EditorAssetDatabase* GetAssetDatabase() { return m_assetDatabase.get(); }
 
 private:
     void ProcessEvents();
     void Shutdown();
 
+    std::unique_ptr<EditorCore> m_editorCore;
     std::unique_ptr<EditorRenderManager> m_renderManager;
     std::unique_ptr<EngineMain> m_engine;
-    std::unique_ptr<EditorSelectionState> m_selectionState;
     std::shared_ptr<SDL_Window> m_window;
     std::vector<std::shared_ptr<EditorWindow>> m_editorWindows;
     std::unique_ptr<EditorTheme> m_editorTheme;
-    std::unique_ptr<EditorAssetDatabase> m_assetDatabase;
     bool m_sdlInitialized = false;
     bool m_imguiContextCreated = false;
     bool m_imguiSdlInitialized = false;

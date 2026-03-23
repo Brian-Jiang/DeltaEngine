@@ -1,22 +1,17 @@
 #include "EditorMain.h"
 
-#include "Editor/Assets/EditorAssetDatabase.h"
+#include "Editor/EditorCore.h"
 #include "Editor/EditorRenderManager.h"
-#include "Editor/EditorSelectionState.h"
 #include "Editor/EditorWindows/EditorWindow_AssetBrowser.h"
 #include "Editor/EditorWindows/EditorWindow_ComponentsHierarchy.h"
 #include "Editor/EditorWindows/EditorWindow_Details.h"
 #include "Editor/EditorWindows/EditorWindow_Viewport.h"
 #include "Editor/EditorWindows/EditorWindow_WorldOutliner.h"
 #include "Editor/Style/EditorTheme.h"
-#include "Runtime/Assets/AssetDatabaseLocator.h"
-#include "Runtime/Assets/PA_DScene.h"
 #include "Runtime/EngineMain.h"
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/DirectX/SwapChain.h"
 #include "Runtime/Graphics/DirectX/CommandQueue.h"
-#include "Runtime/IO/IOManager.h"
-
 #include <backends/imgui_impl_dx12.h>
 #include <backends/imgui_impl_sdl3.h>
 #include <imgui.h>
@@ -82,32 +77,12 @@ EditorMain::EditorMain()
     m_renderManager = std::make_unique<EditorRenderManager>(hwnd, DEFAULT_WIDTH, DEFAULT_HEIGHT);
     m_renderManager->ToggleVSync(false);
 
-    m_assetDatabase = std::make_unique<EditorAssetDatabase>();
-    AssetDatabaseLocator::Register(m_assetDatabase.get());
-    m_assetDatabase->ScanAssetsFolder(IOManager::GetEngineImportedAssetsFolder());
-
     m_engine = std::make_unique<EngineMain>();
     m_engine->CreateWorld();
     m_engine->Initialize(m_renderManager->GetSceneRenderer());
 
-    // CreateAssets();
-
-    PA_DScene* sceneAsset = m_assetDatabase->LoadAsset<PA_DScene>(m_assetDatabase->FindAssetIdByPath(IOManager::GetEngineImportedAssetFullPath("DefaultScene")));
-    if (!sceneAsset)
-    {
-        std::printf("Failed to load DefaultScene.\n");
-        m_exitCode = 1;
-        m_running = false;
-        return;
-    }
-
-    m_engine->LoadScene(sceneAsset->GetAssetId());
-
-    // m_engine->CreateGameObjects();
-
-    // m_assetDatabase->SaveDirtyAssets();
-
-    m_selectionState = std::make_unique<EditorSelectionState>();
+    m_editorCore = std::make_unique<EditorCore>();
+    m_editorCore->Initialize(*m_engine);
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -238,94 +213,6 @@ void EditorMain::GetSceneRenderSize(UINT& width, UINT& height) const
     m_renderManager->GetSceneRenderSize(width, height);
 }
 
-//void EditorMain::CreateAssets()
-//{
-//    // Default scene
-//    const std::filesystem::path scenePath = IOManager::GetEngineImportedAssetFullPath("DefaultScene");
-//
-//    PA_DScene* sceneAsset = PA_DScene::Create("DefaultScene");
-//    m_assetDatabase->CreateAsset(scenePath, sceneAsset);
-//    AssetId sceneId = sceneAsset->GetAssetId();
-//
-//    // Default shader
-//    DShader* shader = CreateDObject<DShader>();
-//    {
-//        shader->Initialize(
-//            L"Shaders.hlsl",
-//            L"VSMain", L"PSMain",
-//            L"vs_6_0", L"ps_6_0");
-//
-//        shader->SetInputLayout({
-//            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-//            { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-//            { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-//            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-//        });
-//
-//        m_assetDatabase->CreateAsset(
-//            IOManager::GetEngineImportedAssetFullPath("DefaultShader"),
-//            PA_Shader::Create(shader));
-//    }
-//
-//    // Star mesh and material
-//    {
-//        DMesh* mesh = CreateDObject<DMesh>();
-//        mesh->Initialize(std::wstring(L"Star.obj"));
-//        std::vector<DTexture*> textures = mesh->GetTextures();
-//        std::vector<DMaterial*> materials;
-//        for (int i = 0; i < mesh->GetSubMeshCount(); i++) {
-//            DMaterial* material = CreateDObject<DMaterial>();
-//            material->Initialize(shader);
-//            if (i < textures.size()) {
-//                m_assetDatabase->CreateAsset(
-//                    IOManager::GetEngineImportedAssetFullPath("StarTexture_" + std::to_string(i)),
-//                    PA_Texture::Create(textures[i]));
-//                material->AddTexture(textures[i]);
-//            }
-//            materials.push_back(material);
-//
-//            m_assetDatabase->CreateAsset(
-//                IOManager::GetEngineImportedAssetFullPath("StarMaterial_" + std::to_string(i)),
-//                PA_Material::Create(material));
-//        }
-//
-//        mesh->SetMaterials(materials);
-//
-//        m_assetDatabase->CreateAsset(
-//            IOManager::GetEngineImportedAssetFullPath("StarMesh"),
-//            PA_StaticMesh::Create(mesh));
-//    }
-//
-//    // Home mesh and material
-//    {
-//        DMesh* mesh = CreateDObject<DMesh>();
-//        mesh->Initialize(std::wstring(L"home/source/home.fbx"));
-//        std::vector<DTexture*> textures = mesh->GetTextures();
-//        std::vector<DMaterial*> materials;
-//        for (int i = 0; i < mesh->GetSubMeshCount(); i++) {
-//            DMaterial* material = CreateDObject<DMaterial>();
-//            material->Initialize(shader);
-//            if (i < textures.size()) {
-//                m_assetDatabase->CreateAsset(
-//                    IOManager::GetEngineImportedAssetFullPath("HomeTexture_" + std::to_string(i)),
-//                    PA_Texture::Create(textures[i]));
-//                material->AddTexture(textures[i]);
-//            }
-//            materials.push_back(material);
-//
-//            m_assetDatabase->CreateAsset(
-//                IOManager::GetEngineImportedAssetFullPath("HomeMaterial_" + std::to_string(i)),
-//                PA_Material::Create(material));
-//        }
-//
-//        mesh->SetMaterials(materials);
-//
-//        m_assetDatabase->CreateAsset(
-//            IOManager::GetEngineImportedAssetFullPath("HomeMesh"),
-//            PA_StaticMesh::Create(mesh));
-//    }
-//}
-
 void EditorMain::ProcessEvents()
 {
     SDL_Event event;
@@ -390,10 +277,9 @@ void EditorMain::Shutdown()
         m_imguiContextCreated = false;
     }
 
-    m_selectionState.reset();
     m_editorWindows.clear();
     m_editorTheme.reset();
-    m_assetDatabase.reset();
+    m_editorCore.reset();
     m_renderManager.reset();
     m_engine.reset();
     m_window.reset();

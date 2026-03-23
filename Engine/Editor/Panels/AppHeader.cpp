@@ -1,5 +1,6 @@
 #include "Panels/AppHeader.h"
 
+#include "EditorCore.h"
 #include "EditorMain.h"
 #include "Assets/EditorAssetDatabase.h"
 #include "Style/EditorTheme.h"
@@ -77,9 +78,9 @@ void AppHeader::Draw()
         {
             if (ImGui::MenuItem("Save"))
             {
-                if (g_editor)
+                if (g_editorCore)
                 {
-                    if (EditorAssetDatabase* assetDatabase = g_editor->GetAssetDatabase())
+                    if (EditorAssetDatabase* assetDatabase = g_editorCore->GetAssetDatabase())
                         assetDatabase->SaveDirtyAssets();
                 }
             }
@@ -141,9 +142,9 @@ void AppHeader::Draw()
 
     if (const DClass* picked = m_goPickerPopup.Draw(c))
     {
-        if (g_editor && g_editor->GetEngine())
+        if (g_editorCore && g_editorCore->GetEngine())
         {
-            if (auto* world = g_editor->GetEngine()->GetWorld())
+            if (auto* world = g_editorCore->GetWorld())
                 world->CreateGameObjectByClass(picked);
         }
     }

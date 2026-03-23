@@ -29,6 +29,13 @@ void AssetDatabaseLocator::Register(IAssetDatabase* db)
     s_instance = db;
 }
 
+void AssetDatabaseLocator::Unregister()
+{
+    if (s_instance == nullptr)
+        FailFast("AssetDatabaseLocator::Unregister() called without a registered instance.");
+    s_instance = nullptr;
+}
+
 IAssetDatabase& AssetDatabaseLocator::Get()
 {
     if (s_instance == nullptr)

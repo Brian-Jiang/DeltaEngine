@@ -10,6 +10,9 @@ public:
     /// Registers the process-wide asset database instance.
     static void Register(IAssetDatabase* db);
 
+    /// Unregisters the process-wide asset database instance.
+    static void Unregister();
+
     /// Returns the registered asset database instance.
     static IAssetDatabase& Get();
 

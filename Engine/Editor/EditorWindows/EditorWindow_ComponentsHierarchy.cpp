@@ -1,5 +1,6 @@
 #include "Editor/EditorWindows/EditorWindow_ComponentsHierarchy.h"
 
+#include "Editor/EditorCore.h"
 #include "Editor/EditorMain.h"
 #include "Editor/EditorSelectionState.h"
 #include "Editor/Style/EditorTheme.h"
@@ -33,7 +34,7 @@ void EditorWindow_ComponentsHierarchy::Render()
         return;
     }
 
-    if (!g_editor || !g_editor->GetSelectionState())
+    if (!g_editorCore || !g_editorCore->GetSelectionState())
     {
         ImGui::TextDisabled("No editor");
         ImGui::End();
@@ -43,7 +44,7 @@ void EditorWindow_ComponentsHierarchy::Render()
     EditorTheme* theme = g_editor->GetEditorTheme();
     const EditorTheme::ThemeColors& c = theme ? theme->colors : EditorTheme::ThemeColors{};
 
-    auto selectionState    = g_editor->GetSelectionState();
+    auto selectionState    = g_editorCore->GetSelectionState();
     auto contextGameObject = selectionState->GetContextGameObject();
 
     if (!contextGameObject)
@@ -140,7 +141,7 @@ void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(SceneComponent* 
     bool hasChildren = !children.empty();
     ImGuiTreeNodeFlags flags = hasChildren ? ImGuiTreeNodeFlags_None : ImGuiTreeNodeFlags_Leaf;
 
-    auto selectionState = g_editor->GetSelectionState();
+    auto selectionState = g_editorCore->GetSelectionState();
     bool isSelected = false;
     for (const auto& comp : selectionState->GetSelectedComponents())
     {
@@ -178,7 +179,7 @@ void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(SceneComponent* 
             if (owner)
             {
                 owner->RemoveComponent(sceneComponent);
-                if (auto* sel = g_editor->GetSelectionState())
+                if (auto* sel = g_editorCore->GetSelectionState())
                     sel->ClearSelection();
             }
         }}});
@@ -200,7 +201,7 @@ void EditorWindow_ComponentsHierarchy::RenderRegularComponents(const std::vector
     EditorTheme* theme = g_editor ? g_editor->GetEditorTheme() : nullptr;
     const EditorTheme::ThemeColors& c = theme ? theme->colors : EditorTheme::ThemeColors{};
 
-    auto selectionState = g_editor->GetSelectionState();
+    auto selectionState = g_editorCore->GetSelectionState();
 
     for (const auto& component : components)
     {
@@ -245,7 +246,7 @@ void EditorWindow_ComponentsHierarchy::RenderRegularComponents(const std::vector
                 if (owner)
                 {
                     owner->RemoveComponent(component);
-                    if (auto* sel = g_editor->GetSelectionState())
+                    if (auto* sel = g_editorCore->GetSelectionState())
                         sel->ClearSelection();
                 }
             }}});

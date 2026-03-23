@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstring>
 
+#include "Editor/EditorCore.h"
 #include "Editor/EditorMain.h"
 #include "Editor/EditorSelectionState.h"
 #include "Editor/Style/EditorTheme.h"
@@ -65,14 +66,14 @@ void EditorWindow_WorldOutliner::Render()
         return;
     }
 
-    if (!g_editor || !g_editor->GetEngine())
+    if (!g_editorCore || !g_editorCore->GetEngine())
     {
         ImGui::TextDisabled("No engine");
         ImGui::End();
         return;
     }
 
-    auto world = g_editor->GetEngine()->GetWorld();
+    auto world = g_editorCore->GetWorld();
     if (!world)
     {
         ImGui::TextDisabled("No world");
@@ -103,7 +104,7 @@ void EditorWindow_WorldOutliner::Render()
     }
 
     m_selectedIndex = -1;
-    if (auto* sel = g_editor->GetSelectionState())
+    if (auto* sel = g_editorCore->GetSelectionState())
     {
         const auto& selected = sel->GetSelectedGameObjects();
         for (int i = 0; i < static_cast<int>(gameObjects.size()); ++i)
@@ -211,7 +212,7 @@ void EditorWindow_WorldOutliner::Render()
                 ImGuiSelectableFlags_SpanAllColumns, ImVec2(0.f, EditorTheme::RowH())))
         {
             m_selectedIndex = entry->index;
-            if (auto* sel = g_editor->GetSelectionState())
+            if (auto* sel = g_editorCore->GetSelectionState())
                 sel->SelectGameObject(entry->go);
         }
         ImGui::PopStyleColor(3);
@@ -222,7 +223,7 @@ void EditorWindow_WorldOutliner::Render()
                 if (entry->go && world)
                 {
                     world->DestroyGameObject(entry->go);
-                    if (auto* sel = g_editor->GetSelectionState())
+                    if (auto* sel = g_editorCore->GetSelectionState())
                         sel->ClearSelection();
                 }
             }}});

@@ -1,6 +1,7 @@
 #include "Editor/EditorWindows/EditorWindow_AssetBrowser.h"
 
 #include "Editor/Assets/EditorAssetDatabase.h"
+#include "Editor/EditorCore.h"
 #include "Editor/EditorMain.h"
 #include "Editor/EditorSelectionState.h"
 #include "Runtime/IO/IOManager.h"
@@ -28,14 +29,14 @@ void EditorWindow_AssetBrowser::Render()
         return;
     }
 
-    if (!g_editor)
+    if (!g_editorCore)
     {
         ImGui::TextDisabled("No editor");
         ImGui::End();
         return;
     }
 
-    EditorAssetDatabase* assetDatabase = g_editor->GetAssetDatabase();
+    EditorAssetDatabase* assetDatabase = g_editorCore->GetAssetDatabase();
     if (!assetDatabase)
     {
         ImGui::TextDisabled("No asset database");
@@ -113,15 +114,15 @@ void EditorWindow_AssetBrowser::RenderFolderNode(const FolderNode& node,
 
 void EditorWindow_AssetBrowser::RenderAssetLeaf(const AssetId& assetId, EditorAssetDatabase* assetDatabase)
 {
-    if (!assetDatabase || !g_editor)
+    if (!assetDatabase || !g_editorCore)
         return;
 
     const std::filesystem::path assetPath = assetDatabase->GetAssetPath(assetId);
     if (assetPath.empty())
         return;
 
-    const bool isSelected = g_editor->GetSelectionState() &&
-        g_editor->GetSelectionState()->GetSelectedAssetId() == assetId;
+    const bool isSelected = g_editorCore->GetSelectionState() &&
+        g_editorCore->GetSelectionState()->GetSelectedAssetId() == assetId;
 
     ImGui::PushID(assetPath.generic_string().c_str());
     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen |
@@ -133,7 +134,7 @@ void EditorWindow_AssetBrowser::RenderAssetLeaf(const AssetId& assetId, EditorAs
     if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
     {
         if (assetDatabase->LoadAsset(assetId))
-            g_editor->GetSelectionState()->SelectAsset(assetId);
+            g_editorCore->GetSelectionState()->SelectAsset(assetId);
     }
 
     if (ImGui::BeginPopupContextItem())
@@ -143,14 +144,14 @@ void EditorWindow_AssetBrowser::RenderAssetLeaf(const AssetId& assetId, EditorAs
                 {
                     const AssetId duplicatedId = assetDatabase->DuplicateAsset(assetId);
                     if (!duplicatedId.IsNull() && assetDatabase->LoadAsset(duplicatedId))
-                        g_editor->GetSelectionState()->SelectAsset(duplicatedId);
+                        g_editorCore->GetSelectionState()->SelectAsset(duplicatedId);
                 } },
             { "Delete", [&]()
                 {
-                    const bool wasSelected = g_editor->GetSelectionState()->GetSelectedAssetId() == assetId;
+                    const bool wasSelected = g_editorCore->GetSelectionState()->GetSelectedAssetId() == assetId;
                     assetDatabase->DeleteAsset(assetId);
                     if (wasSelected)
-                        g_editor->GetSelectionState()->ClearSelection();
+                        g_editorCore->GetSelectionState()->ClearSelection();
                 } },
         });
         m_assetContextMenu.Draw(g_editor->GetEditorTheme()->colors);
