@@ -45,7 +45,7 @@ void EditorWindow_ComponentsHierarchy::Render()
     const EditorTheme::ThemeColors& c = theme ? theme->colors : EditorTheme::ThemeColors{};
 
     auto selectionState    = g_editorCore->GetSelectionState();
-    auto contextGameObject = selectionState->GetContextGameObject();
+    auto contextGameObject = selectionState->GetContextGameObject(*g_editorCore);
 
     if (!contextGameObject)
     {
@@ -142,15 +142,11 @@ void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(SceneComponent* 
     ImGuiTreeNodeFlags flags = hasChildren ? ImGuiTreeNodeFlags_None : ImGuiTreeNodeFlags_Leaf;
 
     auto selectionState = g_editorCore->GetSelectionState();
-    bool isSelected = false;
-    for (const auto& comp : selectionState->GetSelectedComponents())
-    {
-        if (comp == sceneComponent)
-        {
-            isSelected = true;
-            break;
-        }
-    }
+    const AssetId sa  = selectionState->GetSelectedAssetId();
+    const ObjectId so = selectionState->GetSelectedObjectId();
+    auto [ca, co]     = g_editorCore->GetIdsForObject(sceneComponent);
+    const bool isSelected =
+        !sa.IsNull() && !so.IsNull() && ca == sa && co == so;
     if (isSelected)
         flags |= ImGuiTreeNodeFlags_Selected | ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_OpenOnArrow;
 
@@ -170,7 +166,11 @@ void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(SceneComponent* 
     bool open = ImGui::TreeNodeEx(label, flags);
 
     if (ImGui::IsItemClicked())
-        selectionState->SelectComponent(sceneComponent);
+    {
+        auto [a, o] = g_editorCore->GetIdsForObject(sceneComponent);
+        if (!a.IsNull() && !o.IsNull())
+            selectionState->SetSelection(a, o);
+    }
 
     if (ImGui::BeginPopupContextItem())
     {
@@ -178,7 +178,10 @@ void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(SceneComponent* 
             GameObject* owner = sceneComponent->GetGameObject();
             if (owner)
             {
+                const ObjectId oid = sceneComponent->GetObjectId();
                 owner->RemoveComponent(sceneComponent);
+                if (g_editorCore)
+                    g_editorCore->NotifyObjectDestroyed(oid);
                 if (auto* sel = g_editorCore->GetSelectionState())
                     sel->ClearSelection();
             }
@@ -209,15 +212,11 @@ void EditorWindow_ComponentsHierarchy::RenderRegularComponents(const std::vector
             continue;
 
         ImGui::PushID(static_cast<void*>(component));
-        bool isSelected = false;
-        for (const auto& comp : selectionState->GetSelectedComponents())
-        {
-            if (comp == component)
-            {
-                isSelected = true;
-                break;
-            }
-        }
+        const AssetId sa  = selectionState->GetSelectedAssetId();
+        const ObjectId so = selectionState->GetSelectedObjectId();
+        auto [ca, co]     = g_editorCore->GetIdsForObject(component);
+        const bool isSelected =
+            !sa.IsNull() && !so.IsNull() && ca == sa && co == so;
 
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf;
         if (isSelected)
@@ -237,7 +236,11 @@ void EditorWindow_ComponentsHierarchy::RenderRegularComponents(const std::vector
         bool open = ImGui::TreeNodeEx(component->GetName().c_str(), flags);
 
         if (ImGui::IsItemClicked())
-            selectionState->SelectComponent(component);
+        {
+            auto [a, o] = g_editorCore->GetIdsForObject(component);
+            if (!a.IsNull() && !o.IsNull())
+                selectionState->SetSelection(a, o);
+        }
 
         if (ImGui::BeginPopupContextItem())
         {
@@ -245,7 +248,10 @@ void EditorWindow_ComponentsHierarchy::RenderRegularComponents(const std::vector
                 GameObject* owner = component->GetGameObject();
                 if (owner)
                 {
+                    const ObjectId oid = component->GetObjectId();
                     owner->RemoveComponent(component);
+                    if (g_editorCore)
+                        g_editorCore->NotifyObjectDestroyed(oid);
                     if (auto* sel = g_editorCore->GetSelectionState())
                         sel->ClearSelection();
                 }

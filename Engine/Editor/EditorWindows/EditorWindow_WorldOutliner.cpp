@@ -104,21 +104,24 @@ void EditorWindow_WorldOutliner::Render()
     }
 
     m_selectedIndex = -1;
-    if (auto* sel = g_editorCore->GetSelectionState())
+    if (EditorSelectionState* sel = g_editorCore->GetSelectionState())
     {
-        const auto& selected = sel->GetSelectedGameObjects();
-        for (int i = 0; i < static_cast<int>(gameObjects.size()); ++i)
+        const AssetId sa  = sel->GetSelectedAssetId();
+        const ObjectId so = sel->GetSelectedObjectId();
+        if (!sa.IsNull() && !so.IsNull())
         {
-            for (auto* sgo : selected)
+            for (int i = 0; i < static_cast<int>(gameObjects.size()); ++i)
             {
-                if (sgo == gameObjects[i])
+                GameObject* go = gameObjects[i];
+                if (!go)
+                    continue;
+                auto [a, o] = g_editorCore->GetIdsForObject(go);
+                if (a == sa && o == so)
                 {
                     m_selectedIndex = i;
                     break;
                 }
             }
-            if (m_selectedIndex >= 0)
-                break;
         }
     }
 
@@ -212,8 +215,15 @@ void EditorWindow_WorldOutliner::Render()
                 ImGuiSelectableFlags_SpanAllColumns, ImVec2(0.f, EditorTheme::RowH())))
         {
             m_selectedIndex = entry->index;
-            if (auto* sel = g_editorCore->GetSelectionState())
-                sel->SelectGameObject(entry->go);
+            if (entry->go)
+            {
+                if (EditorSelectionState* sel = g_editorCore->GetSelectionState())
+                {
+                    auto [a, o] = g_editorCore->GetIdsForObject(entry->go);
+                    if (!a.IsNull() && !o.IsNull())
+                        sel->SetSelection(a, o);
+                }
+            }
         }
         ImGui::PopStyleColor(3);
 
@@ -222,7 +232,10 @@ void EditorWindow_WorldOutliner::Render()
             m_destroyGoMenu.Open({{"Destroy", [&]() {
                 if (entry->go && world)
                 {
+                    const ObjectId oid = entry->go->GetObjectId();
                     world->DestroyGameObject(entry->go);
+                    if (g_editorCore)
+                        g_editorCore->NotifyObjectDestroyed(oid);
                     if (auto* sel = g_editorCore->GetSelectionState())
                         sel->ClearSelection();
                 }

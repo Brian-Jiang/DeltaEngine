@@ -3,7 +3,9 @@
 #include "Editor/Assets/EditorAssetDatabase.h"
 #include "Editor/EditorSelectionState.h"
 #include "Runtime/Assets/AssetDatabaseLocator.h"
+#include "Runtime/Assets/DPrimaryAsset.h"
 #include "Runtime/Assets/PA_DScene.h"
+#include "Runtime/Core/DObject.h"
 #include "Runtime/EngineMain.h"
 #include "Runtime/IO/IOManager.h"
 
@@ -68,6 +70,45 @@ void EditorCore::LoadScene(const std::filesystem::path& scenePath)
     PA_DScene* sceneAsset = m_assetDatabase->LoadAsset<PA_DScene>(id);
     if (sceneAsset)
         m_engine->LoadScene(sceneAsset->GetAssetId());
+}
+
+DObject* EditorCore::FindObject(const AssetId& assetId, const ObjectId& objectId)
+{
+    if (!m_assetDatabase || assetId.IsNull() || objectId.IsNull())
+        return nullptr;
+
+    if (DObject* found = m_assetDatabase->FindObject(assetId, objectId))
+        return found;
+
+    m_assetDatabase->LoadAsset(assetId);
+    return m_assetDatabase->FindObject(assetId, objectId);
+}
+
+std::pair<AssetId, ObjectId> EditorCore::GetIdsForObject(DObject* obj)
+{
+    if (!obj || !m_assetDatabase)
+        return {AssetId::Null(), ObjectId::Null()};
+
+    for (const auto& [id, entry] : m_assetDatabase->GetAllAssets())
+    {
+        DPrimaryAsset* asset = entry.m_instance;
+        if (!asset)
+            continue;
+
+        for (DObject* o : asset->GetObjects())
+        {
+            if (o == obj)
+                return {asset->GetAssetId(), obj->GetObjectId()};
+        }
+    }
+
+    return {AssetId::Null(), ObjectId::Null()};
+}
+
+void EditorCore::NotifyObjectDestroyed(const ObjectId& objectId)
+{
+    if (m_selectionState)
+        m_selectionState->NotifyObjectDestroyed(objectId);
 }
 
 // void EditorMain::CreateAssets()

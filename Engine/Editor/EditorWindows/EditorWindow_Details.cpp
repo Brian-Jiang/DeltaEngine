@@ -7,6 +7,7 @@
 #include "Editor/Style/EditorTheme.h"
 #include "Editor/UIComponents/PropertyWidgets/PropertyWidgetUtil.h"
 #include "Runtime/Assets/DPrimaryAsset.h"
+#include "Runtime/Core/DObject.h"
 #include "Runtime/Core/DComponent.h"
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Core/SceneComponent.h"
@@ -99,35 +100,33 @@ void EditorWindow_Details::Render()
     }
 
     EditorSelectionState* selectionState = g_editorCore->GetSelectionState();
-    const AssetId selectedAssetId = selectionState->GetSelectedAssetId();
-    const auto& gameObjects = selectionState->GetSelectedGameObjects();
-    const auto& components = selectionState->GetSelectedComponents();
 
-    if (!selectedAssetId.IsNull())
-    {
-        RenderAssetDetails(selectedAssetId);
-        ImGui::End();
-        return;
-    }
-
-    if (gameObjects.empty() && components.empty())
+    if (!selectionState->HasSelection())
     {
         ImGui::TextDisabled("Select a GameObject, component, or asset");
         ImGui::End();
         return;
     }
 
-    for (GameObject* gameObject : gameObjects)
+    if (selectionState->HasAssetSelection())
     {
-        if (gameObject)
-            RenderGameObjectDetails(gameObject);
+        RenderAssetDetails(selectionState->GetSelectedAssetId());
+        ImGui::End();
+        return;
     }
 
-    for (DComponent* component : components)
+    DObject* selected = selectionState->ResolveSelection(*g_editorCore);
+    if (!selected)
     {
-        if (component)
-            RenderComponentDetails(component);
+        ImGui::TextDisabled("Select a GameObject, component, or asset");
+        ImGui::End();
+        return;
     }
+
+    if (GameObject* gameObject = dynamic_cast<GameObject*>(selected))
+        RenderGameObjectDetails(gameObject);
+    else if (DComponent* component = dynamic_cast<DComponent*>(selected))
+        RenderComponentDetails(component);
 
     ImGui::End();
 }

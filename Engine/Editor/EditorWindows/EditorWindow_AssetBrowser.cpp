@@ -121,8 +121,9 @@ void EditorWindow_AssetBrowser::RenderAssetLeaf(const AssetId& assetId, EditorAs
     if (assetPath.empty())
         return;
 
-    const bool isSelected = g_editorCore->GetSelectionState() &&
-        g_editorCore->GetSelectionState()->GetSelectedAssetId() == assetId;
+    EditorSelectionState* sel = g_editorCore->GetSelectionState();
+    const bool isSelected     = sel && sel->GetSelectedAssetId() == assetId &&
+        sel->GetSelectedObjectId().IsNull();
 
     ImGui::PushID(assetPath.generic_string().c_str());
     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen |
