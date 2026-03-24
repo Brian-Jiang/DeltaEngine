@@ -86,6 +86,7 @@ public:
     DFUNCTION()
     DELTAENGINE_API void SetParent(SceneComponent* parent);
     void PostEditChangeProperty(const DProperty* prop) override;
+    void PostRestore() override;
 
     void OnAfterDeserialize() override;
 

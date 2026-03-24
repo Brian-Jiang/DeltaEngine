@@ -314,6 +314,12 @@ void DeltaEngine::SceneComponent::PostEditChangeProperty(const DProperty* prop)
     }
 }
 
+void SceneComponent::PostRestore()
+{
+    SyncEulerFromMatrix();
+    UpdateTransform();
+}
+
 void SceneComponent::OnAfterDeserialize()
 {
     SyncEulerFromMatrix();

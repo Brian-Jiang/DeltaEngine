@@ -10,6 +10,7 @@ set(DELTA_EDITOR_TEST_SOURCES
     Serialization/Compatibility/FallbackAndDefaultsTests.cpp
     Serialization/References/CrossAssetReferenceTests.cpp
     Serialization/BulkData/BulkDataRoundTripTests.cpp
+    Serialization/Snapshot/PartialSnapshotTests.cpp
 )
 
 add_executable(DeltaEditorTests

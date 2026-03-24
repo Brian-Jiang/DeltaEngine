@@ -23,7 +23,7 @@ public:
     DELTAENGINE_API virtual ~DComponent();
 
     /// Registers the owning game object for this component.
-    virtual void RegisterComponent(GameObject* gameObject);
+    DELTAENGINE_API virtual void RegisterComponent(GameObject* gameObject);
     /// Removes the component from its owner and asset.
     void MarkForDestroy();
 

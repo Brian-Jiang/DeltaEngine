@@ -43,6 +43,7 @@ public:
     DELTAENGINE_API void MarkDirty();
 
     virtual void PostEditChangeProperty(const DProperty* prop) { (void)prop; }
+    virtual void PostRestore() {}
 
 private:
     DHandle        m_handle;
