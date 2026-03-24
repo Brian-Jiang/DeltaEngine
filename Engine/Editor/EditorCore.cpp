@@ -6,8 +6,13 @@
 #include "Runtime/Assets/DPrimaryAsset.h"
 #include "Runtime/Assets/PA_DScene.h"
 #include "Runtime/Core/DObject.h"
+#include "Runtime/Core/DScene.h"
+#include "Runtime/Core/GameObject.h"
+#include "Runtime/Core/SceneComponent.h"
 #include "Runtime/EngineMain.h"
 #include "Runtime/IO/IOManager.h"
+#include "Reflection/DClass.h"
+#include "Reflection/ReflectionRegistry.h"
 
 #include <cstdio>
 
@@ -109,6 +114,57 @@ void EditorCore::NotifyObjectDestroyed(const ObjectId& objectId)
 {
     if (m_selectionState)
         m_selectionState->NotifyObjectDestroyed(objectId);
+}
+
+DPrimaryAsset* EditorCore::GetActiveSceneAsset()
+{
+    DWorld* world = GetWorld();
+    if (!world) return nullptr;
+    DScene* scene = world->GetActiveScene();
+    if (!scene) return nullptr;
+    return scene->GetOwningAsset();
+}
+
+ObjectId EditorCore::CreateGameObject(std::string_view name, GameObject** outPtr)
+{
+    DPrimaryAsset* asset = GetActiveSceneAsset();
+    if (!asset)
+    {
+        std::printf("[EditorCore] CreateGameObject: no active scene asset.\n");
+        return ObjectId::Null();
+    }
+    DWorld* world = GetWorld();
+    DScene* scene = world->GetActiveScene();
+    GameObject* go = world->CreateGameObjectInScene(scene, std::string(name));
+    if (!go) return ObjectId::Null();
+    if (SceneComponent* root = go->GetRootSceneComponent())
+        if (!root->HasOwningAsset())
+            asset->AddObject(root);
+    if (outPtr) *outPtr = go;
+    return go->GetObjectId();
+}
+
+ObjectId EditorCore::AddComponentToGameObject(ObjectId gameObjectId, std::string_view componentClassName)
+{
+    DPrimaryAsset* asset = GetActiveSceneAsset();
+    if (!asset)
+    {
+        std::printf("[EditorCore] AddComponentToGameObject: no active scene asset.\n");
+        return ObjectId::Null();
+    }
+    DObject* obj = asset->FindObject(gameObjectId);
+    GameObject* go = dynamic_cast<GameObject*>(obj);
+    if (!go)
+    {
+        std::printf("[EditorCore] AddComponentToGameObject: GameObject not found.\n");
+        return ObjectId::Null();
+    }
+    const DClass* dclass = GetReflectionRegistry().FindClassByName(std::string(componentClassName));
+    if (!dclass) return ObjectId::Null();
+    DComponent* comp = go->AddComponentByClass(dclass);
+    if (!comp) return ObjectId::Null();
+    asset->MarkDirty();
+    return comp->GetObjectId();
 }
 
 // void EditorMain::CreateAssets()

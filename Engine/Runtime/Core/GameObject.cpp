@@ -77,6 +77,9 @@ DComponent* GameObject::AddComponentByClass(const DClass* dclass)
     if (!comp)
         return nullptr;
 
+    if (HasOwningAsset())
+        GetOwningAsset()->AddObject(comp);
+
     comp->RegisterComponent(this);
     comp->SetName(std::format("New {}", dclass->GetName()));
     m_components.push_back(comp);

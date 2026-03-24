@@ -4,6 +4,7 @@
 #include <cctype>
 #include <cstdio>
 #include <cstring>
+#include <format>
 
 #include "Editor/EditorCore.h"
 #include "Editor/EditorMain.h"
@@ -11,7 +12,7 @@
 #include "Editor/Style/EditorTheme.h"
 #include "Runtime/EngineMain.h"
 #include "Runtime/Core/DWorld.h"
-#include "Runtime/Core/DScene.h"
+#include "Runtime/Assets/DPrimaryAsset.h"
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
 #include "Runtime/Reflection/DClass.h"
@@ -167,8 +168,11 @@ void EditorWindow_WorldOutliner::Render()
 
     if (const DClass* picked = m_addGoPicker.Draw(c))
     {
-        DScene* activeScene = world->GetActiveScene();
-        world->CreateGameObjectInScene(activeScene, picked);
+        const std::string goName = std::format("New {}", picked->GetName());
+        const ObjectId newId = g_editorCore->CreateGameObject(goName);
+        if (!newId.IsNull())
+            if (DPrimaryAsset* asset = g_editorCore->GetActiveSceneAsset())
+                g_editorCore->GetSelectionState()->SetSelection(asset->GetAssetId(), newId);
     }
 
     ImGui::PushStyleColor(ImGuiCol_FrameBg,        c.DInput);

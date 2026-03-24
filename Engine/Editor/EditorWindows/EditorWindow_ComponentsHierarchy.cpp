@@ -4,6 +4,7 @@
 #include "Editor/EditorMain.h"
 #include "Editor/EditorSelectionState.h"
 #include "Editor/Style/EditorTheme.h"
+#include "Runtime/Assets/DPrimaryAsset.h"
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Core/SceneComponent.h"
 #include "Runtime/Core/DComponent.h"
@@ -122,7 +123,11 @@ void EditorWindow_ComponentsHierarchy::Render()
 
     if (const DClass* picked = m_addCompPicker.Draw(c))
     {
-        contextGameObject->AddComponentByClass(picked);
+        const ObjectId newId = g_editorCore->AddComponentToGameObject(
+            contextGameObject->GetObjectId(), picked->GetName());
+        if (!newId.IsNull())
+            if (DPrimaryAsset* asset = g_editorCore->GetActiveSceneAsset())
+                g_editorCore->GetSelectionState()->SetSelection(asset->GetAssetId(), newId);
     }
 
     ImGui::End();

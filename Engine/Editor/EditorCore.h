@@ -10,11 +10,14 @@
 
 DELTA_ENGINE_NS_BEGIN
 
+class DComponent;
 class DObject;
+class DPrimaryAsset;
 class EditorAssetDatabase;
 class EditorSelectionState;
 class EngineMain;
 class DWorld;
+class GameObject;
 
 class EditorCore;
 extern EditorCore* g_editorCore;
@@ -32,8 +35,12 @@ public:
     DELTAEDITOR_API EditorSelectionState* GetSelectionState() { return m_selectionState.get(); }
     DELTAEDITOR_API EngineMain* GetEngine() { return m_engine; }
     DELTAEDITOR_API DWorld* GetWorld();
+    DELTAEDITOR_API DPrimaryAsset* GetActiveSceneAsset();
 
     DELTAEDITOR_API void LoadScene(const std::filesystem::path& scenePath);
+
+    DELTAEDITOR_API ObjectId CreateGameObject(std::string_view name, GameObject** outPtr = nullptr);
+    DELTAEDITOR_API ObjectId AddComponentToGameObject(ObjectId gameObjectId, std::string_view componentClassName);
 
     DELTAEDITOR_API DObject* FindObject(const AssetId& assetId, const ObjectId& objectId);
     DELTAEDITOR_API std::pair<AssetId, ObjectId> GetIdsForObject(DObject* obj);

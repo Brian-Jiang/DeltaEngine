@@ -34,6 +34,10 @@
         {
           "assetId": "097992b4-c850-4c69-a612-ec83528b0c30",
           "objectId": "2315bf5d-b686-48f0-8360-77d6e020d0b3"
+        },
+        {
+          "assetId": "097992b4-c850-4c69-a612-ec83528b0c30",
+          "objectId": "6c9e4502-3c02-463d-82b1-981d67808a8e"
         }
       ],
       "m_name": "DefaultScene"
@@ -356,6 +360,17 @@
         "assetId": "00000000-0000-0000-0000-000000000000",
         "objectId": "00000000-0000-0000-0000-000000000000"
       }
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "6c9e4502-3c02-463d-82b1-981d67808a8e",
+      "m_components": [],
+      "m_name": "New GameObject",
+      "m_rootSceneComponent": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "00000000-0000-0000-0000-000000000000"
+      },
+      "m_sceneComponents": []
     }
   ]
 }
