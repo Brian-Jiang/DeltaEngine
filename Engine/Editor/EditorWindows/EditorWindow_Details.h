@@ -12,6 +12,9 @@
 #include "UIComponents/PropertyWidgets/ColorField.h"
 #include "UIComponents/PropertyWidgets/StringField.h"
 #include "UIComponents/PropertyWidgets/ReferenceField.h"
+#include "UIComponents/WidgetEditEvent.h"
+
+#include <nlohmann/json.hpp>
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -43,20 +46,24 @@ private:
     void DrawReadOnlyProperty(const std::string& label, const std::string& value) const;
     void DrawVectorElements(const DVectorPropertyBase* vectorProp, void* instance, int depth);
 
-    bool DrawIntProperty(DObject* instance, DProperty* prop);
-    bool DrawFloatProperty(DObject* instance, DProperty* prop);
-    bool DrawDoubleProperty(DObject* instance, DProperty* prop);
-    bool DrawBoolProperty(DObject* instance, DProperty* prop);
-    bool DrawStringProperty(DObject* instance, DProperty* prop);
+    WidgetEditEvent DrawIntProperty(DObject* instance, DProperty* prop);
+    WidgetEditEvent DrawFloatProperty(DObject* instance, DProperty* prop);
+    WidgetEditEvent DrawDoubleProperty(DObject* instance, DProperty* prop);
+    WidgetEditEvent DrawBoolProperty(DObject* instance, DProperty* prop);
+    WidgetEditEvent DrawStringProperty(DObject* instance, DProperty* prop);
     bool DrawWStringProperty(DObject* instance, DProperty* prop);
-    bool DrawVector3Property(DObject* instance, DProperty* prop);
-    bool DrawQuaternionProperty(DObject* instance, DProperty* prop);
-    bool DrawFloat4Property(DObject* instance, DProperty* prop);
-    bool DrawFloat4x4Property(DObject* instance, DProperty* prop);
+    WidgetEditEvent DrawVector3Property(DObject* instance, DProperty* prop);
+    WidgetEditEvent DrawQuaternionProperty(DObject* instance, DProperty* prop);
+    WidgetEditEvent DrawFloat4Property(DObject* instance, DProperty* prop);
+    WidgetEditEvent DrawFloat4x4Property(DObject* instance, DProperty* prop);
     bool DrawObjectPtrProperty(DObject* instance, DProperty* prop, int depth);
     bool DrawSharedObjectPtrProperty(DObject* instance, DProperty* prop, int depth);
     bool DrawBulkDataProperty(DObject* instance, DProperty* prop);
     bool DrawVectorProperty(DObject* instance, DProperty* prop, int depth);
+
+    const DProperty* m_activeEditProp   = nullptr;
+    nlohmann::json   m_activeEditBefore = {};
+    DObject*         m_activeEditObject = nullptr;
 
     Vec3Field      m_vec3Field;
     ScalarField    m_scalarField;

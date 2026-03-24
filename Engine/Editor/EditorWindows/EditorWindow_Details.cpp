@@ -2,6 +2,9 @@
 
 #include "Editor/Assets/EditorAssetDatabase.h"
 #include "Editor/Commands/EditorCommandContext.h"
+#include "Editor/Commands/EditorCommand_SetProperty.h"
+#include "Editor/Commands/EditorCommandManager.h"
+#include "Editor/Commands/PropertyValueIO.h"
 #include "Editor/EditorCore.h"
 #include "Editor/EditorMain.h"
 #include "Editor/EditorSelectionState.h"
@@ -79,6 +82,47 @@ std::string GetPropertyDisplayName(const std::string& propName)
 std::string GetAssetDisplayName(const std::filesystem::path& path)
 {
     return path.stem().stem().string();
+}
+
+bool IsUndoablePropertyType(EPropertyType type)
+{
+    switch (type)
+    {
+    case EPropertyType::Float:
+    case EPropertyType::Int:
+    case EPropertyType::Bool:
+    case EPropertyType::Double:
+    case EPropertyType::String:
+    case EPropertyType::Vector3:
+    case EPropertyType::Quaternion:
+    case EPropertyType::Float4:
+    case EPropertyType::Float4x4:
+        return true;
+    default:
+        return false;
+    }
+}
+
+void LivePreviewWrite(DObject* obj, DProperty* prop)
+{
+    void* addr = prop->GetValue(obj);
+    switch (prop->GetPropertyType())
+    {
+    case EPropertyType::Float4:
+    {
+        DirectX::XMVECTOR v = DirectX::XMLoadFloat4(static_cast<DirectX::XMFLOAT4*>(addr));
+        EditorCommandContext::ApplyReflectedWrite(obj, prop, &v);
+        return;
+    }
+    case EPropertyType::Float4x4:
+    {
+        DirectX::XMMATRIX m = DirectX::XMLoadFloat4x4(static_cast<DirectX::XMFLOAT4X4*>(addr));
+        EditorCommandContext::ApplyReflectedWrite(obj, prop, &m);
+        return;
+    }
+    default:
+        EditorCommandContext::ApplyReflectedWrite(obj, prop, addr);
+    }
 }
 }
 
@@ -359,43 +403,58 @@ void EditorWindow_Details::DrawPropertyEditor(DObject* instance, DClass* dclass,
     if (depth >= kMaxDepth)
         return;
 
+    if (depth == 0 && m_activeEditProp && m_activeEditObject != instance)
+    {
+        m_activeEditProp   = nullptr;
+        m_activeEditBefore = {};
+        m_activeEditObject = nullptr;
+    }
+
     for (DStruct* s = dclass; s; s = s->GetSuper())
     {
         for (DProperty* prop = s->GetOwnProperties(); prop; prop = prop->GetNext())
         {
             ImGui::PushID(prop->GetName().c_str());
 
+            const bool undoable = IsUndoablePropertyType(prop->GetPropertyType());
+
+            nlohmann::json preSnapshot;
+            if (undoable && !m_activeEditProp)
+                preSnapshot = PropertyToJson(instance, prop);
+
+            WidgetEditEvent evt;
+
             switch (prop->GetPropertyType())
             {
             case EPropertyType::Int:
-                DrawIntProperty(instance, prop);
+                evt = DrawIntProperty(instance, prop);
                 break;
             case EPropertyType::Float:
-                DrawFloatProperty(instance, prop);
+                evt = DrawFloatProperty(instance, prop);
                 break;
             case EPropertyType::Double:
-                DrawDoubleProperty(instance, prop);
+                evt = DrawDoubleProperty(instance, prop);
                 break;
             case EPropertyType::Bool:
-                DrawBoolProperty(instance, prop);
+                evt = DrawBoolProperty(instance, prop);
                 break;
             case EPropertyType::String:
-                DrawStringProperty(instance, prop);
+                evt = DrawStringProperty(instance, prop);
                 break;
             case EPropertyType::WString:
                 DrawWStringProperty(instance, prop);
                 break;
             case EPropertyType::Vector3:
-                DrawVector3Property(instance, prop);
+                evt = DrawVector3Property(instance, prop);
                 break;
             case EPropertyType::Quaternion:
-                DrawQuaternionProperty(instance, prop);
+                evt = DrawQuaternionProperty(instance, prop);
                 break;
             case EPropertyType::Float4:
-                DrawFloat4Property(instance, prop);
+                evt = DrawFloat4Property(instance, prop);
                 break;
             case EPropertyType::Float4x4:
-                DrawFloat4x4Property(instance, prop);
+                evt = DrawFloat4x4Property(instance, prop);
                 break;
             case EPropertyType::ObjectPtr:
                 DrawObjectPtrProperty(instance, prop, depth);
@@ -417,6 +476,38 @@ void EditorWindow_Details::DrawPropertyEditor(DObject* instance, DClass* dclass,
                 DrawReadOnlyProperty(GetPropertyDisplayName(prop->GetName()),
                     prop->ToString(prop->GetValue(instance)));
                 break;
+            }
+
+            if (undoable)
+            {
+                if (evt.editBegan && !m_activeEditProp)
+                {
+                    m_activeEditProp   = prop;
+                    m_activeEditObject = instance;
+                    m_activeEditBefore = std::move(preSnapshot);
+                }
+
+                if (evt.valueChanged)
+                    LivePreviewWrite(instance, prop);
+
+                if (evt.editEnded && m_activeEditProp == prop)
+                {
+                    nlohmann::json valueAfter = PropertyToJson(instance, prop);
+                    if (m_activeEditBefore != valueAfter)
+                    {
+                        auto [assetId, objectId] = g_editorCore->GetIdsForObject(instance);
+                        auto cmd = std::make_unique<EditorCommand_SetProperty>(
+                            assetId, objectId,
+                            std::string(prop->GetName()),
+                            std::move(m_activeEditBefore),
+                            std::move(valueAfter));
+                        EditorCommandContext ctx{ *g_editorCore };
+                        g_editorCore->GetCommandManager().Execute(std::move(cmd), ctx);
+                    }
+                    m_activeEditProp   = nullptr;
+                    m_activeEditBefore = {};
+                    m_activeEditObject = nullptr;
+                }
             }
 
             ImGui::PopID();
@@ -512,7 +603,7 @@ void EditorWindow_Details::DrawVectorElements(const DVectorPropertyBase* vectorP
     }
 }
 
-bool EditorWindow_Details::DrawIntProperty(DObject* instance, DProperty* prop)
+WidgetEditEvent EditorWindow_Details::DrawIntProperty(DObject* instance, DProperty* prop)
 {
     EditorTheme* theme = g_editor->GetEditorTheme();
     const auto& c = theme->colors;
@@ -522,26 +613,19 @@ bool EditorWindow_Details::DrawIntProperty(DObject* instance, DProperty* prop)
     const float availW = BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
     ImGui::SetNextItemWidth(availW);
     const bool changed = ImGui::DragInt("##v", val);
+    auto evt = WidgetEditFromLastItem(changed);
     EndPropertyRow();
 
-    if (changed)
-        EditorCommandContext::ApplyReflectedWrite(instance, prop, val);
-    return changed;
+    return evt;
 }
 
-bool EditorWindow_Details::DrawFloatProperty(DObject* instance, DProperty* prop)
+WidgetEditEvent EditorWindow_Details::DrawFloatProperty(DObject* instance, DProperty* prop)
 {
     float* val = static_cast<float*>(prop->GetValue(instance));
-
-    const auto evt = m_scalarField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), val, 0.1f);
-    // TODO Phase 7: if (evt.editBegan)  { BeginPropertyEditCommand(...); }
-    // TODO Phase 7: if (evt.editEnded)  { CommitPropertyEditCommand(...); }
-    if (evt.valueChanged)
-        EditorCommandContext::ApplyReflectedWrite(instance, prop, val);
-    return evt.valueChanged;
+    return m_scalarField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), val, 0.1f);
 }
 
-bool EditorWindow_Details::DrawDoubleProperty(DObject* instance, DProperty* prop)
+WidgetEditEvent EditorWindow_Details::DrawDoubleProperty(DObject* instance, DProperty* prop)
 {
     EditorTheme* theme = g_editor->GetEditorTheme();
     const auto& c = theme->colors;
@@ -551,14 +635,13 @@ bool EditorWindow_Details::DrawDoubleProperty(DObject* instance, DProperty* prop
     const float availW = BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
     ImGui::SetNextItemWidth(availW);
     const bool changed = ImGui::InputDouble("##v", val, 0.1, 1.0, "%.6f");
+    auto evt = WidgetEditFromLastItem(changed);
     EndPropertyRow();
 
-    if (changed)
-        EditorCommandContext::ApplyReflectedWrite(instance, prop, val);
-    return changed;
+    return evt;
 }
 
-bool EditorWindow_Details::DrawBoolProperty(DObject* instance, DProperty* prop)
+WidgetEditEvent EditorWindow_Details::DrawBoolProperty(DObject* instance, DProperty* prop)
 {
     EditorTheme* theme = g_editor->GetEditorTheme();
     const auto& c = theme->colors;
@@ -567,14 +650,13 @@ bool EditorWindow_Details::DrawBoolProperty(DObject* instance, DProperty* prop)
 
     BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
     const bool changed = ImGui::Checkbox("##v", val);
+    auto evt = WidgetEditFromLastItem(changed);
     EndPropertyRow();
 
-    if (changed)
-        EditorCommandContext::ApplyReflectedWrite(instance, prop, val);
-    return changed;
+    return evt;
 }
 
-bool EditorWindow_Details::DrawStringProperty(DObject* instance, DProperty* prop)
+WidgetEditEvent EditorWindow_Details::DrawStringProperty(DObject* instance, DProperty* prop)
 {
     const std::string& current = *static_cast<const std::string*>(prop->GetValue(instance));
     char buf[1024];
@@ -583,13 +665,14 @@ bool EditorWindow_Details::DrawStringProperty(DObject* instance, DProperty* prop
     buf[len] = '\0';
     buf[sizeof(buf) - 1] = '\0';
 
-    if (m_stringField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), buf, sizeof(buf)))
+    auto evt = m_stringField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), buf, sizeof(buf));
+    if (evt.valueChanged)
     {
         const std::string newVal(buf);
-        EditorCommandContext::ApplyReflectedWrite(instance, prop, &newVal);
-        return true;
+        std::string* addr = static_cast<std::string*>(prop->GetValue(instance));
+        *addr = newVal;
     }
-    return false;
+    return evt;
 }
 
 bool EditorWindow_Details::DrawWStringProperty(DObject* instance, DProperty* prop)
@@ -599,19 +682,13 @@ bool EditorWindow_Details::DrawWStringProperty(DObject* instance, DProperty* pro
     return false;
 }
 
-bool EditorWindow_Details::DrawVector3Property(DObject* instance, DProperty* prop)
+WidgetEditEvent EditorWindow_Details::DrawVector3Property(DObject* instance, DProperty* prop)
 {
     Vector3* val = static_cast<Vector3*>(prop->GetValue(instance));
-
-    const auto evt = m_vec3Field.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), &val->x, 0.1f);
-    // TODO Phase 7: if (evt.editBegan)  { BeginTransformCommand(...); }
-    // TODO Phase 7: if (evt.editEnded)  { CommitTransformCommand(...); }
-    if (evt.valueChanged)
-        EditorCommandContext::ApplyReflectedWrite(instance, prop, val);
-    return evt.valueChanged;
+    return m_vec3Field.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), &val->x, 0.1f);
 }
 
-bool EditorWindow_Details::DrawQuaternionProperty(DObject* instance, DProperty* prop)
+WidgetEditEvent EditorWindow_Details::DrawQuaternionProperty(DObject* instance, DProperty* prop)
 {
     EditorTheme* theme = g_editor->GetEditorTheme();
     const auto& c = theme->colors;
@@ -621,24 +698,20 @@ bool EditorWindow_Details::DrawQuaternionProperty(DObject* instance, DProperty* 
     const float availW = BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
     ImGui::SetNextItemWidth(availW);
     const bool changed = ImGui::DragFloat4("##v", &val->x, 0.01f);
+    auto evt = WidgetEditFromLastItem(changed);
     EndPropertyRow();
 
-    if (changed)
-        EditorCommandContext::ApplyReflectedWrite(instance, prop, val);
-    return changed;
+    return evt;
 }
 
-bool EditorWindow_Details::DrawFloat4Property(DObject* instance, DProperty* prop)
+WidgetEditEvent EditorWindow_Details::DrawFloat4Property(DObject* instance, DProperty* prop)
 {
     void* addr = prop->GetValue(instance);
 
     if (prop->GetMeta("UIType") == "Color")
     {
         float* val = static_cast<float*>(addr);
-        const auto evt = m_colorField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), val, true);
-        if (evt.valueChanged)
-            EditorCommandContext::ApplyReflectedWrite(instance, prop, val);
-        return evt.valueChanged;
+        return m_colorField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), val, true);
     }
 
     EditorTheme* theme = g_editor->GetEditorTheme();
@@ -649,56 +722,51 @@ bool EditorWindow_Details::DrawFloat4Property(DObject* instance, DProperty* prop
     const float availW = BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
     ImGui::SetNextItemWidth(availW);
     const bool changed = ImGui::DragFloat4("##v", &val->x, 0.01f);
+    auto evt = WidgetEditFromLastItem(changed);
     EndPropertyRow();
 
-    if (changed)
-    {
-        const DirectX::XMVECTOR vectorValue = DirectX::XMLoadFloat4(val);
-        EditorCommandContext::ApplyReflectedWrite(instance, prop, &vectorValue);
-    }
-    return changed;
+    return evt;
 }
 
-bool EditorWindow_Details::DrawFloat4x4Property(DObject* instance, DProperty* prop)
+WidgetEditEvent EditorWindow_Details::DrawFloat4x4Property(DObject* instance, DProperty* prop)
 {
     EditorTheme* theme = g_editor->GetEditorTheme();
     const auto& c = theme->colors;
 
     auto* mat = static_cast<DirectX::XMFLOAT4X4*>(prop->GetValue(instance));
-    bool changed = false;
+    WidgetEditEvent evt;
 
     const std::string displayName = GetPropertyDisplayName(prop->GetName());
     if (ImGui::TreeNodeEx(displayName.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
     {
         float availW = BeginPropertyRow("Row 0", c);
         ImGui::SetNextItemWidth(availW);
-        changed |= ImGui::DragFloat4("##r0", &mat->_11, 0.01f);
+        bool r0 = ImGui::DragFloat4("##r0", &mat->_11, 0.01f);
+        evt.Merge(WidgetEditFromLastItem(r0));
         EndPropertyRow();
 
         availW = BeginPropertyRow("Row 1", c);
         ImGui::SetNextItemWidth(availW);
-        changed |= ImGui::DragFloat4("##r1", &mat->_21, 0.01f);
+        bool r1 = ImGui::DragFloat4("##r1", &mat->_21, 0.01f);
+        evt.Merge(WidgetEditFromLastItem(r1));
         EndPropertyRow();
 
         availW = BeginPropertyRow("Row 2", c);
         ImGui::SetNextItemWidth(availW);
-        changed |= ImGui::DragFloat4("##r2", &mat->_31, 0.01f);
+        bool r2 = ImGui::DragFloat4("##r2", &mat->_31, 0.01f);
+        evt.Merge(WidgetEditFromLastItem(r2));
         EndPropertyRow();
 
         availW = BeginPropertyRow("Row 3", c);
         ImGui::SetNextItemWidth(availW);
-        changed |= ImGui::DragFloat4("##r3", &mat->_41, 0.01f);
+        bool r3 = ImGui::DragFloat4("##r3", &mat->_41, 0.01f);
+        evt.Merge(WidgetEditFromLastItem(r3));
         EndPropertyRow();
 
         ImGui::TreePop();
     }
 
-    if (changed)
-    {
-        const DirectX::XMMATRIX matrixValue = DirectX::XMLoadFloat4x4(mat);
-        EditorCommandContext::ApplyReflectedWrite(instance, prop, &matrixValue);
-    }
-    return changed;
+    return evt;
 }
 
 bool EditorWindow_Details::DrawObjectPtrProperty(DObject* instance, DProperty* prop, int depth)
