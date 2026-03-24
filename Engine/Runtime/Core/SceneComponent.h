@@ -7,6 +7,7 @@
 
 #include "SimpleMath.h"
 #include "Runtime/Core/DComponent.h"
+#include "Runtime/Serialization/ISerializationCallbackReceiver.h"
 
 #include "SceneComponent.generated.h"
 
@@ -15,7 +16,7 @@ DELTA_ENGINE_NS_BEGIN
 class DWorld;
 
 DCLASS()
-class SceneComponent : public DComponent
+class SceneComponent : public DComponent, public ISerializationCallbackReceiver
 {
     DGENERATED_BODY(SceneComponent)
     friend class DWorld;
@@ -84,10 +85,15 @@ public:
     /// Reparents this component while preventing cycles.
     DFUNCTION()
     DELTAENGINE_API void SetParent(SceneComponent* parent);
+    void PostEditChangeProperty(const DProperty* prop) override;
+
+    void OnAfterDeserialize() override;
+
 protected:
     virtual void OnTransformChanged() {}
 
 private:
+    void SyncEulerFromMatrix();
     DPROPERTY()
     DirectX::XMMATRIX m_localTransform;
 

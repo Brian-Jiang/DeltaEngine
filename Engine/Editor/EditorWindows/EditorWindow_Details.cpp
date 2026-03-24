@@ -1,6 +1,7 @@
 #include "Editor/EditorWindows/EditorWindow_Details.h"
 
 #include "Editor/Assets/EditorAssetDatabase.h"
+#include "Editor/Commands/EditorCommandContext.h"
 #include "Editor/EditorCore.h"
 #include "Editor/EditorMain.h"
 #include "Editor/EditorSelectionState.h"
@@ -524,7 +525,7 @@ bool EditorWindow_Details::DrawIntProperty(DObject* instance, DProperty* prop)
     EndPropertyRow();
 
     if (changed)
-        prop->SetValue(instance, val);
+        EditorCommandContext::ApplyReflectedWrite(instance, prop, val);
     return changed;
 }
 
@@ -536,7 +537,7 @@ bool EditorWindow_Details::DrawFloatProperty(DObject* instance, DProperty* prop)
     // TODO Phase 7: if (evt.editBegan)  { BeginPropertyEditCommand(...); }
     // TODO Phase 7: if (evt.editEnded)  { CommitPropertyEditCommand(...); }
     if (evt.valueChanged)
-        prop->SetValue(instance, val);
+        EditorCommandContext::ApplyReflectedWrite(instance, prop, val);
     return evt.valueChanged;
 }
 
@@ -553,7 +554,7 @@ bool EditorWindow_Details::DrawDoubleProperty(DObject* instance, DProperty* prop
     EndPropertyRow();
 
     if (changed)
-        prop->SetValue(instance, val);
+        EditorCommandContext::ApplyReflectedWrite(instance, prop, val);
     return changed;
 }
 
@@ -569,7 +570,7 @@ bool EditorWindow_Details::DrawBoolProperty(DObject* instance, DProperty* prop)
     EndPropertyRow();
 
     if (changed)
-        prop->SetValue(instance, val);
+        EditorCommandContext::ApplyReflectedWrite(instance, prop, val);
     return changed;
 }
 
@@ -585,7 +586,7 @@ bool EditorWindow_Details::DrawStringProperty(DObject* instance, DProperty* prop
     if (m_stringField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), buf, sizeof(buf)))
     {
         const std::string newVal(buf);
-        prop->SetValue(instance, &newVal);
+        EditorCommandContext::ApplyReflectedWrite(instance, prop, &newVal);
         return true;
     }
     return false;
@@ -606,7 +607,7 @@ bool EditorWindow_Details::DrawVector3Property(DObject* instance, DProperty* pro
     // TODO Phase 7: if (evt.editBegan)  { BeginTransformCommand(...); }
     // TODO Phase 7: if (evt.editEnded)  { CommitTransformCommand(...); }
     if (evt.valueChanged)
-        prop->SetValue(instance, val);
+        EditorCommandContext::ApplyReflectedWrite(instance, prop, val);
     return evt.valueChanged;
 }
 
@@ -623,7 +624,7 @@ bool EditorWindow_Details::DrawQuaternionProperty(DObject* instance, DProperty* 
     EndPropertyRow();
 
     if (changed)
-        prop->SetValue(instance, val);
+        EditorCommandContext::ApplyReflectedWrite(instance, prop, val);
     return changed;
 }
 
@@ -636,7 +637,7 @@ bool EditorWindow_Details::DrawFloat4Property(DObject* instance, DProperty* prop
         float* val = static_cast<float*>(addr);
         const auto evt = m_colorField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), val, true);
         if (evt.valueChanged)
-            prop->SetValue(instance, val);
+            EditorCommandContext::ApplyReflectedWrite(instance, prop, val);
         return evt.valueChanged;
     }
 
@@ -653,7 +654,7 @@ bool EditorWindow_Details::DrawFloat4Property(DObject* instance, DProperty* prop
     if (changed)
     {
         const DirectX::XMVECTOR vectorValue = DirectX::XMLoadFloat4(val);
-        prop->SetValue(instance, &vectorValue);
+        EditorCommandContext::ApplyReflectedWrite(instance, prop, &vectorValue);
     }
     return changed;
 }
@@ -695,7 +696,7 @@ bool EditorWindow_Details::DrawFloat4x4Property(DObject* instance, DProperty* pr
     if (changed)
     {
         const DirectX::XMMATRIX matrixValue = DirectX::XMLoadFloat4x4(mat);
-        prop->SetValue(instance, &matrixValue);
+        EditorCommandContext::ApplyReflectedWrite(instance, prop, &matrixValue);
     }
     return changed;
 }

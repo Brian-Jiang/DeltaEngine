@@ -10,6 +10,7 @@
 DELTA_ENGINE_NS_BEGIN
 
 class DClass;
+class DProperty;
 class DPrimaryAsset;
 
 DCLASS()
@@ -40,6 +41,8 @@ public:
     bool HasOwningAsset() const { return m_owningAsset != nullptr; }
 
     DELTAENGINE_API void MarkDirty();
+
+    virtual void PostEditChangeProperty(const DProperty* prop) { (void)prop; }
 
 private:
     DHandle        m_handle;

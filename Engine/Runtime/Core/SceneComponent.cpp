@@ -1,4 +1,6 @@
 #include "Core/SceneComponent.h"
+#include "Reflection/DClass.h"
+#include "Reflection/DProperty.h"
 
 using namespace DirectX;
 using namespace DeltaEngine;
@@ -285,4 +287,34 @@ void DeltaEngine::SceneComponent::UpdateTransform()
 void DeltaEngine::SceneComponent::SetTransformDirty()
 {
     UpdateTransform();
+}
+
+void DeltaEngine::SceneComponent::SyncEulerFromMatrix()
+{
+    XMVECTOR scale, rotation, translation;
+    if (XMMatrixDecompose(&scale, &rotation, &translation, m_localTransform))
+    {
+        auto euler = SimpleMath::Quaternion(rotation).ToEuler();
+        m_eulerRotationCache = SimpleMath::Vector3(
+            XMConvertToDegrees(euler.x),
+            XMConvertToDegrees(euler.y),
+            XMConvertToDegrees(euler.z));
+    }
+}
+
+void DeltaEngine::SceneComponent::PostEditChangeProperty(const DProperty* prop)
+{
+    static const DProperty* s_localTransformProp =
+        GetClass()->FindPropertyByName("m_localTransform");
+
+    if (prop == s_localTransformProp)
+    {
+        SyncEulerFromMatrix();
+        SetTransformDirty();
+    }
+}
+
+void SceneComponent::OnAfterDeserialize()
+{
+    SyncEulerFromMatrix();
 }
