@@ -1,83 +1,122 @@
 #include "Editor/EditorSelectionState.h"
 
 #include "Editor/EditorCore.h"
-#include "Runtime/Core/DComponent.h"
-#include "Runtime/Core/DObject.h"
+#include "Runtime/Assets/DPrimaryAsset.h"
 #include "Runtime/Core/GameObject.h"
+
+#include <algorithm>
 
 using namespace DeltaEngine;
 
-void EditorSelectionState::SetSelection(const AssetId& assetId, const ObjectId& objectId)
+// --- GameObject selection ---
+
+void EditorSelectionState::SetSelectedGameObject(ObjectId id)
 {
-    m_selectedAssetId   = assetId;
-    m_selectedObjectId  = objectId;
-    m_cachedObject      = nullptr;
+    ClearAssetSelection();
+    m_selectedGameObjects.clear();
+    m_selectedGameObjects.push_back(id);
 }
 
-void EditorSelectionState::SelectAsset(const AssetId& assetId)
+void EditorSelectionState::AddSelectedGameObject(ObjectId id)
 {
-    SetSelection(assetId, ObjectId::Null());
+    ClearAssetSelection();
+    if (std::find(m_selectedGameObjects.begin(), m_selectedGameObjects.end(), id) == m_selectedGameObjects.end())
+        m_selectedGameObjects.push_back(id);
 }
 
-void EditorSelectionState::ClearSelection()
+void EditorSelectionState::RemoveSelectedGameObject(ObjectId id)
 {
-    m_selectedAssetId  = AssetId::Null();
-    m_selectedObjectId = ObjectId::Null();
-    m_cachedObject     = nullptr;
+    m_selectedGameObjects.erase(
+        std::remove(m_selectedGameObjects.begin(), m_selectedGameObjects.end(), id),
+        m_selectedGameObjects.end());
 }
 
-bool EditorSelectionState::HasSelection() const
+void EditorSelectionState::ClearGameObjectSelection()
 {
-    return !m_selectedAssetId.IsNull();
+    m_selectedGameObjects.clear();
 }
 
-bool EditorSelectionState::HasAssetSelection() const
+bool EditorSelectionState::IsGameObjectSelected(ObjectId id) const
 {
-    return !m_selectedAssetId.IsNull() && m_selectedObjectId.IsNull();
+    return std::find(m_selectedGameObjects.begin(), m_selectedGameObjects.end(), id) != m_selectedGameObjects.end();
 }
 
-DObject* EditorSelectionState::ResolveSelection(EditorCore& core)
+// --- Component selection ---
+
+void EditorSelectionState::SetSelectedComponent(ObjectId id)
 {
-    if (m_selectedAssetId.IsNull() || m_selectedObjectId.IsNull())
-        return nullptr;
-
-    if (m_cachedObject)
-        return m_cachedObject;
-
-    DObject* found = core.FindObject(m_selectedAssetId, m_selectedObjectId);
-    if (!found)
-    {
-        ClearSelection();
-        return nullptr;
-    }
-
-    m_cachedObject = found;
-    return m_cachedObject;
+    m_selectedComponents.clear();
+    m_selectedComponents.push_back(id);
 }
 
-GameObject* EditorSelectionState::GetSelectedGameObject(EditorCore& core)
+void EditorSelectionState::AddSelectedComponent(ObjectId id)
 {
-    return dynamic_cast<GameObject*>(ResolveSelection(core));
+    if (std::find(m_selectedComponents.begin(), m_selectedComponents.end(), id) == m_selectedComponents.end())
+        m_selectedComponents.push_back(id);
 }
 
-DComponent* EditorSelectionState::GetSelectedComponent(EditorCore& core)
+void EditorSelectionState::RemoveSelectedComponent(ObjectId id)
 {
-    return dynamic_cast<DComponent*>(ResolveSelection(core));
+    m_selectedComponents.erase(
+        std::remove(m_selectedComponents.begin(), m_selectedComponents.end(), id),
+        m_selectedComponents.end());
 }
+
+void EditorSelectionState::ClearComponentSelection()
+{
+    m_selectedComponents.clear();
+}
+
+bool EditorSelectionState::IsComponentSelected(ObjectId id) const
+{
+    return std::find(m_selectedComponents.begin(), m_selectedComponents.end(), id) != m_selectedComponents.end();
+}
+
+// --- Asset selection ---
+
+void EditorSelectionState::SetSelectedAsset(AssetId id)
+{
+    ClearGameObjectSelection();
+    m_selectedAssets.clear();
+    m_selectedAssets.push_back(id);
+}
+
+void EditorSelectionState::AddSelectedAsset(AssetId id)
+{
+    ClearGameObjectSelection();
+    if (std::find(m_selectedAssets.begin(), m_selectedAssets.end(), id) == m_selectedAssets.end())
+        m_selectedAssets.push_back(id);
+}
+
+void EditorSelectionState::RemoveSelectedAsset(AssetId id)
+{
+    m_selectedAssets.erase(
+        std::remove(m_selectedAssets.begin(), m_selectedAssets.end(), id),
+        m_selectedAssets.end());
+}
+
+void EditorSelectionState::ClearAssetSelection()
+{
+    m_selectedAssets.clear();
+}
+
+bool EditorSelectionState::IsAssetSelected(AssetId id) const
+{
+    return std::find(m_selectedAssets.begin(), m_selectedAssets.end(), id) != m_selectedAssets.end();
+}
+
+// --- Helpers ---
 
 GameObject* EditorSelectionState::GetContextGameObject(EditorCore& core)
 {
-    DObject* obj = ResolveSelection(core);
-    if (!obj)
+    if (m_selectedGameObjects.empty())
         return nullptr;
 
-    if (auto* go = dynamic_cast<GameObject*>(obj))
-        return go;
+    DPrimaryAsset* asset = core.GetActiveSceneAsset();
+    if (!asset)
+        return nullptr;
 
-    if (auto* comp = dynamic_cast<DComponent*>(obj))
-        return comp->GetGameObject();
-
-    return nullptr;
+    return dynamic_cast<GameObject*>(asset->FindObject(m_selectedGameObjects[0]));
 }
 
 void EditorSelectionState::NotifyObjectDestroyed(const ObjectId& objectId)
@@ -85,6 +124,6 @@ void EditorSelectionState::NotifyObjectDestroyed(const ObjectId& objectId)
     if (objectId.IsNull())
         return;
 
-    if (m_selectedObjectId == objectId)
-        ClearSelection();
+    RemoveSelectedGameObject(objectId);
+    RemoveSelectedComponent(objectId);
 }

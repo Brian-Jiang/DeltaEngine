@@ -12,7 +12,6 @@
 #include "Editor/Style/EditorTheme.h"
 #include "Runtime/EngineMain.h"
 #include "Runtime/Core/DWorld.h"
-#include "Runtime/Assets/DPrimaryAsset.h"
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
 #include "Runtime/Reflection/DClass.h"
@@ -104,28 +103,6 @@ void EditorWindow_WorldOutliner::Render()
         m_entries.push_back(std::move(e));
     }
 
-    m_selectedIndex = -1;
-    if (EditorSelectionState* sel = g_editorCore->GetSelectionState())
-    {
-        const AssetId sa  = sel->GetSelectedAssetId();
-        const ObjectId so = sel->GetSelectedObjectId();
-        if (!sa.IsNull() && !so.IsNull())
-        {
-            for (int i = 0; i < static_cast<int>(gameObjects.size()); ++i)
-            {
-                GameObject* go = gameObjects[i];
-                if (!go)
-                    continue;
-                auto [a, o] = g_editorCore->GetIdsForObject(go);
-                if (a == sa && o == so)
-                {
-                    m_selectedIndex = i;
-                    break;
-                }
-            }
-        }
-    }
-
     RebuildFilter();
 
     {
@@ -171,8 +148,8 @@ void EditorWindow_WorldOutliner::Render()
         const std::string goName = std::format("New {}", picked->GetName());
         const ObjectId newId = g_editorCore->CreateGameObject(goName);
         if (!newId.IsNull())
-            if (DPrimaryAsset* asset = g_editorCore->GetActiveSceneAsset())
-                g_editorCore->GetSelectionState()->SetSelection(asset->GetAssetId(), newId);
+            if (EditorSelectionState* sel = g_editorCore->GetSelectionState())
+                sel->SetSelectedGameObject(newId);
     }
 
     ImGui::PushStyleColor(ImGuiCol_FrameBg,        c.DInput);
@@ -207,7 +184,8 @@ void EditorWindow_WorldOutliner::Render()
         ImVec2 rowMin = ImGui::GetCursorScreenPos();
         ImVec2 rowMax = ImVec2(rowMin.x + ImGui::GetContentRegionAvail().x,
                                rowMin.y + EditorTheme::RowH());
-        bool isSelected = (entry->index == m_selectedIndex);
+        EditorSelectionState* sel = g_editorCore->GetSelectionState();
+        bool isSelected = sel && entry->go && sel->IsGameObjectSelected(entry->go->GetObjectId());
 
         ImGui::PushStyleColor(ImGuiCol_Header,        ImVec4(0.f, 0.f, 0.f, 0.f));
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, c.DHover);
@@ -218,14 +196,19 @@ void EditorWindow_WorldOutliner::Render()
         if (ImGui::Selectable(rowId, isSelected,
                 ImGuiSelectableFlags_SpanAllColumns, ImVec2(0.f, EditorTheme::RowH())))
         {
-            m_selectedIndex = entry->index;
-            if (entry->go)
+            if (entry->go && sel)
             {
-                if (EditorSelectionState* sel = g_editorCore->GetSelectionState())
+                const ObjectId id = entry->go->GetObjectId();
+                if (ImGui::GetIO().KeyCtrl)
                 {
-                    auto [a, o] = g_editorCore->GetIdsForObject(entry->go);
-                    if (!a.IsNull() && !o.IsNull())
-                        sel->SetSelection(a, o);
+                    if (sel->IsGameObjectSelected(id))
+                        sel->RemoveSelectedGameObject(id);
+                    else
+                        sel->AddSelectedGameObject(id);
+                }
+                else
+                {
+                    sel->SetSelectedGameObject(id);
                 }
             }
         }
@@ -240,8 +223,6 @@ void EditorWindow_WorldOutliner::Render()
                     world->DestroyGameObject(entry->go);
                     if (g_editorCore)
                         g_editorCore->NotifyObjectDestroyed(oid);
-                    if (auto* sel = g_editorCore->GetSelectionState())
-                        sel->ClearSelection();
                 }
             }}});
             m_destroyGoMenu.Draw(c);

@@ -4,7 +4,6 @@
 #include "Editor/EditorMain.h"
 #include "Editor/EditorSelectionState.h"
 #include "Editor/Style/EditorTheme.h"
-#include "Runtime/Assets/DPrimaryAsset.h"
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Core/SceneComponent.h"
 #include "Runtime/Core/DComponent.h"
@@ -45,7 +44,7 @@ void EditorWindow_ComponentsHierarchy::Render()
     EditorTheme* theme = g_editor->GetEditorTheme();
     const EditorTheme::ThemeColors& c = theme ? theme->colors : EditorTheme::ThemeColors{};
 
-    auto selectionState    = g_editorCore->GetSelectionState();
+    auto* selectionState   = g_editorCore->GetSelectionState();
     auto contextGameObject = selectionState->GetContextGameObject(*g_editorCore);
 
     if (!contextGameObject)
@@ -126,8 +125,8 @@ void EditorWindow_ComponentsHierarchy::Render()
         const ObjectId newId = g_editorCore->AddComponentToGameObject(
             contextGameObject->GetObjectId(), picked->GetName());
         if (!newId.IsNull())
-            if (DPrimaryAsset* asset = g_editorCore->GetActiveSceneAsset())
-                g_editorCore->GetSelectionState()->SetSelection(asset->GetAssetId(), newId);
+            if (EditorSelectionState* sel = g_editorCore->GetSelectionState())
+                sel->SetSelectedComponent(newId);
     }
 
     ImGui::End();
@@ -146,12 +145,8 @@ void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(SceneComponent* 
     bool hasChildren = !children.empty();
     ImGuiTreeNodeFlags flags = hasChildren ? ImGuiTreeNodeFlags_None : ImGuiTreeNodeFlags_Leaf;
 
-    auto selectionState = g_editorCore->GetSelectionState();
-    const AssetId sa  = selectionState->GetSelectedAssetId();
-    const ObjectId so = selectionState->GetSelectedObjectId();
-    auto [ca, co]     = g_editorCore->GetIdsForObject(sceneComponent);
-    const bool isSelected =
-        !sa.IsNull() && !so.IsNull() && ca == sa && co == so;
+    auto* selectionState = g_editorCore->GetSelectionState();
+    const bool isSelected = selectionState->IsComponentSelected(sceneComponent->GetObjectId());
     if (isSelected)
         flags |= ImGuiTreeNodeFlags_Selected | ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_OpenOnArrow;
 
@@ -172,9 +167,18 @@ void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(SceneComponent* 
 
     if (ImGui::IsItemClicked())
     {
-        auto [a, o] = g_editorCore->GetIdsForObject(sceneComponent);
-        if (!a.IsNull() && !o.IsNull())
-            selectionState->SetSelection(a, o);
+        const ObjectId id = sceneComponent->GetObjectId();
+        if (ImGui::GetIO().KeyCtrl)
+        {
+            if (selectionState->IsComponentSelected(id))
+                selectionState->RemoveSelectedComponent(id);
+            else
+                selectionState->AddSelectedComponent(id);
+        }
+        else
+        {
+            selectionState->SetSelectedComponent(id);
+        }
     }
 
     if (ImGui::BeginPopupContextItem())
@@ -187,8 +191,6 @@ void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(SceneComponent* 
                 owner->RemoveComponent(sceneComponent);
                 if (g_editorCore)
                     g_editorCore->NotifyObjectDestroyed(oid);
-                if (auto* sel = g_editorCore->GetSelectionState())
-                    sel->ClearSelection();
             }
         }}});
         m_destroyCompMenu.Draw(c);
@@ -209,7 +211,7 @@ void EditorWindow_ComponentsHierarchy::RenderRegularComponents(const std::vector
     EditorTheme* theme = g_editor ? g_editor->GetEditorTheme() : nullptr;
     const EditorTheme::ThemeColors& c = theme ? theme->colors : EditorTheme::ThemeColors{};
 
-    auto selectionState = g_editorCore->GetSelectionState();
+    auto* selectionState = g_editorCore->GetSelectionState();
 
     for (const auto& component : components)
     {
@@ -217,11 +219,7 @@ void EditorWindow_ComponentsHierarchy::RenderRegularComponents(const std::vector
             continue;
 
         ImGui::PushID(static_cast<void*>(component));
-        const AssetId sa  = selectionState->GetSelectedAssetId();
-        const ObjectId so = selectionState->GetSelectedObjectId();
-        auto [ca, co]     = g_editorCore->GetIdsForObject(component);
-        const bool isSelected =
-            !sa.IsNull() && !so.IsNull() && ca == sa && co == so;
+        const bool isSelected = selectionState->IsComponentSelected(component->GetObjectId());
 
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf;
         if (isSelected)
@@ -242,9 +240,18 @@ void EditorWindow_ComponentsHierarchy::RenderRegularComponents(const std::vector
 
         if (ImGui::IsItemClicked())
         {
-            auto [a, o] = g_editorCore->GetIdsForObject(component);
-            if (!a.IsNull() && !o.IsNull())
-                selectionState->SetSelection(a, o);
+            const ObjectId id = component->GetObjectId();
+            if (ImGui::GetIO().KeyCtrl)
+            {
+                if (selectionState->IsComponentSelected(id))
+                    selectionState->RemoveSelectedComponent(id);
+                else
+                    selectionState->AddSelectedComponent(id);
+            }
+            else
+            {
+                selectionState->SetSelectedComponent(id);
+            }
         }
 
         if (ImGui::BeginPopupContextItem())
@@ -257,8 +264,6 @@ void EditorWindow_ComponentsHierarchy::RenderRegularComponents(const std::vector
                     owner->RemoveComponent(component);
                     if (g_editorCore)
                         g_editorCore->NotifyObjectDestroyed(oid);
-                    if (auto* sel = g_editorCore->GetSelectionState())
-                        sel->ClearSelection();
                 }
             }}});
             m_destroyCompMenu.Draw(c);

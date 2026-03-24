@@ -122,8 +122,7 @@ void EditorWindow_AssetBrowser::RenderAssetLeaf(const AssetId& assetId, EditorAs
         return;
 
     EditorSelectionState* sel = g_editorCore->GetSelectionState();
-    const bool isSelected     = sel && sel->GetSelectedAssetId() == assetId &&
-        sel->GetSelectedObjectId().IsNull();
+    const bool isSelected     = sel && sel->IsAssetSelected(assetId);
 
     ImGui::PushID(assetPath.generic_string().c_str());
     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen |
@@ -135,7 +134,7 @@ void EditorWindow_AssetBrowser::RenderAssetLeaf(const AssetId& assetId, EditorAs
     if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
     {
         if (assetDatabase->LoadAsset(assetId))
-            g_editorCore->GetSelectionState()->SelectAsset(assetId);
+            g_editorCore->GetSelectionState()->SetSelectedAsset(assetId);
     }
 
     if (ImGui::BeginPopupContextItem())
@@ -145,14 +144,14 @@ void EditorWindow_AssetBrowser::RenderAssetLeaf(const AssetId& assetId, EditorAs
                 {
                     const AssetId duplicatedId = assetDatabase->DuplicateAsset(assetId);
                     if (!duplicatedId.IsNull() && assetDatabase->LoadAsset(duplicatedId))
-                        g_editorCore->GetSelectionState()->SelectAsset(duplicatedId);
+                        g_editorCore->GetSelectionState()->SetSelectedAsset(duplicatedId);
                 } },
             { "Delete", [&]()
                 {
-                    const bool wasSelected = g_editorCore->GetSelectionState()->GetSelectedAssetId() == assetId;
+                    const bool wasSelected = g_editorCore->GetSelectionState()->IsAssetSelected(assetId);
                     assetDatabase->DeleteAsset(assetId);
                     if (wasSelected)
-                        g_editorCore->GetSelectionState()->ClearSelection();
+                        g_editorCore->GetSelectionState()->ClearAssetSelection();
                 } },
         });
         m_assetContextMenu.Draw(g_editor->GetEditorTheme()->colors);

@@ -101,32 +101,88 @@ void EditorWindow_Details::Render()
 
     EditorSelectionState* selectionState = g_editorCore->GetSelectionState();
 
-    if (!selectionState->HasSelection())
+    enum class Category { None, GameObject, Asset, Component };
+    Category category = Category::None;
+
+    if (selectionState->HasComponentSelection())
+        category = Category::Component;
+    else if (selectionState->HasGameObjectSelection())
+        category = Category::GameObject;
+    else if (selectionState->HasAssetSelection())
+        category = Category::Asset;
+
+    if (category == Category::None)
     {
         ImGui::TextDisabled("Select a GameObject, component, or asset");
         ImGui::End();
         return;
     }
 
-    if (selectionState->HasAssetSelection())
+    auto resolveObject = [&](ObjectId id) -> DObject*
     {
-        RenderAssetDetails(selectionState->GetSelectedAssetId());
-        ImGui::End();
-        return;
-    }
+        DPrimaryAsset* asset = g_editorCore->GetActiveSceneAsset();
+        return asset ? asset->FindObject(id) : nullptr;
+    };
 
-    DObject* selected = selectionState->ResolveSelection(*g_editorCore);
-    if (!selected)
+    if (category == Category::GameObject)
     {
-        ImGui::TextDisabled("Select a GameObject, component, or asset");
-        ImGui::End();
-        return;
+        const auto& ids = selectionState->GetSelectedGameObjects();
+        if (ids.size() > 1)
+        {
+            const ImVec2 avail = ImGui::GetContentRegionAvail();
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + avail.y * 0.5f - ImGui::GetTextLineHeight() * 0.5f);
+            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.6f);
+            const float textW = ImGui::CalcTextSize("Multiple selection not supported").x;
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (avail.x - textW) * 0.5f);
+            ImGui::TextUnformatted("Multiple selection not supported");
+            ImGui::PopStyleVar();
+            ImGui::End();
+            return;
+        }
+        DObject* obj = resolveObject(ids[0]);
+        if (GameObject* go = dynamic_cast<GameObject*>(obj))
+            RenderGameObjectDetails(go);
+        else
+            ImGui::TextDisabled("Failed to resolve GameObject");
     }
-
-    if (GameObject* gameObject = dynamic_cast<GameObject*>(selected))
-        RenderGameObjectDetails(gameObject);
-    else if (DComponent* component = dynamic_cast<DComponent*>(selected))
-        RenderComponentDetails(component);
+    else if (category == Category::Asset)
+    {
+        const auto& ids = selectionState->GetSelectedAssets();
+        if (ids.size() > 1)
+        {
+            const ImVec2 avail = ImGui::GetContentRegionAvail();
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + avail.y * 0.5f - ImGui::GetTextLineHeight() * 0.5f);
+            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.6f);
+            const float textW = ImGui::CalcTextSize("Multiple selection not supported").x;
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (avail.x - textW) * 0.5f);
+            ImGui::TextUnformatted("Multiple selection not supported");
+            ImGui::PopStyleVar();
+            ImGui::End();
+            return;
+        }
+        RenderAssetDetails(ids[0]);
+    }
+    else if (category == Category::Component)
+    {
+        const auto& ids = selectionState->GetSelectedComponents();
+        if (ids.size() > 1)
+        {
+            const ImVec2 avail = ImGui::GetContentRegionAvail();
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + avail.y * 0.5f - ImGui::GetTextLineHeight() * 0.5f);
+            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.6f);
+            const float textW = ImGui::CalcTextSize("Multiple selection not supported").x;
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (avail.x - textW) * 0.5f);
+            ImGui::TextUnformatted("Multiple selection not supported");
+            ImGui::PopStyleVar();
+            ImGui::End();
+            return;
+        }
+        DObject* obj = resolveObject(ids[0]);
+        if (DComponent* comp = dynamic_cast<DComponent*>(obj))
+            RenderComponentDetails(comp);
+        else
+            ImGui::TextDisabled("Failed to resolve component");
+    }
 
     ImGui::End();
 }

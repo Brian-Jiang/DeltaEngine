@@ -46,7 +46,6 @@ private:
 
     std::vector<OutlinerEntry>        m_entries;
     std::vector<const OutlinerEntry*> m_filtered;
-    int                               m_selectedIndex = -1;
     char                              m_filterBuf[128] = {};
     TypeChip                          m_typeChip;
     ClassPickerPopup                  m_addGoPicker;
