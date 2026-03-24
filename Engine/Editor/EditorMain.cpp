@@ -1,6 +1,8 @@
 #include "EditorMain.h"
 
 #include "Editor/EditorCore.h"
+#include "Editor/Commands/EditorCommandContext.h"
+#include "Editor/Commands/EditorCommandManager.h"
 #include "Editor/EditorRenderManager.h"
 #include "Editor/EditorWindows/EditorWindow_AssetBrowser.h"
 #include "Editor/EditorWindows/EditorWindow_ComponentsHierarchy.h"
@@ -235,7 +237,20 @@ void EditorMain::ProcessEvents()
         case SDL_EVENT_KEY_DOWN:
         {
             const SDL_Keycode key = event.key.key;
-            if (key == SDLK_F11)
+            if ((event.key.mod & SDL_KMOD_CTRL) && key == SDLK_Z)
+            {
+                EditorCommandContext ctx{ *m_editorCore };
+                if (event.key.mod & SDL_KMOD_SHIFT)
+                    m_editorCore->GetCommandManager().Redo(ctx);
+                else
+                    m_editorCore->GetCommandManager().Undo(ctx);
+            }
+            else if ((event.key.mod & SDL_KMOD_CTRL) && key == SDLK_Y)
+            {
+                EditorCommandContext ctx{ *m_editorCore };
+                m_editorCore->GetCommandManager().Redo(ctx);
+            }
+            else if (key == SDLK_F11)
             {
                 if (m_renderManager)
                     m_renderManager->SetFullscreen(!m_renderManager->IsFullscreen());

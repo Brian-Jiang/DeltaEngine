@@ -1,6 +1,7 @@
 #include "EditorCore.h"
 
 #include "Editor/Assets/EditorAssetDatabase.h"
+#include "Editor/Commands/EditorCommandManager.h"
 #include "Editor/EditorSelectionState.h"
 #include "Runtime/Assets/AssetDatabaseLocator.h"
 #include "Runtime/Assets/DPrimaryAsset.h"
@@ -51,14 +52,31 @@ void EditorCore::Initialize(EngineMain& engine)
     // m_assetDatabase->SaveDirtyAssets();
 
     m_selectionState = std::make_unique<EditorSelectionState>();
+    m_commandManager = std::make_unique<EditorCommandManager>();
 }
 
 void EditorCore::Shutdown()
 {
+    if (m_commandManager)
+    {
+        m_commandManager->Clear();
+        m_commandManager.reset();
+    }
     m_selectionState.reset();
     AssetDatabaseLocator::Unregister();
     m_assetDatabase.reset();
     m_engine = nullptr;
+}
+
+void EditorCore::SetTestValue(const std::string& key, const std::string& value)
+{
+    m_testValueStore[key] = value;
+}
+
+std::string EditorCore::GetTestValue(const std::string& key) const
+{
+    auto it = m_testValueStore.find(key);
+    return it != m_testValueStore.end() ? it->second : std::string{};
 }
 
 DWorld* EditorCore::GetWorld()
