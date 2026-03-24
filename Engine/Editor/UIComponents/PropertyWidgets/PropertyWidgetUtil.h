@@ -2,9 +2,19 @@
 
 #include "EngineIncludes.h"
 #include "Style/EditorTheme.h"
+#include "UIComponents/WidgetEditEvent.h"
 #include "imgui.h"
 
 DELTA_ENGINE_NS_BEGIN
+
+inline WidgetEditEvent WidgetEditFromLastItem(bool valueChanged)
+{
+    WidgetEditEvent evt;
+    evt.valueChanged = valueChanged;
+    evt.editBegan    = ImGui::IsItemActivated();
+    evt.editEnded    = ImGui::IsItemDeactivatedAfterEdit();
+    return evt;
+}
 
 // Draws the label column and returns remaining width for the value widget.
 inline float BeginPropertyRow(const char* label, const EditorTheme::ThemeColors& c)

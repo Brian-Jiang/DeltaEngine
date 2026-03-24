@@ -7,7 +7,7 @@
 
 using namespace DeltaEngine;
 
-bool StringField::Draw(const char* label, char* buf, size_t bufSize, bool readOnly)
+WidgetEditEvent StringField::Draw(const char* label, char* buf, size_t bufSize, bool readOnly)
 {
     EditorTheme* theme = g_editor->GetEditorTheme();
     const auto&  c     = theme->colors;
@@ -25,7 +25,12 @@ bool StringField::Draw(const char* label, char* buf, size_t bufSize, bool readOn
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding,   3.f);
 
     ImGuiInputTextFlags inputFlags = readOnly ? ImGuiInputTextFlags_ReadOnly : 0;
-    bool changed = ImGui::InputText("##s", buf, bufSize, inputFlags);
+    ImGui::InputText("##s", buf, bufSize, inputFlags);
+
+    WidgetEditEvent evt;
+    evt.valueChanged = ImGui::IsItemEdited();
+    evt.editBegan    = ImGui::IsItemActivated();
+    evt.editEnded    = ImGui::IsItemDeactivatedAfterEdit();
 
     ImGui::PopStyleVar(2);
     ImGui::PopStyleColor(4);
@@ -33,5 +38,5 @@ bool StringField::Draw(const char* label, char* buf, size_t bufSize, bool readOn
     EndPropertyRow();
     ImGui::PopID();
 
-    return changed;
+    return evt;
 }

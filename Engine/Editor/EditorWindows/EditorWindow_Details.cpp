@@ -334,9 +334,12 @@ void EditorWindow_Details::RenderSceneComponentTransform(SceneComponent* sceneCo
     Vector3 scale = sceneComponent->GetLocalScale();
 
     bool changed = false;
-    changed |= m_vec3Field.Draw("Position", &pos.x, 0.1f);
-    changed |= m_vec3Field.Draw("Rotation", &euler.x, 1.0f);
-    changed |= m_vec3Field.Draw("Scale", &scale.x, 0.01f);
+    const auto posEvt = m_vec3Field.Draw("Position", &pos.x, 0.1f);
+    // TODO Phase 7: if (posEvt.editBegan)  { BeginTransformCommand(...); }
+    // TODO Phase 7: if (posEvt.editEnded)  { CommitTransformCommand(...); }
+    changed |= posEvt.valueChanged;
+    changed |= m_vec3Field.Draw("Rotation", &euler.x, 1.0f).valueChanged;
+    changed |= m_vec3Field.Draw("Scale", &scale.x, 0.01f).valueChanged;
 
     if (changed)
     {
@@ -529,10 +532,12 @@ bool EditorWindow_Details::DrawFloatProperty(DObject* instance, DProperty* prop)
 {
     float* val = static_cast<float*>(prop->GetValue(instance));
 
-    const bool changed = m_scalarField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), val, 0.1f);
-    if (changed)
+    const auto evt = m_scalarField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), val, 0.1f);
+    // TODO Phase 7: if (evt.editBegan)  { BeginPropertyEditCommand(...); }
+    // TODO Phase 7: if (evt.editEnded)  { CommitPropertyEditCommand(...); }
+    if (evt.valueChanged)
         prop->SetValue(instance, val);
-    return changed;
+    return evt.valueChanged;
 }
 
 bool EditorWindow_Details::DrawDoubleProperty(DObject* instance, DProperty* prop)
@@ -597,10 +602,12 @@ bool EditorWindow_Details::DrawVector3Property(DObject* instance, DProperty* pro
 {
     Vector3* val = static_cast<Vector3*>(prop->GetValue(instance));
 
-    const bool changed = m_vec3Field.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), &val->x, 0.1f);
-    if (changed)
+    const auto evt = m_vec3Field.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), &val->x, 0.1f);
+    // TODO Phase 7: if (evt.editBegan)  { BeginTransformCommand(...); }
+    // TODO Phase 7: if (evt.editEnded)  { CommitTransformCommand(...); }
+    if (evt.valueChanged)
         prop->SetValue(instance, val);
-    return changed;
+    return evt.valueChanged;
 }
 
 bool EditorWindow_Details::DrawQuaternionProperty(DObject* instance, DProperty* prop)
@@ -627,10 +634,10 @@ bool EditorWindow_Details::DrawFloat4Property(DObject* instance, DProperty* prop
     if (prop->GetMeta("UIType") == "Color")
     {
         float* val = static_cast<float*>(addr);
-        const bool changed = m_colorField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), val, true);
-        if (changed)
+        const auto evt = m_colorField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), val, true);
+        if (evt.valueChanged)
             prop->SetValue(instance, val);
-        return changed;
+        return evt.valueChanged;
     }
 
     EditorTheme* theme = g_editor->GetEditorTheme();

@@ -7,7 +7,7 @@
 
 using namespace DeltaEngine;
 
-bool Vec3Field::Draw(const char* label, float* values, float speed, const char* fmt)
+WidgetEditEvent Vec3Field::Draw(const char* label, float* values, float speed, const char* fmt)
 {
     EditorTheme* theme = g_editor->GetEditorTheme();
     const auto&  c     = theme->colors;
@@ -25,7 +25,7 @@ bool Vec3Field::Draw(const char* label, float* values, float speed, const char* 
     const float fieldW = (availW - 2.f * gap) / 3.f;
 
     static const char* kAxisLabels[3] = { "X", "Y", "Z" };
-    bool changed = false;
+    WidgetEditEvent evt;
 
     for (int i = 0; i < 3; ++i)
     {
@@ -69,8 +69,10 @@ bool Vec3Field::Draw(const char* label, float* values, float speed, const char* 
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding,   3.f);
 
         if (mono) ImGui::PushFont(mono);
-        changed |= ImGui::DragFloat("##v", &values[i], speed, 0.f, 0.f, fmt);
+        const bool axisChanged = ImGui::DragFloat("##v", &values[i], speed, 0.f, 0.f, fmt);
         if (mono) ImGui::PopFont();
+
+        evt.Merge(WidgetEditFromLastItem(axisChanged));
 
         ImGui::PopStyleVar(2);
         ImGui::PopStyleColor(3);
@@ -86,5 +88,5 @@ bool Vec3Field::Draw(const char* label, float* values, float speed, const char* 
     EndPropertyRow();
     ImGui::PopID();
 
-    return changed;
+    return evt;
 }

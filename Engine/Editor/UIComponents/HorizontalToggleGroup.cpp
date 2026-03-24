@@ -7,13 +7,13 @@
 
 using namespace DeltaEngine;
 
-bool HorizontalToggleGroup::Draw(const char* id, const Item* items, int itemCount,
-                                 int& selected, float itemW, float itemH,
-                                 const int* overrideSelectedIndex,
-                                 const ImVec4* overrideSelectedColor)
+WidgetEditEvent HorizontalToggleGroup::Draw(const char* id, const Item* items, int itemCount,
+                                            int& selected, float itemW, float itemH,
+                                            const int* overrideSelectedIndex,
+                                            const ImVec4* overrideSelectedColor)
 {
     if (!items || itemCount <= 0)
-        return false;
+        return {};
 
     const float fh = ImGui::GetFrameHeight();
     if (itemH <= 0.f) itemH = fh;
@@ -23,7 +23,7 @@ bool HorizontalToggleGroup::Draw(const char* id, const Item* items, int itemCoun
     const auto& c = theme->colors;
     ImDrawList* drawList = ImGui::GetWindowDrawList();
     if (!drawList)
-        return false;
+        return {};
     const float spacing = 1.f;
     const float totalW = itemCount * itemW + (itemCount - 1) * spacing;
     const float rounding = 6.f;
@@ -120,5 +120,13 @@ bool HorizontalToggleGroup::Draw(const char* id, const Item* items, int itemCoun
     ImGui::EndGroup();
     ImGui::PopID();
 
-    return selectionChanged;
+    if (selectionChanged)
+    {
+        WidgetEditEvent evt;
+        evt.valueChanged = true;
+        evt.editBegan    = true;
+        evt.editEnded    = true;
+        return evt;
+    }
+    return {};
 }

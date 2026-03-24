@@ -7,7 +7,7 @@
 
 using namespace DeltaEngine;
 
-bool ColorField::Draw(const char* label, float* values, bool hasAlpha)
+WidgetEditEvent ColorField::Draw(const char* label, float* values, bool hasAlpha)
 {
     EditorTheme* theme = g_editor->GetEditorTheme();
     const auto&  c     = theme->colors;
@@ -17,9 +17,8 @@ bool ColorField::Draw(const char* label, float* values, bool hasAlpha)
 
     float availW = BeginPropertyRow(label, c);
     float fh     = ImGui::GetFrameHeight();
-    bool  changed = false;
+    WidgetEditEvent evt;
 
-    // Color swatch button — opens picker popup on click
     ImVec4 swatchCol = { values[0], values[1], values[2], hasAlpha ? values[3] : 1.f };
     if (ImGui::ColorButton("##sw", swatchCol,
             ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoBorder,
@@ -27,6 +26,7 @@ bool ColorField::Draw(const char* label, float* values, bool hasAlpha)
     {
         ImGui::OpenPopup("##cpick");
     }
+    evt.Merge(WidgetEditFromLastItem(false));
 
     ImGui::SameLine(0.f, 4.f);
     ImGui::SetNextItemWidth(-1.f);
@@ -40,8 +40,9 @@ bool ColorField::Draw(const char* label, float* values, bool hasAlpha)
         editFlags |= ImGuiColorEditFlags_NoAlpha;
 
     if (mono) ImGui::PushFont(mono);
-    changed |= ImGui::ColorEdit4("##ce", values, editFlags);
+    const bool ceChanged = ImGui::ColorEdit4("##ce", values, editFlags);
     if (mono) ImGui::PopFont();
+    evt.Merge(WidgetEditFromLastItem(ceChanged));
 
     if (ImGui::BeginPopup("##cpick"))
     {
@@ -51,12 +52,13 @@ bool ColorField::Draw(const char* label, float* values, bool hasAlpha)
             ImGuiColorEditFlags_DisplayHex;
         if (!hasAlpha)
             pickerFlags |= ImGuiColorEditFlags_NoAlpha;
-        changed |= ImGui::ColorPicker4("##pk", values, pickerFlags);
+        const bool pkChanged = ImGui::ColorPicker4("##pk", values, pickerFlags);
+        evt.Merge(WidgetEditFromLastItem(pkChanged));
         ImGui::EndPopup();
     }
 
     EndPropertyRow();
     ImGui::PopID();
 
-    return changed;
+    return evt;
 }

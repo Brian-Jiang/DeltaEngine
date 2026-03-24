@@ -7,7 +7,7 @@
 
 using namespace DeltaEngine;
 
-bool ScalarField::Draw(const char* label, float* value, float speed, const char* fmt)
+WidgetEditEvent ScalarField::Draw(const char* label, float* value, float speed, const char* fmt)
 {
     EditorTheme* theme = g_editor->GetEditorTheme();
     const auto&  c     = theme->colors;
@@ -26,8 +26,10 @@ bool ScalarField::Draw(const char* label, float* value, float speed, const char*
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding,   3.f);
 
     if (mono) ImGui::PushFont(mono);
-    bool changed = ImGui::DragFloat("##v", value, speed, 0.f, 0.f, fmt);
+    const bool changed = ImGui::DragFloat("##v", value, speed, 0.f, 0.f, fmt);
     if (mono) ImGui::PopFont();
+
+    WidgetEditEvent evt = WidgetEditFromLastItem(changed);
 
     ImGui::PopStyleVar(2);
     ImGui::PopStyleColor(4);
@@ -35,5 +37,5 @@ bool ScalarField::Draw(const char* label, float* value, float speed, const char*
     EndPropertyRow();
     ImGui::PopID();
 
-    return changed;
+    return evt;
 }
