@@ -2,6 +2,12 @@
 
 #include "Editor/EditorCore.h"
 
+// PATTERN FOR OBJECT-TARGETING COMMANDS:
+// Always resolve the target object fresh inside Execute/Undo/Redo:
+//   auto* obj = ctx.core.ResolveObject<MyType>(m_assetId, m_objectId);
+//   if (!obj) return false;
+// Never store resolved pointers as members — they are invalid across undo/redo.
+
 using namespace DeltaEngine;
 
 EditorCommand_SetTestValue::EditorCommand_SetTestValue(std::string key, std::string valueBefore, std::string valueAfter)

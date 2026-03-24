@@ -6,7 +6,6 @@
 #include "Runtime/Assets/AssetDatabaseLocator.h"
 #include "Runtime/Assets/DPrimaryAsset.h"
 #include "Runtime/Assets/PA_DScene.h"
-#include "Runtime/Core/DObject.h"
 #include "Runtime/Core/DScene.h"
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Core/SceneComponent.h"
@@ -95,18 +94,31 @@ void EditorCore::LoadScene(const std::filesystem::path& scenePath)
         m_engine->LoadScene(sceneAsset->GetAssetId());
 }
 
-DObject* EditorCore::FindObject(const AssetId& assetId, const ObjectId& objectId)
+DObject* EditorCore::ResolveObject(const AssetId& assetId, const ObjectId& objectId)
 {
     if (!m_assetDatabase || assetId.IsNull() || objectId.IsNull())
         return nullptr;
 
-    if (DObject* found = m_assetDatabase->FindObject(assetId, objectId))
-        return found;
+    DPrimaryAsset* asset = m_assetDatabase->GetLoadedAsset(assetId);
+    if (!asset)
+        asset = m_assetDatabase->LoadAsset(assetId);
+    if (!asset)
+    {
+        std::printf("[EditorCore] ResolveObject: asset not found or failed to load (assetId=%s)\n",
+            assetId.ToString().c_str());
+        return nullptr;
+    }
 
-    m_assetDatabase->LoadAsset(assetId);
-    return m_assetDatabase->FindObject(assetId, objectId);
+    DObject* obj = asset->FindObject(objectId);
+    if (!obj)
+    {
+        std::printf("[EditorCore] ResolveObject: objectId not found in asset (objectId=%s assetId=%s)\n",
+            objectId.ToString().c_str(), assetId.ToString().c_str());
+    }
+    return obj;
 }
 
+// Only searches assets already loaded in memory. If you have an AssetId, use ResolveObject for command paths.
 std::pair<AssetId, ObjectId> EditorCore::GetIdsForObject(DObject* obj)
 {
     if (!obj || !m_assetDatabase)

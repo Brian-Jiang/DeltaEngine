@@ -2,6 +2,7 @@
 
 #include "EditorIncludes.h"
 
+#include "Runtime/Core/DObject.h"
 #include "Runtime/Core/UUID.h"
 
 #include <filesystem>
@@ -13,7 +14,6 @@
 DELTA_ENGINE_NS_BEGIN
 
 class DComponent;
-class DObject;
 class DPrimaryAsset;
 class EditorAssetDatabase;
 class EditorSelectionState;
@@ -50,7 +50,14 @@ public:
     DELTAEDITOR_API void SetTestValue(const std::string& key, const std::string& value);
     DELTAEDITOR_API std::string GetTestValue(const std::string& key) const;
 
-    DELTAEDITOR_API DObject* FindObject(const AssetId& assetId, const ObjectId& objectId);
+    DELTAEDITOR_API DObject* ResolveObject(const AssetId& assetId, const ObjectId& objectId);
+
+    template<typename T>
+    T* ResolveObject(const AssetId& assetId, const ObjectId& objectId)
+    {
+        return dynamic_cast<T*>(ResolveObject(assetId, objectId));
+    }
+
     DELTAEDITOR_API std::pair<AssetId, ObjectId> GetIdsForObject(DObject* obj);
     DELTAEDITOR_API void NotifyObjectDestroyed(const ObjectId& objectId);
 
