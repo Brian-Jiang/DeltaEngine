@@ -1,6 +1,7 @@
 #include "Editor/Commands/EditorCommand_DeleteGameObject.h"
 #include "Editor/Assets/EditorAssetDatabase.h"
 #include "Editor/EditorCore.h"
+#include "Editor/EditorSelectionState.h"
 
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/GameObject.h"
@@ -58,6 +59,9 @@ bool EditorCommand_DeleteGameObject::Undo(EditorCommandContext& ctx)
         std::printf("EditorCommand_DeleteGameObject::Undo: restore failed\n");
         return false;
     }
+
+    if (EditorSelectionState* sel = ctx.core.GetSelectionState())
+        sel->SetSelectedGameObject(m_gameObjectId);
 
     return true;
 }

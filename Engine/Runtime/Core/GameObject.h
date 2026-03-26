@@ -79,6 +79,15 @@ public:
     /// Removes and destroys a component owned by this game object.
     DELTAENGINE_API void RemoveComponent(DComponent* component);
 
+    /// Removes a component from this game object's lists without destroying it.
+    DELTAENGINE_API void DetachComponent(DComponent* component);
+
+    /// Inserts a pre-allocated regular component at the given index.
+    DELTAENGINE_API void InsertComponent(DComponent* comp, int index);
+
+    /// Inserts a pre-allocated scene component at the given index with optional parent.
+    DELTAENGINE_API void InsertSceneComponent(SceneComponent* sc, int index, SceneComponent* parent);
+
     /// Destroys this game object and its owned components.
     DFUNCTION()
     DELTAENGINE_API void Destroy();

@@ -1,9 +1,13 @@
 #include "Panels/AppHeader.h"
 
+#include "Commands/EditorCommand_CreateGameObject.h"
+#include "Commands/EditorCommandContext.h"
+#include "Commands/EditorCommandManager.h"
 #include "EditorCore.h"
 #include "EditorMain.h"
 #include "Assets/EditorAssetDatabase.h"
 #include "Style/EditorTheme.h"
+#include "Runtime/Assets/DPrimaryAsset.h"
 #include "Runtime/EngineMain.h"
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
@@ -87,7 +91,20 @@ void AppHeader::Draw()
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Edit"))
+        {
+            auto& cmdMgr = g_editorCore->GetCommandManager();
+            if (ImGui::MenuItem("Undo", "Ctrl+Z", false, cmdMgr.CanUndo()))
+            {
+                EditorCommandContext ctx{ *g_editorCore };
+                cmdMgr.Undo(ctx);
+            }
+            if (ImGui::MenuItem("Redo", "Ctrl+Y", false, cmdMgr.CanRedo()))
+            {
+                EditorCommandContext ctx{ *g_editorCore };
+                cmdMgr.Redo(ctx);
+            }
             ImGui::EndMenu();
+        }
         if (ImGui::BeginMenu("View"))
             ImGui::EndMenu();
         if (ImGui::BeginMenu("Scene"))
@@ -142,10 +159,16 @@ void AppHeader::Draw()
 
     if (const DClass* picked = m_goPickerPopup.Draw(c))
     {
-        if (g_editorCore && g_editorCore->GetEngine())
+        if (g_editorCore)
         {
-            if (auto* world = g_editorCore->GetWorld())
-                world->CreateGameObjectByClass(picked);
+            DPrimaryAsset* sceneAsset = g_editorCore->GetActiveSceneAsset();
+            if (sceneAsset)
+            {
+                EditorCommandContext ctx{ *g_editorCore };
+                g_editorCore->GetCommandManager().Execute(
+                    std::make_unique<EditorCommand_CreateGameObject>(
+                        sceneAsset->GetAssetId(), std::string(picked->GetName())), ctx);
+            }
         }
     }
 

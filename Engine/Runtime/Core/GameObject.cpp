@@ -133,6 +133,82 @@ void GameObject::RemoveComponent(DComponent* component)
     }
 }
 
+void GameObject::DetachComponent(DComponent* component)
+{
+    if (!component)
+        return;
+
+    auto it = std::find(m_components.begin(), m_components.end(), component);
+    if (it != m_components.end())
+    {
+        component->MarkForDestroy();
+        m_components.erase(it);
+        return;
+    }
+
+    auto* sc = dynamic_cast<SceneComponent*>(component);
+    if (!sc)
+        return;
+
+    auto scIt = std::find(m_sceneComponents.begin(), m_sceneComponents.end(), sc);
+    if (scIt != m_sceneComponents.end())
+    {
+        if (sc == m_rootSceneComponent)
+            m_rootSceneComponent = nullptr;
+
+        sc->MarkForDestroy();
+        sc->SetParent(nullptr);
+        m_sceneComponents.erase(scIt);
+    }
+}
+
+void GameObject::InsertComponent(DComponent* comp, int index)
+{
+    if (!comp)
+        return;
+
+    if (HasOwningAsset())
+        GetOwningAsset()->AddObject(comp);
+
+    comp->RegisterComponent(this);
+
+    int idx = std::clamp(index, 0, static_cast<int>(m_components.size()));
+    m_components.insert(m_components.begin() + idx, comp);
+}
+
+void GameObject::InsertSceneComponent(SceneComponent* sc, int index, SceneComponent* parent)
+{
+    if (!sc)
+        return;
+
+    if (HasOwningAsset())
+        GetOwningAsset()->AddObject(sc);
+
+    sc->RegisterComponent(this);
+
+    int idx = std::clamp(index, 0, static_cast<int>(m_sceneComponents.size()));
+    m_sceneComponents.insert(m_sceneComponents.begin() + idx, sc);
+
+    if (!m_rootSceneComponent)
+    {
+        m_rootSceneComponent = sc;
+        if (m_currentWorld)
+        {
+            SceneComponent* worldRoot = m_currentWorld->GetRootSceneComponent();
+            if (worldRoot)
+                sc->SetParent(worldRoot);
+        }
+    }
+    else if (parent)
+    {
+        sc->SetParent(parent);
+    }
+    else
+    {
+        sc->SetParent(m_rootSceneComponent);
+    }
+}
+
 const std::string& GameObject::GetName() const { return m_name; }
 
 DWorld* GameObject::GetCurrentWorld() const { return m_currentWorld; }

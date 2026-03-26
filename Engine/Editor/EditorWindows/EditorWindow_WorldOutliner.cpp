@@ -6,10 +6,15 @@
 #include <cstring>
 #include <format>
 
+#include "Editor/Commands/EditorCommand_CreateGameObject.h"
+#include "Editor/Commands/EditorCommand_DeleteGameObject.h"
+#include "Editor/Commands/EditorCommandContext.h"
+#include "Editor/Commands/EditorCommandManager.h"
 #include "Editor/EditorCore.h"
 #include "Editor/EditorMain.h"
 #include "Editor/EditorSelectionState.h"
 #include "Editor/Style/EditorTheme.h"
+#include "Runtime/Assets/DPrimaryAsset.h"
 #include "Runtime/EngineMain.h"
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/GameObject.h"
@@ -145,11 +150,14 @@ void EditorWindow_WorldOutliner::Render()
 
     if (const DClass* picked = m_addGoPicker.Draw(c))
     {
-        const std::string goName = std::format("New {}", picked->GetName());
-        const ObjectId newId = g_editorCore->CreateGameObject(goName);
-        if (!newId.IsNull())
-            if (EditorSelectionState* sel = g_editorCore->GetSelectionState())
-                sel->SetSelectedGameObject(newId);
+        DPrimaryAsset* sceneAsset = g_editorCore->GetActiveSceneAsset();
+        if (sceneAsset)
+        {
+            EditorCommandContext ctx{ *g_editorCore };
+            g_editorCore->GetCommandManager().Execute(
+                std::make_unique<EditorCommand_CreateGameObject>(
+                    sceneAsset->GetAssetId(), std::string(picked->GetName())), ctx);
+        }
     }
 
     ImGui::PushStyleColor(ImGuiCol_FrameBg,        c.DInput);
@@ -217,12 +225,15 @@ void EditorWindow_WorldOutliner::Render()
         if (ImGui::BeginPopupContextItem())
         {
             m_destroyGoMenu.Open({{"Destroy", [&]() {
-                if (entry->go && world)
+                if (entry->go && g_editorCore)
                 {
-                    const ObjectId oid = entry->go->GetObjectId();
-                    world->DestroyGameObject(entry->go);
-                    if (g_editorCore)
-                        g_editorCore->NotifyObjectDestroyed(oid);
+                    auto [assetId, objId] = g_editorCore->GetIdsForObject(entry->go);
+                    if (!assetId.IsNull() && !objId.IsNull())
+                    {
+                        EditorCommandContext ctx{ *g_editorCore };
+                        g_editorCore->GetCommandManager().Execute(
+                            std::make_unique<EditorCommand_DeleteGameObject>(assetId, objId), ctx);
+                    }
                 }
             }}});
             m_destroyGoMenu.Draw(c);

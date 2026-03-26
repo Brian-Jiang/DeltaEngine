@@ -64,6 +64,8 @@ void DWorld::DestroyGameObject(GameObject* gameObject)
     {
         GameObject* obj = *it;
         obj->Destroy();
+        if (obj->HasOwningAsset())
+            obj->GetOwningAsset()->RemoveObject(obj->GetObjectId());
         m_gameObjects.erase(it);
         m_gameObjectsChanged = true;
         GetReflectionRegistry().DestroyObject(obj);

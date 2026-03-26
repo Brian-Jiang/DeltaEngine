@@ -1,9 +1,14 @@
 #include "Editor/EditorWindows/EditorWindow_ComponentsHierarchy.h"
 
+#include "Editor/Commands/EditorCommand_CreateComponent.h"
+#include "Editor/Commands/EditorCommand_DeleteComponent.h"
+#include "Editor/Commands/EditorCommandContext.h"
+#include "Editor/Commands/EditorCommandManager.h"
 #include "Editor/EditorCore.h"
 #include "Editor/EditorMain.h"
 #include "Editor/EditorSelectionState.h"
 #include "Editor/Style/EditorTheme.h"
+#include "Runtime/Assets/DPrimaryAsset.h"
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Core/SceneComponent.h"
 #include "Runtime/Core/DComponent.h"
@@ -122,11 +127,16 @@ void EditorWindow_ComponentsHierarchy::Render()
 
     if (const DClass* picked = m_addCompPicker.Draw(c))
     {
-        const ObjectId newId = g_editorCore->AddComponentToGameObject(
-            contextGameObject->GetObjectId(), picked->GetName());
-        if (!newId.IsNull())
-            if (EditorSelectionState* sel = g_editorCore->GetSelectionState())
-                sel->SetSelectedComponent(newId);
+        DPrimaryAsset* sceneAsset = g_editorCore->GetActiveSceneAsset();
+        if (sceneAsset)
+        {
+            EditorCommandContext ctx{ *g_editorCore };
+            g_editorCore->GetCommandManager().Execute(
+                std::make_unique<EditorCommand_CreateComponent>(
+                    sceneAsset->GetAssetId(),
+                    contextGameObject->GetObjectId(),
+                    std::string(picked->GetName())), ctx);
+        }
     }
 
     ImGui::End();
@@ -183,14 +193,22 @@ void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(SceneComponent* 
 
     if (ImGui::BeginPopupContextItem())
     {
-        m_destroyCompMenu.Open({{"Destroy", [&]() {
+        bool isLastRoot = (sceneComponent == sceneComponent->GetGameObject()->GetRootSceneComponent()
+            && sceneComponent->GetGameObject()->GetSceneComponents().size() <= 1);
+        m_destroyCompMenu.Open({{"Destroy", [&, isLastRoot]() {
+            if (isLastRoot)
+                return;
             GameObject* owner = sceneComponent->GetGameObject();
-            if (owner)
+            if (owner && g_editorCore)
             {
-                const ObjectId oid = sceneComponent->GetObjectId();
-                owner->RemoveComponent(sceneComponent);
-                if (g_editorCore)
-                    g_editorCore->NotifyObjectDestroyed(oid);
+                auto [assetId, compId] = g_editorCore->GetIdsForObject(sceneComponent);
+                if (!assetId.IsNull() && !compId.IsNull())
+                {
+                    EditorCommandContext ctx{ *g_editorCore };
+                    g_editorCore->GetCommandManager().Execute(
+                        std::make_unique<EditorCommand_DeleteComponent>(
+                            assetId, owner->GetObjectId(), compId), ctx);
+                }
             }
         }}});
         m_destroyCompMenu.Draw(c);
@@ -258,12 +276,16 @@ void EditorWindow_ComponentsHierarchy::RenderRegularComponents(const std::vector
         {
             m_destroyCompMenu.Open({{"Destroy", [&]() {
                 GameObject* owner = component->GetGameObject();
-                if (owner)
+                if (owner && g_editorCore)
                 {
-                    const ObjectId oid = component->GetObjectId();
-                    owner->RemoveComponent(component);
-                    if (g_editorCore)
-                        g_editorCore->NotifyObjectDestroyed(oid);
+                    auto [assetId, compId] = g_editorCore->GetIdsForObject(component);
+                    if (!assetId.IsNull() && !compId.IsNull())
+                    {
+                        EditorCommandContext ctx{ *g_editorCore };
+                        g_editorCore->GetCommandManager().Execute(
+                            std::make_unique<EditorCommand_DeleteComponent>(
+                                assetId, owner->GetObjectId(), compId), ctx);
+                    }
                 }
             }}});
             m_destroyCompMenu.Draw(c);
