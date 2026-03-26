@@ -1,0 +1,9 @@
+#include "Runtime/Logging/LogChannels.h"
+
+DEFINE_LOG_CATEGORY(LogCore);
+DEFINE_LOG_CATEGORY(LogReflection);
+DEFINE_LOG_CATEGORY(LogSerialization);
+DEFINE_LOG_CATEGORY(LogAsset);
+DEFINE_LOG_CATEGORY(LogRenderer);
+DEFINE_LOG_CATEGORY(LogShader);
+DEFINE_LOG_CATEGORY(LogRHI);

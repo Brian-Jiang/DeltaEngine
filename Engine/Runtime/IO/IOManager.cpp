@@ -64,3 +64,8 @@ std::string IOManager::GetEngineImportedAssetFullPath(std::string assetName, boo
     std::string extension = isJson ? ".dasset.json" : ".dasset";
     return prefix + assetName + extension;
 }
+
+std::string IOManager::GetIntermediateFolder()
+{
+    return "../../../Intermediate/";
+}

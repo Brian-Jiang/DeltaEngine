@@ -5,6 +5,7 @@
 #endif
 
 #include "Macros.h"
+#include "Runtime/Logging/LogChannels.h"
 
 DELTA_ENGINE_NS_BEGIN
 

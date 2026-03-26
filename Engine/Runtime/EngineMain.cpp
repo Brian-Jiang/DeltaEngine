@@ -18,9 +18,9 @@
 #include "Reflection/ReflectionRegistry.h"
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/GameObject.h"
+#include "Runtime/Logging/LoggingManager.h"
 
 #include <SDL3/SDL.h>
-#include <spdlog/spdlog.h>
 
 namespace
 {
@@ -33,6 +33,7 @@ using namespace DirectX;
 
 EngineMain::EngineMain()
 {
+    LoggingManager::Initialize(IOManager::GetIntermediateFolder() + "Logs/");
     time = std::make_unique<Time>();
     GetReflectionRegistry().FinalizeRegistration();
 }
@@ -52,7 +53,8 @@ DWorld* EngineMain::GetWorld() const
 
 void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer)
 {
-    spdlog::info("Initializing EngineMain with scene renderer {}.", static_cast<void*>(sceneRenderer.get()));
+    DLOG(LogCore, ELogLevel::Display, "Initializing EngineMain with scene renderer {}.", static_cast<void*>(sceneRenderer.get()));
+
     dxRenderManager = std::move(sceneRenderer);
 }
 

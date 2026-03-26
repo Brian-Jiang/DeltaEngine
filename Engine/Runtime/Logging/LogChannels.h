@@ -1,0 +1,11 @@
+#pragma once
+
+#include "LogCategory.h"
+
+DECLARE_LOG_CATEGORY(LogCore);
+DECLARE_LOG_CATEGORY(LogReflection);
+DECLARE_LOG_CATEGORY(LogSerialization);
+DECLARE_LOG_CATEGORY(LogAsset);
+DECLARE_LOG_CATEGORY(LogRenderer);
+DECLARE_LOG_CATEGORY(LogShader);
+DECLARE_LOG_CATEGORY(LogRHI);
