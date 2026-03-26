@@ -1,8 +1,10 @@
 #include "Editor/Commands/EditorCommand_DeleteGameObject.h"
 #include "Editor/Assets/EditorAssetDatabase.h"
 #include "Editor/EditorCore.h"
+#include "Runtime/Assets/PA_DScene.h"
 #include "Editor/EditorSelectionState.h"
 
+#include "Runtime/Core/DScene.h"
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Serialization/ObjectSnapshotWriter.h"
@@ -51,8 +53,22 @@ bool EditorCommand_DeleteGameObject::Undo(EditorCommandContext& ctx)
     if (!world)
         return false;
 
+    EditorAssetDatabase* db = ctx.core.GetAssetDatabase();
+    if (!db)
+        return false;
+
+    DPrimaryAsset* asset = db->GetLoadedAsset(m_assetId);
+    if (!asset)
+        asset = db->LoadAsset(m_assetId);
+    if (!asset)
+        return false;
+
+    DScene* scene = nullptr;
+    if (auto* pa = dynamic_cast<PA_DScene*>(asset))
+        scene = pa->GetScene();
+
     ObjectSnapshotReader reader;
-    DObject* restored = reader.Restore(m_snapshot, world, ctx.core.GetAssetDatabase());
+    DObject* restored = reader.Restore(m_snapshot, world, db, asset, scene);
 
     if (!restored)
     {

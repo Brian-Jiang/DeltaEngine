@@ -6,6 +6,8 @@
 #include "Core/GameObject.h"
 #include "Core/SceneComponent.h"
 #include "Core/DWorld.h"
+#include "Assets/DPrimaryAsset.h"
+#include "Core/DScene.h"
 #include "Reflection/DClass.h"
 #include "Reflection/DObjectReferenceTraversal.h"
 #include "Reflection/ReflectionRegistry.h"
@@ -23,7 +25,9 @@ using namespace DeltaEngine;
 DObject* ObjectSnapshotReader::Restore(
     const ObjectSnapshot& snapshot,
     DWorld* world,
-    IAssetDatabase* db)
+    IAssetDatabase* db,
+    DPrimaryAsset* registerWithAsset,
+    DScene* addRestoredRootGameObjectToScene)
 {
     if (snapshot.rootJson.empty() || !snapshot.rootJson.contains("objects"))
         return nullptr;
@@ -93,6 +97,15 @@ DObject* ObjectSnapshotReader::Restore(
     }
     ar.EndArray();
 
+    if (registerWithAsset)
+    {
+        for (DObject* obj : restoredObjects)
+        {
+            if (obj && !obj->HasOwningAsset())
+                registerWithAsset->AddObject(obj);
+        }
+    }
+
     // OnAfterDeserialize
     for (DObject* obj : restoredObjects)
     {
@@ -136,6 +149,8 @@ DObject* ObjectSnapshotReader::Restore(
 
         if (world)
             world->AddGameObjectFromScene(go);
+        if (addRestoredRootGameObjectToScene)
+            addRestoredRootGameObjectToScene->AddGameObject(go);
     }
 
     // PostRestore bottom-up (leaves first)

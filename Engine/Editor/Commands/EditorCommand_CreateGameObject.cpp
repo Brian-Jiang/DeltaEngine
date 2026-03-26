@@ -4,6 +4,7 @@
 #include "Editor/EditorSelectionState.h"
 
 #include "Runtime/Assets/DPrimaryAsset.h"
+#include "Runtime/Assets/PA_DScene.h"
 #include "Runtime/Core/DScene.h"
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/GameObject.h"
@@ -96,8 +97,22 @@ bool EditorCommand_CreateGameObject::Redo(EditorCommandContext& ctx)
     if (!world)
         return false;
 
+    EditorAssetDatabase* db = ctx.core.GetAssetDatabase();
+    if (!db)
+        return false;
+
+    DPrimaryAsset* asset = db->GetLoadedAsset(m_sceneAssetId);
+    if (!asset)
+        asset = db->LoadAsset(m_sceneAssetId);
+    if (!asset)
+        return false;
+
+    DScene* scene = nullptr;
+    if (auto* pa = dynamic_cast<PA_DScene*>(asset))
+        scene = pa->GetScene();
+
     ObjectSnapshotReader reader;
-    DObject* restored = reader.Restore(m_snapshot, world, ctx.core.GetAssetDatabase());
+    DObject* restored = reader.Restore(m_snapshot, world, db, asset, scene);
     if (!restored)
         return false;
 

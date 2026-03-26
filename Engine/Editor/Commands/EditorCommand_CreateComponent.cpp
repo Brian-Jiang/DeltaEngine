@@ -116,7 +116,7 @@ bool EditorCommand_CreateComponent::Redo(EditorCommandContext& ctx)
         return false;
 
     ObjectSnapshotReader reader;
-    DObject* restored = reader.Restore(m_snapshot, nullptr, ctx.core.GetAssetDatabase());
+    DObject* restored = reader.Restore(m_snapshot, nullptr, ctx.core.GetAssetDatabase(), asset, nullptr);
     if (!restored)
         return false;
 
