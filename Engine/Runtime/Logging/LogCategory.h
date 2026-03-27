@@ -77,7 +77,7 @@ private:
 
 // In a .h — forward-declares the category for other TUs
 #define DECLARE_LOG_CATEGORY(CategoryName) \
-    extern DELTAENGINE_API DLogCategory CategoryName
+    extern DLogCategory CategoryName;
 
 // In a .cpp — defines a module-wide category
 #define DEFINE_LOG_CATEGORY(CategoryName) \

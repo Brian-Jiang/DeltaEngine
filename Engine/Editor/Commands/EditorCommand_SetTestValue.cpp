@@ -19,12 +19,14 @@ EditorCommand_SetTestValue::EditorCommand_SetTestValue(std::string key, std::str
 
 bool EditorCommand_SetTestValue::Execute(EditorCommandContext& ctx)
 {
+    DLOG(LogEditorCommand, ELogLevel::Log, "[Set Test Value] Execute: Start (key='{}')", m_key);
     ctx.core.SetTestValue(m_key, m_valueAfter);
     return true;
 }
 
 bool EditorCommand_SetTestValue::Undo(EditorCommandContext& ctx)
 {
+    DLOG(LogEditorCommand, ELogLevel::Log, "[Set Test Value] Undo: Start (key='{}')", m_key);
     ctx.core.SetTestValue(m_key, m_valueBefore);
     return true;
 }

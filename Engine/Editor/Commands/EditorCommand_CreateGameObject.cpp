@@ -35,19 +35,30 @@ std::string_view EditorCommand_CreateGameObject::GetDescription() const
 
 bool EditorCommand_CreateGameObject::Execute(EditorCommandContext& ctx)
 {
+    DLOG(LogEditorCommand, ELogLevel::Log, "[Create GameObject] Execute: Start");
+
     DPrimaryAsset* asset = ctx.core.GetActiveSceneAsset();
     if (!asset)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Create GameObject] Execute: No active scene asset found");
         return false;
+    }
 
     DWorld* world = ctx.core.GetWorld();
     if (!world)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Create GameObject] Execute: No world");
         return false;
+    }
 
     DScene* scene = world->GetActiveScene();
     const std::string goName = std::format("New {}", m_className);
     GameObject* go = world->CreateGameObjectInScene(scene, goName);
     if (!go)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Create GameObject] Execute: CreateGameObjectInScene failed for class '{}'", m_className);
         return false;
+    }
 
     if (SceneComponent* root = go->GetRootSceneComponent())
         if (!root->HasOwningAsset())
@@ -63,9 +74,14 @@ bool EditorCommand_CreateGameObject::Execute(EditorCommandContext& ctx)
 
 bool EditorCommand_CreateGameObject::Undo(EditorCommandContext& ctx)
 {
+    DLOG(LogEditorCommand, ELogLevel::Log, "[Create GameObject] Undo: Start");
+
     DWorld* world = ctx.core.GetWorld();
     if (!world)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Create GameObject] Undo: No world");
         return false;
+    }
 
     GameObject* go = nullptr;
     for (auto* g : world->GetGameObjects())
@@ -77,7 +93,10 @@ bool EditorCommand_CreateGameObject::Undo(EditorCommandContext& ctx)
         }
     }
     if (!go)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Create GameObject] Undo: GameObject with ID {} not found", m_createdId.ToString());
         return false;
+    }
 
     ObjectSnapshotWriter writer;
     m_snapshot = writer.Capture(go);
@@ -90,22 +109,33 @@ bool EditorCommand_CreateGameObject::Undo(EditorCommandContext& ctx)
 
 bool EditorCommand_CreateGameObject::Redo(EditorCommandContext& ctx)
 {
+    DLOG(LogEditorCommand, ELogLevel::Log, "[Create GameObject] Redo: Start");
+
     if (!m_hasSnapshot)
         return Execute(ctx);
 
     DWorld* world = ctx.core.GetWorld();
     if (!world)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Create GameObject] Redo: No world");
         return false;
+    }
 
     EditorAssetDatabase* db = ctx.core.GetAssetDatabase();
     if (!db)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Create GameObject] Redo: No asset database");
         return false;
+    }
 
     DPrimaryAsset* asset = db->GetLoadedAsset(m_sceneAssetId);
     if (!asset)
         asset = db->LoadAsset(m_sceneAssetId);
     if (!asset)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Create GameObject] Redo: Failed to load scene asset {}", m_sceneAssetId.ToString());
         return false;
+    }
 
     DScene* scene = nullptr;
     if (auto* pa = dynamic_cast<PA_DScene*>(asset))
@@ -114,7 +144,10 @@ bool EditorCommand_CreateGameObject::Redo(EditorCommandContext& ctx)
     ObjectSnapshotReader reader;
     DObject* restored = reader.Restore(m_snapshot, world, db, asset, scene);
     if (!restored)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Create GameObject] Redo: Failed to restore GameObject from snapshot");
         return false;
+    }
 
     m_createdId = restored->GetObjectId();
 

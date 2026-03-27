@@ -7,6 +7,8 @@
 
 DELTA_ENGINE_NS_BEGIN
 
+DECLARE_LOG_CATEGORY(LogEditorCommand)
+
 class EditorCommand
 {
 public:

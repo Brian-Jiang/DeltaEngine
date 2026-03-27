@@ -35,22 +35,36 @@ std::string_view EditorCommand_CreateComponent::GetDescription() const
 
 bool EditorCommand_CreateComponent::Execute(EditorCommandContext& ctx)
 {
+    DLOG(LogEditorCommand, ELogLevel::Log, "[Create Component] Execute: Start");
+
     DPrimaryAsset* asset = ctx.core.GetActiveSceneAsset();
     if (!asset)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Create Component] Execute: No active scene asset found");
         return false;
+    }
 
     DObject* obj = asset->FindObject(m_gameObjectId);
     GameObject* go = dynamic_cast<GameObject*>(obj);
     if (!go)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Create Component] Execute: GameObject with ID {} not found in asset", m_gameObjectId.ToString());
         return false;
+    }
 
     const DClass* dclass = GetReflectionRegistry().FindClassByName(m_className);
     if (!dclass)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Create Component] Execute: Class '{}' not found in reflection registry", m_className);
         return false;
+    }
 
     DComponent* comp = go->AddComponentByClass(dclass);
     if (!comp)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Create Component] Execute: Failed to create component of class '{}'", m_className);
         return false;
+    }
 
     asset->MarkDirty();
     m_createdComponentId = comp->GetObjectId();
@@ -77,19 +91,30 @@ bool EditorCommand_CreateComponent::Execute(EditorCommandContext& ctx)
 
 bool EditorCommand_CreateComponent::Undo(EditorCommandContext& ctx)
 {
+    DLOG(LogEditorCommand, ELogLevel::Log, "[Create Component] Undo: Start");
+
     DPrimaryAsset* asset = ctx.core.GetActiveSceneAsset();
     if (!asset)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Create Component] Undo: No active scene asset found");
         return false;
+    }
 
     DObject* goObj = asset->FindObject(m_gameObjectId);
     GameObject* go = dynamic_cast<GameObject*>(goObj);
     if (!go)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Create Component] Undo: GameObject with ID {} not found in asset", m_gameObjectId.ToString());
         return false;
+    }
 
     DObject* compObj = asset->FindObject(m_createdComponentId);
     DComponent* comp = dynamic_cast<DComponent*>(compObj);
     if (!comp)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Create Component] Undo: Component with ID {} not found in asset", m_createdComponentId.ToString());
         return false;
+    }
 
     ObjectSnapshotWriter writer;
     m_snapshot = writer.Capture(comp);
@@ -103,22 +128,33 @@ bool EditorCommand_CreateComponent::Undo(EditorCommandContext& ctx)
 
 bool EditorCommand_CreateComponent::Redo(EditorCommandContext& ctx)
 {
+    DLOG(LogEditorCommand, ELogLevel::Log, "[Create Component] Redo: Start");
+
     if (!m_hasSnapshot)
         return Execute(ctx);
 
     DPrimaryAsset* asset = ctx.core.GetActiveSceneAsset();
     if (!asset)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Create Component] Redo: No active scene asset found");
         return false;
+    }
 
     DObject* goObj = asset->FindObject(m_gameObjectId);
     GameObject* go = dynamic_cast<GameObject*>(goObj);
     if (!go)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Create Component] Redo: GameObject with ID {} not found in asset", m_gameObjectId.ToString());
         return false;
+    }
 
     ObjectSnapshotReader reader;
     DObject* restored = reader.Restore(m_snapshot, nullptr, ctx.core.GetAssetDatabase(), asset, nullptr);
     if (!restored)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Create Component] Redo: Failed to restore component from snapshot");
         return false;
+    }
 
     m_createdComponentId = restored->GetObjectId();
 
@@ -126,7 +162,10 @@ bool EditorCommand_CreateComponent::Redo(EditorCommandContext& ctx)
     {
         auto* sc = dynamic_cast<SceneComponent*>(restored);
         if (!sc)
+        {
+            DLOG(LogEditorCommand, ELogLevel::Error, "[Create Component] Redo: Failed to cast restored object to SceneComponent");
             return false;
+        }
 
         SceneComponent* parent = nullptr;
         if (!m_parentSceneComponentId.IsNull())
@@ -141,7 +180,10 @@ bool EditorCommand_CreateComponent::Redo(EditorCommandContext& ctx)
     {
         auto* comp = dynamic_cast<DComponent*>(restored);
         if (!comp)
+        {
+            DLOG(LogEditorCommand, ELogLevel::Error, "[Create Component] Redo: Failed to cast restored object to DComponent");
             return false;
+        }
         go->InsertComponent(comp, m_componentIndex);
         comp->PostRestore();
     }

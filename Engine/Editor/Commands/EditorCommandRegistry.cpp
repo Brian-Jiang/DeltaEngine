@@ -1,7 +1,5 @@
 #include "EditorCommandRegistry.h"
 
-#include <cstdio>
-
 using namespace DeltaEngine;
 
 EditorCommandRegistry& EditorCommandRegistry::Get()
@@ -20,8 +18,7 @@ std::unique_ptr<EditorCommand> EditorCommandRegistry::Create(std::string_view ty
     auto it = m_factories.find(std::string(typeName));
     if (it == m_factories.end())
     {
-        std::printf("[EditorCommandRegistry] Unknown command type: %.*s\n",
-            static_cast<int>(typeName.size()), typeName.data());
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Command Registry] Unknown command type: {}", typeName);
         return nullptr;
     }
     return it->second();

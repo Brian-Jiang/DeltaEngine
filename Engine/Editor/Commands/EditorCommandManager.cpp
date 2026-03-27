@@ -5,8 +5,12 @@ using namespace DeltaEngine;
 
 bool EditorCommandManager::Execute(std::unique_ptr<EditorCommand> cmd, EditorCommandContext& ctx)
 {
+    DLOG(LogEditorCommand, ELogLevel::Log, "[Command Manager] Execute: {}", cmd->GetTypeName());
     if (!cmd->Execute(ctx))
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Command Manager] Execute failed: {}", cmd->GetTypeName());
         return false;
+    }
 
     m_redoStack.clear();
     m_undoStack.push_back(std::move(cmd));
@@ -25,12 +29,18 @@ void EditorCommandManager::ExecuteAuxiliary(std::unique_ptr<EditorAuxiliaryComma
 bool EditorCommandManager::Undo(EditorCommandContext& ctx)
 {
     if (m_undoStack.empty())
+    {
+        DLOG(LogEditorCommand, ELogLevel::Warning, "[Command Manager] Undo: Stack empty");
         return false;
+    }
 
     auto cmd = std::move(m_undoStack.back());
     m_undoStack.pop_back();
 
+    DLOG(LogEditorCommand, ELogLevel::Log, "[Command Manager] Undo: {}", cmd->GetTypeName());
     bool result = cmd->Undo(ctx);
+    if (!result)
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Command Manager] Undo failed: {}", cmd->GetTypeName());
     m_redoStack.push_back(std::move(cmd));
     return result;
 }
@@ -38,12 +48,18 @@ bool EditorCommandManager::Undo(EditorCommandContext& ctx)
 bool EditorCommandManager::Redo(EditorCommandContext& ctx)
 {
     if (m_redoStack.empty())
+    {
+        DLOG(LogEditorCommand, ELogLevel::Warning, "[Command Manager] Redo: Stack empty");
         return false;
+    }
 
     auto cmd = std::move(m_redoStack.back());
     m_redoStack.pop_back();
 
+    DLOG(LogEditorCommand, ELogLevel::Log, "[Command Manager] Redo: {}", cmd->GetTypeName());
     bool result = cmd->Redo(ctx);
+    if (!result)
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Command Manager] Redo failed: {}", cmd->GetTypeName());
     m_undoStack.push_back(std::move(cmd));
     return result;
 }
@@ -98,6 +114,8 @@ void EditorCommandManager::DeserializeAndReplay(const nlohmann::json& in, Editor
             cmd->Deserialize(envelope["data"]);
             Execute(std::move(cmd), ctx);
         }
+        else
+            DLOG(LogEditorCommand, ELogLevel::Error, "[Command Manager] DeserializeAndReplay: Unknown command type: {}", type);
     }
 }
 

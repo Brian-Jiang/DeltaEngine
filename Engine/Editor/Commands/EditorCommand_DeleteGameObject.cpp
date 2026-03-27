@@ -10,8 +10,6 @@
 #include "Runtime/Serialization/ObjectSnapshotWriter.h"
 #include "Runtime/Serialization/ObjectSnapshotReader.h"
 
-#include <cstdio>
-
 using namespace DeltaEngine;
 
 EditorCommand_DeleteGameObject::EditorCommand_DeleteGameObject(
@@ -30,17 +28,25 @@ std::string_view EditorCommand_DeleteGameObject::GetDescription() const
 
 bool EditorCommand_DeleteGameObject::Execute(EditorCommandContext& ctx)
 {
+    DLOG(LogEditorCommand, ELogLevel::Log, "[Delete GameObject] Execute: Start");
+
     DObject* obj = ctx.core.ResolveObject(m_assetId, m_gameObjectId);
     auto* go = dynamic_cast<GameObject*>(obj);
     if (!go)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Delete GameObject] Execute: GameObject with ID {} not found", m_gameObjectId.ToString());
         return false;
+    }
 
     ObjectSnapshotWriter writer;
     m_snapshot = writer.Capture(go);
 
     DWorld* world = ctx.core.GetWorld();
     if (!world)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Delete GameObject] Execute: No world");
         return false;
+    }
 
     world->DestroyGameObject(go);
     ctx.core.NotifyObjectDestroyed(m_gameObjectId);
@@ -49,19 +55,30 @@ bool EditorCommand_DeleteGameObject::Execute(EditorCommandContext& ctx)
 
 bool EditorCommand_DeleteGameObject::Undo(EditorCommandContext& ctx)
 {
+    DLOG(LogEditorCommand, ELogLevel::Log, "[Delete GameObject] Undo: Start");
+
     DWorld* world = ctx.core.GetWorld();
     if (!world)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Delete GameObject] Undo: No world");
         return false;
+    }
 
     EditorAssetDatabase* db = ctx.core.GetAssetDatabase();
     if (!db)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Delete GameObject] Undo: No asset database");
         return false;
+    }
 
     DPrimaryAsset* asset = db->GetLoadedAsset(m_assetId);
     if (!asset)
         asset = db->LoadAsset(m_assetId);
     if (!asset)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Delete GameObject] Undo: Failed to load asset {}", m_assetId.ToString());
         return false;
+    }
 
     DScene* scene = nullptr;
     if (auto* pa = dynamic_cast<PA_DScene*>(asset))
@@ -72,7 +89,7 @@ bool EditorCommand_DeleteGameObject::Undo(EditorCommandContext& ctx)
 
     if (!restored)
     {
-        std::printf("EditorCommand_DeleteGameObject::Undo: restore failed\n");
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Delete GameObject] Undo: Failed to restore GameObject from snapshot");
         return false;
     }
 

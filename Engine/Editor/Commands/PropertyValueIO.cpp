@@ -1,4 +1,5 @@
 #include "Editor/Commands/PropertyValueIO.h"
+#include "Editor/Commands/EditorCommand.h"
 
 #include "Runtime/Reflection/DProperty.h"
 #include "Runtime/Core/DObject.h"
@@ -51,6 +52,7 @@ nlohmann::json DeltaEngine::PropertyToJson(const DObject* obj, const DProperty* 
         return arr;
     }
     default:
+        DLOG(LogEditorCommand, ELogLevel::Warning, "[PropertyValueIO] PropertyToJson: unsupported type for '{}'", prop->GetName());
         return nullptr;
     }
 }
@@ -111,6 +113,7 @@ bool DeltaEngine::SetPropertyFromJson(DObject* obj, const DProperty* prop, const
         break;
     }
     default:
+        DLOG(LogEditorCommand, ELogLevel::Error, "[PropertyValueIO] SetPropertyFromJson: unsupported type for '{}'", prop->GetName());
         return false;
     }
 

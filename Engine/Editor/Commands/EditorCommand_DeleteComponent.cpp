@@ -12,7 +12,6 @@
 #include "Runtime/Serialization/ObjectSnapshotReader.h"
 
 #include <algorithm>
-#include <cstdio>
 
 using namespace DeltaEngine;
 
@@ -33,19 +32,30 @@ std::string_view EditorCommand_DeleteComponent::GetDescription() const
 
 bool EditorCommand_DeleteComponent::Execute(EditorCommandContext& ctx)
 {
+    DLOG(LogEditorCommand, ELogLevel::Log, "[Delete Component] Execute: Start");
+
     DPrimaryAsset* asset = ctx.core.GetActiveSceneAsset();
     if (!asset)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Delete Component] Execute: No active scene asset found");
         return false;
+    }
 
     DObject* goObj = asset->FindObject(m_gameObjectId);
     GameObject* go = dynamic_cast<GameObject*>(goObj);
     if (!go)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Delete Component] Execute: GameObject with ID {} not found in asset", m_gameObjectId.ToString());
         return false;
+    }
 
     DObject* compObj = asset->FindObject(m_componentId);
     DComponent* comp = dynamic_cast<DComponent*>(compObj);
     if (!comp)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Delete Component] Execute: Component with ID {} not found in asset", m_componentId.ToString());
         return false;
+    }
 
     auto* sc = dynamic_cast<SceneComponent*>(comp);
     m_isSceneComponent = (sc != nullptr);
@@ -54,7 +64,7 @@ bool EditorCommand_DeleteComponent::Execute(EditorCommandContext& ctx)
     {
         if (sc == go->GetRootSceneComponent() && go->GetSceneComponents().size() <= 1)
         {
-            std::printf("[DeleteComponent] Cannot delete the last root SceneComponent.\n");
+            DLOG(LogEditorCommand, ELogLevel::Error, "[Delete Component] Execute: Cannot delete the last root SceneComponent");
             return false;
         }
 
@@ -83,19 +93,30 @@ bool EditorCommand_DeleteComponent::Execute(EditorCommandContext& ctx)
 
 bool EditorCommand_DeleteComponent::Undo(EditorCommandContext& ctx)
 {
+    DLOG(LogEditorCommand, ELogLevel::Log, "[Delete Component] Undo: Start");
+
     DPrimaryAsset* asset = ctx.core.GetActiveSceneAsset();
     if (!asset)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Delete Component] Undo: No active scene asset found");
         return false;
+    }
 
     DObject* goObj = asset->FindObject(m_gameObjectId);
     GameObject* go = dynamic_cast<GameObject*>(goObj);
     if (!go)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Delete Component] Undo: GameObject with ID {} not found in asset", m_gameObjectId.ToString());
         return false;
+    }
 
     ObjectSnapshotReader reader;
     DObject* restored = reader.Restore(m_snapshot, nullptr, ctx.core.GetAssetDatabase(), asset, nullptr);
     if (!restored)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Delete Component] Undo: Failed to restore component from snapshot");
         return false;
+    }
 
     m_componentId = restored->GetObjectId();
 
@@ -103,7 +124,10 @@ bool EditorCommand_DeleteComponent::Undo(EditorCommandContext& ctx)
     {
         auto* sc = dynamic_cast<SceneComponent*>(restored);
         if (!sc)
+        {
+            DLOG(LogEditorCommand, ELogLevel::Error, "[Delete Component] Undo: Failed to cast restored object to SceneComponent");
             return false;
+        }
 
         SceneComponent* parent = nullptr;
         if (!m_parentSceneComponentId.IsNull())
@@ -118,7 +142,10 @@ bool EditorCommand_DeleteComponent::Undo(EditorCommandContext& ctx)
     {
         auto* comp = dynamic_cast<DComponent*>(restored);
         if (!comp)
+        {
+            DLOG(LogEditorCommand, ELogLevel::Error, "[Delete Component] Undo: Failed to cast restored object to DComponent");
             return false;
+        }
         go->InsertComponent(comp, m_componentIndex);
         comp->PostRestore();
     }
@@ -133,6 +160,7 @@ bool EditorCommand_DeleteComponent::Undo(EditorCommandContext& ctx)
 
 bool EditorCommand_DeleteComponent::Redo(EditorCommandContext& ctx)
 {
+    DLOG(LogEditorCommand, ELogLevel::Log, "[Delete Component] Redo: Start");
     return Execute(ctx);
 }
 

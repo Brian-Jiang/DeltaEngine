@@ -31,26 +31,42 @@ bool EditorCommand_SetProperty::ApplyValue(EditorCommandContext& ctx, const nloh
 {
     DObject* obj = ctx.core.ResolveObject(m_assetId, m_objectId);
     if (!obj)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Set Property] Object {} not found in asset {}", m_objectId.ToString(), m_assetId.ToString());
         return false;
+    }
 
     DClass* dc = obj->GetClass();
     if (!dc)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Set Property] Object {} has no class", m_objectId.ToString());
         return false;
+    }
 
     DProperty* prop = dc->FindPropertyByName(m_propertyName);
     if (!prop)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Set Property] Property '{}' not found on object {}", m_propertyName, m_objectId.ToString());
         return false;
+    }
 
-    return SetPropertyFromJson(obj, prop, value);
+    if (!SetPropertyFromJson(obj, prop, value))
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Set Property] SetPropertyFromJson failed for '{}' on object {}", m_propertyName, m_objectId.ToString());
+        return false;
+    }
+    return true;
 }
 
 bool EditorCommand_SetProperty::Execute(EditorCommandContext& ctx)
 {
+    DLOG(LogEditorCommand, ELogLevel::Log, "[Set Property] Execute: Start");
     return ApplyValue(ctx, m_valueAfter);
 }
 
 bool EditorCommand_SetProperty::Undo(EditorCommandContext& ctx)
 {
+    DLOG(LogEditorCommand, ELogLevel::Log, "[Set Property] Undo: Start");
     return ApplyValue(ctx, m_valueBefore);
 }
 
