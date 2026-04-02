@@ -23,3 +23,4 @@
 #define DECLARE_LOG_CATEGORY(CategoryName) \
 extern DELTAENGINE_API DLogCategory CategoryName;
 #define DLOG(Category, Level, __VA_ARGS__) do { constexpr ::spdlog::level::level_enum _lvl = ::ToSpdlogLevel(Level); auto* _log = (Category).GetLogger(); if (_log && _log->should_log(_lvl)) { _log->log(spdlog::source_loc { __FILE__, __LINE__, __func__ }, _lvl, __VA_ARGS__); } if constexpr (Level == ::ELogLevel::Fatal) std::abort(); } while (false)
+#define DEFINE_LOG_CATEGORY(CategoryName) DLogCategory CategoryName { #CategoryName, ELogLevel::Log }

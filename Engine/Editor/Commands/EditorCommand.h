@@ -1,5 +1,7 @@
 #pragma once
 
+#include "EditorIncludes.h"
+
 #include "EditorCommandContext.h"
 
 #include <nlohmann/json.hpp>
