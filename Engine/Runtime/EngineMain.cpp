@@ -14,6 +14,7 @@
 #include "Graphics/Light/SpotLight.h"
 #include "Graphics/Renderer/MeshRenderer.h"
 #include "Graphics/Renderer/Renderer.h"
+#include "Graphics/DirectX/CommandList.h"
 #include "IO/IOManager.h"
 #include "Reflection/ReflectionRegistry.h"
 #include "Runtime/Core/DWorld.h"
@@ -96,6 +97,8 @@ void EngineMain::RecordSceneDraws(std::shared_ptr<DXGraphicsContext> context)
     if (DWorld* world = GetWorld())
     {
         world->PreGatherDrawCalls(context);
+        if (context->cameraOverride.has_value())
+            context->commandList->SetGraphicsDynamicConstantBuffer(0, *context->cameraOverride);
         context->ApplyLightBuffersToCommandList();
         world->GatherDrawCalls(context);
     }

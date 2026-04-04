@@ -4,9 +4,11 @@
 
 #include <d3d12.h>
 #include <memory>
+#include <optional>
 
 #include "Runtime/Graphics/DirectX/ImGuiSrvDescriptorAllocator.h"
 #include "Runtime/Graphics/DirectX/SwapChain.h"
+#include "Runtime/Graphics/Structures/Camera.h"
 
 #include "imgui.h"
 
@@ -56,6 +58,11 @@ public:
     /// Renders the scene, editor UI, and presents the frame.
     void RenderFrame(class EngineMain* engine);
 
+    /// Sets a preview camera override that replaces the scene camera for the next frame.
+    void SetPreviewCameraOverride(const CameraCB& cb) { m_previewCameraOverride = cb; }
+    /// Clears the preview camera override so the scene camera is used again.
+    void ClearPreviewCameraOverride() { m_previewCameraOverride.reset(); }
+
     /// Returns the swap-chain width in pixels.
     UINT GetWidth() const { return m_width; }
     /// Returns the swap-chain height in pixels.
@@ -84,6 +91,7 @@ private:
     ImGuiSrvDescriptorAllocator m_imGuiSrvAllocator;
 
     std::shared_ptr<DirectX12Texture> m_viewportDisplayTexture;
+    std::optional<CameraCB> m_previewCameraOverride;
 
     D3D12_CPU_DESCRIPTOR_HANDLE m_imguiSrvCpuHandle;
     D3D12_GPU_DESCRIPTOR_HANDLE m_imguiSrvGpuHandle;

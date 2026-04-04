@@ -7,6 +7,7 @@
 #include <Windows.h>
 
 #include "EditorWindows/EditorWindow.h"
+#include "Runtime/Graphics/Structures/Camera.h"
 
 #include "imgui.h"
 
@@ -69,6 +70,11 @@ public:
     DELTAEDITOR_API void SetSceneRenderSize(UINT width, UINT height);
     /// Returns the current scene render target size.
     DELTAEDITOR_API void GetSceneRenderSize(UINT& width, UINT& height) const;
+
+    /// Sets a preview camera override that replaces the scene camera for the next frame.
+    DELTAEDITOR_API void SetPreviewCameraOverride(const CameraCB& cb);
+    /// Clears the preview camera override so the scene camera is used again.
+    DELTAEDITOR_API void ClearPreviewCameraOverride();
     /// Returns the active editor theme.
     DELTAEDITOR_API EditorTheme* GetEditorTheme() { return m_editorTheme.get(); }
 

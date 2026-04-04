@@ -5,9 +5,11 @@
 #include <d3d12.h>
 #include <wrl/client.h>
 #include <memory>
+#include <optional>
 #include <vector>
 #include <DirectXMath.h>
 
+#include "Runtime/Graphics/Structures/Camera.h"
 #include "Runtime/Graphics/Structures/Light.h"
 
 DELTA_ENGINE_NS_BEGIN
@@ -42,6 +44,10 @@ struct DXGraphicsContext
 
     /// Uploads the gathered light buffers to the command list.
     void ApplyLightBuffersToCommandList();
+
+    /// When set, overrides the scene camera matrices for this frame.
+    /// Applied after PreGatherDrawCalls, before GatherDrawCalls.
+    std::optional<CameraCB> cameraOverride;
 };
 
 DELTA_ENGINE_NS_END

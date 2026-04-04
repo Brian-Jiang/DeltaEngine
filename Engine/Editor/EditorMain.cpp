@@ -217,6 +217,18 @@ void EditorMain::GetSceneRenderSize(UINT& width, UINT& height) const
     m_renderManager->GetSceneRenderSize(width, height);
 }
 
+void EditorMain::SetPreviewCameraOverride(const CameraCB& cb)
+{
+    if (m_renderManager)
+        m_renderManager->SetPreviewCameraOverride(cb);
+}
+
+void EditorMain::ClearPreviewCameraOverride()
+{
+    if (m_renderManager)
+        m_renderManager->ClearPreviewCameraOverride();
+}
+
 void EditorMain::ProcessEvents()
 {
     SDL_Event event;

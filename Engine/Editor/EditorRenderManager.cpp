@@ -146,7 +146,12 @@ void EditorRenderManager::RenderFrame(EngineMain* engine)
     m_statusBar->Draw();
 
     m_sceneRenderer->PrepareFrame();
-    engine->RecordSceneDraws(m_sceneRenderer->GetGraphicsContext());
+    {
+        auto ctx = m_sceneRenderer->GetGraphicsContext();
+        if (m_previewCameraOverride.has_value())
+            ctx->cameraOverride = m_previewCameraOverride;
+        engine->RecordSceneDraws(ctx);
+    }
     m_sceneRenderer->RenderFrame();
 
     CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
