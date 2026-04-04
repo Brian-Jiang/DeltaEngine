@@ -10,7 +10,7 @@
 
 DELTA_ENGINE_NS_BEGIN
 
-class EditorCommand_CreateGameObject : public EditorCommand
+class DELTAEDITOR_API EditorCommand_CreateGameObject : public EditorCommand
 {
 public:
     EditorCommand_CreateGameObject() = default;

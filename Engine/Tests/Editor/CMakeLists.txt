@@ -1,4 +1,9 @@
 set(DELTA_EDITOR_TEST_SOURCES
+    EditorCommandTests_SetProperty.cpp
+    EditorCommandTests_SceneStructure.cpp
+    EditorCommandTests_Scene_SaveLoad.cpp
+    EditorCommandTests_CommandQueue.cpp
+    EditorCommandTests_UndoStack.cpp
     UI/EditorThemeColorTests.cpp
     EditorWindows/EditorWindowConceptTests.cpp
     EditorWindows/ViewportPresetTests.cpp
@@ -27,7 +32,7 @@ target_include_directories(DeltaEditorTests PRIVATE
     "${CMAKE_SOURCE_DIR}/Engine"
     "${CMAKE_SOURCE_DIR}/Engine/Tests"
 )
-target_link_libraries(DeltaEditorTests PRIVATE DeltaEditor ThirdParty::gtest_main)
+target_link_libraries(DeltaEditorTests PRIVATE DeltaEditor DeltaEngine ThirdParty::gtest_main)
 target_compile_options(DeltaEditorTests PRIVATE
     "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->"
     "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/EHsc>"

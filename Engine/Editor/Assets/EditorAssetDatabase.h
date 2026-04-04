@@ -37,6 +37,9 @@ public:
     using IAssetDatabase::LoadAsset;
 
     void ScanAssetsFolder(const std::filesystem::path& root);
+
+    /// Drops the in-memory instance and reloads the asset body from disk (JSON path only).
+    void ReloadAssetFromDisk(const AssetId& id);
     const std::unordered_map<AssetId, AssetEntry>& GetAllAssets() const;
 
     const DPrimaryAsset::Header* GetAssetHeader(const AssetId& id) const;

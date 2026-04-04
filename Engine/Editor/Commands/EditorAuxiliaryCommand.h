@@ -1,10 +1,12 @@
 #pragma once
 
+#include "EditorIncludes.h"
+
 #include "EditorCommandContext.h"
 
 DELTA_ENGINE_NS_BEGIN
 
-class EditorAuxiliaryCommand
+class DELTAEDITOR_API EditorAuxiliaryCommand
 {
 public:
     virtual ~EditorAuxiliaryCommand() = default;

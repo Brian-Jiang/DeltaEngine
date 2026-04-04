@@ -7,7 +7,7 @@
 
 DELTA_ENGINE_NS_BEGIN
 
-class EditorCommand_SetTestValue : public EditorCommand
+class DELTAEDITOR_API EditorCommand_SetTestValue : public EditorCommand
 {
 public:
     EditorCommand_SetTestValue() = default;

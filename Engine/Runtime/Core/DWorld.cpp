@@ -168,6 +168,12 @@ void DeltaEngine::DWorld::Clear()
     m_gameObjects.clear();
 }
 
+void DWorld::DestroyAllWorldGameObjects()
+{
+    while (!m_gameObjects.empty())
+        DestroyGameObject(m_gameObjects.front());
+}
+
 SceneComponent* DeltaEngine::DWorld::GetRootSceneComponent() const { return m_rootSceneComponent; }
 
 const std::vector<GameObject*>& DeltaEngine::DWorld::GetGameObjects() const { return m_gameObjects; }

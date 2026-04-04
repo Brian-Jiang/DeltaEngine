@@ -154,11 +154,19 @@ void EngineMain::CreateGameObjects()
     spotLight->SetLocalRotation(DirectX::SimpleMath::Quaternion::CreateFromAxisAngle(DirectX::SimpleMath::Vector3::UnitZ, -XM_PIDIV4));
     spotLight->UpdateParameters(XMVectorSet(0.2f, 0.8f, 1.0f, 1.0f), 3.0f, 20.0f, XM_PI / 6.0f, XM_PI / 3.0f);
 
-    dxRenderManager->InitWorldRenderers(*world);
+    if (dxRenderManager)
+        dxRenderManager->InitWorldRenderers(*world);
 }
 
 void EngineMain::LoadScene(const AssetId& sceneAssetId)
 {
+    DWorld* world = GetWorld();
+    if (world)
+    {
+        world->DestroyAllWorldGameObjects();
+        world->SetActiveScene(nullptr);
+    }
+
     DPrimaryAsset* asset = AssetDatabaseLocator::Get().LoadAsset(sceneAssetId);
     if (!asset)
         return;
@@ -170,33 +178,34 @@ void EngineMain::LoadScene(const AssetId& sceneAssetId)
     if (!scene)
         return;
 
-    DWorld* world = GetWorld();
     if (!world)
         return;
 
     for (GameObject* go : scene->GetGameObjects())
         world->AddGameObjectFromScene(go);
 
-    if (!world->GetActiveScene())
-        world->SetActiveScene(scene);
+    world->SetActiveScene(scene);
 
-    for (GameObject* go : scene->GetGameObjects())
+    if (dxRenderManager)
     {
-        if (Camera* cam = go->GetRootSceneComponent<Camera>())
+        for (GameObject* go : scene->GetGameObjects())
         {
-            m_cameraGameObject = go;
-            cam->UpdateRenderProxy();
-            break;
+            if (Camera* cam = go->GetRootSceneComponent<Camera>())
+            {
+                m_cameraGameObject = go;
+                cam->UpdateRenderProxy();
+                break;
+            }
         }
-    }
 
-    for (GameObject* go : scene->GetGameObjects())
-    {
-        if (Renderer* renderer = go->GetRootSceneComponent<Renderer>())
-            renderer->CreateRenderProxy();
-    }
+        for (GameObject* go : scene->GetGameObjects())
+        {
+            if (Renderer* renderer = go->GetRootSceneComponent<Renderer>())
+                renderer->CreateRenderProxy();
+        }
 
-    dxRenderManager->InitWorldRenderers(*world);
+        dxRenderManager->InitWorldRenderers(*world);
+    }
 }
 
 void EngineMain::Cleanup()

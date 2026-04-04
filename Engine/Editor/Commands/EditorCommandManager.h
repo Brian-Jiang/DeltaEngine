@@ -27,6 +27,8 @@ public:
 
     DELTAEDITOR_API void Clear();
 
+    DELTAEDITOR_API size_t GetUndoStackDepth() const;
+
 private:
     std::vector<std::unique_ptr<EditorCommand>> m_undoStack;
     std::vector<std::unique_ptr<EditorCommand>> m_redoStack;

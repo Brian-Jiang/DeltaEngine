@@ -10,7 +10,7 @@
 
 DELTA_ENGINE_NS_BEGIN
 
-class EditorCommand_DeleteGameObject : public EditorCommand
+class DELTAEDITOR_API EditorCommand_DeleteGameObject : public EditorCommand
 {
 public:
     EditorCommand_DeleteGameObject() = default;

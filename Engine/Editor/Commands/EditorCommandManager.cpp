@@ -124,3 +124,8 @@ void EditorCommandManager::Clear()
     m_undoStack.clear();
     m_redoStack.clear();
 }
+
+size_t EditorCommandManager::GetUndoStackDepth() const
+{
+    return m_undoStack.size();
+}

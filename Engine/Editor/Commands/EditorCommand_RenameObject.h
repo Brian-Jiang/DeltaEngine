@@ -9,7 +9,7 @@
 
 DELTA_ENGINE_NS_BEGIN
 
-class EditorCommand_RenameObject : public EditorCommand
+class DELTAEDITOR_API EditorCommand_RenameObject : public EditorCommand
 {
 public:
     EditorCommand_RenameObject() = default;

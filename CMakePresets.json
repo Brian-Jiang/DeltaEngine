@@ -31,5 +31,15 @@
       "name": "x64-debug",
       "configurePreset": "x64-debug"
     }
+  ],
+  "testPresets": [
+    {
+      "name": "x64-debug",
+      "configurePreset": "x64-debug",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
   ]
 }

@@ -2,6 +2,7 @@
 
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DObjectReferenceTraversal.h"
+#include "Runtime/Core/DObject.h"
 #include "Runtime/Reflection/DProperty.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
 #include "Runtime/Serialization/JsonAssetArchive.h"
@@ -16,6 +17,26 @@ using namespace DeltaEngine;
 // ---------------------------------------------------------------------------
 // ScanAssetsFolder
 // ---------------------------------------------------------------------------
+
+void EditorAssetDatabase::ReloadAssetFromDisk(const AssetId& id)
+{
+    auto it = m_assets.find(id);
+    if (it == m_assets.end())
+        return;
+
+    AssetEntry& entry = it->second;
+    if (entry.m_instance)
+    {
+        DPrimaryAsset* pa = entry.m_instance;
+        std::vector<DObject*> owned = pa->GetObjects();
+        for (DObject* obj : owned)
+            GetReflectionRegistry().DestroyObject(obj);
+        GetReflectionRegistry().DestroyObject(pa);
+        entry.m_instance = nullptr;
+    }
+    entry.m_state = AssetState::HeaderOnly;
+    LoadAsset(id);
+}
 
 void EditorAssetDatabase::ScanAssetsFolder(const std::filesystem::path& root)
 {

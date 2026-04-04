@@ -9,7 +9,7 @@
 
 DELTA_ENGINE_NS_BEGIN
 
-class EditorCommand_SetProperty : public EditorCommand
+class DELTAEDITOR_API EditorCommand_SetProperty : public EditorCommand
 {
 public:
     EditorCommand_SetProperty() = default;

@@ -9,7 +9,7 @@
 
 DELTA_ENGINE_NS_BEGIN
 
-class EditorCommand_ReparentSceneComponent : public EditorCommand
+class DELTAEDITOR_API EditorCommand_ReparentSceneComponent : public EditorCommand
 {
 public:
     EditorCommand_ReparentSceneComponent() = default;

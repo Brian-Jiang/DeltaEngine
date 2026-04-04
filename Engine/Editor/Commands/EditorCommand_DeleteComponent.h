@@ -10,7 +10,7 @@
 
 DELTA_ENGINE_NS_BEGIN
 
-class EditorCommand_DeleteComponent : public EditorCommand
+class DELTAEDITOR_API EditorCommand_DeleteComponent : public EditorCommand
 {
 public:
     EditorCommand_DeleteComponent() = default;

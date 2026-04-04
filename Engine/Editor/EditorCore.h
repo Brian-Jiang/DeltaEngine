@@ -33,7 +33,8 @@ public:
     DELTAEDITOR_API EditorCore();
     DELTAEDITOR_API ~EditorCore();
 
-    DELTAEDITOR_API void Initialize(EngineMain& engine);
+    DELTAEDITOR_API void Initialize(EngineMain& engine, bool headless = false,
+                                    std::filesystem::path assetRootOverride = {});
     DELTAEDITOR_API void Shutdown();
 
     DELTAEDITOR_API EditorAssetDatabase* GetAssetDatabase() { return m_assetDatabase.get(); }
@@ -77,6 +78,7 @@ private:
 
     std::mutex m_commandQueueMutex;
     std::vector<std::string> m_pendingCommands;
+    bool m_headless = false;
 };
 
 DELTA_ENGINE_NS_END

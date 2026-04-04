@@ -15,6 +15,8 @@ endif()
 
 project("DeltaEngine" VERSION 0.1.0)
 
+include(CTest)
+
 # Enable multithreaded compilation for MSVC
 if(MSVC)
     add_compile_options(/MP)

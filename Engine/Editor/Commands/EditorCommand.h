@@ -11,7 +11,7 @@ DELTA_ENGINE_NS_BEGIN
 
 DECLARE_LOG_CATEGORY(LogEditorCommand)
 
-class EditorCommand
+class DELTAEDITOR_API EditorCommand
 {
 public:
     virtual ~EditorCommand() = default;

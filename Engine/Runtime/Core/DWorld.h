@@ -51,6 +51,9 @@ public:
     DFUNCTION()
     DELTAENGINE_API void Clear();
 
+    /// Destroys every GameObject in the world (used before reloading a scene from disk).
+    DELTAENGINE_API void DestroyAllWorldGameObjects();
+
     DFUNCTION()
     DELTAENGINE_API const std::vector<GameObject*>& GetGameObjects() const;
     DFUNCTION()

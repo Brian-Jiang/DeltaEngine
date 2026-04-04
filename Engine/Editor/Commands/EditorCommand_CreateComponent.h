@@ -10,7 +10,7 @@
 
 DELTA_ENGINE_NS_BEGIN
 
-class EditorCommand_CreateComponent : public EditorCommand
+class DELTAEDITOR_API EditorCommand_CreateComponent : public EditorCommand
 {
 public:
     EditorCommand_CreateComponent() = default;

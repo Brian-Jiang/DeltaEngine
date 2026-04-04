@@ -9,6 +9,7 @@
 #include "Runtime/Assets/AssetDatabaseLocator.h"
 #include "Runtime/Assets/DPrimaryAsset.h"
 #include "Runtime/Assets/PA_DScene.h"
+#include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/DScene.h"
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Core/SceneComponent.h"
@@ -36,24 +37,40 @@ EditorCore::~EditorCore()
     g_editorCore = nullptr;
 }
 
-void EditorCore::Initialize(EngineMain& engine)
+void EditorCore::Initialize(EngineMain& engine, bool headless, std::filesystem::path assetRootOverride)
 {
     m_engine = &engine;
+    m_headless = headless;
 
     m_assetDatabase = std::make_unique<EditorAssetDatabase>();
     AssetDatabaseLocator::Register(m_assetDatabase.get());
-    m_assetDatabase->ScanAssetsFolder(IOManager::GetEngineImportedAssetsFolder());
 
-    PA_DScene* sceneAsset = m_assetDatabase->LoadAsset<PA_DScene>(
-        m_assetDatabase->FindAssetIdByPath(IOManager::GetEngineImportedAssetFullPath("DefaultScene")));
-    if (sceneAsset)
-        m_engine->LoadScene(sceneAsset->GetAssetId());
+    if (!assetRootOverride.empty())
+    {
+        const std::filesystem::path root = std::filesystem::weakly_canonical(assetRootOverride);
+        PA_DScene* defaultScene = PA_DScene::Create("DefaultScene");
+        m_assetDatabase->CreateAsset(root / "DefaultScene.dasset.json", defaultScene);
+
+        m_assetDatabase->ScanAssetsFolder(root);
+
+        PA_DScene* sceneAsset = m_assetDatabase->LoadAsset<PA_DScene>(
+            m_assetDatabase->FindAssetIdByPath(root / "DefaultScene.dasset.json"));
+        if (sceneAsset)
+            m_engine->LoadScene(sceneAsset->GetAssetId());
+        else
+            std::printf("Failed to load DefaultScene (temp root).\n");
+    }
     else
-        std::printf("Failed to load DefaultScene.\n");
+    {
+        m_assetDatabase->ScanAssetsFolder(IOManager::GetEngineImportedAssetsFolder());
 
-    // CreateAssets();
-    // m_engine->CreateGameObjects();
-    // m_assetDatabase->SaveDirtyAssets();
+        PA_DScene* sceneAsset = m_assetDatabase->LoadAsset<PA_DScene>(
+            m_assetDatabase->FindAssetIdByPath(IOManager::GetEngineImportedAssetFullPath("DefaultScene")));
+        if (sceneAsset)
+            m_engine->LoadScene(sceneAsset->GetAssetId());
+        else
+            std::printf("Failed to load DefaultScene.\n");
+    }
 
     m_selectionState = std::make_unique<EditorSelectionState>();
     m_commandManager = std::make_unique<EditorCommandManager>();
@@ -67,8 +84,11 @@ void EditorCore::Shutdown()
         m_commandManager.reset();
     }
     m_selectionState.reset();
-    AssetDatabaseLocator::Unregister();
-    m_assetDatabase.reset();
+    if (m_assetDatabase)
+    {
+        AssetDatabaseLocator::Unregister();
+        m_assetDatabase.reset();
+    }
     m_engine = nullptr;
 }
 
@@ -93,7 +113,19 @@ void EditorCore::LoadScene(const std::filesystem::path& scenePath)
     if (!m_assetDatabase || !m_engine)
         return;
 
-    AssetId id = m_assetDatabase->FindAssetIdByPath(scenePath);
+    const std::filesystem::path canonical = std::filesystem::weakly_canonical(scenePath);
+    AssetId id = m_assetDatabase->FindAssetIdByPath(canonical);
+    if (id.IsNull())
+        return;
+
+    if (DWorld* world = m_engine->GetWorld())
+    {
+        world->DestroyAllWorldGameObjects();
+        world->SetActiveScene(nullptr);
+    }
+
+    m_assetDatabase->ReloadAssetFromDisk(id);
+
     PA_DScene* sceneAsset = m_assetDatabase->LoadAsset<PA_DScene>(id);
     if (sceneAsset)
         m_engine->LoadScene(sceneAsset->GetAssetId());
