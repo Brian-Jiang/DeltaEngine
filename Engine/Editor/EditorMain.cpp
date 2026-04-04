@@ -1,6 +1,7 @@
 #include "EditorMain.h"
 
 #include "Editor/EditorCore.h"
+#include "Editor/Commands/EditorAuxiliarySceneCommands.h"
 #include "Editor/Commands/EditorCommandContext.h"
 #include "Editor/Commands/EditorCommandManager.h"
 #include "Editor/EditorRenderManager.h"
@@ -179,6 +180,7 @@ int EditorMain::Run()
         if (!m_running)
             break;
 
+        m_editorCore->DrainCommandQueue();
         m_engine->PreTick();
         m_engine->Tick();
         m_renderManager->RenderFrame(m_engine.get());
@@ -237,7 +239,13 @@ void EditorMain::ProcessEvents()
         case SDL_EVENT_KEY_DOWN:
         {
             const SDL_Keycode key = event.key.key;
-            if ((event.key.mod & SDL_KMOD_CTRL) && key == SDLK_Z)
+            if ((event.key.mod & SDL_KMOD_CTRL) && key == SDLK_S)
+            {
+                EditorCommandContext ctx{ *m_editorCore };
+                m_editorCore->GetCommandManager().ExecuteAuxiliary(
+                    std::make_unique<EditorAuxiliaryCommand_SaveScene>(), ctx);
+            }
+            else if ((event.key.mod & SDL_KMOD_CTRL) && key == SDLK_Z)
             {
                 EditorCommandContext ctx{ *m_editorCore };
                 if (event.key.mod & SDL_KMOD_SHIFT)

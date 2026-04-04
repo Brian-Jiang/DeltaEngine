@@ -7,9 +7,11 @@
 
 #include <filesystem>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -61,12 +63,20 @@ public:
     DELTAEDITOR_API std::pair<AssetId, ObjectId> GetIdsForObject(DObject* obj);
     DELTAEDITOR_API void NotifyObjectDestroyed(const ObjectId& objectId);
 
+    // Serialized command dispatch queue for headless / MCP callers.
+    // JSON envelope: { "type": "EditorCommand_SetProperty", "data": { ... } }
+    DELTAEDITOR_API void EnqueueSerializedCommand(std::string jsonPayload);
+    DELTAEDITOR_API void DrainCommandQueue();
+
 private:
     std::unique_ptr<EditorAssetDatabase> m_assetDatabase;
     std::unique_ptr<EditorSelectionState> m_selectionState;
     std::unique_ptr<EditorCommandManager> m_commandManager;
     std::unordered_map<std::string, std::string> m_testValueStore;
     EngineMain* m_engine = nullptr;
+
+    std::mutex m_commandQueueMutex;
+    std::vector<std::string> m_pendingCommands;
 };
 
 DELTA_ENGINE_NS_END

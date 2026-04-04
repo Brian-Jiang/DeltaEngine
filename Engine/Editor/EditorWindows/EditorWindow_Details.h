@@ -65,6 +65,10 @@ private:
     nlohmann::json   m_activeEditBefore = {};
     DObject*         m_activeEditObject = nullptr;
 
+    bool             m_transformEditing = false;
+    SceneComponent*  m_transformEditTarget = nullptr;
+    nlohmann::json   m_transformEditBefore = {};
+
     Vec3Field      m_vec3Field;
     ScalarField    m_scalarField;
     ColorField     m_colorField;

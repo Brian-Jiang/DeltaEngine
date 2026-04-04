@@ -374,23 +374,61 @@ void EditorWindow_Details::RenderSceneComponentTransform(SceneComponent* sceneCo
     if (!sceneComponent)
         return;
 
+    if (m_transformEditing && m_transformEditTarget != sceneComponent)
+    {
+        m_transformEditing = false;
+        m_transformEditTarget = nullptr;
+        m_transformEditBefore = {};
+    }
+
     Vector3 pos = sceneComponent->GetLocalPosition();
     Vector3 euler = sceneComponent->GetLocalRotationEulerAngles();
     Vector3 scale = sceneComponent->GetLocalScale();
 
-    bool changed = false;
-    const auto posEvt = m_vec3Field.Draw("Position", &pos.x, 0.1f);
-    // TODO Phase 7: if (posEvt.editBegan)  { BeginTransformCommand(...); }
-    // TODO Phase 7: if (posEvt.editEnded)  { CommitTransformCommand(...); }
-    changed |= posEvt.valueChanged;
-    changed |= m_vec3Field.Draw("Rotation", &euler.x, 1.0f).valueChanged;
-    changed |= m_vec3Field.Draw("Scale", &scale.x, 0.01f).valueChanged;
+    WidgetEditEvent combined;
+    combined.Merge(m_vec3Field.Draw("Position", &pos.x, 0.1f));
+    combined.Merge(m_vec3Field.Draw("Rotation", &euler.x, 1.0f));
+    combined.Merge(m_vec3Field.Draw("Scale", &scale.x, 0.01f));
 
-    if (changed)
+    if (combined.editBegan && !m_transformEditing)
+    {
+        m_transformEditing = true;
+        m_transformEditTarget = sceneComponent;
+        DClass* dc = sceneComponent->GetClass();
+        DProperty* ltProp = dc ? dc->FindPropertyByName("m_localTransform") : nullptr;
+        if (ltProp)
+            m_transformEditBefore = PropertyToJson(sceneComponent, ltProp);
+    }
+
+    if (combined.valueChanged)
     {
         sceneComponent->SetLocalPosition(pos);
         sceneComponent->SetLocalRotation(euler);
         sceneComponent->SetLocalScale(scale);
+    }
+
+    if (combined.editEnded && m_transformEditing)
+    {
+        DClass* dc = sceneComponent->GetClass();
+        DProperty* ltProp = dc ? dc->FindPropertyByName("m_localTransform") : nullptr;
+        if (ltProp)
+        {
+            nlohmann::json valueAfter = PropertyToJson(sceneComponent, ltProp);
+            if (m_transformEditBefore != valueAfter)
+            {
+                auto [assetId, objectId] = g_editorCore->GetIdsForObject(sceneComponent);
+                auto cmd = std::make_unique<EditorCommand_SetProperty>(
+                    assetId, objectId,
+                    std::string("m_localTransform"),
+                    std::move(m_transformEditBefore),
+                    std::move(valueAfter));
+                EditorCommandContext ctx{ *g_editorCore };
+                g_editorCore->GetCommandManager().Execute(std::move(cmd), ctx);
+            }
+        }
+        m_transformEditing = false;
+        m_transformEditTarget = nullptr;
+        m_transformEditBefore = {};
     }
 }
 

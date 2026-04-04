@@ -1,5 +1,6 @@
 #include "Panels/AppHeader.h"
 
+#include "Commands/EditorAuxiliarySceneCommands.h"
 #include "Commands/EditorCommand_CreateGameObject.h"
 #include "Commands/EditorCommandContext.h"
 #include "Commands/EditorCommandManager.h"
@@ -80,12 +81,13 @@ void AppHeader::Draw()
 
         if (ImGui::BeginMenu("File"))
         {
-            if (ImGui::MenuItem("Save"))
+            if (ImGui::MenuItem("Save", "Ctrl+S"))
             {
                 if (g_editorCore)
                 {
-                    if (EditorAssetDatabase* assetDatabase = g_editorCore->GetAssetDatabase())
-                        assetDatabase->SaveDirtyAssets();
+                    EditorCommandContext ctx{ *g_editorCore };
+                    g_editorCore->GetCommandManager().ExecuteAuxiliary(
+                        std::make_unique<EditorAuxiliaryCommand_SaveScene>(), ctx);
                 }
             }
             ImGui::EndMenu();

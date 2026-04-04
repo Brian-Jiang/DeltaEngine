@@ -61,6 +61,19 @@ bool EditorCommand_SetProperty::ApplyValue(EditorCommandContext& ctx, const nloh
 bool EditorCommand_SetProperty::Execute(EditorCommandContext& ctx)
 {
     DLOG(LogEditorCommand, ELogLevel::Log, "[Set Property] Execute: Start");
+
+    if (m_valueBefore.is_null())
+    {
+        DObject* obj = ctx.core.ResolveObject(m_assetId, m_objectId);
+        if (obj)
+        {
+            DClass* dc = obj->GetClass();
+            DProperty* prop = dc ? dc->FindPropertyByName(m_propertyName) : nullptr;
+            if (prop)
+                m_valueBefore = PropertyToJson(obj, prop);
+        }
+    }
+
     return ApplyValue(ctx, m_valueAfter);
 }
 

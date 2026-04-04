@@ -1,7 +1,10 @@
 #include "EditorCore.h"
 
 #include "Editor/Assets/EditorAssetDatabase.h"
+#include "Editor/Commands/EditorCommand.h"
+#include "Editor/Commands/EditorCommandContext.h"
 #include "Editor/Commands/EditorCommandManager.h"
+#include "Editor/Commands/EditorCommandRegistry.h"
 #include "Editor/EditorSelectionState.h"
 #include "Runtime/Assets/AssetDatabaseLocator.h"
 #include "Runtime/Assets/DPrimaryAsset.h"
@@ -13,6 +16,8 @@
 #include "Runtime/IO/IOManager.h"
 #include "Reflection/DClass.h"
 #include "Reflection/ReflectionRegistry.h"
+
+#include <nlohmann/json.hpp>
 
 #include <cstdio>
 
@@ -195,6 +200,67 @@ ObjectId EditorCore::AddComponentToGameObject(ObjectId gameObjectId, std::string
     if (!comp) return ObjectId::Null();
     asset->MarkDirty();
     return comp->GetObjectId();
+}
+
+void EditorCore::EnqueueSerializedCommand(std::string jsonPayload)
+{
+    std::lock_guard lock(m_commandQueueMutex);
+    m_pendingCommands.push_back(std::move(jsonPayload));
+}
+
+void EditorCore::DrainCommandQueue()
+{
+    std::vector<std::string> batch;
+    {
+        std::lock_guard lock(m_commandQueueMutex);
+        batch.swap(m_pendingCommands);
+    }
+
+    if (batch.empty())
+        return;
+
+    EditorCommandContext ctx{ *this };
+
+    for (const auto& payload : batch)
+    {
+        nlohmann::json envelope;
+        try
+        {
+            envelope = nlohmann::json::parse(payload);
+        }
+        catch (const nlohmann::json::parse_error& e)
+        {
+            DLOG(LogEditorCommand, ELogLevel::Error, "[DrainCommandQueue] JSON parse error: {}", e.what());
+            continue;
+        }
+
+        std::string type = envelope.value("type", "");
+        if (type.empty())
+        {
+            DLOG(LogEditorCommand, ELogLevel::Error, "[DrainCommandQueue] Missing 'type' field");
+            continue;
+        }
+
+        auto cmd = EditorCommandRegistry::Get().Create(type);
+        if (!cmd)
+        {
+            DLOG(LogEditorCommand, ELogLevel::Error, "[DrainCommandQueue] Unknown command type: {}", type);
+            continue;
+        }
+
+        try
+        {
+            if (envelope.contains("data"))
+                cmd->Deserialize(envelope["data"]);
+        }
+        catch (const std::exception& e)
+        {
+            DLOG(LogEditorCommand, ELogLevel::Error, "[DrainCommandQueue] Deserialize failed for '{}': {}", type, e.what());
+            continue;
+        }
+
+        m_commandManager->Execute(std::move(cmd), ctx);
+    }
 }
 
 // void EditorMain::CreateAssets()
