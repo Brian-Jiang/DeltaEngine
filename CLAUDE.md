@@ -22,7 +22,7 @@ cmake --build Build/x64-Debug
 
 Build output goes to `Build/x64-Debug/bin/` (executables) and `Build/x64-Debug/lib/` (libraries). The `CopyDxcBin` custom target copies DXC compiler binaries to the output directory automatically.
 
-**Compiler requirements:** MSVC with C++23, `/permissive-` (strict), `/MP` (parallel compilation). No test suite exists — the editor is the primary verification tool.
+**Compiler requirements:** MSVC with C++23, `/permissive-` (strict), `/MP` (parallel compilation). A GTest-based test suite lives in `Engine/Tests/` (see [Tests](#tests) below).
 
 ### DeltaHeaderTool Build Integration
 
@@ -125,12 +125,110 @@ The editor now has a fixed-position chrome layer plus docked content windows:
 ### Editor Windows (`Engine/Editor/EditorWindows/`)
 
 All editor windows implement `EditorWindow` interface. Current windows:
-- `EditorWindow_Viewport` — displays scene texture, fly camera (WASD + mouse)
+- `EditorWindow_Viewport` — displays scene texture, fly camera (WASD + mouse); supports viewport presets (`EditorWindow_ViewportPresets.h`)
 - `EditorWindow_WorldOutliner` — scene hierarchy tree
 - `EditorWindow_ComponentsHierarchy` — components of selected GameObject
-- `EditorWindow_Details` — property inspector (reflection-driven: reads DClass/DProperty to display fields)
+- `EditorWindow_Details` — property inspector (reflection-driven: reads DClass/DProperty to display fields; fires `WidgetEditEvent` on edits, dispatching `EditorCommand_SetProperty` through the command system)
+- `EditorWindow_AssetBrowser` — folder tree of imported assets with select/duplicate/delete actions
 
-`EditorSelectionState` (singleton-like, owned by `EditorMain`) is the shared selection model passed to all editor windows.
+`EditorSelectionState` is the shared selection model; it is owned by `EditorCore` (not `EditorMain`) and accessed via `EditorCore::GetSelectionState()`.
+
+### EditorCore (`Engine/Editor/EditorCore.h`)
+
+`EditorCore` is the central editor state object (global `g_editorCore` pointer). It owns and initialises:
+- `EditorAssetDatabase` — asset registry
+- `EditorSelectionState` — selection model
+- `EditorCommandManager` — undo/redo stack
+
+Key operations exposed:
+- `LoadScene(path)`, `GetWorld()`, `GetActiveSceneAsset()`
+- `CreateGameObject(name)`, `AddComponentToGameObject(id, className)`
+- `ResolveObject(assetId, objectId)` / `GetIdsForObject(obj)` — bidirectional UUID↔pointer lookup
+- `EnqueueSerializedCommand(json)` + `DrainCommandQueue()` — serialized command dispatch for headless / MCP callers
+- Supports headless mode (`Initialize(..., headless=true)`) for test environments
+
+### Editor Command System (`Engine/Editor/Commands/`)
+
+A full undo/redo command system built on the Command pattern:
+
+| Class | Role |
+|---|---|
+| `EditorCommand` | Abstract base; `Execute / Undo / Redo / Serialize / Deserialize` |
+| `EditorCommandManager` | Owns undo/redo stacks (max 100 deep); `SerializeUndoStack` / `DeserializeAndReplay` |
+| `EditorCommandRegistry` | Factory registry; `CommandRegistrar<T>` auto-registers at startup |
+| `EditorCommandContext` | Carries `EditorCore&` through every command call |
+| `EditorCommandBatch` | Groups multiple commands into one undoable unit |
+| `EditorAuxiliaryCommand` | Non-undoable side effects (e.g. selection changes) |
+
+Concrete commands:
+- `EditorCommand_CreateGameObject` / `EditorCommand_DeleteGameObject`
+- `EditorCommand_CreateComponent` / `EditorCommand_DeleteComponent`
+- `EditorCommand_SetProperty` — uses `PropertyValueIO` to read/write reflected property values as JSON; works with any `DProperty`
+- `EditorCommand_RenameObject` / `EditorCommand_ReparentSceneComponent`
+- `EditorAuxiliarySceneCommands` — auxiliary (non-undoable) scene operations
+
+Commands serialize to/from JSON, enabling undo-stack persistence and replay across sessions.
+
+---
+
+## Logging System (`Engine/Runtime/Logging/`)
+
+Structured logging built on **spdlog**, following UE5 conventions:
+
+- **`DLogCategory`** — named category with per-category `ELogLevel` (`VeryVerbose` → `Fatal`); categories register themselves globally and can be reinitialized with new sinks.
+- **`LoggingManager`** — call `Initialize(logDir)` once at startup and `Shutdown()` at exit; supports adding sinks at runtime (e.g. an in-editor console sink) and setting a global level override.
+- **`LogChannels.h/.cpp`** — predefined engine-wide log channels.
+
+Macros:
+```cpp
+DECLARE_LOG_CATEGORY(LogFoo)          // .h — forward-declares the category
+DEFINE_LOG_CATEGORY(LogFoo)           // .cpp — defines it with default Log level
+DEFINE_LOG_CATEGORY_STATIC(LogFoo)    // .cpp — file-local category
+
+DLOG(LogFoo, ELogLevel::Warning, "Mesh {} failed to load", meshName);
+DLOG_IF(LogFoo, ELogLevel::Error, cond, "detail: {}", val);
+```
+
+---
+
+## Object Snapshots (`Engine/Runtime/Serialization/`)
+
+`ObjectSnapshot` captures a partial or full serialized image of a `DObject` subtree for undo/redo:
+
+- **`ObjectSnapshotWriter`** — writes a `DObject` (and selected properties) into an `ObjectSnapshot` (JSON + captured `ObjectId` list).
+- **`ObjectSnapshotReader`** — applies a snapshot back onto an existing `DObject`, restoring only the captured fields without a full reload.
+- Used by the editor command system (e.g. `EditorCommand_SetProperty`) to save/restore property state around undoable edits.
+
+---
+
+## Tests (`Engine/Tests/`)
+
+A GTest-based test suite, built as a separate CMake target. Layout:
+
+```
+Engine/Tests/
+├── Engine/           # Runtime library tests
+│   ├── Reflection/   — ReflectionRegistry
+│   ├── Serialization/— core serialization
+│   ├── Assets/       — DPrimaryAsset, scene asset integration
+│   └── Graphics/     — render structure, render core
+├── Editor/           # Editor library tests
+│   ├── EditorCommandTests_UndoStack.cpp
+│   ├── EditorCommandTests_SceneStructure.cpp
+│   ├── EditorCommandTests_Scene_SaveLoad.cpp
+│   ├── EditorCommandTests_SetProperty.cpp
+│   ├── EditorCommandTests_CommandQueue.cpp
+│   ├── EditorCoreFixture.h   — shared headless EditorCore setup
+│   ├── State/        — EditorSelectionState
+│   ├── EditorWindows/— window concept + viewport preset tests
+│   ├── Serialization/— snapshot round-trip, bulk data, references
+│   └── UI/           — editor theme color tests
+└── Shared/           — shared test helpers (SerializationTestSupport, TestEnvironment)
+```
+
+`EditorCoreFixture` spins up `EditorCore` in headless mode so editor command tests run without a window or GPU.
+
+`DeltaHeaderTool` has its own **pytest** suite under `Tools/DeltaHeaderTool/` (pytest installed in the bundled Python).
 
 ---
 
@@ -241,7 +339,7 @@ Tools/
 
 ### Python Usage
 
-Python is **build-time only**. The bundled `Tools/Python/python.exe` runs `DeltaHeaderTool` during CMake builds. There is **no embedded Python in the engine runtime** (no pybind11, no Python C API in `Engine/` code).
+Python is **build-time only**. The bundled `Tools/Python/python.exe` runs `DeltaHeaderTool` during CMake builds and also provides `pytest` for the DeltaHeaderTool test suite. There is **no embedded Python in the engine runtime** (no pybind11, no Python C API in `Engine/` code).
 
 ---
 
@@ -254,3 +352,6 @@ Python is **build-time only**. The bundled `Tools/Python/python.exe` runs `Delta
 - **`DXGraphicsContext`** is the primary way to pass rendering state down the call stack — do not add global graphics state.
 - **Adding a new reflected class:** annotate with `DCLASS()` + `DGENERATED_BODY(Name)`, add `DPROPERTY()`/`DFUNCTION()` annotations, then build (or run `delta_header_generate.bat`) — the tool regenerates the `.generated.h/.cpp` pair automatically.
 - **Do not hand-edit generated files** in `Intermediate/DeltaHeaderTool/Generated/` — they are overwritten on every build.
+- **Adding a new editor command:** subclass `EditorCommand`, implement `Execute`/`Undo`/`Serialize`/`Deserialize`, add a `static constexpr std::string_view StaticTypeName()`, and declare a `CommandRegistrar<T>` static instance in the `.cpp` to auto-register with `EditorCommandRegistry`.
+- **Logging:** use `DLOG(Category, ELogLevel::X, ...)` everywhere; define a `DEFINE_LOG_CATEGORY` in the `.cpp` and `DECLARE_LOG_CATEGORY` in the `.h`.
+- **Property edits in the editor** must go through `EditorCommand_SetProperty` (not direct assignment) so they are undoable.
