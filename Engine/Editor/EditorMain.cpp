@@ -20,6 +20,7 @@
 #include <imgui.h>
 #include <SDL3/SDL.h>
 
+#include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <thread>
@@ -192,8 +193,29 @@ int EditorMain::Run()
 
 void EditorMain::RenderEditorWindows()
 {
-    for (const auto& window : m_editorWindows)
-        window->Render();
+    // Remove non-singleton windows that the user has closed.
+    m_editorWindows.erase(
+        std::remove_if(m_editorWindows.begin(), m_editorWindows.end(),
+            [](const auto& info) { return info.m_window->ShouldDestroyOnClose() && !info.m_open; }),
+        m_editorWindows.end());
+
+    // Render remaining windows; skip singleton windows that are currently hidden.
+    for (auto& info : m_editorWindows)
+    {
+        if (!info.m_open)
+            continue;
+        info.m_window->Render(info.m_open);
+    }
+}
+
+std::vector<EditorWindowInfo>& EditorMain::GetEditorWindowInfos()
+{
+    return m_editorWindows;
+}
+
+void EditorMain::OpenViewportWindow()
+{
+    OpenEditorWindow<EditorWindow_Viewport>();  // Non-singleton: always creates a new instance.
 }
 
 void EditorMain::SetSceneRenderSize(UINT width, UINT height)

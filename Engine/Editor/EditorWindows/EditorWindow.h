@@ -13,11 +13,19 @@ public:
     virtual ~EditorWindow() = default;
 
     /// Called each frame from the editor render path to draw this window.
-    virtual void Render() = 0;
+    /// open is the EditorWindowInfo::m_open flag; pass &open to ImGui::Begin.
+    virtual void Render(bool& open) = 0;
+
+    /// When true, RenderEditorWindows removes this window from the list once
+    /// open becomes false (e.g. the user clicks the docked-tab X button).
+    /// Singleton windows return false so they can be re-shown from the menu.
+    virtual bool ShouldDestroyOnClose() const { return false; }
+
+    /// When true, OpenEditorWindow prevents a second instance from being created.
+    virtual bool IsSingleton() const { return true; }
+
     /// ImGui window title string.
     const char* m_title = "Editor Window";
-    /// Optional open flag for ImGui::Begin; when null, no collapse close button is shown.
-    bool* m_open = nullptr;
 };
 
 /// True if T is an editor dock window type (derives from EditorWindow).

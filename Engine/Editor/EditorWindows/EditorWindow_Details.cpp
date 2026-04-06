@@ -129,9 +129,9 @@ void LivePreviewWrite(DObject* obj, DProperty* prop)
 EditorWindow_Details::EditorWindow_Details() = default;
 EditorWindow_Details::~EditorWindow_Details() = default;
 
-void EditorWindow_Details::Render()
+void EditorWindow_Details::Render(bool& open)
 {
-    if (!ImGui::Begin(m_title, m_open))
+    if (!ImGui::Begin(m_title, &open))
     {
         ImGui::End();
         return;

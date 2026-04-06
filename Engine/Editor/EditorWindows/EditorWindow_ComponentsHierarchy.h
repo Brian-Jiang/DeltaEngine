@@ -21,12 +21,10 @@ public:
     ~EditorWindow_ComponentsHierarchy();
 
     /// Scene tree and non-spatial components for the selection's GameObject.
-    void Render() override;
+    void Render(bool& open) override;
 
     /// ImGui window title.
     const char* m_title = "Components Hierarchy";
-    /// Optional open flag for ImGui::Begin.
-    bool* m_open = nullptr;
 
 private:
     void RenderSceneComponentTree(SceneComponent* sceneComponent);

@@ -21,9 +21,9 @@ std::string GetAssetDisplayName(const std::filesystem::path& path)
 EditorWindow_AssetBrowser::EditorWindow_AssetBrowser() = default;
 EditorWindow_AssetBrowser::~EditorWindow_AssetBrowser() = default;
 
-void EditorWindow_AssetBrowser::Render()
+void EditorWindow_AssetBrowser::Render(bool& open)
 {
-    if (!ImGui::Begin(m_title, m_open))
+    if (!ImGui::Begin(m_title, &open))
     {
         ImGui::End();
         return;

@@ -34,12 +34,10 @@ public:
     ~EditorWindow_WorldOutliner();
 
     /// Lists world objects, filter, add/destroy via context actions.
-    void Render() override;
+    void Render(bool& open) override;
 
     /// ImGui window title.
     const char* m_title = "World Outliner";
-    /// Optional open flag for ImGui::Begin.
-    bool* m_open = nullptr;
 
 private:
     void RebuildFilter();

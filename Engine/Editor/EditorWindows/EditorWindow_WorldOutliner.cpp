@@ -63,9 +63,9 @@ void EditorWindow_WorldOutliner::RebuildFilter()
     }
 }
 
-void EditorWindow_WorldOutliner::Render()
+void EditorWindow_WorldOutliner::Render(bool& open)
 {
-    if (!ImGui::Begin(m_title, m_open))
+    if (!ImGui::Begin(m_title, &open))
     {
         ImGui::End();
         return;

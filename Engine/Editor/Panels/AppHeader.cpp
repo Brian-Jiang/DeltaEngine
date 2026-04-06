@@ -13,6 +13,10 @@
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
 #include "Runtime/Reflection/DClass.h"
+#include "Editor/EditorWindows/EditorWindow_WorldOutliner.h"
+#include "Editor/EditorWindows/EditorWindow_AssetBrowser.h"
+#include "Editor/EditorWindows/EditorWindow_Details.h"
+#include "Editor/EditorWindows/EditorWindow_ComponentsHierarchy.h"
 
 #include "imgui.h"
 
@@ -109,6 +113,41 @@ void AppHeader::Draw()
         }
         if (ImGui::BeginMenu("View"))
             ImGui::EndMenu();
+        if (ImGui::BeginMenu("Window"))
+        {
+            // Viewport: always opens a new instance.
+            if (ImGui::MenuItem("Viewport"))
+                g_editor->OpenViewportWindow();
+
+            if (ImGui::MenuItem("World Outliner"))
+                g_editor->OpenEditorWindow<EditorWindow_WorldOutliner>();
+
+            if (ImGui::MenuItem("Asset Browser"))
+            {
+                g_editor->OpenEditorWindow<EditorWindow_AssetBrowser>();
+            }
+
+            if (ImGui::MenuItem("Details"))
+            {
+                g_editor->OpenEditorWindow<EditorWindow_Details>();
+            }
+
+            if (ImGui::MenuItem("Components Hierarchy"))
+            {
+                g_editor->OpenEditorWindow<EditorWindow_ComponentsHierarchy>();
+            }
+
+            //ImGui::Separator();
+
+            //// Singleton windows: open if closed, do nothing if already open.
+            //for (auto& info : g_editor->GetEditorWindowInfos())
+            //{
+            //    if (!info.m_window->IsSingleton()) continue;
+            //    if (ImGui::MenuItem(info.m_window->m_title, nullptr, false, !info.m_open))
+            //        info.m_open = true;
+            //}
+            ImGui::EndMenu();
+        }
         if (ImGui::BeginMenu("Scene"))
             ImGui::EndMenu();
         if (ImGui::BeginMenu("Object"))

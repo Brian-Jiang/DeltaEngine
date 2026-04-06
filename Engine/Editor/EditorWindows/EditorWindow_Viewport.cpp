@@ -48,7 +48,6 @@ static CameraCB BuildCameraCB(const EditorViewportCamera& cam, float w, float h)
 EditorWindow_Viewport::EditorWindow_Viewport()
 {
     m_sceneTextureId = g_editor->GetSceneTextureId();
-
     m_viewportIndex = s_nextViewportIndex++;
 
     std::vector<EditorViewportCamera> cameras;
@@ -175,9 +174,9 @@ void EditorWindow_Viewport::UpdateViewportFlyMode(bool viewportImageHovered)
 // Render
 // ---------------------------------------------------------------------------
 
-void EditorWindow_Viewport::Render()
+void EditorWindow_Viewport::Render(bool& open)
 {
-    if (!ImGui::Begin(m_title, m_open))
+    if (!ImGui::Begin(m_title, &open))
     {
         g_editor->ClearPreviewCameraOverride();
         ImGui::End();

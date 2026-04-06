@@ -31,9 +31,9 @@ EditorWindow_ComponentsHierarchy::~EditorWindow_ComponentsHierarchy()
 {
 }
 
-void EditorWindow_ComponentsHierarchy::Render()
+void EditorWindow_ComponentsHierarchy::Render(bool& open)
 {
-    if (!ImGui::Begin(m_title, m_open))
+    if (!ImGui::Begin(m_title, &open))
     {
         ImGui::End();
         return;

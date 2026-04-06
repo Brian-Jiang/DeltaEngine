@@ -19,15 +19,19 @@ public:
     ~EditorWindow_Viewport();
 
     /// Draws the viewport toolbar, scene image, and fly-camera input when applicable.
-    void Render() override;
+    void Render(bool& open) override;
+
+    /// Viewport instances are removed from the window list when the user closes them.
+    bool ShouldDestroyOnClose() const override { return true; }
+
+    /// Viewport windows are not singletons — multiple instances can be open at once.
+    bool IsSingleton() const override { return false; }
 
     /// ImGui texture id for the scene color target shown in the viewport.
     void SetSceneTexture(ImTextureID textureId) { m_sceneTextureId = textureId; }
 
     /// ImGui window title.
     const char* m_title = "Viewport";
-    /// If non-null, ImGui shows a collapse/close widget and writes open state here.
-    bool* m_open = nullptr;
 
 private:
     void UpdateSceneRenderSize(int renderW, int renderH);

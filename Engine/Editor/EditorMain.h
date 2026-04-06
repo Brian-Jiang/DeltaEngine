@@ -24,6 +24,13 @@ class EngineMain;
 /// Global editor instance. Set during EditorMain construction, cleared on destruction.
 extern EditorMain* g_editor;
 
+/// Tracks a single open editor window together with its visibility state.
+struct EditorWindowInfo
+{
+    bool m_open = true;
+    std::shared_ptr<EditorWindow> m_window;
+};
+
 /// Editor application. Owns the main loop, window, and render pipeline.
 class EditorMain
 {
@@ -34,27 +41,40 @@ public:
     /// Runs the editor main loop until shutdown.
     DELTAEDITOR_API int Run();
 
+    /// Opens an editor window of type T.
+    /// For singleton windows (IsSingleton() == true), re-shows the existing instance
+    /// instead of creating a duplicate. Returns a raw pointer to the window.
     template <typename T>
         requires IsEditorWindow<T>
-    std::shared_ptr<T> OpenEditorWindow()
+    T* OpenEditorWindow()
     {
-        std::shared_ptr<T> window = std::make_shared<T>();
-        m_editorWindows.push_back(window);
-        return window;
+        auto window = std::make_shared<T>();
+        if (window->IsSingleton())
+        {
+            for (auto& info : m_editorWindows)
+            {
+                if (auto* existing = dynamic_cast<T*>(info.m_window.get()))
+                {
+                    info.m_open = true;
+                    return existing;
+                }
+            }
+        }
+        EditorWindowInfo& info = m_editorWindows.emplace_back();
+        info.m_open = true;
+        info.m_window = window;
+        return window.get();
     }
 
     template <typename T>
         requires IsEditorWindow<T>
-    std::shared_ptr<T> GetEditorWindow()
+    T* GetEditorWindow()
     {
-        for (const auto& window : m_editorWindows)
+        for (auto& info : m_editorWindows)
         {
-            if (auto casted = std::dynamic_pointer_cast<T>(window))
-            {
+            if (auto* casted = dynamic_cast<T*>(info.m_window.get()))
                 return casted;
-            }
         }
-
         return nullptr;
     }
 
@@ -77,6 +97,12 @@ public:
     DELTAEDITOR_API void ClearPreviewCameraOverride();
     /// Returns the active editor theme.
     DELTAEDITOR_API EditorTheme* GetEditorTheme() { return m_editorTheme.get(); }
+    /// Returns the list of all open editor windows and their visibility state.
+    /// Used by the Window menu to re-show singleton windows that were closed.
+    DELTAEDITOR_API std::vector<EditorWindowInfo>& GetEditorWindowInfos();
+
+    /// Opens a new viewport window instance.
+    DELTAEDITOR_API void OpenViewportWindow();
 
 private:
     void ProcessEvents();
@@ -86,7 +112,7 @@ private:
     std::unique_ptr<EditorRenderManager> m_renderManager;
     std::unique_ptr<EngineMain> m_engine;
     std::shared_ptr<SDL_Window> m_window;
-    std::vector<std::shared_ptr<EditorWindow>> m_editorWindows;
+    std::vector<EditorWindowInfo> m_editorWindows;
     std::unique_ptr<EditorTheme> m_editorTheme;
     bool m_sdlInitialized = false;
     bool m_imguiContextCreated = false;
