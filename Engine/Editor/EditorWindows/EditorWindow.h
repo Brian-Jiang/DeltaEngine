@@ -3,6 +3,7 @@
 #include "EngineIncludes.h"
 
 #include <concepts>
+#include <string>
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -24,8 +25,25 @@ public:
     /// When true, OpenEditorWindow prevents a second instance from being created.
     virtual bool IsSingleton() const { return true; }
 
-    /// ImGui window title string.
-    const char* m_title = "Editor Window";
+    /// Assigns the per-type instance id and rebuilds the ImGui window id string.
+    /// Called by OpenEditorWindow after construction.
+    void SetWindowId(int id)
+    {
+        m_id = id;
+        m_imguiTitle = m_title + "##" + std::to_string(id);
+    }
+
+    /// Returns the ImGui window title ("Title##id").
+    const char* GetImGuiTitle() const { return m_imguiTitle.c_str(); }
+
+    /// Human-readable display title. Subclasses set this in their constructor.
+    std::string m_title = "Editor Window";
+
+    /// Per-type instance index (0-based), set by OpenEditorWindow.
+    int m_id = 0;
+
+private:
+    std::string m_imguiTitle = "Editor Window##0";
 };
 
 /// True if T is an editor dock window type (derives from EditorWindow).

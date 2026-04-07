@@ -31,9 +31,6 @@ public:
     /// Property inspector for the current selection (asset, GameObject, or component).
     void Render(bool& open) override;
 
-    /// ImGui window title.
-    const char* m_title = "Details";
-
 private:
     void RenderAssetDetails(const AssetId& assetId);
     void RenderGameObjectDetails(GameObject* gameObject);

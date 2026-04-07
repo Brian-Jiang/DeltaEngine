@@ -27,6 +27,7 @@ using namespace DeltaEngine;
 
 EditorWindow_WorldOutliner::EditorWindow_WorldOutliner()
 {
+    m_title = "World Outliner";
 }
 
 EditorWindow_WorldOutliner::~EditorWindow_WorldOutliner()
@@ -65,7 +66,7 @@ void EditorWindow_WorldOutliner::RebuildFilter()
 
 void EditorWindow_WorldOutliner::Render(bool& open)
 {
-    if (!ImGui::Begin(m_title, &open))
+    if (!ImGui::Begin(GetImGuiTitle(), &open))
     {
         ImGui::End();
         return;

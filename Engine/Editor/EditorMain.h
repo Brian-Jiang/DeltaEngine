@@ -60,6 +60,13 @@ public:
                 }
             }
         }
+        int instanceCount = 0;
+        for (auto& info : m_editorWindows)
+        {
+            if (dynamic_cast<T*>(info.m_window.get()))
+                ++instanceCount;
+        }
+        window->SetWindowId(instanceCount);
         EditorWindowInfo& info = m_editorWindows.emplace_back();
         info.m_open = true;
         info.m_window = window;

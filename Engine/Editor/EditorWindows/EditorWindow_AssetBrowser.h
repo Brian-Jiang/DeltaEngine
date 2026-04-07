@@ -22,9 +22,6 @@ public:
     /// Folder tree of imported assets with select / duplicate / delete actions.
     void Render(bool& open) override;
 
-    /// ImGui window title.
-    const char* m_title = "Asset Browser";
-
 private:
     struct FolderNode
     {

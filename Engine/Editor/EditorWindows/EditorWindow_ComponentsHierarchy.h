@@ -23,9 +23,6 @@ public:
     /// Scene tree and non-spatial components for the selection's GameObject.
     void Render(bool& open) override;
 
-    /// ImGui window title.
-    const char* m_title = "Components Hierarchy";
-
 private:
     void RenderSceneComponentTree(SceneComponent* sceneComponent);
     void RenderRegularComponents(const std::vector<DComponent*>& components);

@@ -30,9 +30,6 @@ public:
     /// ImGui texture id for the scene color target shown in the viewport.
     void SetSceneTexture(ImTextureID textureId) { m_sceneTextureId = textureId; }
 
-    /// ImGui window title.
-    const char* m_title = "Viewport";
-
 private:
     void UpdateSceneRenderSize(int renderW, int renderH);
     void UpdateViewportFlyMode(bool viewportImageHovered);

@@ -36,9 +36,6 @@ public:
     /// Lists world objects, filter, add/destroy via context actions.
     void Render(bool& open) override;
 
-    /// ImGui window title.
-    const char* m_title = "World Outliner";
-
 private:
     void RebuildFilter();
 

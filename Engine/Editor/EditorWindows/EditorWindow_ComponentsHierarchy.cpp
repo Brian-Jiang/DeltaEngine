@@ -25,6 +25,7 @@ static constexpr float       kCompIconSz = 18.f;
 
 EditorWindow_ComponentsHierarchy::EditorWindow_ComponentsHierarchy()
 {
+    m_title = "Components Hierarchy";
 }
 
 EditorWindow_ComponentsHierarchy::~EditorWindow_ComponentsHierarchy()
@@ -33,7 +34,7 @@ EditorWindow_ComponentsHierarchy::~EditorWindow_ComponentsHierarchy()
 
 void EditorWindow_ComponentsHierarchy::Render(bool& open)
 {
-    if (!ImGui::Begin(m_title, &open))
+    if (!ImGui::Begin(GetImGuiTitle(), &open))
     {
         ImGui::End();
         return;

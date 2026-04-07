@@ -126,12 +126,16 @@ void LivePreviewWrite(DObject* obj, DProperty* prop)
 }
 }
 
-EditorWindow_Details::EditorWindow_Details() = default;
+EditorWindow_Details::EditorWindow_Details()
+{
+    m_title = "Details";
+}
+
 EditorWindow_Details::~EditorWindow_Details() = default;
 
 void EditorWindow_Details::Render(bool& open)
 {
-    if (!ImGui::Begin(m_title, &open))
+    if (!ImGui::Begin(GetImGuiTitle(), &open))
     {
         ImGui::End();
         return;
