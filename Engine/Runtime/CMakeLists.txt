@@ -31,6 +31,7 @@ target_link_libraries(${TARGET_NAME} PUBLIC ThirdParty::DirectXTK12)
 target_link_libraries(${TARGET_NAME} PUBLIC ThirdParty::DirectXTex)
 target_link_libraries(${TARGET_NAME} PUBLIC ThirdParty::nlohmann_json)
 target_link_libraries(${TARGET_NAME} PUBLIC ThirdParty::spdlog)
+target_link_libraries(${TARGET_NAME} PUBLIC ThirdParty::asio)
 
 target_link_libraries(${TARGET_NAME} PUBLIC d3d12.lib)
 target_link_libraries(${TARGET_NAME} PUBLIC dxguid.lib dxgi.lib d3dcompiler.lib)
