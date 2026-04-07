@@ -8,12 +8,15 @@
 #include <filesystem>
 #include <memory>
 #include <mutex>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 DELTA_ENGINE_NS_BEGIN
+
+DECLARE_LOG_CATEGORY(LogEditorCore)
 
 class DComponent;
 class DPrimaryAsset;
@@ -68,6 +71,10 @@ public:
     // JSON envelope: { "type": "EditorCommand_SetProperty", "data": { ... } }
     DELTAEDITOR_API void EnqueueSerializedCommand(std::string jsonPayload);
     DELTAEDITOR_API void DrainCommandQueue();
+
+    // Returns a JSON snapshot of the live scene: all GameObjects with their
+    // reflected properties and components, keyed by stable object/asset UUIDs.
+    DELTAEDITOR_API nlohmann::json SerializeSceneToJson();
 
 private:
     std::unique_ptr<EditorAssetDatabase> m_assetDatabase;

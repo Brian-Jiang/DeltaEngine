@@ -16,6 +16,7 @@
 #include "Runtime/Test/TestComponent2.h"
 
 #include <DirectXMath.h>
+#include <nlohmann/json.hpp>
 
 #include <cmath>
 
@@ -263,4 +264,31 @@ TEST_F(EditorCommandTests_SceneStructure, EditorCommand_RenameObject_UndoRestore
 
     ASSERT_TRUE(m_core->GetCommandManager().Undo(ctx));
     EXPECT_EQ(go->GetName(), original);
+}
+
+TEST_F(EditorCommandTests_SceneStructure, SerializeSceneToJson_ContainsCreatedGameObject)
+{
+    EditorCommandContext ctx{ *m_core };
+    const AssetId sceneId = GetActiveSceneAssetId();
+    ASSERT_FALSE(sceneId.IsNull());
+
+    ASSERT_TRUE(m_core->GetCommandManager().Execute(
+        std::make_unique<EditorCommand_CreateGameObject>(sceneId, "TestObject"), ctx));
+
+    nlohmann::json scene = m_core->SerializeSceneToJson();
+
+    ASSERT_TRUE(scene.contains("objects"));
+    ASSERT_FALSE(scene["objects"].empty());
+
+    bool found = false;
+    for (const auto& entry : scene["objects"])
+    {
+        if (entry.value("class", "") == "GameObject" &&
+            !entry.value("objectId", "").empty())
+        {
+            found = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(found);
 }

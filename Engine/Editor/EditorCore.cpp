@@ -15,14 +15,18 @@
 #include "Runtime/Core/SceneComponent.h"
 #include "Runtime/EngineMain.h"
 #include "Runtime/IO/IOManager.h"
+#include "Runtime/Serialization/ObjectSnapshotWriter.h"
 #include "Reflection/DClass.h"
 #include "Reflection/ReflectionRegistry.h"
 
 #include <nlohmann/json.hpp>
 
 #include <cstdio>
+#include <queue>
 
 using namespace DeltaEngine;
+
+DEFINE_LOG_CATEGORY(DeltaEngine::LogEditorCore)
 
 EditorCore* DeltaEngine::g_editorCore = nullptr;
 
@@ -293,6 +297,78 @@ void EditorCore::DrainCommandQueue()
 
         m_commandManager->Execute(std::move(cmd), ctx);
     }
+}
+
+nlohmann::json EditorCore::SerializeSceneToJson()
+{
+    nlohmann::json result;
+    result["objects"] = nlohmann::json::array();
+
+    DWorld* world = GetWorld();
+    if (!world)
+        return result;
+
+    for (GameObject* go : world->GetGameObjects())
+    {
+        auto [assetId, objectId] = GetIdsForObject(go);
+        if (assetId.IsNull() || objectId.IsNull())
+        {
+            DLOG(LogEditorCore, ELogLevel::Warning,
+                 "SerializeSceneToJson: skipping unregistered GameObject");
+            continue;
+        }
+
+        ObjectSnapshotWriter writer;
+        ObjectSnapshot snapshot = writer.Capture(go);
+        const auto& snapshotObjects = snapshot.rootJson["objects"];
+
+        // Build a parallel component list in the same order CollectObjects uses:
+        // DComponents first, then SceneComponents in BFS order.
+        std::vector<DObject*> componentObjects;
+        for (DComponent* comp : go->GetComponents())
+            componentObjects.push_back(comp);
+
+        std::queue<SceneComponent*> q;
+        for (SceneComponent* sc : go->GetSceneComponents())
+            q.push(sc);
+        while (!q.empty())
+        {
+            SceneComponent* sc = q.front();
+            q.pop();
+            componentObjects.push_back(sc);
+            for (SceneComponent* child : sc->GetChildren())
+                q.push(child);
+        }
+
+        nlohmann::json goEntry;
+        goEntry["objectId"]   = objectId.ToString();
+        goEntry["assetId"]    = assetId.ToString();
+        goEntry["class"]      = "GameObject";
+        goEntry["name"]       = go->GetName();
+        goEntry["properties"] = !snapshotObjects.empty() ? snapshotObjects[0]
+                                                         : nlohmann::json{};
+        goEntry["components"] = nlohmann::json::array();
+
+        for (size_t i = 0; i < componentObjects.size(); ++i)
+        {
+            DObject* comp = componentObjects[i];
+            auto [compAssetId, compObjectId] = GetIdsForObject(comp);
+
+            nlohmann::json compEntry;
+            compEntry["objectId"]   = compObjectId.IsNull() ? ""
+                                                             : compObjectId.ToString();
+            compEntry["class"]      = comp->GetClass() ? comp->GetClass()->GetName()
+                                                       : "";
+            compEntry["properties"] = (i + 1 < snapshotObjects.size())
+                                          ? snapshotObjects[i + 1]
+                                          : nlohmann::json{};
+            goEntry["components"].push_back(std::move(compEntry));
+        }
+
+        result["objects"].push_back(std::move(goEntry));
+    }
+
+    return result;
 }
 
 // void EditorMain::CreateAssets()

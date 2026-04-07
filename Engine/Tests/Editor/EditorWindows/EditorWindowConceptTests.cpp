@@ -8,7 +8,7 @@ namespace
 {
 struct TestEditorWindow final : EditorWindow
 {
-    void Render() override {}
+    void Render(bool& open) override { }
 };
 }
 

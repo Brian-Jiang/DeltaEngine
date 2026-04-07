@@ -81,7 +81,7 @@ private:
 
 // In a .cpp — defines a module-wide category
 #define DEFINE_LOG_CATEGORY(CategoryName) \
-    DLogCategory CategoryName { #CategoryName, ELogLevel::Log }
+    DLogCategory CategoryName { #CategoryName, ELogLevel::Log };
 
 // In a .cpp — file-local category, no header needed
 #define DEFINE_LOG_CATEGORY_STATIC(CategoryName) \
