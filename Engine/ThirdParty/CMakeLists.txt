@@ -10,6 +10,7 @@ include(dxtex.cmake)
 include(assimp.cmake)
 include(nlohmann_json.cmake)
 include(spdlog.cmake)
+include(asio.cmake)
 include(googletest.cmake)
 
 add_custom_target(CopyDxcBin ALL
