@@ -70,7 +70,7 @@ public:
     // Serialized command dispatch queue for headless / MCP callers.
     // JSON envelope: { "type": "EditorCommand_SetProperty", "data": { ... } }
     DELTAEDITOR_API void EnqueueSerializedCommand(std::string jsonPayload);
-    DELTAEDITOR_API void DrainCommandQueue();
+    DELTAEDITOR_API void DrainCommandQueue(std::vector<std::string>& outResponses);
 
     // Returns a JSON snapshot of the live scene: all GameObjects with their
     // reflected properties and components, keyed by stable object/asset UUIDs.

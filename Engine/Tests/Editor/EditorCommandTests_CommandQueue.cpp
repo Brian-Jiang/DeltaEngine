@@ -30,7 +30,10 @@ TEST_F(EditorCommandTests_CommandQueue, EditorCommand_DrainQueue_SetProperty_Exe
     createEnv["type"] = "EditorCommand_CreateGameObject";
     createEnv["data"] = createData;
     m_core->EnqueueSerializedCommand(createEnv.dump());
-    m_core->DrainCommandQueue();
+    {
+        std::vector<std::string> responses;
+        m_core->DrainCommandQueue(responses);
+    }
 
     GameObject* go = nullptr;
     for (GameObject* g : m_core->GetWorld()->GetGameObjects())
@@ -53,7 +56,10 @@ TEST_F(EditorCommandTests_CommandQueue, EditorCommand_DrainQueue_SetProperty_Exe
     spEnv["type"] = "EditorCommand_SetProperty";
     spEnv["data"] = spData;
     m_core->EnqueueSerializedCommand(spEnv.dump());
-    m_core->DrainCommandQueue();
+    {
+        std::vector<std::string> responses;
+        m_core->DrainCommandQueue(responses);
+    }
 
     EXPECT_EQ(go->GetName(), "FromQueue");
 }
@@ -71,7 +77,10 @@ TEST_F(EditorCommandTests_CommandQueue, EditorCommand_DrainQueue_UnknownType_Log
     createEnv["data"] = createData;
     m_core->EnqueueSerializedCommand(createEnv.dump());
 
-    m_core->DrainCommandQueue();
+    {
+        std::vector<std::string> responses;
+        m_core->DrainCommandQueue(responses);
+    }
 
     EXPECT_FALSE(m_core->GetWorld()->GetGameObjects().empty());
 }
@@ -93,7 +102,10 @@ TEST_F(EditorCommandTests_CommandQueue, EditorCommand_DrainQueue_InvalidObjectId
     spEnv["type"] = "EditorCommand_SetProperty";
     spEnv["data"] = spData;
     m_core->EnqueueSerializedCommand(spEnv.dump());
-    m_core->DrainCommandQueue();
+    {
+        std::vector<std::string> responses;
+        m_core->DrainCommandQueue(responses);
+    }
 
     EXPECT_EQ(m_core->GetCommandManager().GetUndoStackDepth(), depthBefore);
 }
@@ -124,7 +136,10 @@ TEST_F(EditorCommandTests_CommandQueue, EditorCommand_DrainQueue_ConcurrentEnque
     for (auto& th : threads)
         th.join();
 
-    m_core->DrainCommandQueue();
+    {
+        std::vector<std::string> responses;
+        m_core->DrainCommandQueue(responses);
+    }
 
     std::set<ObjectId> ids;
     for (GameObject* g : m_core->GetWorld()->GetGameObjects())
@@ -132,4 +147,24 @@ TEST_F(EditorCommandTests_CommandQueue, EditorCommand_DrainQueue_ConcurrentEnque
 
     EXPECT_EQ(ids.size(), 100u);
     EXPECT_EQ(m_core->GetWorld()->GetGameObjects().size(), 100);
+}
+
+TEST_F(EditorCommandTests_CommandQueue, EditorCommand_DrainQueue_CreateGameObject_ResponseHasObjectId)
+{
+    const AssetId sceneId = GetActiveSceneAssetId();
+    nlohmann::json createData;
+    createData["sceneAssetId"] = sceneId.ToString();
+    createData["className"] = "GameObject";
+    nlohmann::json createEnv;
+    createEnv["type"] = "EditorCommand_CreateGameObject";
+    createEnv["data"] = createData;
+    m_core->EnqueueSerializedCommand(createEnv.dump());
+
+    std::vector<std::string> responses;
+    m_core->DrainCommandQueue(responses);
+
+    ASSERT_EQ(responses.size(), 1u);
+    auto resp = nlohmann::json::parse(responses[0]);
+    EXPECT_TRUE(resp.value("ok", false));
+    EXPECT_FALSE(resp.value("objectId", "").empty());
 }

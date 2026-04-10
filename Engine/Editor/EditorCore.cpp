@@ -244,7 +244,7 @@ void EditorCore::EnqueueSerializedCommand(std::string jsonPayload)
     m_pendingCommands.push_back(std::move(jsonPayload));
 }
 
-void EditorCore::DrainCommandQueue()
+void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
 {
     std::vector<std::string> batch;
     {
@@ -267,6 +267,7 @@ void EditorCore::DrainCommandQueue()
         catch (const nlohmann::json::parse_error& e)
         {
             DLOG(LogEditorCommand, ELogLevel::Error, "[DrainCommandQueue] JSON parse error: {}", e.what());
+            outResponses.push_back(nlohmann::json{{"ok", false}, {"error", std::string{"JSON parse error: "} + e.what()}}.dump());
             continue;
         }
 
@@ -274,6 +275,7 @@ void EditorCore::DrainCommandQueue()
         if (type.empty())
         {
             DLOG(LogEditorCommand, ELogLevel::Error, "[DrainCommandQueue] Missing 'type' field");
+            outResponses.push_back(nlohmann::json{{"ok", false}, {"error", "Missing 'type' field"}}.dump());
             continue;
         }
 
@@ -281,6 +283,7 @@ void EditorCore::DrainCommandQueue()
         if (!cmd)
         {
             DLOG(LogEditorCommand, ELogLevel::Error, "[DrainCommandQueue] Unknown command type: {}", type);
+            outResponses.push_back(nlohmann::json{{"ok", false}, {"commandType", type}, {"error", "Unknown command type"}}.dump());
             continue;
         }
 
@@ -292,11 +295,31 @@ void EditorCore::DrainCommandQueue()
         catch (const std::exception& e)
         {
             DLOG(LogEditorCommand, ELogLevel::Error, "[DrainCommandQueue] Deserialize failed for '{}': {}", type, e.what());
+            outResponses.push_back(nlohmann::json{{"ok", false}, {"commandType", type}, {"error", std::string{"Deserialize failed: "} + e.what()}}.dump());
             continue;
         }
 
-        m_commandManager->Execute(std::move(cmd), ctx);
+        std::string typeName{cmd->GetTypeName()};
+        EditorCommand* cmdPtr = cmd.get();
+        bool ok = m_commandManager->Execute(std::move(cmd), ctx);
+        if (ok)
+        {
+            nlohmann::json j;
+            cmdPtr->Serialize(j);
+            outResponses.push_back(
+                nlohmann::json{{"ok", true}, {"commandType", typeName}, {"objectId", j.value("createdId", "")}}.dump()
+            );
+        }
+        else
+        {
+            outResponses.push_back(
+                nlohmann::json{{"ok", false}, {"commandType", typeName}, {"error", "Execute() returned false"}}.dump()
+            );
+        }
     }
+
+    if (!outResponses.empty())
+        DLOG(LogEditorCore, ELogLevel::VeryVerbose, "Drained {} commands", outResponses.size());
 }
 
 nlohmann::json EditorCore::SerializeSceneToJson()

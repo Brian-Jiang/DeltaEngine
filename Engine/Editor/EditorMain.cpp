@@ -27,6 +27,7 @@
 #include <chrono>
 #include <cstdio>
 #include <thread>
+#include <vector>
 
 using namespace DeltaEngine;
 
@@ -217,7 +218,12 @@ int EditorMain::Run()
         if (!m_running)
             break;
 
-        m_editorCore->DrainCommandQueue();
+        std::vector<std::string> responses;
+        m_editorCore->DrainCommandQueue(responses);
+        if (g_mcpServer) {
+            for (const auto& r : responses)
+                g_mcpServer->SendResponse(r);
+        }
         m_engine->PreTick();
         m_engine->Tick();
         m_renderManager->RenderFrame(m_engine.get());
