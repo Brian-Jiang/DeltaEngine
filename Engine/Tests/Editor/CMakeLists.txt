@@ -3,6 +3,7 @@ set(DELTA_EDITOR_TEST_SOURCES
     EditorCommandTests_SceneStructure.cpp
     EditorCommandTests_Scene_SaveLoad.cpp
     EditorCommandTests_CommandQueue.cpp
+    EditorCommandTests_McpPath.cpp
     EditorCommandTests_UndoStack.cpp
     UI/EditorThemeColorTests.cpp
     EditorWindows/EditorWindowConceptTests.cpp
