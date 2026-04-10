@@ -1,6 +1,8 @@
 #include "EditorMain.h"
 
 #include "Editor/EditorCore.h"
+#include "Editor/McpSocketServer.h"
+#include "Runtime/Reflection/ReflectionRegistry.h"
 #include "Editor/Commands/EditorAuxiliarySceneCommands.h"
 #include "Editor/Commands/EditorCommandContext.h"
 #include "Editor/Commands/EditorCommandManager.h"
@@ -19,6 +21,7 @@
 #include <backends/imgui_impl_sdl3.h>
 #include <imgui.h>
 #include <SDL3/SDL.h>
+#include <nlohmann/json.hpp>
 
 #include <algorithm>
 #include <chrono>
@@ -28,6 +31,7 @@
 using namespace DeltaEngine;
 
 EditorMain* DeltaEngine::g_editor = nullptr;
+static std::unique_ptr<McpSocketServer> g_mcpServer;
 
 namespace
 {
@@ -87,6 +91,38 @@ EditorMain::EditorMain()
 
     m_editorCore = std::make_unique<EditorCore>();
     m_editorCore->Initialize(*m_engine);
+
+    g_mcpServer = std::make_unique<McpSocketServer>(
+        [](const std::string& json) {
+            g_editorCore->EnqueueSerializedCommand(json);
+        },
+        [](const std::string& json) -> std::string {
+            try
+            {
+                auto j = nlohmann::json::parse(json);
+                std::string q = j.value("query", "");
+                if (q == "scene_state")
+                    return g_editorCore->SerializeSceneToJson().dump();
+                if (q == "class_schema")
+                {
+                    std::string cls = j.value("className", "");
+                    auto* dclass = GetReflectionRegistry().FindClassByName(cls);
+                    if (!dclass)
+                        return nlohmann::json{{"ok", false}, {"error", "unknown class"}}.dump();
+                    nlohmann::json props = nlohmann::json::array();
+                    for (auto* prop = dclass->GetProperties(); prop; prop = prop->GetNext())
+                        props.push_back({{"name", prop->GetName()}, {"type", prop->GetType()}});
+                    return nlohmann::json{{"ok", true}, {"class", cls}, {"properties", props}}.dump();
+                }
+                return nlohmann::json{{"ok", false}, {"error", "unknown query"}}.dump();
+            }
+            catch (const std::exception& e)
+            {
+                return nlohmann::json{{"ok", false}, {"error", e.what()}}.dump();
+            }
+        }
+    );
+    g_mcpServer->Start();
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -336,6 +372,7 @@ void EditorMain::Shutdown()
 
     m_editorWindows.clear();
     m_editorTheme.reset();
+    g_mcpServer.reset();
     m_editorCore.reset();
     m_renderManager.reset();
     m_engine.reset();
