@@ -279,23 +279,51 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
             continue;
         }
 
-        auto cmd = EditorCommandRegistry::Get().Create(type);
+        // MCP envelope: {"type":"command","command":"EditorCommand_*", ...flat fields...}
+        // Legacy envelope: {"type":"EditorCommand_*","data":{...}}
+        std::string commandName;
+        nlohmann::json commandData;
+        if (type == "command" && envelope.contains("command"))
+        {
+            commandName = envelope["command"].get<std::string>();
+            commandData = envelope;
+            commandData.erase("type");
+            commandData.erase("command");
+
+            // Auto-inject active scene asset ID for MCP callers
+            DPrimaryAsset* activeAsset = GetActiveSceneAsset();
+            if (activeAsset)
+            {
+                std::string aid = activeAsset->GetAssetId().ToString();
+                if (!commandData.contains("sceneAssetId"))
+                    commandData["sceneAssetId"] = aid;
+                if (!commandData.contains("assetId"))
+                    commandData["assetId"] = aid;
+            }
+        }
+        else
+        {
+            commandName = type;
+            commandData = envelope.value("data", nlohmann::json{});
+        }
+
+        auto cmd = EditorCommandRegistry::Get().Create(commandName);
         if (!cmd)
         {
-            DLOG(LogEditorCommand, ELogLevel::Error, "[DrainCommandQueue] Unknown command type: {}", type);
-            outResponses.push_back(nlohmann::json{{"ok", false}, {"commandType", type}, {"error", "Unknown command type"}}.dump());
+            DLOG(LogEditorCommand, ELogLevel::Error, "[DrainCommandQueue] Unknown command type: {}", commandName);
+            outResponses.push_back(nlohmann::json{{"ok", false}, {"commandType", commandName}, {"error", "Unknown command type"}}.dump());
             continue;
         }
 
         try
         {
-            if (envelope.contains("data"))
-                cmd->Deserialize(envelope["data"]);
+            if (!commandData.empty())
+                cmd->Deserialize(commandData);
         }
         catch (const std::exception& e)
         {
-            DLOG(LogEditorCommand, ELogLevel::Error, "[DrainCommandQueue] Deserialize failed for '{}': {}", type, e.what());
-            outResponses.push_back(nlohmann::json{{"ok", false}, {"commandType", type}, {"error", std::string{"Deserialize failed: "} + e.what()}}.dump());
+            DLOG(LogEditorCommand, ELogLevel::Error, "[DrainCommandQueue] Deserialize failed for '{}': {}", commandName, e.what());
+            outResponses.push_back(nlohmann::json{{"ok", false}, {"commandType", commandName}, {"error", std::string{"Deserialize failed: "} + e.what()}}.dump());
             continue;
         }
 
@@ -306,8 +334,11 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
         {
             nlohmann::json j;
             cmdPtr->Serialize(j);
+            std::string objectId = j.value("createdId", "");
+            if (objectId.empty())
+                objectId = j.value("createdComponentId", "");
             outResponses.push_back(
-                nlohmann::json{{"ok", true}, {"commandType", typeName}, {"objectId", j.value("createdId", "")}}.dump()
+                nlohmann::json{{"ok", true}, {"commandType", typeName}, {"objectId", objectId}}.dump()
             );
         }
         else

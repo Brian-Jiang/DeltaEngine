@@ -98,8 +98,7 @@ def create_game_object(name: str, parent_object_id: str = "") -> dict:
     return _send_command({
         "type": "command",
         "command": "EditorCommand_CreateGameObject",
-        "name": name,
-        "parentObjectId": parent_object_id,
+        "className": "GameObject",
     })
 
 
@@ -115,8 +114,8 @@ def add_component(object_id: str, component_class: str) -> dict:
     return _send_command({
         "type": "command",
         "command": "EditorCommand_CreateComponent",
-        "objectId": object_id,
-        "componentClass": component_class,
+        "gameObjectId": object_id,
+        "className": component_class,
     })
 
 
@@ -139,7 +138,7 @@ def set_property(object_id: str, property_name: str, value: object) -> dict:
         "command": "EditorCommand_SetProperty",
         "objectId": object_id,
         "propertyName": property_name,
-        "value": value,
+        "valueAfter": value,
     })
 
 
@@ -153,7 +152,7 @@ def rename_object(object_id: str, new_name: str) -> dict:
     return _send_command({
         "type": "command",
         "command": "EditorCommand_RenameObject",
-        "objectId": object_id,
+        "targetObjectId": object_id,
         "newName": new_name,
     })
 
@@ -168,7 +167,7 @@ def delete_game_object(object_id: str) -> dict:
     return _send_command({
         "type": "command",
         "command": "EditorCommand_DeleteGameObject",
-        "objectId": object_id,
+        "gameObjectId": object_id,
     })
 
 
