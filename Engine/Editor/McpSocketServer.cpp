@@ -1,6 +1,7 @@
 #include "McpSocketServer.h"
 
 #include "Runtime/Logging/LogCategory.h"
+#include "Runtime/IO/IOManager.h"
 
 #include <nlohmann/json.hpp>
 
@@ -46,7 +47,8 @@ uint16_t McpSocketServer::Start(uint16_t preferredPort)
         return 0;
     }
 
-    auto portFile = std::filesystem::temp_directory_path() / "DeltaEditor.port";
+    auto portFile = std::filesystem::path(IOManager::GetIntermediateFolder()) / "EditorState" / "DeltaEditor.port";
+    std::filesystem::create_directories(portFile.parent_path());
     std::ofstream(portFile) << port;
 
     DoAccept();
@@ -65,7 +67,7 @@ void McpSocketServer::Stop()
     if (m_thread.joinable())
         m_thread.join();
 
-    auto portFile = std::filesystem::temp_directory_path() / "DeltaEditor.port";
+    auto portFile = std::filesystem::path(IOManager::GetIntermediateFolder()) / "EditorState" / "DeltaEditor.port";
     std::filesystem::remove(portFile);
 }
 
