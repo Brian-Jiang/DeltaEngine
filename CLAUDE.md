@@ -18,6 +18,8 @@ Tools\Scripts\rebuild-x64-debug.bat            # configure + build (DeltaEditorL
 Tools\Scripts\build-x64-debug-engine-tests.bat # build DeltaEngineTests
 Tools\Scripts\build-x64-debug-editor-tests.bat # build DeltaEditorTests
 Tools\Scripts\run-x64-debug.bat                # launch DeltaEditorLaunch.exe
+Tools\Scripts\run-x64-debug-engine-tests.bat   # run DeltaEngineTests (extra args forwarded to GTest)
+Tools\Scripts\run-x64-debug-editor-tests.bat   # run DeltaEditorTests (extra args forwarded to GTest)
 Tools\Scripts\delta_header_generate.bat        # incremental reflection codegen
 Tools\Scripts\delta_header_force_generate.bat  # full reflection codegen
 Tools\Scripts\test-delta-header-tool.bat       # pytest for DeltaHeaderTool
@@ -29,8 +31,17 @@ Every script in `Tools/Scripts/` pauses at the end by default so a human double-
 
 ```bash
 Tools\Scripts\build-x64-debug.bat --automatic
+Tools\Scripts\run-x64-debug-engine-tests.bat --automatic              # build then run engine tests
+Tools\Scripts\run-x64-debug-editor-tests.bat --automatic              # build then run editor tests
+Tools\Scripts\run-x64-debug-engine-tests.bat --automatic --gtest_filter=Foo*  # GTest filter example
 Tools\Scripts\test-delta-header-tool.bat --automatic
 Tools\Scripts\test-delta-header-tool.bat --automatic -k test_parser  # extra args pass through to pytest
+```
+
+**Verifying code modifications:** After any change to engine or editor code, run the relevant test suite to confirm nothing regressed:
+```bash
+Tools\Scripts\build-x64-debug-engine-tests.bat --automatic && Tools\Scripts\run-x64-debug-engine-tests.bat --automatic
+Tools\Scripts\build-x64-debug-editor-tests.bat --automatic && Tools\Scripts\run-x64-debug-editor-tests.bat --automatic
 ```
 
 Build output goes to `Build/x64-Debug/bin/` (executables) and `Build/x64-Debug/lib/` (libraries). The `CopyDxcBin` custom target copies DXC compiler binaries to the output directory automatically.
@@ -334,6 +345,8 @@ Tools/
     ├── build-x64-debug-editor-tests.bat   # Build DeltaEditorTests
     ├── rebuild-x64-debug.bat              # Configure + build DeltaEditorLaunch
     ├── run-x64-debug.bat                  # Launch DeltaEditorLaunch.exe
+    ├── run-x64-debug-engine-tests.bat     # Run DeltaEngineTests.exe
+    ├── run-x64-debug-editor-tests.bat     # Run DeltaEditorTests.exe
     ├── set_env.bat
     ├── delta_header_generate.bat          # Incremental generation
     ├── delta_header_force_generate.bat    # Full regeneration (--force)
