@@ -1,6 +1,7 @@
 #include "EditorMain.h"
 
 #include "Editor/EditorCore.h"
+#include "Editor/Mcp/McpQueryRouter.h"
 #include "Editor/Mcp/McpRegistry.h"
 #include "Editor/McpSocketServer.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
@@ -96,23 +97,13 @@ EditorMain::EditorMain()
 
     McpRegistry::Get().InitializeAll(*m_editorCore);
 
+    auto router = std::make_shared<McpQueryRouter>(*m_editorCore);
     g_mcpServer = std::make_unique<McpSocketServer>(
         [](const std::string& json) {
             g_editorCore->EnqueueSerializedCommand(json);
         },
-        [](const std::string& json) -> std::string {
-            try
-            {
-                auto j = nlohmann::json::parse(json);
-                std::string sys = j.value("system", "");
-                std::string op  = j.value("operation", "");
-                auto params = j.value("params", nlohmann::json::object());
-                return McpRegistry::Get().Dispatch(sys, op, *g_editorCore, params).dump();
-            }
-            catch (const std::exception& e)
-            {
-                return nlohmann::json{{"ok", false}, {"error", e.what()}}.dump();
-            }
+        [router](const std::string& json) -> std::string {
+            return router->Route(json);
         }
     );
     g_mcpServer->Start();
