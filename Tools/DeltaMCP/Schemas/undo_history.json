@@ -1,0 +1,14 @@
+{
+  "system": "undo_history",
+  "description": "Editor undo/redo stack inspection",
+  "operations": {
+    "stack": {
+      "description": "Current undo and redo stack entries with command types and descriptions",
+      "params": {
+        "max_entries": { "type": "int",  "optional": true, "default": 50 },
+        "include_data": { "type": "bool", "optional": true, "default": false,
+                          "description": "Include serialized command data" }
+      }
+    }
+  }
+}

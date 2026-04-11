@@ -1,0 +1,25 @@
+{
+  "system": "project",
+  "description": "Project-level information, settings, and build state",
+  "operations": {
+    "info": {
+      "description": "Project name, root path, engine version, and configuration",
+      "params": {}
+    },
+    "settings": {
+      "description": "Current project settings",
+      "params": {
+        "category": { "type": "string", "optional": true,
+                      "description": "Filter to a specific settings category" }
+      }
+    },
+    "open_scenes": {
+      "description": "List of currently loaded scene assets",
+      "params": {}
+    },
+    "build_state": {
+      "description": "Current build configuration, target platform, and status",
+      "params": {}
+    }
+  }
+}

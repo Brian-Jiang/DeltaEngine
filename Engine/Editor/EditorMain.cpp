@@ -1,6 +1,7 @@
 #include "EditorMain.h"
 
 #include "Editor/EditorCore.h"
+#include "Editor/Mcp/McpRegistry.h"
 #include "Editor/McpSocketServer.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
 #include "Editor/Commands/EditorAuxiliarySceneCommands.h"
@@ -93,6 +94,8 @@ EditorMain::EditorMain()
     m_editorCore = std::make_unique<EditorCore>();
     m_editorCore->Initialize(*m_engine);
 
+    McpRegistry::Get().InitializeAll(*m_editorCore);
+
     g_mcpServer = std::make_unique<McpSocketServer>(
         [](const std::string& json) {
             g_editorCore->EnqueueSerializedCommand(json);
@@ -101,21 +104,10 @@ EditorMain::EditorMain()
             try
             {
                 auto j = nlohmann::json::parse(json);
-                std::string q = j.value("query", "");
-                if (q == "scene_state")
-                    return g_editorCore->SerializeSceneToJson().dump();
-                if (q == "class_schema")
-                {
-                    std::string cls = j.value("className", "");
-                    auto* dclass = GetReflectionRegistry().FindClassByName(cls);
-                    if (!dclass)
-                        return nlohmann::json{{"ok", false}, {"error", "unknown class"}}.dump();
-                    nlohmann::json props = nlohmann::json::array();
-                    for (auto* prop = dclass->GetProperties(); prop; prop = prop->GetNext())
-                        props.push_back({{"name", prop->GetName()}, {"type", prop->GetType()}});
-                    return nlohmann::json{{"ok", true}, {"class", cls}, {"properties", props}}.dump();
-                }
-                return nlohmann::json{{"ok", false}, {"error", "unknown query"}}.dump();
+                std::string sys = j.value("system", "");
+                std::string op  = j.value("operation", "");
+                auto params = j.value("params", nlohmann::json::object());
+                return McpRegistry::Get().Dispatch(sys, op, *g_editorCore, params).dump();
             }
             catch (const std::exception& e)
             {

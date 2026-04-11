@@ -1,0 +1,10 @@
+{
+  "system": "selection",
+  "description": "Current editor selection state",
+  "operations": {
+    "current": {
+      "description": "Currently selected object IDs and their classes",
+      "params": {}
+    }
+  }
+}

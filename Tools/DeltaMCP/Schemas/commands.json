@@ -1,0 +1,132 @@
+{
+  "commands": {
+    "CreateGameObject": {
+      "description": "Create a new empty GameObject",
+      "undoable": true,
+      "params": {
+        "name":           { "type": "string", "required": true },
+        "parentObjectId": { "type": "string", "optional": true, "default": "" }
+      },
+      "returns": { "objectId": "string" }
+    },
+    "DeleteGameObject": {
+      "description": "Delete a GameObject and all its components",
+      "undoable": true,
+      "params": {
+        "objectId": { "type": "string", "required": true }
+      }
+    },
+    "RenameObject": {
+      "description": "Rename a GameObject or component",
+      "undoable": true,
+      "params": {
+        "objectId": { "type": "string", "required": true },
+        "newName":  { "type": "string", "required": true }
+      }
+    },
+    "ReparentSceneComponent": {
+      "description": "Change a SceneComponent's parent",
+      "undoable": true,
+      "params": {
+        "objectId":            { "type": "string", "required": true },
+        "newParentId":         { "type": "string", "required": true },
+        "keepWorldTransform":  { "type": "bool",   "default": true }
+      }
+    },
+    "CreateComponent": {
+      "description": "Add a component to a GameObject",
+      "undoable": true,
+      "params": {
+        "objectId":       { "type": "string", "required": true },
+        "componentClass": { "type": "string", "required": true }
+      },
+      "returns": { "objectId": "string" }
+    },
+    "DeleteComponent": {
+      "description": "Remove a component",
+      "undoable": true,
+      "params": {
+        "objectId": { "type": "string", "required": true }
+      }
+    },
+    "SetProperty": {
+      "description": "Set a reflected property on any DObject",
+      "undoable": true,
+      "params": {
+        "objectId":     { "type": "string", "required": true },
+        "propertyName": { "type": "string", "required": true },
+        "value":        { "required": true,
+                          "description": "float→number, Vec3→[x,y,z], Quat→[x,y,z,w], ref→{objectId,assetId}" }
+      }
+    },
+    "SetTransform": {
+      "description": "Set position/rotation/scale in one command",
+      "undoable": true,
+      "params": {
+        "objectId": { "type": "string", "required": true },
+        "position": { "type": "array", "optional": true, "description": "[x,y,z]" },
+        "rotation": { "type": "array", "optional": true, "description": "[x,y,z,w]" },
+        "scale":    { "type": "array", "optional": true, "description": "[x,y,z]" },
+        "space":    { "type": "string", "optional": true,
+                      "options": ["local","world"], "default": "world" }
+      }
+    },
+    "DuplicateGameObject": {
+      "description": "Duplicate a GameObject and all its components",
+      "undoable": true,
+      "params": {
+        "objectId":        { "type": "string", "required": true },
+        "newName":         { "type": "string", "optional": true },
+        "offset_position": { "type": "array",  "optional": true,
+                             "description": "[x,y,z] world offset" }
+      },
+      "returns": { "objectId": "string" }
+    },
+    "SetViewportCamera": {
+      "description": "Move the viewport fly camera",
+      "undoable": false,
+      "params": {
+        "position": { "type": "array", "optional": true },
+        "rotation": { "type": "array", "optional": true },
+        "fov":      { "type": "float", "optional": true }
+      }
+    },
+    "SelectObject": {
+      "description": "Change the editor selection",
+      "undoable": false,
+      "params": {
+        "object_ids":       { "type": "array", "required": true },
+        "add_to_selection": { "type": "bool",  "default": false }
+      }
+    },
+    "LoadScene": {
+      "description": "Load a scene asset into the editor",
+      "undoable": false,
+      "params": {
+        "asset_id": { "type": "string", "required": true },
+        "additive": { "type": "bool",   "default": false }
+      }
+    },
+    "SaveScene": {
+      "description": "Save the active scene",
+      "undoable": false,
+      "params": {
+        "force_path": { "type": "string", "optional": true }
+      }
+    },
+    "Undo": {
+      "description": "Undo the last undoable command",
+      "undoable": false,
+      "params": {
+        "steps": { "type": "int", "default": 1 }
+      }
+    },
+    "Redo": {
+      "description": "Redo the last undone command",
+      "undoable": false,
+      "params": {
+        "steps": { "type": "int", "default": 1 }
+      }
+    }
+  }
+}

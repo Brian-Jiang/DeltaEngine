@@ -1,0 +1,29 @@
+{
+  "system": "viewport",
+  "description": "Editor viewport camera, rendering settings, and picking",
+  "operations": {
+    "camera": {
+      "description": "Current viewport camera position, rotation, and projection settings",
+      "params": {}
+    },
+    "render_settings": {
+      "description": "Current render pipeline settings (resolution, debug overlays, etc.)",
+      "params": {}
+    },
+    "visible_objects": {
+      "description": "List of object IDs currently visible in the viewport frustum",
+      "params": {
+        "include_partial": { "type": "bool", "optional": true, "default": true,
+                             "description": "Include partially visible objects" }
+      }
+    },
+    "raycast": {
+      "description": "Cast a ray from screen coordinates and return hit results",
+      "params": {
+        "screen_x":  { "type": "float", "required": true, "description": "Normalized 0-1 screen X" },
+        "screen_y":  { "type": "float", "required": true, "description": "Normalized 0-1 screen Y" },
+        "max_hits":  { "type": "int",   "optional": true, "default": 1 }
+      }
+    }
+  }
+}

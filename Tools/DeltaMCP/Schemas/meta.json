@@ -1,0 +1,31 @@
+{
+  "system": "meta",
+  "description": "MCP server introspection — list and describe available operations and commands",
+  "operations": {
+    "list_operations": {
+      "description": "Lightweight index of all systems and their operation names",
+      "params": {}
+    },
+    "describe_operations": {
+      "description": "Full schemas for specific operations or commands",
+      "params": {
+        "operations": {
+          "type": "array",
+          "required": true,
+          "description": "Array of {system,operation} or {command} objects to describe"
+        }
+      }
+    },
+    "capabilities": {
+      "description": "Full capability dump — all systems, operations, and commands",
+      "params": {
+        "system_filter": { "type": "string", "optional": true,
+                           "description": "Limit to a single system" }
+      }
+    },
+    "active_systems": {
+      "description": "Which systems have active C++ handlers vs stub-only",
+      "params": {}
+    }
+  }
+}

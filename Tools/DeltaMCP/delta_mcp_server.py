@@ -1,6 +1,6 @@
 import json
-import socket
 import pathlib
+import socket
 import sys
 
 from mcp.server.fastmcp import FastMCP
@@ -18,14 +18,91 @@ def _find_repo_root() -> pathlib.Path:
     )
 
 
-def _get_port() -> int:
-    port_file = _find_repo_root() / "Intermediate" / "EditorState" / "DeltaEditor.port"
-    if not port_file.exists():
-        raise RuntimeError(
-            f"Port file not found at {port_file}. "
-            "Is DeltaEditor running?"
-        )
-    return int(port_file.read_text().strip())
+def _load_schemas() -> dict:
+    schemas_dir = pathlib.Path(__file__).resolve().parent / "Schemas"
+    systems: dict = {}
+    commands: dict = {}
+    for path in sorted(schemas_dir.glob("*.json")):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if "commands" in data:
+            commands.update(data["commands"])
+        if "system" in data:
+            systems[data["system"]] = data
+    return {"systems": systems, "commands": commands}
+
+
+_SCHEMAS = _load_schemas()
+
+
+def _list_operations() -> dict:
+    index = {
+        name: list(schema.get("operations", {}).keys())
+        for name, schema in _SCHEMAS["systems"].items()
+    }
+    return {
+        "ok": True,
+        "systems": index,
+        "commands": list(_SCHEMAS["commands"].keys()),
+    }
+
+
+def _describe_operations(requested: list[dict]) -> dict:
+    ops_result: dict = {}
+    cmds_result: dict = {}
+    errors: list[str] = []
+    for entry in requested:
+        if "command" in entry:
+            name = entry["command"]
+            if name in _SCHEMAS["commands"]:
+                cmds_result[name] = _SCHEMAS["commands"][name]
+            else:
+                errors.append(f"Unknown command: {name}")
+        elif "system" in entry and "operation" in entry:
+            sys_name = entry["system"]
+            op_name = entry["operation"]
+            key = f"{sys_name}/{op_name}"
+            sys_schema = _SCHEMAS["systems"].get(sys_name)
+            if sys_schema and op_name in sys_schema.get("operations", {}):
+                ops_result[key] = sys_schema["operations"][op_name]
+            else:
+                errors.append(f"Unknown operation: {key}")
+    result: dict = {"ok": True, "operations": ops_result, "commands": cmds_result}
+    if errors:
+        result["warnings"] = errors
+    return result
+
+
+_LOCAL_META_OPS = {"list_operations", "describe_operations",
+                   "capabilities", "active_systems"}
+
+
+def _handle_local_meta(payload: dict) -> dict:
+    op = payload.get("operation")
+    params = payload.get("params", {})
+    if op == "list_operations":
+        return _list_operations()
+    if op == "describe_operations":
+        return _describe_operations(params.get("operations", []))
+    if op == "capabilities":
+        sf = params.get("system_filter", "")
+        if sf:
+            sys_schema = _SCHEMAS["systems"].get(sf)
+            return {
+                "ok": True,
+                "systems": {sf: sys_schema} if sys_schema else {},
+                "commands": _SCHEMAS["commands"],
+            }
+        return {"ok": True, **_SCHEMAS}
+    if op == "active_systems":
+        stub = {"animation", "timeline", "cloth", "physics"}
+        all_systems = list(_SCHEMAS["systems"].keys())
+        return {
+            "ok": True,
+            "active": [s for s in all_systems if s not in stub],
+            "stub_only": [s for s in all_systems if s in stub],
+            "note": "stub_only systems return not-yet-implemented from C++",
+        }
+    return {"ok": False, "error": f"Unknown meta operation: {op}"}
 
 
 mcp_server = FastMCP("DeltaEditor")
@@ -36,11 +113,28 @@ _buf: str = ""
 
 def _send_command(payload: dict) -> dict:
     global _sock, _buf
+
+    if (
+        payload.get("type") == "query"
+        and payload.get("system") == "meta"
+        and payload.get("operation") in _LOCAL_META_OPS
+    ):
+        return _handle_local_meta(payload)
+
     try:
         if _sock is None:
+            port_file = (
+                _find_repo_root() / "Intermediate" / "EditorState" / "DeltaEditor.port"
+            )
+            if not port_file.exists():
+                return {
+                    "ok": False,
+                    "error": "DeltaEditor is not running. "
+                    "Launch the editor and try again.",
+                }
             _sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             _sock.settimeout(5.0)
-            _sock.connect(("127.0.0.1", _get_port()))
+            _sock.connect(("127.0.0.1", int(port_file.read_text().strip())))
             _buf = ""
         line = json.dumps(payload) + "\n"
         _sock.sendall(line.encode())
@@ -72,7 +166,7 @@ def get_scene_state() -> dict:
     Always call this first to discover objectIds before issuing any
     command that targets an existing object.
     """
-    return _send_command({"type": "query", "query": "scene_state"})
+    return _send_command({"type": "query", "system": "scene", "operation": "game_objects", "params": {}})
 
 
 @mcp_server.tool()
@@ -83,8 +177,8 @@ def get_class_schema(class_name: str) -> dict:
     Examples: "MeshRenderer", "PointLight", "SceneComponent", "Camera".
     The response contains a "properties" array of {name, type} objects.
     """
-    return _send_command({"type": "query", "query": "class_schema",
-                          "className": class_name})
+    return _send_command({"type": "query", "system": "reflection", "operation": "class_schema",
+                          "params": {"class_name": class_name}})
 
 
 @mcp_server.tool()
@@ -192,6 +286,33 @@ def execute_batch(commands: list[dict]) -> dict:
     return _send_command({
         "type": "batch",
         "commands": commands,
+    })
+
+
+@mcp_server.tool()
+def list_operations() -> dict:
+    """
+    Returns a lightweight index of all available MCP systems,
+    their query operations, and all available commands.
+    Call this first to discover what the editor exposes.
+    """
+    return _send_command({
+        "type": "query", "system": "meta",
+        "operation": "list_operations", "params": {},
+    })
+
+
+@mcp_server.tool()
+def describe_operations(operations: list[dict]) -> dict:
+    """
+    Returns full parameter schemas for specific operations or commands.
+    Each entry is either {"system":"x","operation":"y"} or {"command":"Z"}.
+    Example: [{"system":"scene","operation":"game_objects"},{"command":"SetProperty"}]
+    """
+    return _send_command({
+        "type": "query", "system": "meta",
+        "operation": "describe_operations",
+        "params": {"operations": operations},
     })
 
 

@@ -1,0 +1,63 @@
+{
+  "system": "scene",
+  "description": "Active world, GameObjects, and component hierarchy",
+  "operations": {
+    "game_objects": {
+      "description": "List all GameObjects in the active world",
+      "params": {
+        "include_fields": {
+          "type": "array",
+          "optional": true,
+          "default": [],
+          "options": ["position","rotation","scale","world_transform",
+                      "parent","children","components","tags","active"],
+          "description": "Fields to include per object"
+        },
+        "name_filter":     { "type": "string",  "optional": true },
+        "class_filter":    { "type": "string",  "optional": true,
+                             "description": "Only objects that have this component class" },
+        "include_inactive":{ "type": "bool",    "optional": true, "default": false }
+      }
+    },
+    "game_object": {
+      "description": "Full detail on a single GameObject",
+      "params": {
+        "object_id":      { "type": "string", "required": true },
+        "include_fields": { "type": "array",  "optional": true,
+                            "default": ["transform","components"],
+                            "options": ["transform","components","component_properties",
+                                        "parent","children","tags"] }
+      }
+    },
+    "hierarchy": {
+      "description": "Parent-child tree of the active world (names + IDs only)",
+      "params": {
+        "root_object_id": { "type": "string", "optional": true,
+                            "description": "Subtree root. Omit for entire world." }
+      }
+    },
+    "component": {
+      "description": "Full detail on a single component",
+      "params": {
+        "object_id":      { "type": "string", "required": true },
+        "include_schema": { "type": "bool",   "optional": true, "default": false,
+                            "description": "Also return property type metadata" }
+      }
+    },
+    "components_on_object": {
+      "description": "All components attached to a GameObject",
+      "params": {
+        "object_id":          { "type": "string", "required": true },
+        "include_properties": { "type": "bool",   "optional": true, "default": false }
+      }
+    },
+    "find_by_property": {
+      "description": "Find objects/components where a property matches a value",
+      "params": {
+        "class_name":    { "type": "string", "required": true },
+        "property_name": { "type": "string", "required": true },
+        "value":         { "required": true }
+      }
+    }
+  }
+}

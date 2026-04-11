@@ -1,0 +1,50 @@
+{
+  "system": "assets",
+  "description": "Asset database — meshes, materials, textures, scenes, shaders",
+  "operations": {
+    "list": {
+      "description": "List assets in a folder",
+      "params": {
+        "folder":      { "type": "string", "optional": true, "default": "/" },
+        "type_filter": { "type": "string", "optional": true, "default": "any",
+                         "options": ["mesh","material","texture","scene","shader",
+                                     "animation_clip","skeleton","any"] },
+        "recursive":   { "type": "bool",   "optional": true, "default": false },
+        "include_fields": { "type": "array", "optional": true,
+                            "default": ["path","type"],
+                            "options": ["path","type","size","import_date",
+                                        "dependencies","thumbnail_available"] }
+      }
+    },
+    "get": {
+      "description": "Full metadata for a single asset",
+      "params": {
+        "asset_id":       { "type": "string", "required": true },
+        "include_fields": { "type": "array",  "optional": true,
+                            "default": ["properties","dependencies"],
+                            "options": ["properties","dependencies","dependents",
+                                        "import_settings","source_path"] }
+      }
+    },
+    "search": {
+      "description": "Fuzzy name search across the asset database",
+      "params": {
+        "query":       { "type": "string", "required": true },
+        "type_filter": { "type": "string", "optional": true, "default": "any" },
+        "limit":       { "type": "int",    "optional": true, "default": 20 }
+      }
+    },
+    "folder_tree": {
+      "description": "Asset folder hierarchy only (no asset contents)",
+      "params": {
+        "root": { "type": "string", "optional": true, "default": "/" }
+      }
+    },
+    "usages": {
+      "description": "Find all scene objects referencing a given asset",
+      "params": {
+        "asset_id": { "type": "string", "required": true }
+      }
+    }
+  }
+}
