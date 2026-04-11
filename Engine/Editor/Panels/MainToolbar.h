@@ -6,11 +6,24 @@
 
 DELTA_ENGINE_NS_BEGIN
 
+enum class EEditorTransformTool
+{
+    Select = 0,
+    Move = 1,
+    Rotate = 2,
+    Scale = 3,
+};
+
 class MainToolbar
 {
 public:
     // Transform/play controls and viewport dropdowns below the app header.
     void Draw();
+
+    /** Currently selected transform tool. */
+    EEditorTransformTool GetTransformTool() const { return static_cast<EEditorTransformTool>(m_transformMode); }
+    /** True when the toolbar's coord-space toggle is set to Local. */
+    bool IsLocalSpace() const { return m_coordSpace == 1; }
 
 private:
     HorizontalToggleGroup m_transformGroup;

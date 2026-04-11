@@ -90,6 +90,8 @@ public:
 
     /// Returns the runtime engine owned by the editor.
     DELTAEDITOR_API EngineMain* GetEngine() { return m_engine.get(); }
+    /// Returns the editor render manager that owns the toolbar and swap chain.
+    DELTAEDITOR_API EditorRenderManager* GetRenderManager() { return m_renderManager.get(); }
     /// Returns the scene texture shown by the viewport window.
     DELTAEDITOR_API ImTextureID GetSceneTextureId() const;
 

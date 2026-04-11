@@ -7,7 +7,11 @@
 #include "Editor/EditorViewportCamera.h"
 #include "imgui.h"
 
+#include <nlohmann/json.hpp>
+
 DELTA_ENGINE_NS_BEGIN
+
+class SceneComponent;
 
 class EditorWindow_Viewport : public EditorWindow
 {
@@ -33,6 +37,7 @@ public:
 private:
     void UpdateSceneRenderSize(int renderW, int renderH);
     void UpdateViewportFlyMode(bool viewportImageHovered);
+    void DrawGizmo(const ImVec2& imageMin, const ImVec2& imageSize, float texW, float texH);
 
     ImTextureID m_sceneTextureId = 0;
 
@@ -48,6 +53,10 @@ private:
     int m_viewportIndex = 0;
     bool m_settingsDirty = false;
     float m_saveTimer = 0.f;
+
+    bool            m_gizmoEditing    = false;
+    SceneComponent* m_gizmoEditTarget = nullptr;
+    nlohmann::json  m_gizmoEditBefore;
 };
 
 DELTA_ENGINE_NS_END

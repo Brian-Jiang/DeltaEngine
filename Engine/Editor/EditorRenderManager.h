@@ -73,6 +73,8 @@ public:
     bool IsVSync() const { return m_swapChain->GetVSync(); }
     /// Returns the texture shown in the viewport window.
     ImTextureID GetSceneTextureId() const { return m_sceneTextureId; }
+    /// Returns the main toolbar owned by the render manager.
+    MainToolbar& GetMainToolbar() { return *m_toolbar; }
 
 private:
     /// Updates the viewport texture that ImGui samples from.

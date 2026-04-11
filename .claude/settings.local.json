@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Tools/Scripts/build-x64-debug.bat --automatic)"
+    ]
+  }
+}

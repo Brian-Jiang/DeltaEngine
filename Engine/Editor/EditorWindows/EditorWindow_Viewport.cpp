@@ -1,13 +1,30 @@
 #include "Editor/EditorWindows/EditorWindow_Viewport.h"
 
-#include <algorithm>
-#include <SDL3/SDL.h>
-#include <DirectXMath.h>
-
+#include "Editor/Commands/EditorCommandContext.h"
+#include "Editor/Commands/EditorCommandManager.h"
+#include "Editor/Commands/EditorCommand_SetProperty.h"
+#include "Editor/Commands/PropertyValueIO.h"
+#include "Editor/EditorCore.h"
+#include "Editor/EditorMain.h"
+#include "Editor/EditorRenderManager.h"
+#include "Editor/EditorSelectionState.h"
+#include "Editor/Panels/MainToolbar.h"
+#include "Runtime/Assets/DPrimaryAsset.h"
+#include "Runtime/Core/GameObject.h"
+#include "Runtime/Core/SceneComponent.h"
 #include "Runtime/Core/Time.h"
 #include "Runtime/Graphics/Structures/Camera.h"
-#include "Editor/EditorMain.h"
+#include "Runtime/Reflection/DClass.h"
+#include "Runtime/Reflection/DProperty.h"
+
+#include <SDL3/SDL.h>
+#include <DirectXMath.h>
+#include <ImGuizmo.h>
+#include <nlohmann/json.hpp>
+
 #include "SimpleMath.h"
+
+#include <algorithm>
 
 using namespace DeltaEngine;
 using namespace DirectX;
@@ -298,8 +315,207 @@ void EditorWindow_Viewport::Render(bool& open)
         ImVec2 displaySize(texW * m_zoom, texH * m_zoom);
         ImGui::Image(m_sceneTextureId, displaySize);
         viewportImageHovered = ImGui::IsItemHovered();
+
+        const ImVec2 imageMin = ImGui::GetItemRectMin();
+        DrawGizmo(imageMin, displaySize, texW, texH);
     }
-    UpdateViewportFlyMode(viewportImageHovered);
+
+    if (!ImGuizmo::IsUsing())
+        UpdateViewportFlyMode(viewportImageHovered);
 
     ImGui::End();
+}
+
+// ---------------------------------------------------------------------------
+// Gizmo
+// ---------------------------------------------------------------------------
+
+namespace
+{
+SceneComponent* ResolveGizmoTarget(EditorCore& core)
+{
+    EditorSelectionState* sel = core.GetSelectionState();
+    if (!sel)
+        return nullptr;
+
+    DPrimaryAsset* sceneAsset = core.GetActiveSceneAsset();
+    if (!sceneAsset)
+        return nullptr;
+    const AssetId& assetId = sceneAsset->GetAssetId();
+
+    if (sel->HasComponentSelection())
+    {
+        const auto& ids = sel->GetSelectedComponents();
+        if (!ids.empty())
+        {
+            if (auto* sc = core.ResolveObject<SceneComponent>(assetId, ids.front()))
+                return sc;
+        }
+    }
+
+    if (sel->HasGameObjectSelection())
+    {
+        const auto& ids = sel->GetSelectedGameObjects();
+        if (!ids.empty())
+        {
+            if (auto* go = core.ResolveObject<GameObject>(assetId, ids.front()))
+                return go->GetRootSceneComponent();
+        }
+    }
+
+    return nullptr;
+}
+
+ImGuizmo::OPERATION ToolToOperation(EEditorTransformTool tool)
+{
+    switch (tool)
+    {
+        case EEditorTransformTool::Move:   return ImGuizmo::TRANSLATE;
+        case EEditorTransformTool::Rotate: return ImGuizmo::ROTATE;
+        case EEditorTransformTool::Scale:  return ImGuizmo::SCALE;
+        default:                           return ImGuizmo::TRANSLATE;
+    }
+}
+} // namespace
+
+void EditorWindow_Viewport::DrawGizmo(const ImVec2& imageMin, const ImVec2& imageSize, float texW, float texH)
+{
+    if (!g_editorCore || !g_editor)
+        return;
+
+    EditorRenderManager* rm = g_editor->GetRenderManager();
+    if (!rm)
+        return;
+
+    const EEditorTransformTool tool = rm->GetMainToolbar().GetTransformTool();
+
+    if (tool == EEditorTransformTool::Select)
+    {
+        // Selection tool — no gizmo. Clear any stale in-flight drag state.
+        if (m_gizmoEditing)
+        {
+            m_gizmoEditing = false;
+            m_gizmoEditTarget = nullptr;
+            m_gizmoEditBefore = {};
+        }
+        return;
+    }
+
+    SceneComponent* sc = ResolveGizmoTarget(*g_editorCore);
+    if (!sc)
+    {
+        if (m_gizmoEditing)
+        {
+            m_gizmoEditing = false;
+            m_gizmoEditTarget = nullptr;
+            m_gizmoEditBefore = {};
+        }
+        return;
+    }
+
+    // Selection churn — drop any in-flight drag for a different target.
+    if (m_gizmoEditing && m_gizmoEditTarget != sc)
+    {
+        m_gizmoEditing = false;
+        m_gizmoEditTarget = nullptr;
+        m_gizmoEditBefore = {};
+    }
+
+    const ImGuizmo::OPERATION op = ToolToOperation(tool);
+    ImGuizmo::MODE mode = rm->GetMainToolbar().IsLocalSpace() ? ImGuizmo::LOCAL : ImGuizmo::WORLD;
+    if (op == ImGuizmo::SCALE)
+        mode = ImGuizmo::LOCAL;
+
+    ImGuizmo::SetDrawlist(ImGui::GetWindowDrawList());
+    ImGuizmo::SetOrthographic(false);
+    ImGuizmo::SetRect(imageMin.x, imageMin.y, imageSize.x, imageSize.y);
+
+    // Build view + projection using the same helper that feeds the runtime camera.
+    const CameraCB cb = BuildCameraCB(m_previewCamera, texW, texH);
+    XMFLOAT4X4 view, proj;
+    XMStoreFloat4x4(&view, cb.viewMatrix);
+    XMStoreFloat4x4(&proj, cb.projectionMatrix);
+
+    XMFLOAT4X4 worldMat;
+    XMStoreFloat4x4(&worldMat, sc->GetWorldTransform());
+
+    const bool wasUsing = m_gizmoEditing;
+
+    ImGuizmo::Manipulate(
+        &view.m[0][0],
+        &proj.m[0][0],
+        op,
+        mode,
+        &worldMat.m[0][0]);
+
+    const bool isUsing = ImGuizmo::IsUsing();
+
+    // Edit begin — snapshot current local transform JSON for undo.
+    if (isUsing && !wasUsing)
+    {
+        DClass* dc = sc->GetClass();
+        DProperty* ltProp = dc ? dc->FindPropertyByName("m_localTransform") : nullptr;
+        if (ltProp)
+            m_gizmoEditBefore = PropertyToJson(sc, ltProp);
+        m_gizmoEditing = true;
+        m_gizmoEditTarget = sc;
+    }
+
+    // Apply manipulated world matrix back as a local transform while the gizmo is held.
+    if (isUsing)
+    {
+        const XMMATRIX newWorld = XMLoadFloat4x4(&worldMat);
+
+        XMMATRIX parentWorld = XMMatrixIdentity();
+        if (SceneComponent* parent = sc->GetParent())
+            parentWorld = parent->GetWorldTransform();
+
+        XMVECTOR det;
+        const XMMATRIX invParent = XMMatrixInverse(&det, parentWorld);
+        const XMMATRIX newLocal = newWorld * invParent;
+
+        XMVECTOR s, r, t;
+        if (XMMatrixDecompose(&s, &r, &t, newLocal))
+        {
+            switch (op)
+            {
+            case ImGuizmo::TRANSLATE:
+                sc->SetLocalPosition(t);
+                break;
+            case ImGuizmo::ROTATE:
+                sc->SetLocalRotation(r);
+                break;
+            case ImGuizmo::SCALE:
+                sc->SetLocalScale(SimpleMath::Vector3(XMVectorGetX(s), XMVectorGetY(s), XMVectorGetZ(s)));
+                break;
+            default:
+                break;
+            }
+        }
+    }
+
+    // Edit end — emit an undoable SetProperty command on m_localTransform.
+    if (!isUsing && wasUsing)
+    {
+        DClass* dc = sc->GetClass();
+        DProperty* ltProp = dc ? dc->FindPropertyByName("m_localTransform") : nullptr;
+        if (ltProp)
+        {
+            nlohmann::json valueAfter = PropertyToJson(sc, ltProp);
+            if (m_gizmoEditBefore != valueAfter)
+            {
+                auto [assetId, objectId] = g_editorCore->GetIdsForObject(sc);
+                auto cmd = std::make_unique<EditorCommand_SetProperty>(
+                    assetId, objectId,
+                    std::string("m_localTransform"),
+                    std::move(m_gizmoEditBefore),
+                    std::move(valueAfter));
+                EditorCommandContext ctx{ *g_editorCore };
+                g_editorCore->GetCommandManager().Execute(std::move(cmd), ctx);
+            }
+        }
+        m_gizmoEditing = false;
+        m_gizmoEditTarget = nullptr;
+        m_gizmoEditBefore = {};
+    }
 }

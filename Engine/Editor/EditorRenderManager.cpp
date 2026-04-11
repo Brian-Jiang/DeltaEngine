@@ -20,6 +20,7 @@
 #include "backends/imgui_impl_dx12.h"
 #include "backends/imgui_impl_sdl3.h"
 #include "imgui.h"
+#include "ImGuizmo.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -115,6 +116,7 @@ void EditorRenderManager::RenderFrame(EngineMain* engine)
     ImGui_ImplDX12_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
+    ImGuizmo::BeginFrame();
 
     m_appHeader->Draw();
     m_toolbar->Draw();
