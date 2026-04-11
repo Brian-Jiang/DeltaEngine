@@ -51,7 +51,7 @@ def _send_command(payload: dict) -> dict:
             _buf += chunk
         response_line, _buf = _buf.split("\n", 1)
         return json.loads(response_line)
-    except Exception:
+    except Exception as e:
         if _sock:
             try:
                 _sock.close()
@@ -59,7 +59,7 @@ def _send_command(payload: dict) -> dict:
                 pass
         _sock = None
         _buf = ""
-        raise
+        return {"ok": False, "error": str(e)}
 
 
 @mcp_server.tool()

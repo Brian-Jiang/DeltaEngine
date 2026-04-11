@@ -84,7 +84,7 @@
         "assetId": "af696d04-8f1e-4b4e-98b2-51a6000dcd20",
         "objectId": "5c2eba86-4aa5-436f-89a8-e195a2e33126"
       },
-      "m_name": "New Scene Component",
+      "m_name": "MeshRenderer Component",
       "m_settings": {}
     },
     {
@@ -129,7 +129,7 @@
         "assetId": "dc7417ee-c251-4a6e-a8a1-53ae05b87c1e",
         "objectId": "fabfc358-8dd6-4357-af8a-8b6575dfe6ca"
       },
-      "m_name": "New Scene Component",
+      "m_name": "Home MeshRenderer Component",
       "m_settings": {}
     },
     {
@@ -178,7 +178,7 @@
         -305.358642578125,
         0.0
       ],
-      "m_name": "New Scene Component",
+      "m_name": "Main Camera",
       "m_near": 0.10000000149011612
     },
     {
@@ -232,7 +232,7 @@
         0.0,
         1.0
       ],
-      "m_name": "New Scene Component"
+      "m_name": "Sun Light"
     },
     {
       "_class": "GameObject",
@@ -279,7 +279,7 @@
         -23.423954010009766,
         1.0
       ],
-      "m_name": "New Scene Component",
+      "m_name": "Warm Point Light",
       "m_range": 25.899999618530273
     },
     {
@@ -328,14 +328,14 @@
         -71.05730438232422,
         1.0
       ],
-      "m_name": "New Scene Component",
+      "m_name": "Cool Spot Light",
       "m_outerConeAngle": 1.0471975803375244,
       "m_range": 37.099998474121094
     },
     {
       "_class": "TestComponent",
       "_objectId": "693d859e-7a40-4cf7-b30c-85a861bd06b6",
-      "m_name": "New Component",
+      "m_name": "Camera Test Component",
       "m_testBool": false,
       "m_testDouble": 0.0,
       "m_testFloat": 0.0,
