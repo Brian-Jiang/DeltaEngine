@@ -10,14 +10,27 @@ DeltaEngine is a DirectX 12 game engine with an integrated editor, written in C+
 
 **CMake + Ninja**, targeting Windows x64. The only configured preset is `x64-debug`.
 
+**Always drive builds, runs, and tests through `Tools/Scripts/*.bat`** — they set up `DELTA_PROJECT_ROOT`, the bundled Python, and the VS dev environment. Do not call `cmake` / `pytest` directly from tool or agent invocations.
+
 ```bash
-# Configure (from repo root)
-cmake --preset x64-debug
+Tools\Scripts\build-x64-debug.bat              # incremental build (DeltaEditorLaunch)
+Tools\Scripts\rebuild-x64-debug.bat            # configure + build (DeltaEditorLaunch)
+Tools\Scripts\build-x64-debug-engine-tests.bat # build DeltaEngineTests
+Tools\Scripts\build-x64-debug-editor-tests.bat # build DeltaEditorTests
+Tools\Scripts\run-x64-debug.bat                # launch DeltaEditorLaunch.exe
+Tools\Scripts\delta_header_generate.bat        # incremental reflection codegen
+Tools\Scripts\delta_header_force_generate.bat  # full reflection codegen
+Tools\Scripts\test-delta-header-tool.bat       # pytest for DeltaHeaderTool
+```
 
-# Build
-cmake --build Build/x64-Debug
+### `--automatic` flag (MANDATORY for tool/agent invocations)
 
-# Or open in Visual Studio via CMake integration (configured in .vs/)
+Every script in `Tools/Scripts/` pauses at the end by default so a human double-clicking the `.bat` can read the output. **When invoked by Claude Code, an agent, CI, or any other non-interactive context, always pass `--automatic`** so the script skips the trailing `pause` and returns the real exit code. Omitting it will hang the tool call forever waiting on a keypress.
+
+```bash
+Tools\Scripts\build-x64-debug.bat --automatic
+Tools\Scripts\test-delta-header-tool.bat --automatic
+Tools\Scripts\test-delta-header-tool.bat --automatic -k test_parser  # extra args pass through to pytest
 ```
 
 Build output goes to `Build/x64-Debug/bin/` (executables) and `Build/x64-Debug/lib/` (libraries). The `CopyDxcBin` custom target copies DXC compiler binaries to the output directory automatically.
@@ -228,7 +241,7 @@ Engine/Tests/
 
 `EditorCoreFixture` spins up `EditorCore` in headless mode so editor command tests run without a window or GPU.
 
-`DeltaHeaderTool` has its own **pytest** suite under `Tools/DeltaHeaderTool/` (pytest installed in the bundled Python).
+`DeltaHeaderTool` has its own **pytest** suite under `Tools/DeltaHeaderTool/tests/` (pytest installed in the bundled Python). Run it via `Tools\Scripts\test-delta-header-tool.bat --automatic` from any tool/agent context.
 
 ---
 
@@ -316,12 +329,18 @@ Tools/
 │   └── PythonSetup.cmake  # Sets DELTA_PYTHON to bundled python.exe
 └── Scripts/
     ├── build.bat
-    ├── build-x64-debug.bat
-    ├── rebuild-x64-debug.bat
-    ├── run-x64-debug.bat
+    ├── build-x64-debug.bat                # Build DeltaEditorLaunch
+    ├── build-x64-debug-engine-tests.bat   # Build DeltaEngineTests
+    ├── build-x64-debug-editor-tests.bat   # Build DeltaEditorTests
+    ├── rebuild-x64-debug.bat              # Configure + build DeltaEditorLaunch
+    ├── run-x64-debug.bat                  # Launch DeltaEditorLaunch.exe
     ├── set_env.bat
-    ├── delta_header_generate.bat        # Incremental generation
-    └── delta_header_force_generate.bat  # Full regeneration (--force)
+    ├── delta_header_generate.bat          # Incremental generation
+    ├── delta_header_force_generate.bat    # Full regeneration (--force)
+    └── test-delta-header-tool.bat         # pytest for DeltaHeaderTool
+
+    # All scripts pause at the end when run interactively.
+    # Pass --automatic (first arg) when invoking from tools/agents/CI.
 ```
 
 ### DeltaHeaderTool Pipeline
