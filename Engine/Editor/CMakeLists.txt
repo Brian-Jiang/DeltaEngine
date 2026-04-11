@@ -18,7 +18,7 @@ target_compile_options(${TARGET_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:
 
 delta_apply_third_party_msvc_external_includes(${TARGET_NAME})
 
-target_link_libraries(${TARGET_NAME} DeltaEngine)
+target_link_libraries(${TARGET_NAME} DeltaEngine ThirdParty::imguizmo)
 
 # Copy Editor fonts to output dir so ApplyDeltaTheme can load them
 set(EDITOR_FONTS_SRC "${CMAKE_CURRENT_SOURCE_DIR}/Assets/Fonts")
