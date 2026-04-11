@@ -19,7 +19,12 @@ private:
     nlohmann::json QueryListOperations(EditorCore&, const nlohmann::json& params);
     nlohmann::json QueryDescribeOperations(EditorCore&, const nlohmann::json& params);
     nlohmann::json QueryCapabilities(EditorCore&, const nlohmann::json& params);
-    nlohmann::json QueryActiveSystems(EditorCore&, const nlohmann::json& params);
+
+    void EnsureSchemasLoaded();
+
+    nlohmann::json m_systemSchemas;
+    nlohmann::json m_commandSchemas;
+    bool m_schemasLoaded = false;
 };
 
 DELTA_ENGINE_NS_END

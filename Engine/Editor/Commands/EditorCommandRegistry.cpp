@@ -23,3 +23,12 @@ std::unique_ptr<EditorCommand> EditorCommandRegistry::Create(std::string_view ty
     }
     return it->second();
 }
+
+std::vector<std::string> EditorCommandRegistry::GetCommandNames() const
+{
+    std::vector<std::string> names;
+    names.reserve(m_factories.size());
+    for (auto& [name, _] : m_factories)
+        names.push_back(name);
+    return names;
+}

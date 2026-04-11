@@ -22,10 +22,6 @@
         "system_filter": { "type": "string", "optional": true,
                            "description": "Limit to a single system" }
       }
-    },
-    "active_systems": {
-      "description": "Which systems have active C++ handlers vs stub-only",
-      "params": {}
     }
   }
 }

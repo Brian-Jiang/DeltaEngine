@@ -24,6 +24,11 @@ std::string McpQueryRouter::Route(const std::string& rawJson) const
         auto params = q.contains("params") ? q["params"]
                                            : nlohmann::json::object();
 
+        DLOG(LogMcpRouter, ELogLevel::Log,
+             "Received MCP query: system='{}', operation='{}'", system, operation);
+        DLOG(LogMcpRouter, ELogLevel::Verbose,
+             "Routing MCP query: params={}", params.dump());
+
         if (system.empty() || operation.empty())
         {
             return nlohmann::json{

@@ -19,6 +19,7 @@ public:
     DELTAENGINE_API static std::string GetEngineImportedAssetsFolder();
     DELTAENGINE_API static std::string GetEngineImportedAssetFullPath(std::string assetName, bool isJson = true);
     DELTAENGINE_API static std::string GetIntermediateFolder();
+    DELTAENGINE_API static std::string GetToolsFolder();
 };
 
 DELTA_ENGINE_NS_END

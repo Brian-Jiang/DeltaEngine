@@ -69,3 +69,8 @@ std::string IOManager::GetIntermediateFolder()
 {
     return "../../../Intermediate/";
 }
+
+std::string IOManager::GetToolsFolder()
+{
+    return "../../../Tools/";
+}

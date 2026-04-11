@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -18,6 +19,7 @@ public:
 
     DELTAEDITOR_API void Register(std::string_view typeName, CommandFactory factory);
     DELTAEDITOR_API std::unique_ptr<EditorCommand> Create(std::string_view typeName) const;
+    DELTAEDITOR_API std::vector<std::string> GetCommandNames() const;
 
 private:
     std::unordered_map<std::string, CommandFactory> m_factories;
