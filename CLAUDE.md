@@ -252,7 +252,7 @@ All annotation macros expand to nothing at compile time — they are only tokens
 
 - **`DStruct`** — metadata for structs: name, super name, size, alignment, linked list of `DProperty`
 - **`DClass`** — extends `DStruct` for classes: adds `DFunction` map, constructor/destructor/copy lambdas, abstract flag
-- **`DProperty`** — abstract base for field metadata; offset-based access; concrete subclasses include scalar/string/math types plus `DObjectPtrProperty<T>`, `DSharedObjectPtrProperty<T>`, `DBulkDataProperty`, and `DVectorProperty<T>`
+- **`DProperty`** — abstract base for field metadata; offset-based access; concrete subclasses include scalar/string/math types plus `DObjectPtrProperty<T>`, `DBulkDataProperty`, and `DVectorProperty<T>`
 - **`DFunction`** — method metadata: name, native thunk pointer, param list (`DProperty*`), optional return property; `Invoke(DObject*, void*)` dispatches via thunk
 - **`ReflectionRegistry`** — singleton (`GetReflectionRegistry()`); maps name → `DStruct*` / `DClass*`; `CreateObject(name)` and `DestroyObject()` for runtime instantiation
 
@@ -286,7 +286,7 @@ Test / Serialization: `TestComponent`, `TestComponent2`, `DTestObjectA`, `DTestO
 ### Reflection Limitations
 
 - `std::vector<T>` properties are supported, including nested vectors such as `std::vector<std::vector<float>>`.
-- Vector elements may be value types, reflected raw pointers (`T*`), shared pointers, or nested vectors.
+- Vector elements may be value types, reflected raw pointers (`T*`), or nested vectors.
 - Template class reflection is **not** supported.
 - Nested class reflection is **not** supported.
 - Method overloads are tracked by index but discrimination is limited.

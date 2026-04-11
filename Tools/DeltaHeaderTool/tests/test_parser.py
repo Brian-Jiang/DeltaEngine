@@ -75,10 +75,6 @@ def test_ptr_properties_kinds(parse_ptr_properties):
     assert raw.property_class == "DObjectPtrProperty<DObject>"
     assert raw.is_object_ptr is True
     assert raw.pointee_type == "DObject"
-    sh = by_name["sharedPtr"]
-    assert sh.property_class == "DSharedObjectPtrProperty<DObject>"
-    assert sh.is_object_ptr is True
-    assert sh.pointee_type == "DObject"
 
 
 def test_vector_properties_depths(parse_vector_properties):

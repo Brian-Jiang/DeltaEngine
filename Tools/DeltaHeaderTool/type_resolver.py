@@ -48,7 +48,6 @@ INNER_TYPE_TO_CPP = {
     "DFloat4x4Property":   "DirectX::XMFLOAT4X4",
 }
 
-_SHARED_PTR_RE = re.compile(r"^std::shared_ptr<(.+)>$")
 _STRING_RE = re.compile(r"^std::(?:string|basic_string\s*<\s*char\b)")
 _WSTRING_RE = re.compile(r"^std::(?:wstring|basic_string\s*<\s*wchar_t\b)")
 _VECTOR_RE = re.compile(r"^std::vector\s*<")
@@ -116,12 +115,6 @@ def _resolve_vector_inner(inner_type: str) -> tuple | None:
         pointee = _strip_namespaces(_strip_elaborated(pointee_raw))
         return (f"DObjectPtrProperty<{pointee}>", s, True, pointee)
 
-    m = _SHARED_PTR_RE.match(s)
-    if m:
-        pointee_raw = m.group(1)
-        pointee = _strip_namespaces(_strip_elaborated(pointee_raw.strip()))
-        return (f"DSharedObjectPtrProperty<{pointee}>", f"std::shared_ptr<{pointee}>", True, pointee)
-
     if _VECTOR_RE.match(s):
         nested_inner = _extract_vector_inner_type(s)
         if nested_inner is not None:
@@ -180,7 +173,7 @@ def _try_resolve_vector(spelling, field_name, class_name, *, diag=None, source_f
     if resolved is None:
         msg = (f"std::vector<{inner_type}> on property '{field_name}' — "
                f"inner type '{inner_type}' has no supported DProperty subclass. "
-               f"Supported: value types, T*, shared_ptr<T>, std::vector<T>, DSTRUCT.")
+               f"Supported: value types, T*, std::vector<T>, DSTRUCT.")
         if diag:
             diag.warn(source_file, line, msg)
         else:
@@ -228,28 +221,6 @@ def resolve_type(cursor_type, field_name="", class_name="", *,
 
     spelling = _strip_elaborated(_strip_const(cursor_type.spelling))
 
-    m = _SHARED_PTR_RE.match(spelling)
-    if m:
-        inner = _strip_namespaces(m.group(1))
-        if tu is not None:
-            try:
-                can = cursor_type.get_canonical()
-                n = can.get_num_template_arguments()
-                if n > 0:
-                    inner_decl = can.get_template_argument_type(0).get_declaration()
-                    if inner_decl.kind in (CursorKind.CLASS_DECL, CursorKind.STRUCT_DECL):
-                        if is_annotated(tu, inner_decl, "DSTRUCT"):
-                            msg = (f"DPROPERTY '{field_name}' cannot use std::shared_ptr to DSTRUCT type "
-                                   f"'{inner_decl.spelling}' — use value type.")
-                            if diag:
-                                diag.warn(source_file, line, msg)
-                            else:
-                                print(f"WARNING: {msg}", file=sys.stderr)
-                            return None
-            except Exception:
-                pass
-        return (f"DSharedObjectPtrProperty<{inner}>", True, inner)
-
     prop = TYPE_MAP.get(spelling)
     if prop:
         return (prop, False, "")
@@ -268,11 +239,6 @@ def resolve_type(cursor_type, field_name="", class_name="", *,
     prop = TYPE_MAP.get(canonical)
     if prop:
         return (prop, False, "")
-
-    m = _SHARED_PTR_RE.match(canonical)
-    if m:
-        inner = _strip_namespaces(m.group(1))
-        return (f"DSharedObjectPtrProperty<{inner}>", True, inner)
 
     if _STRING_RE.match(canonical):
         return ("DStringProperty", False, "")
@@ -296,7 +262,7 @@ def resolve_type(cursor_type, field_name="", class_name="", *,
             return ("DStructProperty", False, "", name)
         if _record_derives_from_dobject(decl):
             msg = (f"DPROPERTY '{field_name}' cannot use DObject-derived type '{name}' "
-                   f"by value — use a pointer or shared_ptr.")
+                   f"by value — use a pointer.")
             if diag:
                 diag.warn(source_file, line, msg)
             else:
@@ -327,11 +293,6 @@ def resolve_type_from_string(type_str: str, field_name: str = "", class_name: st
         pointee = s[:-1].strip()
         pointee_name = _strip_namespaces(pointee)
         return (f"DObjectPtrProperty<{pointee_name}>", True, pointee_name)
-
-    m = _SHARED_PTR_RE.match(s)
-    if m:
-        inner = _strip_namespaces(m.group(1))
-        return (f"DSharedObjectPtrProperty<{inner}>", True, inner)
 
     prop = TYPE_MAP.get(s)
     if prop:

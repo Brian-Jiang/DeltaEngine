@@ -7,9 +7,6 @@ class PtrPropsClass : public DObject
 
     DPROPERTY()
     DObject* rawPtr;
-
-    DPROPERTY()
-    std::shared_ptr<DObject> sharedPtr;
 };
 
 }

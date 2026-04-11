@@ -52,7 +52,6 @@ private:
     WidgetEditEvent DrawFloat4Property(DObject* instance, DProperty* prop);
     WidgetEditEvent DrawFloat4x4Property(DObject* instance, DProperty* prop);
     bool DrawObjectPtrProperty(DObject* instance, DProperty* prop, int depth);
-    bool DrawSharedObjectPtrProperty(DObject* instance, DProperty* prop, int depth);
     bool DrawBulkDataProperty(DObject* instance, DProperty* prop);
     bool DrawVectorProperty(DObject* instance, DProperty* prop, int depth);
 

@@ -7,7 +7,7 @@ from string import Template
 # Emitted once per .generated.cpp for all classes in the file.
 # ${header_stem} is the header file stem (e.g. "TestComponent")
 # ${source_header_include} is the #include for the source header
-# ${cpp_full_includes} is full includes for ObjectPtr/SharedObjectPtr DObject-derived types
+# ${cpp_full_includes} is full includes for ObjectPtr DObject-derived types
 FILE_HEADER = Template("""\
 #include "${header_stem}.generated.h"
 
@@ -169,13 +169,6 @@ DPROPERTY_OBJECT_PTR = Template("""\
         offsetof(${class_name}, ${field_name})));
 """)
 
-DPROPERTY_SHARED_PTR = Template("""\
-    cls->AddProperty(new DSharedObjectPtrProperty<${pointee_type}>(
-        "${field_name}",
-        "${pointee_type}",
-        offsetof(${class_name}, ${field_name})));
-""")
-
 DPROPERTY_VECTOR = Template("""\
     {
         auto* _innerProp = new ${inner_property_type}("${field_name}_elem", 0);
@@ -190,16 +183,6 @@ DPROPERTY_VECTOR_OBJECT_PTR = Template("""\
     {
         auto* _innerProp = new DObjectPtrProperty<${pointee_type}>("${field_name}_elem", "${pointee_type}", 0);
         cls->AddProperty(new DVectorProperty<${pointee_type}*>(
-            "${field_name}",
-            offsetof(${class_name}, ${field_name}),
-            std::unique_ptr<DProperty>(_innerProp)));
-    }
-""")
-
-DPROPERTY_VECTOR_SHARED_PTR = Template("""\
-    {
-        auto* _innerProp = new DSharedObjectPtrProperty<${pointee_type}>("${field_name}_elem", "${pointee_type}", 0);
-        cls->AddProperty(new DVectorProperty<std::shared_ptr<${pointee_type}>>(
             "${field_name}",
             offsetof(${class_name}, ${field_name}),
             std::unique_ptr<DProperty>(_innerProp)));
@@ -252,7 +235,7 @@ DFUNCTION_PARAM = Template("""\
         fn->AddParam(new ${property_type}("${param_name}", offsetof(${class_name}_${func_name}_Params${params_struct_suffix}, ${param_name})));
 """)
 
-DFUNCTION_PARAM_SHARED_PTR = Template("""\
+DFUNCTION_PARAM_OBJECT_PTR = Template("""\
         fn->AddParam(new ${property_type}("${param_name}", "${pointee_type}", offsetof(${class_name}_${func_name}_Params${params_struct_suffix}, ${param_name})));
 """)
 
@@ -276,21 +259,11 @@ DFUNCTION_PARAM_VECTOR_OBJECT_PTR = Template("""\
         }
 """)
 
-DFUNCTION_PARAM_VECTOR_SHARED_PTR = Template("""\
-        {
-            auto* _innerProp = new DSharedObjectPtrProperty<${pointee_type}>("${param_name}_elem", "${pointee_type}", 0);
-            fn->AddParam(new DVectorProperty<std::shared_ptr<${pointee_type}>>(
-                "${param_name}",
-                offsetof(${class_name}_${func_name}_Params${params_struct_suffix}, ${param_name}),
-                std::unique_ptr<DProperty>(_innerProp)));
-        }
-""")
-
 DFUNCTION_RETURN = Template("""\
         fn->SetReturnProperty(new ${property_type}("ReturnValue", offsetof(${class_name}_${func_name}_Params${params_struct_suffix}, returnValue)));
 """)
 
-DFUNCTION_RETURN_SHARED_PTR = Template("""\
+DFUNCTION_RETURN_OBJECT_PTR = Template("""\
         fn->SetReturnProperty(new ${property_type}("ReturnValue", "${pointee_type}", offsetof(${class_name}_${func_name}_Params${params_struct_suffix}, returnValue)));
 """)
 
@@ -313,17 +286,6 @@ DFUNCTION_RETURN_VECTOR_OBJECT_PTR = Template("""\
                 std::unique_ptr<DProperty>(_innerProp)));
         }
 """)
-
-DFUNCTION_RETURN_VECTOR_SHARED_PTR = Template("""\
-        {
-            auto* _innerProp = new DSharedObjectPtrProperty<${pointee_type}>("returnValue_elem", "${pointee_type}", 0);
-            fn->SetReturnProperty(new DVectorProperty<std::shared_ptr<${pointee_type}>>(
-                "ReturnValue",
-                offsetof(${class_name}_${func_name}_Params${params_struct_suffix}, returnValue),
-                std::unique_ptr<DProperty>(_innerProp)));
-        }
-""")
-
 
 # ============================================================
 # GENERATED HEADER (file-level: forward decls, includes, per-class content)

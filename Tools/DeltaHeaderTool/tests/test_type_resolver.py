@@ -63,11 +63,6 @@ def test_raw_pointer_dobject_ptr():
     assert r == ("DObjectPtrProperty<DObject>", True, "DObject")
 
 
-def test_shared_ptr_dshared_object_ptr():
-    r = resolve_type_from_string("std::shared_ptr<DObject>")
-    assert r == ("DSharedObjectPtrProperty<DObject>", True, "DObject")
-
-
 def test_unknown_type_returns_none():
     assert resolve_type_from_string("NotAReflectableType") is None
 

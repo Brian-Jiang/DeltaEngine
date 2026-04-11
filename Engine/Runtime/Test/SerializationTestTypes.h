@@ -4,7 +4,6 @@
 
 #include <string>
 #include <vector>
-#include <memory>
 
 #include "SimpleMath.h"
 #include "Runtime/Core/DObject.h"
@@ -65,9 +64,6 @@ class DTestObjectB : public DObject
 
     DPROPERTY()
     std::vector<DTestObjectA*> m_refs;
-
-    DPROPERTY()
-    std::vector<std::shared_ptr<DTestObjectA>> m_sharedRefs;
 };
 
 

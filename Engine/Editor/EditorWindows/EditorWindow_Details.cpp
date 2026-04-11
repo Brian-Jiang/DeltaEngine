@@ -501,9 +501,6 @@ void EditorWindow_Details::DrawPropertyEditor(DObject* instance, DClass* dclass,
             case EPropertyType::ObjectPtr:
                 DrawObjectPtrProperty(instance, prop, depth);
                 break;
-            case EPropertyType::SharedObjectPtr:
-                DrawSharedObjectPtrProperty(instance, prop, depth);
-                break;
             case EPropertyType::BulkData:
                 DrawBulkDataProperty(instance, prop);
                 break;
@@ -614,7 +611,6 @@ void EditorWindow_Details::DrawVectorElements(const DVectorPropertyBase* vectorP
             break;
         }
         case EPropertyType::ObjectPtr:
-        case EPropertyType::SharedObjectPtr:
         {
             DObject* child = innerProp->GetObjectPointer(elementAddr);
             if (!child)
@@ -813,38 +809,6 @@ WidgetEditEvent EditorWindow_Details::DrawFloat4x4Property(DObject* instance, DP
 
 bool EditorWindow_Details::DrawObjectPtrProperty(DObject* instance, DProperty* prop, int depth)
 {
-    DObject* child = prop->GetObjectPointer(instance);
-    const std::string displayName = GetPropertyDisplayName(prop->GetName());
-    const char* label = displayName.c_str();
-
-    if (!child)
-    {
-        m_refField.Draw(label, "(null)", true);
-        return false;
-    }
-
-    constexpr int kMaxDepth = 8;
-    if (depth >= kMaxDepth)
-    {
-        ImGui::Text("%s: %s (max depth)", label, prop->GetType().c_str());
-        return false;
-    }
-
-    DClass* childClass = child->GetClass();
-    const char* typeName = childClass ? childClass->GetName().c_str() : "?";
-    if (ImGui::TreeNodeEx(label, ImGuiTreeNodeFlags_DefaultOpen, "%s (%s)", label, typeName))
-    {
-        DrawPropertyEditor(child, childClass, depth + 1);
-        ImGui::TreePop();
-    }
-    return false;
-}
-
-bool EditorWindow_Details::DrawSharedObjectPtrProperty(DObject* instance, DProperty* prop, int depth)
-{
-    ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f),
-        "WARNING: SharedObjectPtr will be deprecated in a future version");
-
     DObject* child = prop->GetObjectPointer(instance);
     const std::string displayName = GetPropertyDisplayName(prop->GetName());
     const char* label = displayName.c_str();

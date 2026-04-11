@@ -3,7 +3,6 @@
 #include "EngineIncludes.h"
 
 #include <string>
-#include <memory>
 #include <type_traits>
 #include <unordered_map>
 
@@ -29,7 +28,6 @@ enum class EPropertyType
     Float4,
     Float4x4,
     ObjectPtr,
-    SharedObjectPtr,
     BulkData,
     Vector,
     Struct,
@@ -57,7 +55,7 @@ public:
     virtual std::string ToString(const void* address) const = 0;
     virtual EPropertyType GetPropertyType() const = 0;
 
-    /// Returns the pointed-to DObject* for ObjectPtr/SharedObjectPtr, or nullptr for other types.
+    /// Returns the pointed-to DObject* for ObjectPtr, or nullptr for other types.
     virtual DObject* GetObjectPointer(const void* instance) const { return nullptr; }
 
     virtual void Serialize(AssetArchive& ar, void* objectPtr) = 0;
@@ -342,85 +340,6 @@ public:
     {
         void* addr = static_cast<uint8_t*>(objectPtr) + m_offset;
         *static_cast<T**>(addr) = static_cast<T*>(resolved);
-        m_unresolvedPointers.erase(objectPtr);
-    }
-};
-
-
-template <typename T>
-class DSharedObjectPtrProperty : public DObjectPtrPropertyBase
-{
-public:
-    DSharedObjectPtrProperty(std::string name, std::string type, uint32_t offset)
-        : DObjectPtrPropertyBase(std::move(name), std::move(type), offset, sizeof(std::shared_ptr<T>))
-    {
-    }
-
-    void InitializeValue(void* address) const override
-    {
-        new (address) std::shared_ptr<T>();
-    }
-
-    void DestroyValue(void* address) const override
-    {
-        static_cast<std::shared_ptr<T>*>(address)->~shared_ptr();
-    }
-
-    void SetValue(void* instance, const void* field_value) const override
-    {
-        void* addr = static_cast<uint8_t*>(instance) + m_offset;
-        if (field_value)
-            *static_cast<std::shared_ptr<T>*>(addr) = *static_cast<const std::shared_ptr<T>*>(field_value);
-        else
-            static_cast<std::shared_ptr<T>*>(addr)->reset();
-    }
-
-    void* GetValue(const void* instance) const override
-    {
-        return static_cast<uint8_t*>(const_cast<void*>(instance)) + m_offset;
-    }
-
-    void CopyValue(void* dest, const void* src) const override
-    {
-        new (dest) std::shared_ptr<T>(*static_cast<const std::shared_ptr<T>*>(src));
-    }
-
-    bool Identical(const void* a, const void* b) const override
-    {
-        return *static_cast<const std::shared_ptr<T>*>(a) == *static_cast<const std::shared_ptr<T>*>(b);
-    }
-
-    std::string ToString(const void* address) const override
-    {
-        const auto& ptr = *static_cast<const std::shared_ptr<T>*>(address);
-        if (ptr)
-            return "SharedPtr(" + m_type + ")";
-        return "nullptr";
-    }
-
-    EPropertyType GetPropertyType() const override
-    {
-        return EPropertyType::SharedObjectPtr;
-    }
-
-    DObject* GetObjectPointer(const void* instance) const override
-    {
-        const auto& sp = *static_cast<const std::shared_ptr<T>*>(GetValue(instance));
-        if constexpr (DObjectDerived<T>)
-            return static_cast<DObject*>(sp.get());
-        return nullptr;
-    }
-
-    DObject* GetRawPointer(const void* objectPtr) const override
-    {
-        const auto& sp = *static_cast<const std::shared_ptr<T>*>(GetValue(objectPtr));
-        if constexpr (DObjectDerived<T>)
-            return static_cast<DObject*>(sp.get());
-        return nullptr;
-    }
-
-    void ResolvePointer(void* objectPtr, DObject* /*resolved*/) override
-    {
         m_unresolvedPointers.erase(objectPtr);
     }
 };

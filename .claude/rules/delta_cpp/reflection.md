@@ -55,7 +55,6 @@ Rules:
 | `DirectX::XMFLOAT4` | `DFloat4Property` |
 | `DirectX::XMFLOAT4X4` | `DFloat4x4Property` |
 | `T*` (DObject-derived) | `DObjectPtrProperty<T>` |
-| `std::shared_ptr<T>` | `DSharedObjectPtrProperty<T>` |
 | `std::vector<T>` | `DVectorProperty<T>` |
 
 Do not annotate fields whose types are not on this list with `DPROPERTY()`.

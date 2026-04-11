@@ -20,24 +20,20 @@ from templates import (
     DPROPERTY,
     DPROPERTY_WITH_META,
     DPROPERTY_OBJECT_PTR,
-    DPROPERTY_SHARED_PTR,
     DPROPERTY_VECTOR,
     DPROPERTY_VECTOR_OBJECT_PTR,
-    DPROPERTY_VECTOR_SHARED_PTR,
     DPROPERTY_DSTRUCT,
     DPROPERTY_VECTOR_DSTRUCT,
     DFUNCTION_VOID_NO_PARAMS,
     DFUNCTION_WITH_PARAMS,
     DFUNCTION_PARAM,
-    DFUNCTION_PARAM_SHARED_PTR,
+    DFUNCTION_PARAM_OBJECT_PTR,
     DFUNCTION_PARAM_VECTOR,
     DFUNCTION_PARAM_VECTOR_OBJECT_PTR,
-    DFUNCTION_PARAM_VECTOR_SHARED_PTR,
     DFUNCTION_RETURN,
-    DFUNCTION_RETURN_SHARED_PTR,
+    DFUNCTION_RETURN_OBJECT_PTR,
     DFUNCTION_RETURN_VECTOR,
     DFUNCTION_RETURN_VECTOR_OBJECT_PTR,
-    DFUNCTION_RETURN_VECTOR_SHARED_PTR,
     GENERATED_HEADER_FILE,
     GENERATED_HEADER_PARAMS_STRUCT,
     GENERATED_HEADER_PARAMS_FIELD,
@@ -45,7 +41,6 @@ from templates import (
     GENERATED_HEADER_CREATE_OBJECT,
 )
 
-_SHARED_PTR_PROP_RE = re.compile(r"^DSharedObjectPtrProperty<(.+)>$")
 _OBJECT_PTR_PROP_RE = re.compile(r"^DObjectPtrProperty<(.+)>$")
 
 EXTRA_PROPERTY_HEADERS = {
@@ -70,7 +65,7 @@ def _collect_cpp_full_includes(
     header_stem: str,
     type_to_header: dict[str, str],
 ) -> set[str]:
-    """Collect header paths for DObject-derived types used in ObjectPtr/SharedObjectPtr."""
+    """Collect header paths for DObject-derived types used in ObjectPtr."""
     cpp_full_includes: set[str] = set()
     source_include = f"{classes[0].include_path}{header_stem}.h"
 
@@ -90,14 +85,14 @@ def _collect_cpp_full_includes(
 
         for fn in cls.functions:
             for p in fn.params:
-                m = _SHARED_PTR_PROP_RE.match(p.property_class) or _OBJECT_PTR_PROP_RE.match(p.property_class)
+                m = _OBJECT_PTR_PROP_RE.match(p.property_class)
                 if m:
                     pointee = _strip_namespaces(m.group(1))
                     path = type_to_header.get(pointee)
                     if path and path != source_include:
                         cpp_full_includes.add(path)
             if fn.return_property_class:
-                m = _SHARED_PTR_PROP_RE.match(fn.return_property_class) or _OBJECT_PTR_PROP_RE.match(fn.return_property_class)
+                m = _OBJECT_PTR_PROP_RE.match(fn.return_property_class)
                 if m:
                     pointee = _strip_namespaces(m.group(1))
                     path = type_to_header.get(pointee)
@@ -287,14 +282,6 @@ def _generate_thunk(cls: ClassInfo, fn: FunctionInfo) -> str:
 def _dfunction_vector_param_code(p, class_name: str, func_name: str, suffix: str) -> str:
     off = f"offsetof({class_name}_{func_name}_Params{suffix}, {p.name})"
     if p.inner_is_object_ptr:
-        if _is_shared_ptr_property(p.inner_property_class):
-            return DFUNCTION_PARAM_VECTOR_SHARED_PTR.substitute(
-                pointee_type=p.inner_pointee_type,
-                param_name=p.name,
-                class_name=class_name,
-                func_name=func_name,
-                params_struct_suffix=suffix,
-            )
         return DFUNCTION_PARAM_VECTOR_OBJECT_PTR.substitute(
             pointee_type=p.inner_pointee_type,
             param_name=p.name,
@@ -334,13 +321,6 @@ def _dfunction_vector_param_code(p, class_name: str, func_name: str, suffix: str
 def _dfunction_vector_return_code(fn: FunctionInfo, class_name: str, func_name: str, suffix: str) -> str:
     off = f"offsetof({class_name}_{func_name}_Params{suffix}, returnValue)"
     if fn.return_inner_is_object_ptr:
-        if _is_shared_ptr_property(fn.return_inner_property_class):
-            return DFUNCTION_RETURN_VECTOR_SHARED_PTR.substitute(
-                pointee_type=fn.return_inner_pointee_type,
-                class_name=class_name,
-                func_name=func_name,
-                params_struct_suffix=suffix,
-            )
         return DFUNCTION_RETURN_VECTOR_OBJECT_PTR.substitute(
             pointee_type=fn.return_inner_pointee_type,
             class_name=class_name,
@@ -393,11 +373,10 @@ def _generate_function_registration(cls: ClassInfo, fn: FunctionInfo) -> str:
             param_registrations += _dfunction_vector_param_code(
                 p, cls.name, fn.name, params_struct_suffix)
             continue
-        m_shared = _SHARED_PTR_PROP_RE.match(p.property_class)
         m_obj = _OBJECT_PTR_PROP_RE.match(p.property_class)
-        if m_shared or m_obj:
-            pointee = (m_shared or m_obj).group(1)
-            param_registrations += DFUNCTION_PARAM_SHARED_PTR.substitute(
+        if m_obj:
+            pointee = m_obj.group(1)
+            param_registrations += DFUNCTION_PARAM_OBJECT_PTR.substitute(
                 property_type=p.property_class,
                 param_name=p.name,
                 pointee_type=pointee,
@@ -432,11 +411,10 @@ def _generate_function_registration(cls: ClassInfo, fn: FunctionInfo) -> str:
         return_registration = _dfunction_vector_return_code(
             fn, cls.name, fn.name, params_struct_suffix)
     elif not is_void and fn.return_property_class:
-        m_shared = _SHARED_PTR_PROP_RE.match(fn.return_property_class)
         m_obj = _OBJECT_PTR_PROP_RE.match(fn.return_property_class)
-        if m_shared or m_obj:
-            pointee = (m_shared or m_obj).group(1)
-            return_registration = DFUNCTION_RETURN_SHARED_PTR.substitute(
+        if m_obj:
+            pointee = m_obj.group(1)
+            return_registration = DFUNCTION_RETURN_OBJECT_PTR.substitute(
                 property_type=fn.return_property_class,
                 pointee_type=pointee,
                 class_name=cls.name,
@@ -462,31 +440,20 @@ def _generate_function_registration(cls: ClassInfo, fn: FunctionInfo) -> str:
     )
 
 
-def _is_shared_ptr_property(prop_class: str) -> bool:
-    return prop_class.startswith("DSharedObjectPtrProperty<")
-
-
 def _generate_vector_prop_code(prop, class_name: str) -> str:
     """Generate the AddProperty block for a DVectorProperty field.
 
     Handles three inner-type categories:
       - Simple value types (DFloatProperty, etc.)
-      - Object pointer types (DObjectPtrProperty / DSharedObjectPtrProperty)
+      - Object pointer types (DObjectPtrProperty)
       - Nested vector types (DVectorProperty, recursively)
     """
     if prop.inner_is_object_ptr:
-        if _is_shared_ptr_property(prop.inner_property_class):
-            return DPROPERTY_VECTOR_SHARED_PTR.substitute(
-                pointee_type=prop.inner_pointee_type,
-                field_name=prop.name,
-                class_name=class_name,
-            )
-        else:
-            return DPROPERTY_VECTOR_OBJECT_PTR.substitute(
-                pointee_type=prop.inner_pointee_type,
-                field_name=prop.name,
-                class_name=class_name,
-            )
+        return DPROPERTY_VECTOR_OBJECT_PTR.substitute(
+            pointee_type=prop.inner_pointee_type,
+            field_name=prop.name,
+            class_name=class_name,
+        )
     elif prop.inner_property_class == "DStructProperty":
         return DPROPERTY_VECTOR_DSTRUCT.substitute(
             field_name=prop.name,
@@ -560,12 +527,6 @@ def _generate_class_registration(cls: ClassInfo) -> str:
                 field_name=prop.name,
                 class_name=cls.name,
                 dstruct_type_name=prop.dstruct_type_name,
-            ))
-        elif prop.is_object_ptr and _is_shared_ptr_property(prop.property_class):
-            parts.append(DPROPERTY_SHARED_PTR.substitute(
-                pointee_type=prop.pointee_type,
-                field_name=prop.name,
-                class_name=cls.name,
             ))
         elif prop.is_object_ptr:
             parts.append(DPROPERTY_OBJECT_PTR.substitute(
