@@ -1,13 +1,11 @@
 import json
 import pathlib
 import socket
-import sys
 
 from mcp.server.fastmcp import FastMCP
 
 
 def _find_repo_root() -> pathlib.Path:
-    """Walk upward from this file until we find CMakePresets.json."""
     here = pathlib.Path(__file__).resolve()
     for parent in [here, *here.parents]:
         if (parent / "CMakePresets.json").exists():
@@ -156,164 +154,97 @@ def _send_command(payload: dict) -> dict:
         return {"ok": False, "error": str(e)}
 
 
-@mcp_server.tool()
-def get_scene_state() -> dict:
-    """
-    Returns the full current scene as a JSON tree.
-    Each entry in "objects" has: objectId, assetId, class, name,
-    and a "components" array. Each component has: objectId, class,
-    and a "properties" dict mapping property name to current value.
-    Always call this first to discover objectIds before issuing any
-    command that targets an existing object.
-    """
-    return _send_command({"type": "query", "system": "scene", "operation": "game_objects", "params": {}})
-
-
-@mcp_server.tool()
-def get_class_schema(class_name: str) -> dict:
-    """
-    Returns all reflected property names and their types for a class.
-    Call this before set_property to confirm the exact property name.
-    Examples: "MeshRenderer", "PointLight", "SceneComponent", "Camera".
-    The response contains a "properties" array of {name, type} objects.
-    """
-    return _send_command({"type": "query", "system": "reflection", "operation": "class_schema",
-                          "params": {"class_name": class_name}})
-
-
-@mcp_server.tool()
-def create_game_object(name: str, parent_object_id: str = "") -> dict:
-    """
-    Creates a new empty GameObject in the active scene.
-    Returns {"ok": true, "objectId": "<id>"} on success.
-    Use the returned objectId to attach components or set properties.
-    parent_object_id: objectId of the parent GameObject, or "" for root.
-    """
-    return _send_command({
-        "type": "command",
-        "command": "EditorCommand_CreateGameObject",
-        "className": "GameObject",
-    })
-
-
-@mcp_server.tool()
-def add_component(object_id: str, component_class: str) -> dict:
-    """
-    Adds a component to an existing GameObject.
-    object_id: objectId of the target GameObject (from get_scene_state).
-    component_class: reflected class name, e.g. "PointLight",
-      "MeshRenderer", "Camera", "DirectionalLight", "SpotLight".
-    Returns {"ok": true, "objectId": "<new component id>"}.
-    """
-    return _send_command({
-        "type": "command",
-        "command": "EditorCommand_CreateComponent",
-        "gameObjectId": object_id,
-        "className": component_class,
-    })
-
-
-@mcp_server.tool()
-def set_property(object_id: str, property_name: str, value: object) -> dict:
-    """
-    Sets a reflected property on any DObject (GameObject or component).
-    object_id: objectId from get_scene_state or a previous command response.
-    property_name: exact name from get_class_schema (case-sensitive).
-    value format by property type:
-      float / int / bool  ->  JSON number or bool
-      string              ->  JSON string
-      Vec3                ->  [x, y, z]
-      Quaternion          ->  [x, y, z, w]
-      object reference    ->  {"objectId": "...", "assetId": "..."}
-    Use get_class_schema() first to confirm the property name and type.
-    """
-    return _send_command({
-        "type": "command",
-        "command": "EditorCommand_SetProperty",
-        "objectId": object_id,
-        "propertyName": property_name,
-        "valueAfter": value,
-    })
-
-
-@mcp_server.tool()
-def rename_object(object_id: str, new_name: str) -> dict:
-    """
-    Renames a GameObject or component.
-    object_id: objectId of the object to rename.
-    new_name: the new display name.
-    """
-    return _send_command({
-        "type": "command",
-        "command": "EditorCommand_RenameObject",
-        "targetObjectId": object_id,
-        "newName": new_name,
-    })
-
-
-@mcp_server.tool()
-def delete_game_object(object_id: str) -> dict:
-    """
-    Deletes a GameObject and all its components from the active scene.
-    This action is undoable via Ctrl+Z in the editor.
-    object_id: objectId of the GameObject to delete.
-    """
-    return _send_command({
-        "type": "command",
-        "command": "EditorCommand_DeleteGameObject",
-        "gameObjectId": object_id,
-    })
-
-
-@mcp_server.tool()
-def execute_batch(commands: list[dict]) -> dict:
-    """
-    Executes multiple commands as a single undoable batch.
-    The entire batch appears as one undo entry in the editor (one Ctrl+Z
-    reverses all commands in the batch).
-    Each entry in `commands` is a plain dict with the same keys as the
-    individual tool payloads -- include the "command" key in each entry.
-    Example:
-      [
-        {"command": "EditorCommand_CreateGameObject", "name": "Sun"},
-        {"command": "EditorCommand_CreateComponent",
-         "objectId": "<use prior result>", "componentClass": "DirectionalLight"}
-      ]
-    Note: when object IDs from earlier commands in a batch are needed by
-    later commands in the same batch, use separate sequential tool calls
-    instead, then group unrelated mutations into a batch.
-    """
-    return _send_command({
-        "type": "batch",
-        "commands": commands,
-    })
+def _normalize_command(op: dict) -> dict:
+    """Auto-prefix EditorCommand_ on command names that omit it."""
+    cmd = op.get("command", "")
+    if cmd and not cmd.startswith("EditorCommand_"):
+        return {**op, "command": f"EditorCommand_{cmd}"}
+    return op
 
 
 @mcp_server.tool()
 def list_operations() -> dict:
     """
-    Returns a lightweight index of all available MCP systems,
-    their query operations, and all available commands.
-    Call this first to discover what the editor exposes.
+    Returns a lightweight index of all available systems, their query
+    operations, and all available commands.
+
+    Call this first to discover what the editor exposes. The response has:
+      "systems": { "<system>": ["<operation>", ...], ... }
+      "commands": ["<CommandName>", ...]
+
+    Use describe_operations to get full parameter schemas before calling
+    execute_batch.
     """
-    return _send_command({
-        "type": "query", "system": "meta",
-        "operation": "list_operations", "params": {},
-    })
+    return _list_operations()
 
 
 @mcp_server.tool()
 def describe_operations(operations: list[dict]) -> dict:
     """
     Returns full parameter schemas for specific operations or commands.
-    Each entry is either {"system":"x","operation":"y"} or {"command":"Z"}.
-    Example: [{"system":"scene","operation":"game_objects"},{"command":"SetProperty"}]
+
+    Each entry in `operations` is one of:
+      {"system": "<system>", "operation": "<op>"}   -- for query operations
+      {"command": "<CommandName>"}                   -- for commands
+
+    Example:
+      [{"system":"scene","operation":"game_objects"}, {"command":"SetProperty"}]
+
+    The response contains:
+      "operations": { "<system>/<op>": { description, params }, ... }
+      "commands":   { "<CommandName>": { description, params, returns }, ... }
     """
-    return _send_command({
-        "type": "query", "system": "meta",
-        "operation": "describe_operations",
-        "params": {"operations": operations},
-    })
+    return _describe_operations(operations)
+
+
+@mcp_server.tool()
+def execute_batch(operations: list[dict]) -> dict:
+    """
+    Execute one or more operations sequentially and return all results.
+
+    Each operation is a dict with a "type" field:
+
+    QUERY — read state from the editor:
+      { "type": "query", "system": "<system>", "operation": "<op>",
+        "params": { ... } }
+      Example: { "type":"query","system":"scene","operation":"game_objects","params":{} }
+
+    COMMAND — mutate scene state (each command is its own undo entry):
+      { "type": "command", "command": "<CommandName>", "<param>": <value>, ... }
+      The "EditorCommand_" prefix is added automatically if omitted.
+      Example: { "type":"command","command":"CreateGameObject","name":"Sun" }
+
+    BATCH — group multiple commands into a single undoable unit (one Ctrl+Z):
+      { "type": "batch", "commands": [
+          { "command": "<CommandName>", "<param>": <value> },
+          ...
+        ]
+      }
+      Commands inside "batch" must not have a "type" field.
+      "EditorCommand_" prefix is added automatically on each inner command.
+
+    Workflow:
+      1. Call list_operations to discover systems and commands.
+      2. Call describe_operations to get required params for what you need.
+      3. Query scene state to obtain objectIds if you need to target existing objects.
+      4. Call execute_batch with your queries and/or commands.
+
+    Returns:
+      { "ok": <true if all succeeded>, "results": [ <one result per operation> ] }
+    """
+    results = []
+    for op in operations:
+        op_type = op.get("type")
+        if op_type == "command":
+            payload = _normalize_command(op)
+        elif op_type == "batch":
+            inner = [_normalize_command(c) for c in op.get("commands", [])]
+            payload = {**op, "commands": inner}
+        else:
+            payload = op
+        results.append(_send_command(payload))
+    all_ok = all(r.get("ok", False) for r in results)
+    return {"ok": all_ok, "results": results}
 
 
 if __name__ == "__main__":
