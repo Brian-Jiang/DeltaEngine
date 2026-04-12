@@ -34,7 +34,7 @@ public:
     /// Sets the reflected return property when the function returns a value.
     void SetReturnProperty(DProperty* prop);
 
-    const std::string& GetName() const;
+    DELTAENGINE_API const std::string& GetName() const;
     DELTAENGINE_API DClass* GetDeclaringClass() const;
     DELTAENGINE_API uint32_t GetNumParams() const;
     DELTAENGINE_API uint32_t GetTotalSize() const;

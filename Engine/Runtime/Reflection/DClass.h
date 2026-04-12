@@ -35,6 +35,8 @@ public:
     void AddFunction(DFunction* function);
     /// Finds a reflected function by name on this class or one of its bases.
     DELTAENGINE_API DFunction* FindFunctionByName(const std::string& name) const;
+    /// Returns the functions declared directly on this class.
+    DELTAENGINE_API const std::unordered_map<std::string, DFunction*>& GetFunctions() const;
 
     /// Returns true when this class is the same as or derived from `other`.
     DELTAENGINE_API bool IsChildOf(const DClass* other) const;

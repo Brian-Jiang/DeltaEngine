@@ -57,6 +57,8 @@ bool DClass::IsChildOf(const DClass* other) const
 
 bool DClass::IsAbstract() const { return m_abstract; }
 
+const std::unordered_map<std::string, DFunction*>& DClass::GetFunctions() const { return m_functions; }
+
 void DClass::ConstructObject(void* address) const
 {
     if (m_constructFn)
