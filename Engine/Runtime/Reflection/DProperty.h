@@ -70,6 +70,7 @@ public:
     uint32_t GetSize() const { return m_size; }
     DStruct* GetDeclaringStruct() const { return m_declaringStruct; }
     DProperty* GetNext() const { return m_next; }
+    DProperty* GetHierarchyNext() const { return m_hierarchyNext; }
 
     void SetMetadata(std::unordered_map<std::string, std::string> metadata)
     {
@@ -91,6 +92,7 @@ protected:
     DStruct* m_declaringStruct;
 
     DProperty* m_next;
+    DProperty* m_hierarchyNext;
     std::unordered_map<std::string, std::string> m_metadata;
 };
 

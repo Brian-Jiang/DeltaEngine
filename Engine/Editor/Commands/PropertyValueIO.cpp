@@ -51,6 +51,7 @@ nlohmann::json DeltaEngine::PropertyToJson(const DObject* obj, const DProperty* 
                 arr.push_back(m.m[r][c]);
         return arr;
     }
+    // todo other types
     default:
         DLOG(LogEditorCommand, ELogLevel::Warning, "[PropertyValueIO] PropertyToJson: unsupported type for '{}'", prop->GetName());
         return nullptr;

@@ -22,6 +22,7 @@ void DStruct::AddProperty(DProperty* property)
     property->m_declaringStruct = this;
 
     property->m_next = m_ownProperties;
+    property->m_hierarchyNext = m_ownProperties;
     m_ownProperties = property;
 }
 
@@ -42,6 +43,14 @@ DProperty* DStruct::FindPropertyByName(const std::string& name) const
 void DStruct::SetSuper(DStruct* super)
 {
     m_super = super;
+
+    if (!m_ownProperties)
+        return;
+
+    DProperty* tail = m_ownProperties;
+    while (tail->m_hierarchyNext)
+        tail = tail->m_hierarchyNext;
+    tail->m_hierarchyNext = super ? super->GetProperties() : nullptr;
 }
 
 const std::string& DStruct::GetName() const { return m_name; }
@@ -49,7 +58,12 @@ const std::string& DStruct::GetSuperName() const { return m_superName; }
 DStruct* DStruct::GetSuper() const { return m_super; }
 size_t DStruct::GetStructSize() const { return m_structSize; }
 size_t DStruct::GetMinAlignment() const { return m_minAlignment; }
-DProperty* DStruct::GetProperties() const { return m_properties; }
+DProperty* DStruct::GetProperties() const
+{
+    if (m_ownProperties)
+        return m_ownProperties;
+    return m_super ? m_super->GetProperties() : nullptr;
+}
 DProperty* DStruct::GetOwnProperties() const { return m_ownProperties; }
 
 void DStruct::SerializeFields(AssetArchive& ar, void* basePtr)

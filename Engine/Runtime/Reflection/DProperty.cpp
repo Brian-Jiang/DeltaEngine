@@ -26,6 +26,7 @@ DProperty::DProperty(std::string name,
       m_offset(offset),
       m_size(size),
       m_next(nullptr),
+      m_hierarchyNext(nullptr),
       m_declaringStruct(nullptr)
 {
 }
