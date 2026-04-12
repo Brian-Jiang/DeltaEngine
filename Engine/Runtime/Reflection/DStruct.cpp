@@ -43,14 +43,17 @@ DProperty* DStruct::FindPropertyByName(const std::string& name) const
 void DStruct::SetSuper(DStruct* super)
 {
     m_super = super;
+}
 
+void DStruct::RebuildHierarchyChain()
+{
     if (!m_ownProperties)
         return;
 
     DProperty* tail = m_ownProperties;
-    while (tail->m_hierarchyNext)
-        tail = tail->m_hierarchyNext;
-    tail->m_hierarchyNext = super ? super->GetProperties() : nullptr;
+    while (tail->m_next)
+        tail = tail->m_next;
+    tail->m_hierarchyNext = m_super ? m_super->GetProperties() : nullptr;
 }
 
 const std::string& DStruct::GetName() const { return m_name; }

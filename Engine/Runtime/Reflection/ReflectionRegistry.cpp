@@ -77,6 +77,11 @@ void ReflectionRegistry::FinalizeRegistration()
             }
         }
     }
+
+    for (auto& [name, dstruct] : m_structMap)
+        dstruct->RebuildHierarchyChain();
+    for (auto& [name, cls] : m_classMap)
+        cls->RebuildHierarchyChain();
 }
 
 DStruct* ReflectionRegistry::FindStructByName(const std::string& name) const

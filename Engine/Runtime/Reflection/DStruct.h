@@ -31,6 +31,8 @@ public:
 
     /// Links this type to its reflected base type.
     void SetSuper(DStruct* super);
+    /// Rebuilds the hierarchy property chain after all supers have been linked.
+    void RebuildHierarchyChain();
 
     DELTAENGINE_API const std::string& GetName() const;
     DELTAENGINE_API const std::string& GetSuperName() const;
