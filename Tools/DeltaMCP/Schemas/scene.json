@@ -9,24 +9,23 @@
           "type": "array",
           "optional": true,
           "default": [],
-          "options": ["position","rotation","scale","world_transform",
-                      "parent","children","components","tags","active"],
-          "description": "Fields to include per object"
+          "description": "Fields to include per object. Field names should be the same as reflected DProperty names in GameObject. When empty, includes all fields"
         },
         "name_filter":     { "type": "string",  "optional": true },
         "class_filter":    { "type": "string",  "optional": true,
-                             "description": "Only objects that have this component class" },
-        "include_inactive":{ "type": "bool",    "optional": true, "default": false }
+                             "description": "Only objects that have this component class" }
       }
     },
     "game_object": {
       "description": "Full detail on a single GameObject",
       "params": {
         "object_id":      { "type": "string", "required": true },
-        "include_fields": { "type": "array",  "optional": true,
-                            "default": ["transform","components"],
-                            "options": ["transform","components","component_properties",
-                                        "parent","children","tags"] }
+        "include_fields": {
+          "type": "array",
+          "optional": true,
+          "default": [],
+          "description": "Fields to include. Field names should be the same as reflected DProperty names in GameObject. When empty, includes all fields"
+        }
       }
     },
     "hierarchy": {
@@ -39,9 +38,22 @@
     "component": {
       "description": "Full detail on a single component",
       "params": {
-        "object_id":      { "type": "string", "required": true },
-        "include_schema": { "type": "bool",   "optional": true, "default": false,
-                            "description": "Also return property type metadata" }
+        "object_id": {
+          "type": "string",
+          "required": true
+        },
+        "include_schema": {
+          "type": "bool",
+          "optional": true,
+          "default": false,
+          "description": "Also return property type metadata"
+        },
+        "include_fields": {
+          "type": "array",
+          "optional": true,
+          "default": [],
+          "description": "Fields to include per object. Field names should be the same as reflected DProperty names in this component. When empty, includes all fields"
+        }
       }
     },
     "components_on_object": {

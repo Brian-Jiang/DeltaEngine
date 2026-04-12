@@ -85,7 +85,7 @@ private:
 
 // In a .cpp — file-local category, no header needed
 #define DEFINE_LOG_CATEGORY_STATIC(CategoryName) \
-    static DELTAENGINE_API DLogCategory CategoryName { #CategoryName, ELogLevel::Log }
+    static DLogCategory CategoryName { #CategoryName, ELogLevel::Log }
 
 // ---------------------------------------------------------------------------
 // DLOG — primary logging macro
