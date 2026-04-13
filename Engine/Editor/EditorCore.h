@@ -72,10 +72,6 @@ public:
     DELTAEDITOR_API void EnqueueSerializedCommand(std::string jsonPayload);
     DELTAEDITOR_API void DrainCommandQueue(std::vector<std::string>& outResponses);
 
-    // Returns a JSON snapshot of the live scene: all GameObjects with their
-    // reflected properties and components, keyed by stable object/asset UUIDs.
-    DELTAEDITOR_API nlohmann::json SerializeSceneToJson();
-
 private:
     std::unique_ptr<EditorAssetDatabase> m_assetDatabase;
     std::unique_ptr<EditorSelectionState> m_selectionState;

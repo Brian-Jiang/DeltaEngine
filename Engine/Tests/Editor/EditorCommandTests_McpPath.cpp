@@ -2,13 +2,17 @@
 
 #include "Editor/Commands/EditorCommandContext.h"
 #include "Editor/Commands/EditorCommandManager.h"
+#include "Editor/Commands/PropertyValueIO.h"
 
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Core/DWorld.h"
+#include "Runtime/Core/SceneComponent.h"
 
 #include <nlohmann/json.hpp>
 
+#include <functional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 using json = nlohmann::json;
@@ -16,6 +20,33 @@ using namespace DeltaEngine;
 using namespace DeltaEngine::Tests;
 
 class McpPathTests : public EditorCoreFixture {};
+
+namespace
+{
+SceneComponent* FindSceneComponentByClassName(GameObject* go, std::string_view className)
+{
+    std::function<SceneComponent*(SceneComponent*)> visit;
+    visit = [&](SceneComponent* sc) -> SceneComponent*
+    {
+        if (!sc)
+            return nullptr;
+        if (sc->GetClass() && sc->GetClass()->GetName() == className)
+            return sc;
+        for (SceneComponent* ch : sc->GetChildren())
+        {
+            if (SceneComponent* f = visit(ch))
+                return f;
+        }
+        return nullptr;
+    };
+    for (SceneComponent* sc : go->GetSceneComponents())
+    {
+        if (SceneComponent* f = visit(sc))
+            return f;
+    }
+    return nullptr;
+}
+}
 
 TEST_F(McpPathTests, CreateGameObject_ReturnsObjectId)
 {
@@ -71,24 +102,19 @@ TEST_F(McpPathTests, SetProperty_FloatProperty_RoundTrips)
     ASSERT_EQ(r2.size(), 1u);
     ASSERT_TRUE(json::parse(r2[0])["ok"].get<bool>());
 
-    // Find the component's objectId from the scene snapshot
-    auto scene = m_core->SerializeSceneToJson();
-    std::string compId;
-    for (const auto& obj : scene["objects"])
+    GameObject* go = nullptr;
+    for (GameObject* g : m_core->GetWorld()->GetGameObjects())
     {
-        if (obj["objectId"].get<std::string>() == goObjectId)
+        if (g->GetObjectId().ToString() == goObjectId)
         {
-            for (const auto& comp : obj["components"])
-            {
-                if (comp["class"].get<std::string>() == "PointLight")
-                {
-                    compId = comp["objectId"].get<std::string>();
-                    break;
-                }
-            }
+            go = g;
             break;
         }
     }
+    ASSERT_NE(go, nullptr);
+    SceneComponent* pl = FindSceneComponentByClassName(go, "PointLight");
+    ASSERT_NE(pl, nullptr);
+    const std::string compId = pl->GetObjectId().ToString();
     ASSERT_FALSE(compId.empty());
 
     // Set m_intensity to 7.5
@@ -106,30 +132,9 @@ TEST_F(McpPathTests, SetProperty_FloatProperty_RoundTrips)
     ASSERT_EQ(r3.size(), 1u);
     EXPECT_TRUE(json::parse(r3[0])["ok"].get<bool>());
 
-    // Verify via SerializeSceneToJson
-    // Component properties are flat keys on the snapshot object:
-    // {"_class":"PointLight","_objectId":"...","m_intensity":7.5,...}
-    auto updatedScene = m_core->SerializeSceneToJson();
-    bool found = false;
-    for (const auto& obj : updatedScene["objects"])
-    {
-        if (obj["objectId"].get<std::string>() != goObjectId)
-            continue;
-        for (const auto& comp : obj["components"])
-        {
-            if (comp["class"].get<std::string>() != "PointLight")
-                continue;
-            const auto& props = comp["properties"];
-            if (props.contains("m_intensity"))
-            {
-                EXPECT_NEAR(props["m_intensity"].get<float>(), 7.5f, 0.001f);
-                found = true;
-            }
-            break;
-        }
-        break;
-    }
-    EXPECT_TRUE(found) << "m_intensity property not found in scene snapshot";
+    DProperty* intensityProp = FindPropertyOnObject(pl, "m_intensity");
+    ASSERT_NE(intensityProp, nullptr);
+    EXPECT_NEAR(PropertyToJson(pl, intensityProp).get<float>(), 7.5f, 0.001f);
 }
 
 TEST_F(McpPathTests, UnknownCommandType_ReturnsError)
@@ -170,13 +175,6 @@ TEST_F(McpPathTests, MissingTypeField_ReturnsError)
     auto resp = json::parse(r[0]);
     EXPECT_FALSE(resp["ok"].get<bool>());
     EXPECT_FALSE(resp["error"].get<std::string>().empty());
-}
-
-TEST_F(McpPathTests, SerializeSceneToJson_EmptyScene)
-{
-    auto scene = m_core->SerializeSceneToJson();
-    EXPECT_TRUE(scene.contains("objects"));
-    EXPECT_TRUE(scene["objects"].is_array());
 }
 
 TEST_F(McpPathTests, CreateThenUndo_RemovesGameObject)
