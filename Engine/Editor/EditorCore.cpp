@@ -13,6 +13,9 @@
 #include "Runtime/Core/DScene.h"
 #include "Runtime/EngineMain.h"
 #include "Runtime/IO/IOManager.h"
+#include "Editor/Mcp/McpQueryRouter.h"
+#include "Editor/Mcp/McpRegistry.h"
+#include "Editor/McpSocketServer.h"
 #include <nlohmann/json.hpp>
 
 #include <cstdio>
@@ -22,6 +25,7 @@ using namespace DeltaEngine;
 DEFINE_LOG_CATEGORY(DeltaEngine::LogEditorCore)
 
 EditorCore* DeltaEngine::g_editorCore = nullptr;
+std::unique_ptr<McpSocketServer> DeltaEngine::g_mcpServer;
 
 EditorCore::EditorCore()
 {
@@ -71,10 +75,21 @@ void EditorCore::Initialize(EngineMain& engine, bool headless, std::filesystem::
 
     m_selectionState = std::make_unique<EditorSelectionState>();
     m_commandManager = std::make_unique<EditorCommandManager>();
+
+    if (!m_headless)
+    {
+        McpRegistry::Get().InitializeAll(*this);
+        auto router = std::make_shared<McpQueryRouter>(*this);
+        g_mcpServer = std::make_unique<McpSocketServer>(
+            [router](const std::string& json) { router->Route(json); },
+            [router](const std::string& json) -> std::string { return router->Route(json); });
+        g_mcpServer->Start();
+    }
 }
 
 void EditorCore::Shutdown()
 {
+    g_mcpServer.reset();
     if (m_commandManager)
     {
         m_commandManager->Clear();

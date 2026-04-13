@@ -26,7 +26,10 @@ class DWorld;
 
 class EditorCommandManager;
 class EditorCore;
+class McpSocketServer;
+
 extern EditorCore* g_editorCore;
+extern std::unique_ptr<McpSocketServer> g_mcpServer;
 
 class EditorCore
 {

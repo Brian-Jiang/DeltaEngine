@@ -1,8 +1,6 @@
 #include "EditorMain.h"
 
 #include "Editor/EditorCore.h"
-#include "Editor/Mcp/McpQueryRouter.h"
-#include "Editor/Mcp/McpRegistry.h"
 #include "Editor/McpSocketServer.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
 #include "Editor/Commands/EditorAuxiliarySceneCommands.h"
@@ -34,7 +32,6 @@
 using namespace DeltaEngine;
 
 EditorMain* DeltaEngine::g_editor = nullptr;
-static std::unique_ptr<McpSocketServer> g_mcpServer;
 
 namespace
 {
@@ -94,20 +91,6 @@ EditorMain::EditorMain()
 
     m_editorCore = std::make_unique<EditorCore>();
     m_editorCore->Initialize(*m_engine);
-
-    McpRegistry::Get().InitializeAll(*m_editorCore);
-
-    auto router = std::make_shared<McpQueryRouter>(*m_editorCore);
-    g_mcpServer = std::make_unique<McpSocketServer>(
-        [router](const std::string& json) {
-            router->Route(json);
-            //g_editorCore->EnqueueSerializedCommand(json);
-        },
-        [router](const std::string& json) -> std::string {
-            return router->Route(json);
-        }
-    );
-    g_mcpServer->Start();
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -362,7 +345,6 @@ void EditorMain::Shutdown()
 
     m_editorWindows.clear();
     m_editorTheme.reset();
-    g_mcpServer.reset();
     m_editorCore.reset();
     m_renderManager.reset();
     m_engine.reset();
