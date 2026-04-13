@@ -99,8 +99,9 @@ EditorMain::EditorMain()
 
     auto router = std::make_shared<McpQueryRouter>(*m_editorCore);
     g_mcpServer = std::make_unique<McpSocketServer>(
-        [](const std::string& json) {
-            g_editorCore->EnqueueSerializedCommand(json);
+        [router](const std::string& json) {
+            router->Route(json);
+            //g_editorCore->EnqueueSerializedCommand(json);
         },
         [router](const std::string& json) -> std::string {
             return router->Route(json);

@@ -22,6 +22,13 @@ private:
     nlohmann::json QueryComponent(EditorCore&, const nlohmann::json& params);
     nlohmann::json QueryComponentsOnObject(EditorCore&, const nlohmann::json& params);
     nlohmann::json QueryFindByProperty(EditorCore&, const nlohmann::json& params);
+
+    nlohmann::json CommandCreateGameObject(EditorCore&, const nlohmann::json& params);
+    nlohmann::json CommandDeleteGameObject(EditorCore&, const nlohmann::json& params);
+    nlohmann::json CommandReparentSceneComponent(EditorCore&, const nlohmann::json& params);
+    nlohmann::json CommandCreateComponent(EditorCore&, const nlohmann::json& params);
+    nlohmann::json CommandDeleteComponent(EditorCore&, const nlohmann::json& params);
+    nlohmann::json CommandSetTransform(EditorCore&, const nlohmann::json& params);
 };
 
 DELTA_ENGINE_NS_END

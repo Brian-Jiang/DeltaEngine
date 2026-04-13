@@ -151,6 +151,18 @@ static void CollectAllObjects(EditorCore& core, std::vector<DObject*>& out)
 
 // ─── Registration ───────────────────────────────────────────────────────────
 
+static nlohmann::json EnqueueCommand(EditorCore& core, std::string_view system, const std::string& commandName, nlohmann::json params)
+{
+    nlohmann::json envelope;
+    envelope["type"] = "command";
+    envelope["system"] = system;
+    envelope["command"] = commandName;
+    envelope["params"] = std::move(params);
+
+    core.EnqueueSerializedCommand(envelope.dump());
+    return { {"ok", true}, {"queued", true}, {"command", commandName} };
+}
+
 void McpSceneSystem::RegisterTools(McpRegistry& registry)
 {
     registry.RegisterOperation("scene", "game_objects",
@@ -165,6 +177,19 @@ void McpSceneSystem::RegisterTools(McpRegistry& registry)
         [this](EditorCore& c, const nlohmann::json& p) { return QueryComponentsOnObject(c, p); });
     registry.RegisterOperation("scene", "find_by_property",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryFindByProperty(c, p); });
+
+    registry.RegisterOperation("scene", "CreateGameObject",
+        [this](EditorCore& c, const nlohmann::json& p) { return CommandCreateGameObject(c, p); });
+    registry.RegisterOperation("scene", "DeleteGameObject",
+        [this](EditorCore& c, const nlohmann::json& p) { return CommandDeleteGameObject(c, p); });
+    registry.RegisterOperation("scene", "ReparentSceneComponent",
+        [this](EditorCore& c, const nlohmann::json& p) { return CommandReparentSceneComponent(c, p); });
+    registry.RegisterOperation("scene", "CreateComponent",
+        [this](EditorCore& c, const nlohmann::json& p) { return CommandCreateComponent(c, p); });
+    registry.RegisterOperation("scene", "DeleteComponent",
+        [this](EditorCore& c, const nlohmann::json& p) { return CommandDeleteComponent(c, p); });
+    registry.RegisterOperation("scene", "SetTransform",
+        [this](EditorCore& c, const nlohmann::json& p) { return CommandSetTransform(c, p); });
 }
 
 // ─── game_objects ───────────────────────────────────────────────────────────
@@ -450,4 +475,211 @@ nlohmann::json McpSceneSystem::QueryFindByProperty(EditorCore& core, const nlohm
     }
 
     return { {"ok", true}, {"matches", std::move(matches)} };
+}
+
+// ─── Command: CreateGameObject ──────────────────────────────────────────────
+
+nlohmann::json McpSceneSystem::CommandCreateGameObject(EditorCore& core, const nlohmann::json& params)
+{
+    if (!params.contains("name"))
+        return MakeError("missing required param: name");
+
+    std::string name = params["name"].get<std::string>();
+
+    nlohmann::json data;
+    data["className"] = "GameObject";
+
+    nlohmann::json result = EnqueueCommand(core, "scene", "EditorCommand_CreateGameObject", std::move(data));
+
+    if (!name.empty() && name != "New GameObject")
+    {
+        nlohmann::json renameData;
+        renameData["newName"] = name;
+        core.EnqueueSerializedCommand(nlohmann::json{
+            {"type", "command"},
+            {"system", "scene"},
+            {"command", "EditorCommand_RenameObject"},
+            {"params", {{"newName", name}}}
+        }.dump());
+    }
+
+    return result;
+}
+
+// ─── Command: DeleteGameObject ──────────────────────────────────────────────
+
+nlohmann::json McpSceneSystem::CommandDeleteGameObject(EditorCore& core, const nlohmann::json& params)
+{
+    if (!params.contains("objectId"))
+        return MakeError("missing required param: objectId");
+
+    nlohmann::json data;
+    data["gameObjectId"] = params["objectId"].get<std::string>();
+    return EnqueueCommand(core, "scene", "EditorCommand_DeleteGameObject", std::move(data));
+}
+
+// ─── Command: ReparentSceneComponent ────────────────────────────────────────
+
+nlohmann::json McpSceneSystem::CommandReparentSceneComponent(EditorCore& core, const nlohmann::json& params)
+{
+    if (!params.contains("objectId"))
+        return MakeError("missing required param: objectId");
+    if (!params.contains("newParentId"))
+        return MakeError("missing required param: newParentId");
+
+    nlohmann::json data;
+    data["childObjectId"] = params["objectId"].get<std::string>();
+    data["newParentObjectId"] = params["newParentId"].get<std::string>();
+    return EnqueueCommand(core, "scene", "EditorCommand_ReparentSceneComponent", std::move(data));
+}
+
+// ─── Command: CreateComponent ───────────────────────────────────────────────
+
+nlohmann::json McpSceneSystem::CommandCreateComponent(EditorCore& core, const nlohmann::json& params)
+{
+    if (!params.contains("objectId"))
+        return MakeError("missing required param: objectId");
+    if (!params.contains("componentClass"))
+        return MakeError("missing required param: componentClass");
+
+    nlohmann::json data;
+    data["gameObjectId"] = params["objectId"].get<std::string>();
+    data["className"] = params["componentClass"].get<std::string>();
+    return EnqueueCommand(core, "scene", "EditorCommand_CreateComponent", std::move(data));
+}
+
+// ─── Command: DeleteComponent ───────────────────────────────────────────────
+
+nlohmann::json McpSceneSystem::CommandDeleteComponent(EditorCore& core, const nlohmann::json& params)
+{
+    if (!params.contains("objectId"))
+        return MakeError("missing required param: objectId");
+
+    std::string compIdStr = params["objectId"].get<std::string>();
+
+    DObject* obj = FindObjectById(core, compIdStr);
+    if (!obj)
+        return MakeError("component not found: " + compIdStr);
+
+    auto* comp = dynamic_cast<DComponent*>(obj);
+    if (!comp)
+        return MakeError("object is not a component: " + compIdStr);
+
+    GameObject* owner = comp->GetGameObject();
+    if (!owner)
+        return MakeError("component has no owning GameObject: " + compIdStr);
+
+    //auto [ownerAssetId, ownerObjectId] = core.GetIdsForObject(owner);
+    auto ownerObjectId = comp->GetGameObject()->GetObjectId();
+
+    nlohmann::json data;
+    data["gameObjectId"] = ownerObjectId.ToString();
+    data["componentId"] = compIdStr;
+    return EnqueueCommand(core, "scene", "EditorCommand_DeleteComponent", std::move(data));
+}
+
+// ─── Command: SetTransform ──────────────────────────────────────────────────
+
+nlohmann::json McpSceneSystem::CommandSetTransform(EditorCore& core, const nlohmann::json& params)
+{
+    using namespace DirectX;
+    using namespace DirectX::SimpleMath;
+
+    if (!params.contains("objectId"))
+        return MakeError("missing required param: objectId");
+
+    std::string objectIdStr = params["objectId"].get<std::string>();
+
+    DObject* obj = FindObjectById(core, objectIdStr);
+    if (!obj)
+        return MakeError("object not found: " + objectIdStr);
+
+    auto* sc = dynamic_cast<SceneComponent*>(obj);
+    if (!sc)
+    {
+        if (auto* go = dynamic_cast<GameObject*>(obj))
+            sc = go->GetRootSceneComponent();
+        if (!sc)
+            return MakeError("object has no SceneComponent: " + objectIdStr);
+        auto [scA, scO] = core.GetIdsForObject(sc);
+        objectIdStr = scO.ToString();
+    }
+
+    std::string space = params.value("space", "local");
+    bool worldSpace = (space == "world");
+
+    Vector3 pos = sc->GetLocalPosition();
+    Quaternion rot = sc->GetLocalRotation();
+    Vector3 scl = sc->GetLocalScale();
+
+    if (worldSpace)
+    {
+        pos = sc->GetWorldPosition();
+        rot = sc->GetWorldRotation();
+        scl = sc->GetWorldScale();
+    }
+
+    if (params.contains("position") && params["position"].is_array())
+    {
+        auto& a = params["position"];
+        pos = Vector3(a[0].get<float>(), a[1].get<float>(), a[2].get<float>());
+    }
+    if (params.contains("rotation") && params["rotation"].is_array())
+    {
+        auto& a = params["rotation"];
+        if (a.size() == 4)
+            rot = Quaternion(a[0].get<float>(), a[1].get<float>(), a[2].get<float>(), a[3].get<float>());
+        else if (a.size() == 3)
+            rot = Quaternion::CreateFromYawPitchRoll(a[1].get<float>(), a[0].get<float>(), a[2].get<float>());
+    }
+    if (params.contains("scale") && params["scale"].is_array())
+    {
+        auto& a = params["scale"];
+        scl = Vector3(a[0].get<float>(), a[1].get<float>(), a[2].get<float>());
+    }
+
+    if (worldSpace)
+    {
+        SceneComponent* parent = sc->GetParent();
+        XMMATRIX parentWorldInv = XMMatrixIdentity();
+        if (parent)
+            parentWorldInv = XMMatrixInverse(nullptr, parent->GetWorldTransform());
+
+        XMMATRIX desiredWorld = XMMatrixScalingFromVector(scl)
+            * XMMatrixRotationQuaternion(rot)
+            * XMMatrixTranslationFromVector(pos);
+        XMMATRIX localMat = desiredWorld * parentWorldInv;
+
+        XMFLOAT4X4 f;
+        XMStoreFloat4x4(&f, localMat);
+
+        nlohmann::json matArr = nlohmann::json::array();
+        for (int r = 0; r < 4; ++r)
+            for (int c = 0; c < 4; ++c)
+                matArr.push_back(f.m[r][c]);
+
+        nlohmann::json data;
+        data["objectId"] = objectIdStr;
+        data["propertyName"] = "m_localTransform";
+        data["valueAfter"] = std::move(matArr);
+        return EnqueueCommand(core, "scene", "EditorCommand_SetProperty", std::move(data));
+    }
+
+    XMMATRIX localMat = XMMatrixScalingFromVector(scl)
+        * XMMatrixRotationQuaternion(rot)
+        * XMMatrixTranslationFromVector(pos);
+
+    XMFLOAT4X4 f;
+    XMStoreFloat4x4(&f, localMat);
+
+    nlohmann::json matArr = nlohmann::json::array();
+    for (int r = 0; r < 4; ++r)
+        for (int c = 0; c < 4; ++c)
+            matArr.push_back(f.m[r][c]);
+
+    nlohmann::json data;
+    data["objectId"] = objectIdStr;
+    data["propertyName"] = "m_localTransform";
+    data["valueAfter"] = std::move(matArr);
+    return EnqueueCommand(core, "scene", "EditorCommand_SetProperty", std::move(data));
 }

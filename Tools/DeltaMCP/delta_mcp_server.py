@@ -19,29 +19,24 @@ def _find_repo_root() -> pathlib.Path:
 def _load_schemas() -> dict:
     schemas_dir = pathlib.Path(__file__).resolve().parent / "Schemas"
     systems: dict = {}
-    commands: dict = {}
     for path in sorted(schemas_dir.glob("*.json")):
         data = json.loads(path.read_text(encoding="utf-8"))
-        if "commands" in data:
-            commands.update(data["commands"])
         if "system" in data:
             systems[data["system"]] = data
-    return {"systems": systems, "commands": commands}
+    return {"systems": systems}
 
 
 _SCHEMAS = _load_schemas()
 
 
 def _list_operations() -> dict:
-    index = {
-        name: list(schema.get("operations", {}).keys())
-        for name, schema in _SCHEMAS["systems"].items()
-    }
-    return {
-        "ok": True,
-        "systems": index,
-        "commands": list(_SCHEMAS["commands"].keys()),
-    }
+    index = {}
+    for name, schema in _SCHEMAS["systems"].items():
+        index[name] = {
+            "operations": list(schema.get("operations", {}).keys()),
+            "commands": list(schema.get("commands", {}).keys()),
+        }
+    return {"ok": True, "systems": index}
 
 
 def _describe_operations(requested: list[dict]) -> dict:
@@ -49,14 +44,17 @@ def _describe_operations(requested: list[dict]) -> dict:
     cmds_result: dict = {}
     errors: list[str] = []
     for entry in requested:
+        sys_name = entry.get("system", "")
         if "command" in entry:
-            name = entry["command"]
-            if name in _SCHEMAS["commands"]:
-                cmds_result[name] = _SCHEMAS["commands"][name]
+            cmd_name = entry["command"]
+            key = f"{sys_name}/{cmd_name}" if sys_name else cmd_name
+            sys_schema = _SCHEMAS["systems"].get(sys_name) if sys_name else None
+            schema = sys_schema.get("commands", {}).get(cmd_name) if sys_schema else None
+            if schema is not None:
+                cmds_result[key] = schema
             else:
-                errors.append(f"Unknown command: {name}")
-        elif "system" in entry and "operation" in entry:
-            sys_name = entry["system"]
+                errors.append(f"Unknown command: {key}")
+        elif "operation" in entry:
             op_name = entry["operation"]
             key = f"{sys_name}/{op_name}"
             sys_schema = _SCHEMAS["systems"].get(sys_name)
@@ -88,7 +86,6 @@ def _handle_local_meta(payload: dict) -> dict:
             return {
                 "ok": True,
                 "systems": {sf: sys_schema} if sys_schema else {},
-                "commands": _SCHEMAS["commands"],
             }
         return {"ok": True, **_SCHEMAS}
     if op == "active_systems":
@@ -154,23 +151,20 @@ def _send_command(payload: dict) -> dict:
         return {"ok": False, "error": str(e)}
 
 
-def _normalize_command(op: dict) -> dict:
-    """Auto-prefix EditorCommand_ on command names that omit it."""
-    cmd = op.get("command", "")
-    if cmd and not cmd.startswith("EditorCommand_"):
-        return {**op, "command": f"EditorCommand_{cmd}"}
-    return op
-
-
 @mcp_server.tool()
 def list_operations() -> dict:
     """
     Returns a lightweight index of all available systems, their query
-    operations, and all available commands.
+    operations, and their commands.
 
     Call this first to discover what the editor exposes. The response has:
-      "systems": { "<system>": ["<operation>", ...], ... }
-      "commands": ["<CommandName>", ...]
+      "systems": {
+        "<system>": {
+          "operations": ["<operation>", ...],
+          "commands":   ["<command>", ...]
+        },
+        ...
+      }
 
     Use describe_operations to get full parameter schemas before calling
     execute_batch.
@@ -184,15 +178,18 @@ def describe_operations(operations: list[dict]) -> dict:
     Returns full parameter schemas for specific operations or commands.
 
     Each entry in `operations` is one of:
-      {"system": "<system>", "operation": "<op>"}   -- for query operations
-      {"command": "<CommandName>"}                   -- for commands
+      {"system": "<system>", "operation": "<op>"}      -- for query operations
+      {"system": "<system>", "command": "<command>"}   -- for commands
 
     Example:
-      [{"system":"scene","operation":"game_objects"}, {"command":"SetProperty"}]
+      [
+        {"system": "scene", "operation": "game_objects"},
+        {"system": "scene", "command": "CreateGameObject"}
+      ]
 
     The response contains:
       "operations": { "<system>/<op>": { description, params }, ... }
-      "commands":   { "<CommandName>": { description, params, returns }, ... }
+      "commands":   { "<system>/<command>": { description, params, returns }, ... }
     """
     return _describe_operations(operations)
 
@@ -205,26 +202,27 @@ def execute_batch(operations: list[dict]) -> dict:
     Each operation is a dict with a "type" field:
 
     QUERY — read state from the editor:
-      { "type": "query", "system": "<system>", "operation": "<op>",
-        "params": { ... } }
-      Example: { "type":"query","system":"scene","operation":"game_objects","params":{} }
+      {
+        "type": "query",
+        "system": "<system>",
+        "operation": "<op>",
+        "params": { ... }
+      }
+      Example:
+        {"type":"query","system":"scene","operation":"game_objects","params":{}}
 
     COMMAND — mutate scene state (each command is its own undo entry):
-      { "type": "command", "command": "<CommandName>", "<param>": <value>, ... }
-      The "EditorCommand_" prefix is added automatically if omitted.
-      Example: { "type":"command","command":"CreateGameObject","name":"Sun" }
-
-    BATCH — group multiple commands into a single undoable unit (one Ctrl+Z):
-      { "type": "batch", "commands": [
-          { "command": "<CommandName>", "<param>": <value> },
-          ...
-        ]
+      {
+        "type": "command",
+        "system": "<system>",
+        "command": "<command>",
+        "params": { ... }
       }
-      Commands inside "batch" must not have a "type" field.
-      "EditorCommand_" prefix is added automatically on each inner command.
+      Example:
+        {"type":"command","system":"scene","command":"CreateGameObject","params":{"name":"Sun"}}
 
     Workflow:
-      1. Call list_operations to discover systems and commands.
+      1. Call list_operations to discover systems, operations, and commands.
       2. Call describe_operations to get required params for what you need.
       3. Query scene state to obtain objectIds if you need to target existing objects.
       4. Call execute_batch with your queries and/or commands.
@@ -234,15 +232,7 @@ def execute_batch(operations: list[dict]) -> dict:
     """
     results = []
     for op in operations:
-        op_type = op.get("type")
-        if op_type == "command":
-            payload = _normalize_command(op)
-        elif op_type == "batch":
-            inner = [_normalize_command(c) for c in op.get("commands", [])]
-            payload = {**op, "commands": inner}
-        else:
-            payload = op
-        results.append(_send_command(payload))
+        results.append(_send_command(op))
     all_ok = all(r.get("ok", False) for r in results)
     return {"ok": all_ok, "results": results}
 

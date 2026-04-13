@@ -19,10 +19,34 @@ std::string McpQueryRouter::Route(const std::string& rawJson) const
     {
         auto q = nlohmann::json::parse(rawJson);
 
-        std::string system    = q.value("system", "");
-        std::string operation = q.value("operation", q.value("query", ""));
+        std::string type   = q.value("type", "query");
+        std::string system = q.value("system", "");
         auto params = q.contains("params") ? q["params"]
                                            : nlohmann::json::object();
+
+        if (type == "command")
+        {
+            std::string command = q.value("command", "");
+
+            DLOG(LogMcpRouter, ELogLevel::Log,
+                 "Received MCP command: system='{}', command='{}'", system, command);
+            DLOG(LogMcpRouter, ELogLevel::Verbose,
+                 "Routing MCP command: params={}", params.dump());
+
+            if (system.empty() || command.empty())
+            {
+                return nlohmann::json{
+                    {"ok", false},
+                    {"error", "Command must include 'system' and 'command' fields"}
+                }.dump();
+            }
+
+            return McpRegistry::Get()
+                .Dispatch(system, command, m_core, params)
+                .dump();
+        }
+
+        std::string operation = q.value("operation", q.value("query", ""));
 
         DLOG(LogMcpRouter, ELogLevel::Log,
              "Received MCP query: system='{}', operation='{}'", system, operation);

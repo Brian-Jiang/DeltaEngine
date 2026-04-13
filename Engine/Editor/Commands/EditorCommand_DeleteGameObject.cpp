@@ -34,7 +34,7 @@ bool EditorCommand_DeleteGameObject::Execute(EditorCommandContext& ctx)
     auto* go = dynamic_cast<GameObject*>(obj);
     if (!go)
     {
-        DLOG(LogEditorCommand, ELogLevel::Error, "[Delete GameObject] Execute: GameObject with ID {} not found", m_gameObjectId.ToString());
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Delete GameObject] Execute: GameObject with ID {} not found, assetId {}", m_gameObjectId.ToString(), m_assetId.ToString());
         return false;
     }
 

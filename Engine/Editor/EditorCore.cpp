@@ -279,16 +279,14 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
             continue;
         }
 
-        // MCP envelope: {"type":"command","command":"EditorCommand_*", ...flat fields...}
+        // MCP envelope: {"type":"command","system":"...","command":"EditorCommand_*","params":{...}}
         // Legacy envelope: {"type":"EditorCommand_*","data":{...}}
         std::string commandName;
         nlohmann::json commandData;
         if (type == "command" && envelope.contains("command"))
         {
             commandName = envelope["command"].get<std::string>();
-            commandData = envelope;
-            commandData.erase("type");
-            commandData.erase("command");
+            commandData = envelope.value("params", nlohmann::json::object());
 
             // Auto-inject active scene asset ID for MCP callers
             DPrimaryAsset* activeAsset = GetActiveSceneAsset();

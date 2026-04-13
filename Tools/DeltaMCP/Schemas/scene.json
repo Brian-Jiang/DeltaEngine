@@ -11,15 +11,24 @@
           "default": [],
           "description": "Fields to include per object. Field names should be the same as reflected DProperty names in GameObject. When empty, includes all fields"
         },
-        "name_filter":     { "type": "string",  "optional": true },
-        "class_filter":    { "type": "string",  "optional": true,
-                             "description": "Only objects that have this component class" }
+        "name_filter": {
+          "type": "string",
+          "optional": true
+        },
+        "class_filter": {
+          "type": "string",
+          "optional": true,
+          "description": "Only objects that have this component class"
+        }
       }
     },
     "game_object": {
       "description": "Full detail on a single GameObject",
       "params": {
-        "object_id":      { "type": "string", "required": true },
+        "object_id": {
+          "type": "string",
+          "required": true
+        },
         "include_fields": {
           "type": "array",
           "optional": true,
@@ -31,8 +40,11 @@
     "hierarchy": {
       "description": "Parent-child tree of the active world (names + IDs only)",
       "params": {
-        "root_object_id": { "type": "string", "optional": true,
-                            "description": "Subtree root. Omit for entire world." }
+        "root_object_id": {
+          "type": "string",
+          "optional": true,
+          "description": "Subtree root. Omit for entire world."
+        }
       }
     },
     "component": {
@@ -59,17 +71,152 @@
     "components_on_object": {
       "description": "All components attached to a GameObject",
       "params": {
-        "object_id":          { "type": "string", "required": true },
-        "include_properties": { "type": "bool",   "optional": true, "default": false }
+        "object_id": {
+          "type": "string",
+          "required": true
+        },
+        "include_properties": {
+          "type": "bool",
+          "optional": true,
+          "default": false
+        }
       }
     },
     "find_by_property": {
       "description": "Find objects/components where a property matches a value",
       "params": {
-        "class_name":    { "type": "string", "required": true },
-        "property_name": { "type": "string", "required": true },
-        "value":         { "required": true }
+        "class_name": {
+          "type": "string",
+          "required": true
+        },
+        "property_name": {
+          "type": "string",
+          "required": true
+        },
+        "value": { "required": true }
       }
+    }
+  },
+  "commands": {
+    "CreateGameObject": {
+      "description": "Create a new empty GameObject",
+      "undoable": true,
+      "params": {
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "parentObjectId": {
+          "type": "string",
+          "optional": true,
+          "default": ""
+        }
+      },
+      "returns": { "objectId": "string" }
+    },
+    "DeleteGameObject": {
+      "description": "Delete a GameObject and all its components",
+      "undoable": true,
+      "params": {
+        "objectId": {
+          "type": "string",
+          "required": true
+        }
+      }
+    },
+    "ReparentSceneComponent": {
+      "description": "Change a SceneComponent's parent",
+      "undoable": true,
+      "params": {
+        "objectId": {
+          "type": "string",
+          "required": true
+        },
+        "newParentId": {
+          "type": "string",
+          "required": true
+        },
+        "keepWorldTransform": {
+          "type": "bool",
+          "default": true
+        }
+      }
+    },
+    "CreateComponent": {
+      "description": "Add a component to a GameObject",
+      "undoable": true,
+      "params": {
+        "objectId": {
+          "type": "string",
+          "required": true
+        },
+        "componentClass": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "returns": { "objectId": "string" }
+    },
+    "DeleteComponent": {
+      "description": "Remove a component",
+      "undoable": true,
+      "params": {
+        "objectId": {
+          "type": "string",
+          "required": true
+        }
+      }
+    },
+    "SetTransform": {
+      "description": "Set position/rotation/scale in one command",
+      "undoable": true,
+      "params": {
+        "objectId": {
+          "type": "string",
+          "required": true
+        },
+        "position": {
+          "type": "array",
+          "optional": true,
+          "description": "[x,y,z]"
+        },
+        "rotation": {
+          "type": "array",
+          "optional": true,
+          "description": "[x,y,z,w]"
+        },
+        "scale": {
+          "type": "array",
+          "optional": true,
+          "description": "[x,y,z]"
+        },
+        "space": {
+          "type": "string",
+          "optional": true,
+          "options": [ "local", "world" ],
+          "default": "world"
+        }
+      }
+    },
+    "DuplicateGameObject": {
+      "description": "Duplicate a GameObject and all its components",
+      "undoable": true,
+      "params": {
+        "objectId": {
+          "type": "string",
+          "required": true
+        },
+        "newName": {
+          "type": "string",
+          "optional": true
+        },
+        "offset_position": {
+          "type": "array",
+          "optional": true,
+          "description": "[x,y,z] world offset"
+        }
+      },
+      "returns": { "objectId": "string" }
     }
   }
 }

@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(Tools/Scripts/build-x64-debug.bat --automatic)"
+      "Bash(Tools/Scripts/build-x64-debug.bat --automatic)",
+      "Bash(Tools/Scripts/build-x64-debug-editor-tests.bat --automatic)",
+      "Bash(Tools/Scripts/run-x64-debug-editor-tests.bat --automatic)",
+      "Bash(grep:*)"
     ]
   }
 }

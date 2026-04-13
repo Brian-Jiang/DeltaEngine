@@ -53,7 +53,7 @@ bool EditorCommand_RenameObject::Execute(EditorCommandContext& ctx)
     DObject* obj = ctx.core.ResolveObject(m_assetId, m_targetObjectId);
     if (!obj)
     {
-        DLOG(LogEditorCommand, ELogLevel::Error, "[Rename] Execute: Object {} not found", m_targetObjectId.ToString());
+        DLOG(LogEditorCommand, ELogLevel::Error, "[Rename] Execute: Object {} not found, assetId {}", m_targetObjectId.ToString(), m_assetId.ToString());
         return false;
     }
 
