@@ -18,13 +18,11 @@ DELTA_ENGINE_NS_BEGIN
 
 DECLARE_LOG_CATEGORY(LogEditorCore)
 
-class DComponent;
 class DPrimaryAsset;
 class EditorAssetDatabase;
 class EditorSelectionState;
 class EngineMain;
 class DWorld;
-class GameObject;
 
 class EditorCommandManager;
 class EditorCore;
@@ -48,9 +46,6 @@ public:
     DELTAEDITOR_API DPrimaryAsset* GetActiveSceneAsset();
 
     DELTAEDITOR_API void LoadScene(const std::filesystem::path& scenePath);
-
-    DELTAEDITOR_API ObjectId CreateGameObject(std::string_view name, GameObject** outPtr = nullptr);
-    DELTAEDITOR_API ObjectId AddComponentToGameObject(ObjectId gameObjectId, std::string_view componentClassName);
 
     // todo remove test value when editor command system is in place to support arbitrary data in commands
     DELTAEDITOR_API void SetTestValue(const std::string& key, const std::string& value);

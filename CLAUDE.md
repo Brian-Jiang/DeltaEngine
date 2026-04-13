@@ -166,7 +166,6 @@ All editor windows implement `EditorWindow` interface. Current windows:
 
 Key operations exposed:
 - `LoadScene(path)`, `GetWorld()`, `GetActiveSceneAsset()`
-- `CreateGameObject(name)`, `AddComponentToGameObject(id, className)`
 - `ResolveObject(assetId, objectId)` / `GetIdsForObject(obj)` — bidirectional UUID↔pointer lookup
 - `EnqueueSerializedCommand(json)` + `DrainCommandQueue()` — serialized command dispatch for headless / MCP callers
 - Supports headless mode (`Initialize(..., headless=true)`) for test environments
