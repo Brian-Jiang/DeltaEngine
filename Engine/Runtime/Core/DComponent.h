@@ -24,6 +24,7 @@ public:
 
     /// Registers the owning game object for this component.
     DELTAENGINE_API virtual void RegisterComponent(GameObject* gameObject);
+
     /// Removes the component from its owner and asset.
     void MarkForDestroy();
 
@@ -41,6 +42,7 @@ public:
     DELTAENGINE_API const std::string& GetName() const;
 
 private:
+    DPROPERTY()
     GameObject* m_gameObject;
 
     DPROPERTY()

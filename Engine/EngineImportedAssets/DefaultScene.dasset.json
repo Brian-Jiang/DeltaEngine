@@ -62,6 +62,10 @@
       "_class": "MeshRenderer",
       "_objectId": "c401324f-d0b6-4311-ba23-4f4bb562b12a",
       "m_children": [],
+      "m_gameObject": {
+        "assetId": "097992b4-c850-4c69-a612-ec83528b0c30",
+        "objectId": "b5d199c9-cbb1-4d38-ab05-a307f4fb14f3"
+      },
       "m_localTransform": [
         1.0,
         0.0,
@@ -107,6 +111,10 @@
       "_class": "MeshRenderer",
       "_objectId": "1f406490-21bc-45b7-8122-7c086c917735",
       "m_children": [],
+      "m_gameObject": {
+        "assetId": "097992b4-c850-4c69-a612-ec83528b0c30",
+        "objectId": "c71dc852-c435-4b12-93bd-8f04ba669306"
+      },
       "m_localTransform": [
         1.0,
         0.0,
@@ -160,6 +168,10 @@
       "m_children": [],
       "m_far": 1000.0,
       "m_fov": 0.7853981852531433,
+      "m_gameObject": {
+        "assetId": "097992b4-c850-4c69-a612-ec83528b0c30",
+        "objectId": "8dc31e8d-ce58-4280-bde5-de5b5723d6d5"
+      },
       "m_localTransform": [
         0.9723583459854126,
         0.0,
@@ -213,6 +225,10 @@
         0.0,
         0.0
       ],
+      "m_gameObject": {
+        "assetId": "097992b4-c850-4c69-a612-ec83528b0c30",
+        "objectId": "0ebb55c1-3d47-425e-a1f8-71d1679eb8b2"
+      },
       "m_intensity": 1.0,
       "m_localTransform": [
         1.0,
@@ -260,6 +276,10 @@
         0.20000000298023224,
         1.0
       ],
+      "m_gameObject": {
+        "assetId": "097992b4-c850-4c69-a612-ec83528b0c30",
+        "objectId": "016370bb-0455-4ef4-9fc1-7d3f974e23a3"
+      },
       "m_intensity": 2.0,
       "m_localTransform": [
         1.0,
@@ -308,6 +328,10 @@
         1.0,
         1.0
       ],
+      "m_gameObject": {
+        "assetId": "097992b4-c850-4c69-a612-ec83528b0c30",
+        "objectId": "2315bf5d-b686-48f0-8360-77d6e020d0b3"
+      },
       "m_innerConeAngle": 0.5235987901687622,
       "m_intensity": 1.2000000476837158,
       "m_localTransform": [
@@ -335,6 +359,10 @@
     {
       "_class": "TestComponent",
       "_objectId": "693d859e-7a40-4cf7-b30c-85a861bd06b6",
+      "m_gameObject": {
+        "assetId": "097992b4-c850-4c69-a612-ec83528b0c30",
+        "objectId": "8dc31e8d-ce58-4280-bde5-de5b5723d6d5"
+      },
       "m_name": "Camera Test Component",
       "m_testBool": false,
       "m_testDouble": 0.0,
