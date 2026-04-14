@@ -13,6 +13,7 @@ DELTA_ENGINE_NS_BEGIN
 
 class GameObject;
 class DComponent;
+class Skybox;
 
 /// Serializable scene data. Stores the list of GameObjects that belong to this
 /// scene. A DScene is typically owned by a PA_DScene primary asset.
@@ -39,6 +40,10 @@ public:
     DPROPERTY()
     std::vector<DComponent*> m_components;
 
+    /// Optional skybox assigned to this scene. Serialized as an intra-asset pointer.
+    DPROPERTY()
+    Skybox* m_skybox = nullptr;
+
     DELTAENGINE_API const std::string& GetName() const { return m_name; }
     DELTAENGINE_API void SetName(const std::string& name) { m_name = name; }
 
@@ -53,6 +58,9 @@ public:
 
     DELTAENGINE_API void AddComponent(DComponent* component);
     DELTAENGINE_API void RemoveComponent(DComponent* component);
+
+    DELTAENGINE_API Skybox* GetSkybox() const { return m_skybox; }
+    DELTAENGINE_API void SetSkybox(Skybox* skybox) { m_skybox = skybox; }
 };
 
 DELTA_ENGINE_NS_END
