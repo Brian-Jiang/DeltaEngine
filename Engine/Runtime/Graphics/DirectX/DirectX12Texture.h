@@ -54,6 +54,8 @@ public:
     DELTAENGINE_API virtual ~DirectX12Texture();
 
     DELTAENGINE_API void CreateViews();
+    /// Recreates the SRV descriptor as TextureCube. Call after LoadTexture when IsCubemap() is true.
+    DELTAENGINE_API void CreateCubemapSRV();
 
 private:
     DescriptorAllocation m_RenderTargetView;
