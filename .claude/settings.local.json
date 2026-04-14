@@ -4,7 +4,8 @@
       "Bash(Tools/Scripts/build-x64-debug.bat --automatic)",
       "Bash(Tools/Scripts/build-x64-debug-editor-tests.bat --automatic)",
       "Bash(Tools/Scripts/run-x64-debug-editor-tests.bat --automatic)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(Tools/Scripts/run-x64-debug-engine-tests.bat --automatic)"
     ]
   }
 }
