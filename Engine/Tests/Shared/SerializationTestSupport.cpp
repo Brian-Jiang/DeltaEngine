@@ -1,6 +1,5 @@
 #include "Shared/SerializationTestSupport.h"
 
-#include "Runtime/Assets/AssetDatabaseLocator.h"
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Serialization/JsonAssetArchive.h"
 
@@ -58,17 +57,9 @@ ScopedTempDir EditorSerializationTest::MakeTempDir(std::string_view prefix) cons
     return ScopedTempDir(prefix);
 }
 
-EditorAssetDatabase& EditorSerializationTest::GetRegisteredEditorAssetDatabase()
+EditorAssetDatabase& EditorSerializationTest::GetSharedEditorAssetDatabase()
 {
     static EditorAssetDatabase db;
-    static bool registered = false;
-
-    if (!registered)
-    {
-        AssetDatabaseLocator::Register(&db);
-        registered = true;
-    }
-
     return db;
 }
 

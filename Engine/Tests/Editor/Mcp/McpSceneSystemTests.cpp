@@ -254,18 +254,15 @@ TEST_F(McpSceneSystemTests, CommandDeleteComponent_DispatchesDeleteForComponent)
 
 TEST_F(McpSceneSystemTests, CommandReparentSceneComponent_ChangesParent)
 {
-    const std::string goAId = CreateLegacyGameObject();
-    const std::string goBId = CreateLegacyGameObject();
-    ASSERT_FALSE(goAId.empty());
-    ASSERT_FALSE(goBId.empty());
+    const std::string goId = CreateLegacyGameObject();
+    ASSERT_FALSE(goId.empty());
 
-    // Add a PointLight to each GO — these are returned by GetSceneComponents()
-    auto addPointLight = [&](const std::string& goId) -> std::string
+    auto addSceneComponent = [&](const char* className) -> std::string
     {
         json data;
         data["sceneAssetId"] = GetActiveSceneAssetId().ToString();
         data["gameObjectId"] = goId;
-        data["className"]    = "PointLight";
+        data["className"]    = className;
         json env;
         env["type"] = "EditorCommand_CreateComponent";
         env["data"] = data;
@@ -276,14 +273,13 @@ TEST_F(McpSceneSystemTests, CommandReparentSceneComponent_ChangesParent)
         return json::parse(r[0]).value("objectId", std::string{});
     };
 
-    const std::string plAId = addPointLight(goAId);
-    const std::string plBId = addPointLight(goBId);
-    ASSERT_FALSE(plAId.empty());
-    ASSERT_FALSE(plBId.empty());
+    const std::string plId = addSceneComponent("PointLight");
+    const std::string slId = addSceneComponent("SpotLight");
+    ASSERT_FALSE(plId.empty());
+    ASSERT_FALSE(slId.empty());
 
-    // Reparent PointLight-A under PointLight-B
     auto dispatchRes = Dispatch("scene", "ReparentSceneComponent",
-                                {{"objectId", plAId}, {"newParentId", plBId}});
+                                {{"objectId", slId}, {"newParentId", plId}});
     EXPECT_TRUE(dispatchRes["ok"].get<bool>());
 
     std::vector<std::string> responses;
@@ -297,8 +293,22 @@ TEST_F(McpSceneSystemTests, CommandSetTransform_SetsPosition)
     const std::string goId = CreateLegacyGameObject();
     ASSERT_FALSE(goId.empty());
 
+    json cdata;
+    cdata["sceneAssetId"] = GetActiveSceneAssetId().ToString();
+    cdata["gameObjectId"] = goId;
+    cdata["className"]    = "PointLight";
+    json cenv;
+    cenv["type"] = "EditorCommand_CreateComponent";
+    cenv["data"] = cdata;
+    m_core->EnqueueSerializedCommand(cenv.dump());
+    std::vector<std::string> cr;
+    m_core->DrainCommandQueue(cr);
+    ASSERT_EQ(cr.size(), 1u);
+    const std::string plId = json::parse(cr[0]).value("objectId", std::string{});
+    ASSERT_FALSE(plId.empty());
+
     auto dispatchRes = Dispatch("scene", "SetTransform",
-                                {{"objectId", goId},
+                                {{"objectId", plId},
                                  {"position", json::array({1.0f, 2.0f, 3.0f})},
                                  {"scale",    json::array({1.0f, 1.0f, 1.0f})}});
     EXPECT_TRUE(dispatchRes["ok"].get<bool>());

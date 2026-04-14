@@ -94,8 +94,7 @@ static GameObject* FindGameObjectById(EditorCore& core, const std::string& objec
 
     for (GameObject* go : world->GetGameObjects())
     {
-        auto [assetId, objId] = core.GetIdsForObject(go);
-        if (objId == target)
+        if (go->GetObjectId() == target)
             return go;
     }
     return nullptr;
@@ -113,20 +112,17 @@ static DObject* FindObjectById(EditorCore& core, const std::string& objectIdStr)
 
     for (GameObject* go : world->GetGameObjects())
     {
-        auto [aId, oId] = core.GetIdsForObject(go);
-        if (oId == target)
+        if (go->GetObjectId() == target)
             return go;
 
         for (DComponent* comp : go->GetComponents())
         {
-            auto [ca, co] = core.GetIdsForObject(comp);
-            if (co == target)
+            if (comp->GetObjectId() == target)
                 return comp;
         }
         for (SceneComponent* sc : go->GetSceneComponents())
         {
-            auto [sa, so] = core.GetIdsForObject(sc);
-            if (so == target)
+            if (sc->GetObjectId() == target)
                 return sc;
         }
     }

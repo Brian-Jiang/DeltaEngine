@@ -40,7 +40,8 @@ class EditorSerializationTest : public ::testing::Test
 protected:
     ScopedTempDir MakeTempDir(std::string_view prefix) const;
 
-    static EditorAssetDatabase& GetRegisteredEditorAssetDatabase();
+    // Process-wide singleton for tests; does not call AssetDatabaseLocator::Register.
+    static EditorAssetDatabase& GetSharedEditorAssetDatabase();
     static void SaveAssetToFile(DPrimaryAsset* asset, const std::filesystem::path& filePath);
     static void SaveAssetWithBulkData(DPrimaryAsset* asset, const std::filesystem::path& filePath);
     static void SaveJsonToFile(const nlohmann::json& json, const std::filesystem::path& filePath);

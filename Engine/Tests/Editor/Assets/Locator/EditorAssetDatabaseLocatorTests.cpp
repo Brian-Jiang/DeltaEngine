@@ -6,6 +6,15 @@
 using namespace DeltaEngine;
 using namespace DeltaEngine::Tests;
 
+namespace
+{
+struct ScopedAssetDatabaseLocatorRegistration
+{
+    explicit ScopedAssetDatabaseLocatorRegistration(IAssetDatabase* db) { AssetDatabaseLocator::Register(db); }
+    ~ScopedAssetDatabaseLocatorRegistration() { AssetDatabaseLocator::Unregister(); }
+};
+}
+
 class EditorAssetDatabaseLocatorTests : public EditorSerializationTest
 {
 };
@@ -28,7 +37,8 @@ TEST_F(EditorAssetDatabaseLocatorTests, LocatorReturnsRegisteredEditorDatabase)
     const auto filePath = tempDir.Path() / "LocatorAsset.dasset.json";
     SaveAssetToFile(asset, filePath);
 
-    EditorAssetDatabase& database = GetRegisteredEditorAssetDatabase();
+    EditorAssetDatabase& database = GetSharedEditorAssetDatabase();
+    ScopedAssetDatabaseLocatorRegistration locatorScope(&database);
     database.ScanAssetsFolder(tempDir.Path());
 
     IAssetDatabase& locatorDatabase = AssetDatabaseLocator::Get();
