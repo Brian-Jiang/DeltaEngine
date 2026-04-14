@@ -1,6 +1,7 @@
 #include "Editor/Commands/EditorCommand_ReparentSceneComponent.h"
 #include "Editor/EditorCore.h"
 
+#include "Runtime/Core/DComponent.h"
 #include "Runtime/Core/SceneComponent.h"
 
 using namespace DeltaEngine;
@@ -36,6 +37,11 @@ bool EditorCommand_ReparentSceneComponent::ApplyReparent(EditorCommandContext& c
         if (!newParent)
         {
             DLOG(LogEditorCommand, ELogLevel::Error, "[Reparent] New parent {} not found", newParentId.ToString());
+            return false;
+        }
+        if (child->GetGameObject() != newParent->GetGameObject())
+        {
+            DLOG(LogEditorCommand, ELogLevel::Error, "[Reparent] Child and new parent must belong to the same GameObject");
             return false;
         }
     }

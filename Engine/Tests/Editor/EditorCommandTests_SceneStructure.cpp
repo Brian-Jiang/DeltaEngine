@@ -102,67 +102,65 @@ TEST_F(EditorCommandTests_SceneStructure, EditorCommand_DeleteGameObject_UndoRes
 
     ASSERT_TRUE(m_core->GetCommandManager().Execute(
         std::make_unique<EditorCommand_CreateGameObject>(sceneId, "GameObject"), ctx));
-    GameObject* parent = nullptr;
+    GameObject* go = nullptr;
     for (GameObject* g : m_core->GetWorld()->GetGameObjects())
     {
         if (g->GetName() == "New GameObject")
         {
-            parent = g;
+            go = g;
             break;
         }
     }
-    ASSERT_NE(parent, nullptr);
-    const ObjectId parentId = parent->GetObjectId();
+    ASSERT_NE(go, nullptr);
+    const ObjectId goId = go->GetObjectId();
     ASSERT_TRUE(m_core->GetCommandManager().Execute(
-        std::make_unique<EditorCommand_CreateComponent>(sceneId, parentId, "Camera"), ctx));
-    SceneComponent* parentRoot = parent->GetRootSceneComponent();
-    ASSERT_NE(parentRoot, nullptr);
+        std::make_unique<EditorCommand_CreateComponent>(sceneId, goId, "Camera"), ctx));
+    ASSERT_TRUE(m_core->GetCommandManager().Execute(
+        std::make_unique<EditorCommand_CreateComponent>(sceneId, goId, "Camera"), ctx));
+    ASSERT_TRUE(m_core->GetCommandManager().Execute(
+        std::make_unique<EditorCommand_CreateComponent>(sceneId, goId, "Camera"), ctx));
+
+    const std::vector<SceneComponent*>& scs = go->GetSceneComponents();
+    ASSERT_EQ(scs.size(), 3u);
+    SceneComponent* a = scs[1];
+    SceneComponent* b = scs[2];
+    const ObjectId aId = a->GetObjectId();
+    const ObjectId bId = b->GetObjectId();
 
     ASSERT_TRUE(m_core->GetCommandManager().Execute(
-        std::make_unique<EditorCommand_CreateGameObject>(sceneId, "GameObject"), ctx));
-    GameObject* child = nullptr;
-    for (GameObject* g : m_core->GetWorld()->GetGameObjects())
-    {
-        if (g != parent && g->GetName() == "New GameObject")
-        {
-            child = g;
-            break;
-        }
-    }
-    ASSERT_NE(child, nullptr);
-    ASSERT_TRUE(m_core->GetCommandManager().Execute(
-        std::make_unique<EditorCommand_CreateComponent>(sceneId, child->GetObjectId(), "Camera"), ctx));
-    SceneComponent* childRoot = child->GetRootSceneComponent();
-    ASSERT_NE(childRoot, nullptr);
+        std::make_unique<EditorCommand_ReparentSceneComponent>(sceneId, bId, aId), ctx));
 
-    const ObjectId childId = child->GetObjectId();
-    ASSERT_TRUE(m_core->GetCommandManager().Execute(
-        std::make_unique<EditorCommand_ReparentSceneComponent>(
-            sceneId, childRoot->GetObjectId(), parentRoot->GetObjectId()),
-        ctx));
-
-    const XMMATRIX childWorldBefore = childRoot->GetWorldTransform();
+    const XMMATRIX bWorldBefore = b->GetWorldTransform();
 
     ASSERT_TRUE(m_core->GetCommandManager().Execute(
-        std::make_unique<EditorCommand_DeleteGameObject>(sceneId, parentId), ctx));
+        std::make_unique<EditorCommand_DeleteGameObject>(sceneId, goId), ctx));
 
     ASSERT_TRUE(m_core->GetCommandManager().Undo(ctx));
 
-    GameObject* parentRestored = nullptr;
-    GameObject* childRestored = nullptr;
+    GameObject* goRestored = nullptr;
     for (GameObject* g : m_core->GetWorld()->GetGameObjects())
     {
-        if (g->GetObjectId() == parentId)
-            parentRestored = g;
-        if (g->GetObjectId() == childId)
-            childRestored = g;
+        if (g->GetObjectId() == goId)
+        {
+            goRestored = g;
+            break;
+        }
     }
-    ASSERT_NE(parentRestored, nullptr);
-    ASSERT_NE(childRestored, nullptr);
-    SceneComponent* cr = childRestored->GetRootSceneComponent();
-    ASSERT_NE(cr, nullptr);
-    EXPECT_EQ(cr->GetParent(), parentRestored->GetRootSceneComponent());
-    EXPECT_TRUE(Float4x4ApproxEqual(childWorldBefore, cr->GetWorldTransform()));
+    ASSERT_NE(goRestored, nullptr);
+    SceneComponent* bRestored = nullptr;
+    SceneComponent* aRestored = nullptr;
+    for (SceneComponent* sc : goRestored->GetSceneComponents())
+    {
+        if (sc->GetObjectId() == bId)
+            bRestored = sc;
+        if (sc->GetObjectId() == aId)
+            aRestored = sc;
+    }
+    ASSERT_NE(bRestored, nullptr);
+    ASSERT_NE(aRestored, nullptr);
+    EXPECT_EQ(bRestored->GetParent(), aRestored);
+    EXPECT_EQ(aRestored->GetParent(), goRestored->GetRootSceneComponent());
+    EXPECT_TRUE(Float4x4ApproxEqual(bWorldBefore, bRestored->GetWorldTransform()));
 }
 
 TEST_F(EditorCommandTests_SceneStructure, EditorCommand_CreateComponent_Execute_AttachesToGameObject)
@@ -226,6 +224,33 @@ TEST_F(EditorCommandTests_SceneStructure, EditorCommand_ReparentSceneComponent_M
 
     ASSERT_TRUE(m_core->GetCommandManager().Execute(
         std::make_unique<EditorCommand_CreateGameObject>(sceneId, "GameObject"), ctx));
+    GameObject* go = m_core->GetWorld()->GetGameObjects().back();
+    ASSERT_TRUE(m_core->GetCommandManager().Execute(
+        std::make_unique<EditorCommand_CreateComponent>(sceneId, go->GetObjectId(), "Camera"), ctx));
+    ASSERT_TRUE(m_core->GetCommandManager().Execute(
+        std::make_unique<EditorCommand_CreateComponent>(sceneId, go->GetObjectId(), "Camera"), ctx));
+    ASSERT_TRUE(m_core->GetCommandManager().Execute(
+        std::make_unique<EditorCommand_CreateComponent>(sceneId, go->GetObjectId(), "Camera"), ctx));
+
+    const std::vector<SceneComponent*>& scs = go->GetSceneComponents();
+    ASSERT_EQ(scs.size(), 3u);
+    SceneComponent* a = scs[1];
+    SceneComponent* b = scs[2];
+
+    ASSERT_TRUE(m_core->GetCommandManager().Execute(
+        std::make_unique<EditorCommand_ReparentSceneComponent>(
+            sceneId, b->GetObjectId(), a->GetObjectId()),
+        ctx));
+    EXPECT_EQ(b->GetParent(), a);
+}
+
+TEST_F(EditorCommandTests_SceneStructure, EditorCommand_ReparentSceneComponent_RejectsDifferentGameObjects)
+{
+    EditorCommandContext ctx{ *m_core };
+    const AssetId sceneId = GetActiveSceneAssetId();
+
+    ASSERT_TRUE(m_core->GetCommandManager().Execute(
+        std::make_unique<EditorCommand_CreateGameObject>(sceneId, "GameObject"), ctx));
     GameObject* goA = m_core->GetWorld()->GetGameObjects().back();
     ASSERT_TRUE(m_core->GetCommandManager().Execute(
         std::make_unique<EditorCommand_CreateComponent>(sceneId, goA->GetObjectId(), "Camera"), ctx));
@@ -240,11 +265,12 @@ TEST_F(EditorCommandTests_SceneStructure, EditorCommand_ReparentSceneComponent_M
     SceneComponent* rootB = goB->GetRootSceneComponent();
     ASSERT_NE(rootB, nullptr);
 
-    ASSERT_TRUE(m_core->GetCommandManager().Execute(
+    SceneComponent* parentBefore = rootB->GetParent();
+    EXPECT_FALSE(m_core->GetCommandManager().Execute(
         std::make_unique<EditorCommand_ReparentSceneComponent>(
             sceneId, rootB->GetObjectId(), rootA->GetObjectId()),
         ctx));
-    EXPECT_EQ(rootB->GetParent(), rootA);
+    EXPECT_EQ(rootB->GetParent(), parentBefore);
 }
 
 TEST_F(EditorCommandTests_SceneStructure, EditorCommand_RenameObject_UndoRestoresName)
