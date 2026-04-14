@@ -18,13 +18,6 @@
 using namespace DeltaEngine;
 
 DEFINE_LOG_CATEGORY(DeltaEngine::LogMcpRegistry);
-//static DLogCategory LogMcpRegistry{ "LogMcpRegistry", ELogLevel::Log };
-
-McpRegistry& McpRegistry::Get()
-{
-    static McpRegistry instance;
-    return instance;
-}
 
 void McpRegistry::RegisterOperation(std::string_view system,
                                     std::string_view operation,

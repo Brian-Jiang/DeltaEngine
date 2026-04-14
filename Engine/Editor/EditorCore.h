@@ -26,6 +26,7 @@ class DWorld;
 
 class EditorCommandManager;
 class EditorCore;
+class McpRegistry;
 class McpSocketServer;
 
 extern EditorCore* g_editorCore;
@@ -70,6 +71,8 @@ public:
     DELTAEDITOR_API void EnqueueSerializedCommand(std::string jsonPayload);
     DELTAEDITOR_API void DrainCommandQueue(std::vector<std::string>& outResponses);
 
+    DELTAEDITOR_API McpRegistry* GetMcpRegistry() { return m_mcpRegistry.get(); }
+
 private:
     std::unique_ptr<EditorAssetDatabase> m_assetDatabase;
     std::unique_ptr<EditorSelectionState> m_selectionState;
@@ -79,6 +82,7 @@ private:
 
     std::mutex m_commandQueueMutex;
     std::vector<std::string> m_pendingCommands;
+    std::unique_ptr<McpRegistry> m_mcpRegistry;
     bool m_headless = false;
 };
 

@@ -8,8 +8,9 @@ DELTA_ENGINE_NS_BEGIN
 
 static DLogCategory LogMcpRouter{ "LogMcpRouter", ELogLevel::Log };
 
-McpQueryRouter::McpQueryRouter(EditorCore& core)
+McpQueryRouter::McpQueryRouter(EditorCore& core, McpRegistry& registry)
     : m_core(core)
+    , m_registry(registry)
 {
 }
 
@@ -41,7 +42,7 @@ std::string McpQueryRouter::Route(const std::string& rawJson) const
                 }.dump();
             }
 
-            return McpRegistry::Get()
+            return m_registry
                 .Dispatch(system, command, m_core, params)
                 .dump();
         }
@@ -63,7 +64,7 @@ std::string McpQueryRouter::Route(const std::string& rawJson) const
             }.dump();
         }
 
-        return McpRegistry::Get()
+        return m_registry
             .Dispatch(system, operation, m_core, params)
             .dump();
     }

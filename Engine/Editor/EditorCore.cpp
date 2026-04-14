@@ -80,8 +80,9 @@ void EditorCore::Initialize(EngineMain& engine, bool headless, std::filesystem::
 
     if (!m_headless)
     {
-        McpRegistry::Get().InitializeAll(*this);
-        auto router = std::make_shared<McpQueryRouter>(*this);
+        m_mcpRegistry = std::make_unique<McpRegistry>();
+        m_mcpRegistry->InitializeAll(*this);
+        auto router = std::make_shared<McpQueryRouter>(*this, *m_mcpRegistry);
         g_mcpServer = std::make_unique<McpSocketServer>(
             [router](const std::string& json) { router->Route(json); },
             [router](const std::string& json) -> std::string { return router->Route(json); });
@@ -92,6 +93,7 @@ void EditorCore::Initialize(EngineMain& engine, bool headless, std::filesystem::
 void EditorCore::Shutdown()
 {
     g_mcpServer.reset();
+    m_mcpRegistry.reset();
     if (m_commandManager)
     {
         m_commandManager->Clear();

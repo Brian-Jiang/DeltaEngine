@@ -1,6 +1,7 @@
 #include "McpMetaSystem.h"
 
 #include "Commands/EditorCommandRegistry.h"
+#include "Editor/EditorCore.h"
 #include "Mcp/McpRegistry.h"
 #include "Runtime/Logging/LogCategory.h"
 #include "Runtime/IO/IOManager.h"
@@ -80,13 +81,15 @@ void McpMetaSystem::EnsureSchemasLoaded()
          m_systemSchemas.size(), m_commandSchemas.size());
 }
 
-nlohmann::json McpMetaSystem::QueryListOperations(EditorCore&, const nlohmann::json&)
+nlohmann::json McpMetaSystem::QueryListOperations(EditorCore& c, const nlohmann::json&)
 {
-    auto& registry = McpRegistry::Get();
+    McpRegistry* reg = c.GetMcpRegistry();
+    if (!reg)
+        return {{"ok", false}, {"error", "MCP registry not initialized"}};
 
     nlohmann::json systems = nlohmann::json::object();
-    for (auto& sysName : registry.GetSystemNames())
-        systems[sysName] = registry.GetOperationNames(sysName);
+    for (auto& sysName : reg->GetSystemNames())
+        systems[sysName] = reg->GetOperationNames(sysName);
 
     auto commandNames = EditorCommandRegistry::Get().GetCommandNames();
 
