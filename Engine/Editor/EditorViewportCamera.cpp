@@ -2,11 +2,33 @@
 
 #include "Runtime/IO/IOManager.h"
 
+#include <DirectXMath.h>
+
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
 
 using namespace DeltaEngine;
+using namespace DirectX;
+
+CameraCB EditorViewportCamera::BuildCameraCB(float w, float h) const
+{
+    XMVECTOR rot  = XMLoadFloat4(&rotation);
+    XMMATRIX rotM = XMMatrixRotationQuaternion(rot);
+    XMVECTOR fwd  = XMVector3Normalize(rotM.r[2]);
+    XMVECTOR up   = XMVector3Normalize(rotM.r[1]);
+    XMVECTOR pos  = XMLoadFloat3(&position);
+
+    CameraCB cb{};
+    cb.viewMatrix       = XMMatrixLookToLH(pos, fwd, up);
+    cb.projectionMatrix = XMMatrixPerspectiveFovLH(
+        XMConvertToRadians(fov),
+        GetAspectRatio(w, h),
+        nearPlane,
+        farPlane);
+    cb.position = pos;
+    return cb;
+}
 
 static std::filesystem::path GetCameraStatePath()
 {

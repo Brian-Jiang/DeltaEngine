@@ -19,7 +19,7 @@ private:
     nlohmann::json QueryCamera(EditorCore&, const nlohmann::json& params);
     nlohmann::json QueryRenderSettings(EditorCore&, const nlohmann::json& params);
     nlohmann::json QueryVisibleObjects(EditorCore&, const nlohmann::json& params);
-    nlohmann::json QueryRaycast(EditorCore&, const nlohmann::json& params);
+    nlohmann::json CommandSetViewportCamera(EditorCore&, const nlohmann::json& params);
 };
 
 DELTA_ENGINE_NS_END

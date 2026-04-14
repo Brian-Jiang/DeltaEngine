@@ -17,6 +17,8 @@ public:
 
 private:
     nlohmann::json QueryStack(EditorCore&, const nlohmann::json& params);
+    nlohmann::json CommandUndo(EditorCore&, const nlohmann::json& params);
+    nlohmann::json CommandRedo(EditorCore&, const nlohmann::json& params);
 };
 
 DELTA_ENGINE_NS_END

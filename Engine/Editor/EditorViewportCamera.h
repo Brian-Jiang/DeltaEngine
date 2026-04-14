@@ -2,6 +2,8 @@
 
 #include "EngineIncludes.h"
 
+#include "Runtime/Graphics/Structures/Camera.h"
+
 #include <DirectXMath.h>
 #include <vector>
 
@@ -18,6 +20,8 @@ struct EditorViewportCamera
     DirectX::XMFLOAT4 rotation = { 0.f, 0.f, 0.f, 1.f }; // unit quaternion (x,y,z,w)
 
     float GetAspectRatio(float w, float h) const { return (h > 0.f) ? w / h : 1.f; }
+
+    CameraCB BuildCameraCB(float w, float h) const;
 };
 
 /// Persists all viewport camera states to Intermediate/EditorState/viewport_cameras.json.

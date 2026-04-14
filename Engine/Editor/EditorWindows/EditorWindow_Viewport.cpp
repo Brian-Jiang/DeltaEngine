@@ -35,30 +35,6 @@ using namespace DirectX;
 static int s_nextViewportIndex = 0;
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/// Builds a CameraCB from an EditorViewportCamera for a given render size.
-static CameraCB BuildCameraCB(const EditorViewportCamera& cam, float w, float h)
-{
-    XMVECTOR rot  = XMLoadFloat4(&cam.rotation);
-    XMMATRIX rotM = XMMatrixRotationQuaternion(rot);
-    XMVECTOR fwd  = XMVector3Normalize(rotM.r[2]);
-    XMVECTOR up   = XMVector3Normalize(rotM.r[1]);
-    XMVECTOR pos  = XMLoadFloat3(&cam.position);
-
-    CameraCB cb{};
-    cb.viewMatrix       = XMMatrixLookToLH(pos, fwd, up);
-    cb.projectionMatrix = XMMatrixPerspectiveFovLH(
-        XMConvertToRadians(cam.fov),
-        cam.GetAspectRatio(w, h),
-        cam.nearPlane,
-        cam.farPlane);
-    cb.position = pos;
-    return cb;
-}
-
-// ---------------------------------------------------------------------------
 // Construction / destruction
 // ---------------------------------------------------------------------------
 
@@ -85,6 +61,13 @@ EditorWindow_Viewport::~EditorWindow_Viewport()
     SaveViewportCameras(cameras);
 
     --s_nextViewportIndex;
+}
+
+void EditorWindow_Viewport::SetPreviewCamera(const EditorViewportCamera& cam)
+{
+    m_previewCamera = cam;
+    m_settingsDirty = true;
+    m_saveTimer     = 0.f;
 }
 
 // ---------------------------------------------------------------------------
@@ -286,7 +269,7 @@ void EditorWindow_Viewport::Render(bool& open)
     // --- Push preview camera override for the next frame ---
     if (texW > 0 && texH > 0)
     {
-        CameraCB cb = BuildCameraCB(m_previewCamera, texW, texH);
+        CameraCB cb = m_previewCamera.BuildCameraCB(texW, texH);
         g_editor->SetPreviewCameraOverride(cb);
     }
 
@@ -431,7 +414,7 @@ void EditorWindow_Viewport::DrawGizmo(const ImVec2& imageMin, const ImVec2& imag
     ImGuizmo::SetRect(imageMin.x, imageMin.y, imageSize.x, imageSize.y);
 
     // Build view + projection using the same helper that feeds the runtime camera.
-    const CameraCB cb = BuildCameraCB(m_previewCamera, texW, texH);
+    const CameraCB cb = m_previewCamera.BuildCameraCB(texW, texH);
     XMFLOAT4X4 view, proj;
     XMStoreFloat4x4(&view, cb.viewMatrix);
     XMStoreFloat4x4(&proj, cb.projectionMatrix);

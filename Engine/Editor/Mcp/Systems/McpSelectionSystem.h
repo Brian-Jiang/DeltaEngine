@@ -17,6 +17,7 @@ public:
 
 private:
     nlohmann::json QueryCurrent(EditorCore&, const nlohmann::json& params);
+    nlohmann::json CommandSelectObject(EditorCore&, const nlohmann::json& params);
 };
 
 DELTA_ENGINE_NS_END

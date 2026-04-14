@@ -18,6 +18,8 @@ void McpSelectionSystem::RegisterTools(McpRegistry& registry)
 {
     registry.RegisterOperation("selection", "current",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryCurrent(c, p); });
+    registry.RegisterOperation("selection", "SelectObject",
+        [this](EditorCore& c, const nlohmann::json& p) { return CommandSelectObject(c, p); });
 }
 
 static DObject* FindObjectByObjectId(EditorCore& core, const ObjectId& id)
@@ -105,4 +107,97 @@ nlohmann::json McpSelectionSystem::QueryCurrent(EditorCore& core, const nlohmann
         {"components", std::move(components)},
         {"assets", std::move(assets)}
     };
+}
+
+nlohmann::json McpSelectionSystem::CommandSelectObject(EditorCore& core, const nlohmann::json& params)
+{
+    auto* sel = core.GetSelectionState();
+    if (!sel)
+        return {{"ok", false}, {"error", "no selection state"}};
+
+    if (!params.contains("object_ids") || !params["object_ids"].is_array())
+        return {{"ok", false}, {"error", "missing or invalid object_ids"}};
+
+    const bool addToSelection = params.value("add_to_selection", false);
+    const auto& idsJson = params["object_ids"];
+
+    if (idsJson.empty())
+    {
+        if (!addToSelection)
+        {
+            sel->ClearGameObjectSelection();
+            sel->ClearComponentSelection();
+            sel->ClearAssetSelection();
+        }
+        return {{"ok", true}};
+    }
+
+    enum class Kind : uint8_t { GameObject, Component, Asset };
+    struct Resolved
+    {
+        Kind kind;
+        ObjectId id;
+    };
+    std::vector<Resolved> resolved;
+    nlohmann::json unknown = nlohmann::json::array();
+
+    for (const auto& el : idsJson)
+    {
+        if (!el.is_string())
+        {
+            unknown.push_back(el.dump());
+            continue;
+        }
+        const std::string s = el.get<std::string>();
+        const ObjectId oid = DeltaEngine::UUID::FromString(s);
+        if (oid.IsNull())
+        {
+            unknown.push_back(s);
+            continue;
+        }
+
+        if (DObject* obj = FindObjectByObjectId(core, oid))
+        {
+            if (dynamic_cast<GameObject*>(obj))
+                resolved.push_back({Kind::GameObject, oid});
+            else if (dynamic_cast<DComponent*>(obj))
+                resolved.push_back({Kind::Component, oid});
+            else
+                unknown.push_back(s);
+            continue;
+        }
+
+        if (auto* adb = core.GetAssetDatabase())
+        {
+            if (adb->GetAssetHeader(oid))
+            {
+                resolved.push_back({Kind::Asset, oid});
+                continue;
+            }
+        }
+
+        unknown.push_back(s);
+    }
+
+    if (!addToSelection)
+    {
+        sel->ClearGameObjectSelection();
+        sel->ClearComponentSelection();
+        sel->ClearAssetSelection();
+    }
+
+    for (const Resolved& r : resolved)
+    {
+        switch (r.kind)
+        {
+        case Kind::GameObject: sel->AddSelectedGameObject(r.id); break;
+        case Kind::Component: sel->AddSelectedComponent(r.id); break;
+        case Kind::Asset: sel->AddSelectedAsset(r.id); break;
+        }
+    }
+
+    nlohmann::json out{{"ok", true}, {"count", resolved.size()}};
+    if (!unknown.empty())
+        out["unknown_object_ids"] = std::move(unknown);
+    return out;
 }

@@ -1,6 +1,7 @@
 #include "McpUndoSystem.h"
 
 #include "EditorCore.h"
+#include "Commands/EditorCommandContext.h"
 #include "Commands/EditorCommandManager.h"
 #include "Mcp/McpRegistry.h"
 
@@ -10,6 +11,10 @@ void McpUndoSystem::RegisterTools(McpRegistry& registry)
 {
     registry.RegisterOperation("undo_history", "stack",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryStack(c, p); });
+    registry.RegisterOperation("undo_history", "Undo",
+        [this](EditorCore& c, const nlohmann::json& p) { return CommandUndo(c, p); });
+    registry.RegisterOperation("undo_history", "Redo",
+        [this](EditorCore& c, const nlohmann::json& p) { return CommandRedo(c, p); });
 }
 
 static nlohmann::json SerializeEntry(const EditorCommand& cmd, bool includeData)
@@ -45,6 +50,80 @@ nlohmann::json McpUndoSystem::QueryStack(EditorCore& core, const nlohmann::json&
         {"ok", true},
         {"undo_stack", std::move(undoArr)},
         {"redo_stack", std::move(redoArr)},
+        {"can_undo", mgr.CanUndo()},
+        {"can_redo", mgr.CanRedo()}
+    };
+}
+
+nlohmann::json McpUndoSystem::CommandUndo(EditorCore& core, const nlohmann::json& params)
+{
+    int steps = params.value("steps", 1);
+    if (steps < 1)
+        return {{"ok", false}, {"error", "steps must be >= 1"}};
+
+    auto& mgr = core.GetCommandManager();
+    if (!mgr.CanUndo())
+        return {
+            {"ok", false},
+            {"error", "nothing to undo"},
+            {"can_undo", false},
+            {"can_redo", mgr.CanRedo()}
+        };
+
+    EditorCommandContext ctx{core};
+    int done = 0;
+    for (; done < steps && mgr.CanUndo(); ++done)
+    {
+        if (!mgr.Undo(ctx))
+            return {
+                {"ok", false},
+                {"error", "Undo failed"},
+                {"steps_done", done},
+                {"can_undo", mgr.CanUndo()},
+                {"can_redo", mgr.CanRedo()}
+            };
+    }
+
+    return {
+        {"ok", true},
+        {"steps_done", done},
+        {"can_undo", mgr.CanUndo()},
+        {"can_redo", mgr.CanRedo()}
+    };
+}
+
+nlohmann::json McpUndoSystem::CommandRedo(EditorCore& core, const nlohmann::json& params)
+{
+    int steps = params.value("steps", 1);
+    if (steps < 1)
+        return {{"ok", false}, {"error", "steps must be >= 1"}};
+
+    auto& mgr = core.GetCommandManager();
+    if (!mgr.CanRedo())
+        return {
+            {"ok", false},
+            {"error", "nothing to redo"},
+            {"can_undo", mgr.CanUndo()},
+            {"can_redo", false}
+        };
+
+    EditorCommandContext ctx{core};
+    int done = 0;
+    for (; done < steps && mgr.CanRedo(); ++done)
+    {
+        if (!mgr.Redo(ctx))
+            return {
+                {"ok", false},
+                {"error", "Redo failed"},
+                {"steps_done", done},
+                {"can_undo", mgr.CanUndo()},
+                {"can_redo", mgr.CanRedo()}
+            };
+    }
+
+    return {
+        {"ok", true},
+        {"steps_done", done},
         {"can_undo", mgr.CanUndo()},
         {"can_redo", mgr.CanRedo()}
     };

@@ -34,6 +34,9 @@ public:
     /// ImGui texture id for the scene color target shown in the viewport.
     void SetSceneTexture(ImTextureID textureId) { m_sceneTextureId = textureId; }
 
+    const EditorViewportCamera& GetPreviewCamera() const { return m_previewCamera; }
+    void SetPreviewCamera(const EditorViewportCamera& cam);
+
 private:
     void UpdateSceneRenderSize(int renderW, int renderH);
     void UpdateViewportFlyMode(bool viewportImageHovered);
