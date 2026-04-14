@@ -1,8 +1,5 @@
 #include "Assets/DPrimaryAsset.h"
 
-#include "Assets/PA_DScene.h"
-#include "Core/DScene.h"
-#include "Core/GameObject.h"
 #include "Reflection/DClass.h"
 #include "Reflection/DObjectReferenceTraversal.h"
 #include "Reflection/DProperty.h"
@@ -22,28 +19,16 @@ void DPrimaryAsset::AddObject(DObject* obj)
     MarkDirty();
 }
 
-void DPrimaryAsset::RemoveObject(const ObjectId& id)
+void DPrimaryAsset::RemoveObject(const ObjectId &id)
 {
-    auto it = std::find_if(m_objects.begin(), m_objects.end(),
-        [&](const auto& obj) { return obj->GetObjectId() == id; });
-    if (it == m_objects.end())
-        return;
-
-    DObject* obj = *it;
-    if (!obj)
-        return;
-    if (auto* go = dynamic_cast<GameObject*>(obj))
+    auto it =
+        std::find_if(m_objects.begin(), m_objects.end(), [&](const auto &obj) { return obj->GetObjectId() == id; });
+    if (it != m_objects.end())
     {
-        if (auto* paScene = dynamic_cast<PA_DScene*>(this))
-        {
-            if (DScene* scene = paScene->GetScene())
-                scene->RemoveGameObject(go);
-        }
+        (*it)->SetOwningAsset(nullptr);
+        m_objects.erase(it);
+        MarkDirty();
     }
-
-    obj->SetOwningAsset(nullptr);
-    m_objects.erase(it);
-    MarkDirty();
 }
 
 DObject* DPrimaryAsset::FindObject(const ObjectId& id) const
@@ -98,25 +83,6 @@ void DPrimaryAsset::SerializeBody(AssetArchive& ar)
     {
         DeserializeBody(ar);
         return;
-    }
-
-    if (auto* paScene = dynamic_cast<PA_DScene*>(this))
-    {
-        if (DScene* scene = paScene->GetScene())
-        {
-            for (GameObject* go : scene->GetGameObjects())
-            {
-                if (!go)
-                    continue;
-                if (go->HasOwningAsset())
-                    continue;
-                auto ref = std::find(m_objects.begin(), m_objects.end(), go);
-                if (ref == m_objects.end())
-                    AddObject(go);
-                else
-                    go->SetOwningAsset(this);
-            }
-        }
     }
 
     ar.BeginArray("objects", m_objects.size());

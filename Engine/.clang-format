@@ -4,14 +4,10 @@ TabWidth: 4
 UseTab: Never
 ColumnLimit: 120
 BreakBeforeBraces: Allman        # opening brace on new line (Allman style)
-AllowShortFunctionsOnASingleLine:
-  Empty: true
-  Inline: true
-  Other: false
+AllowShortFunctionsOnASingleLine: Inline
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
 SpaceBeforeParens: ControlStatements
-Cpp11BracedListStyle: FunctionCall
-SortIncludes:
-  Enabled: false
+Cpp11BracedListStyle: true
+SortIncludes: false
 LineEnding: CRLF
