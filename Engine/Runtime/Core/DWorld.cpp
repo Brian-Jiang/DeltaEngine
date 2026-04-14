@@ -8,6 +8,7 @@
 #include "Core/SceneComponent.h"
 #include "Core/Camera.h"
 #include "Core/DScene.h"
+#include "Core/Skybox.h"
 #include "Runtime/Core/GameObject.h"
 #include "Assets/DPrimaryAsset.h"
 #include "Graphics/Renderer/Renderer.h"
@@ -150,6 +151,10 @@ void DWorld::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const
             stack.push(child);
         }
     }
+
+    // Skybox draws last: LESS_EQUAL depth test lets it fill pixels the scene didn't touch.
+    if (m_skybox)
+        m_skybox->GatherDrawCalls(context);
 }
 
 void DeltaEngine::DWorld::PreTick(float deltaTime)
@@ -255,9 +260,20 @@ void DWorld::AddGameObjectFromScene(GameObject* go)
 void DWorld::SetActiveScene(DScene* scene)
 {
     m_activeScene = scene;
+    m_skybox = scene ? scene->GetSkybox() : nullptr;
 }
 
 DScene* DWorld::GetActiveScene() const
 {
     return m_activeScene;
+}
+
+void DWorld::SetSkybox(Skybox* skybox)
+{
+    m_skybox = skybox;
+}
+
+Skybox* DWorld::GetSkybox() const
+{
+    return m_skybox;
 }

@@ -16,6 +16,7 @@ class SceneComponent;
 class GameObject;
 class DClass;
 class DScene;
+class Skybox;
 struct DXGraphicsContext;
 
 DCLASS()
@@ -78,6 +79,9 @@ public:
     DFUNCTION()
     DELTAENGINE_API DScene* GetActiveScene() const;
 
+    DELTAENGINE_API void SetSkybox(Skybox* skybox);
+    DELTAENGINE_API Skybox* GetSkybox() const;
+
 private:
     SceneComponent* m_rootSceneComponent;
     std::vector<GameObject*> m_gameObjects;
@@ -85,6 +89,9 @@ private:
 
     /// The scene that editor scene-object operations target.
     DScene* m_activeScene = nullptr;
+
+    /// Runtime skybox pointer, synced from the active scene.
+    Skybox* m_skybox = nullptr;
 };
 
 DELTA_ENGINE_NS_END
