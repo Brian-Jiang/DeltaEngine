@@ -412,9 +412,14 @@ std::shared_ptr<DirectX12Texture> CommandList::LoadTexture(DTexture* texture)
     auto fileName = texture->GetSourcePath();
     std::lock_guard<std::mutex> lock(ms_TextureCacheMutex);
     auto iter = ms_TextureCache.find(fileName);
-    if (iter != ms_TextureCache.end()) {
+    if (iter != ms_TextureCache.end())
+    {
         dx12texture = m_Device.CreateTexture(iter->second);
-    } else {
+        if (texture->IsCubemap())
+            dx12texture->CreateCubemapSRV();
+    }
+    else
+    {
         TexMetadata metadata = *texture->GetMetadata();
         std::shared_ptr<DirectX::ScratchImage> scratchImage = texture->GetScratchImage();
 
@@ -453,6 +458,9 @@ std::shared_ptr<DirectX12Texture> CommandList::LoadTexture(DTexture* texture)
 
         dx12texture = m_Device.CreateTexture(textureResource);
         dx12texture->SetName(fileName);
+
+        if (texture->IsCubemap())
+            dx12texture->CreateCubemapSRV();
 
         // Update the global state tracker.
         ResourceStateTracker::AddGlobalResourceState(textureResource.Get(), D3D12_RESOURCE_STATE_COMMON);
