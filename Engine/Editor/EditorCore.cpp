@@ -78,10 +78,11 @@ void EditorCore::Initialize(EngineMain& engine, bool headless, std::filesystem::
     m_selectionState = std::make_unique<EditorSelectionState>();
     m_commandManager = std::make_unique<EditorCommandManager>();
 
+    m_mcpRegistry = std::make_unique<McpRegistry>();
+    m_mcpRegistry->InitializeAll(*this);
+
     if (!m_headless)
     {
-        m_mcpRegistry = std::make_unique<McpRegistry>();
-        m_mcpRegistry->InitializeAll(*this);
         auto router = std::make_shared<McpQueryRouter>(*this, *m_mcpRegistry);
         g_mcpServer = std::make_unique<McpSocketServer>(
             [router](const std::string& json) { router->Route(json); },

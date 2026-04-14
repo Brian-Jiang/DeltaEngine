@@ -17,6 +17,15 @@ set(DELTA_EDITOR_TEST_SOURCES
     Serialization/References/CrossAssetReferenceTests.cpp
     Serialization/BulkData/BulkDataRoundTripTests.cpp
     Serialization/Snapshot/PartialSnapshotTests.cpp
+    Mcp/McpSceneSystemTests.cpp
+    Mcp/McpAssetsSystemTests.cpp
+    Mcp/McpSelectionSystemTests.cpp
+    Mcp/McpUndoSystemTests.cpp
+    Mcp/McpViewportSystemTests.cpp
+    Mcp/McpCommonSystemTests.cpp
+    Mcp/McpReflectionSystemTests.cpp
+    Mcp/McpProjectSystemTests.cpp
+    Mcp/McpMetaSystemTests.cpp
 )
 
 add_executable(DeltaEditorTests
