@@ -176,6 +176,11 @@ std::wstring DTexture::GetSourcePath() const
     return m_sourcePath;
 }
 
+bool DTexture::IsCubemap() const
+{
+    return m_metadata && m_metadata->IsCubemap();
+}
+
 DTexture* DTexture::LoadFromFile(const std::wstring& filePath, bool sRGB)
 {
     DTexture* texture = CreateDObject<DTexture>();

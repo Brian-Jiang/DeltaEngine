@@ -41,6 +41,8 @@ public:
     
     /// Returns the loaded texture format.
     DELTAENGINE_API DXGI_FORMAT GetFormat() const;
+    /// Returns true when the loaded DDS has the cubemap misc flag set.
+    DELTAENGINE_API bool IsCubemap() const;
 
     /// Returns the loaded DirectXTex metadata.
     inline std::shared_ptr<DirectX::TexMetadata> GetMetadata() const { return m_metadata; }
