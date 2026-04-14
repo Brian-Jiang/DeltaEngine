@@ -6,5 +6,22 @@
       "description": "Currently selected object IDs and their classes",
       "params": {}
     }
+  },
+  "commands": {
+    "SelectObject": {
+      "description": "Change the editor selection",
+      "undoable": false,
+      "params": {
+        "object_ids": {
+          "type": "array",
+          "required": true
+        },
+        "add_to_selection": {
+          "type": "bool",
+          "default": false,
+          "description": "If true, adds the specified objects to the current selection instead of replacing it"
+        }
+      }
+    }
   }
 }

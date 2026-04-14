@@ -14,5 +14,17 @@
       "description": "Current build configuration, target platform, and status",
       "params": {}
     }
+  },
+  "commands": {
+    "LoadScene": {
+      "description": "Load a scene asset into the editor",
+      "undoable": false,
+      "params": {
+        "asset_id": {
+          "type": "string",
+          "required": true
+        }
+      }
+    }
   }
 }

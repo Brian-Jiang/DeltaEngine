@@ -10,6 +10,7 @@
 #include "Mcp/Systems/McpReflectionSystem.h"
 #include "Mcp/Systems/McpUndoSystem.h"
 #include "Mcp/Systems/McpProjectSystem.h"
+#include "Mcp/Systems/McpCommonSystem.h"
 #include "Mcp/Systems/McpMetaSystem.h"
 
 #include <cassert>
@@ -48,6 +49,7 @@ void McpRegistry::InitializeAll(EditorCore& core)
     m_systems.push_back(std::make_unique<McpReflectionSystem>());
     m_systems.push_back(std::make_unique<McpUndoSystem>());
     m_systems.push_back(std::make_unique<McpProjectSystem>());
+    m_systems.push_back(std::make_unique<McpCommonSystem>());
     m_systems.push_back(std::make_unique<McpMetaSystem>());
 
     for (auto& system : m_systems)

@@ -5,6 +5,7 @@
 #include "Editor/Commands/EditorCommandContext.h"
 #include "Editor/Commands/EditorCommandManager.h"
 #include "Editor/Commands/EditorCommandRegistry.h"
+#include "Editor/Commands/EditorAuxiliarySceneCommands.h"
 #include "Editor/EditorSelectionState.h"
 #include "Runtime/Assets/AssetDatabaseLocator.h"
 #include "Runtime/Assets/DPrimaryAsset.h"
@@ -19,6 +20,7 @@
 #include <nlohmann/json.hpp>
 
 #include <cstdio>
+#include <memory>
 
 using namespace DeltaEngine;
 
@@ -242,6 +244,22 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
         {
             DLOG(LogEditorCommand, ELogLevel::Error, "[DrainCommandQueue] Missing 'type' field");
             outResponses.push_back(nlohmann::json{{"ok", false}, {"error", "Missing 'type' field"}}.dump());
+            continue;
+        }
+
+        if (type == "auxiliary")
+        {
+            std::string name = envelope.value("name", "");
+            if (name == "SaveDirtyAssets")
+            {
+                m_commandManager->ExecuteAuxiliary(
+                    std::make_unique<EditorAuxiliaryCommand_SaveScene>(), ctx);
+                outResponses.push_back(
+                    nlohmann::json{{"ok", true}, {"commandType", "SaveDirtyAssets"}}.dump());
+                continue;
+            }
+            outResponses.push_back(
+                nlohmann::json{{"ok", false}, {"error", "Unknown auxiliary: " + name}}.dump());
             continue;
         }
 
