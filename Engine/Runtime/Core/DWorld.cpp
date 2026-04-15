@@ -174,6 +174,8 @@ void DeltaEngine::DWorld::Clear()
     }
 
     m_gameObjects.clear();
+
+    GetReflectionRegistry().DestroyObject(m_skybox);
 }
 
 void DWorld::DestroyAllWorldGameObjects()
