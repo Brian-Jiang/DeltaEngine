@@ -1,0 +1,26 @@
+{
+  "header": {
+    "assetId": "8edb0a7a-3ac1-43e3-84d2-efc8d68a9b79",
+    "bulkDataMap": {
+      "0": {
+        "file": "SkyboxTexture_Bulk0.bin",
+        "size": 4202560
+      }
+    },
+    "className": "PA_Texture",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DTexture",
+      "_objectId": "d208335f-fca1-4bec-adc9-7bbd95cf6fdf",
+      "m_bulkData": {
+        "_bulk": 0,
+        "size": 4202560
+      },
+      "m_sRGB": false,
+      "m_sourcePath": "../../../Engine/EngineSourceAssets/SkyboxCubemap.dds"
+    }
+  ]
+}

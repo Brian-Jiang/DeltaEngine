@@ -4,6 +4,7 @@
 #include "Core/DMesh.h"
 #include "Core/DShader.h"
 #include "Core/DTexture.h"
+#include "Core/Skybox.h"
 #include "Core/UUID.h"
 
 using namespace DeltaEngine;
@@ -83,4 +84,14 @@ PA_StaticMesh* PA_StaticMesh::Create(DMesh* mesh)
 DMesh* PA_StaticMesh::GetStaticMesh() const
 {
     return FindTypedObject<DMesh>(this);
+}
+
+PA_Skybox* PA_Skybox::Create(Skybox* skybox)
+{
+    return CreateTypedPrimaryAsset<PA_Skybox>(skybox, "PA_Skybox");
+}
+
+Skybox* PA_Skybox::GetSkybox() const
+{
+    return FindTypedObject<Skybox>(this);
 }

@@ -93,6 +93,9 @@ void DeltaEngine::DWorld::InitRenderers(std::shared_ptr<DXGraphicsContext> conte
             stack.push(child);
         }
     }
+
+    if (m_skybox)
+        m_skybox->Initialize();
 }
 
 void DWorld::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const

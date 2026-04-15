@@ -66,6 +66,8 @@ public:
     DELTAEDITOR_API std::pair<AssetId, ObjectId> GetIdsForObject(DObject* obj);
     DELTAEDITOR_API void NotifyObjectDestroyed(const ObjectId& objectId);
 
+    DELTAEDITOR_API void CreateAssets();
+
     // Serialized command dispatch queue for headless / MCP callers.
     // JSON envelope: { "type": "EditorCommand_SetProperty", "data": { ... } }
     DELTAEDITOR_API void EnqueueSerializedCommand(std::string jsonPayload);

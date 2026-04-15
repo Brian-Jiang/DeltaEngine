@@ -17,6 +17,11 @@
 #include "Editor/Mcp/McpQueryRouter.h"
 #include "Editor/Mcp/McpRegistry.h"
 #include "Editor/McpSocketServer.h"
+#include "Runtime/Assets/PA_CommonAssets.h"
+#include "Runtime/Core/DTexture.h"
+#include "Runtime/Core/DShader.h"
+#include "Runtime/Core/DMaterial.h"
+#include "Runtime/Core/Skybox.h"
 #include <nlohmann/json.hpp>
 
 #include <cstdio>
@@ -47,6 +52,8 @@ void EditorCore::Initialize(EngineMain& engine, bool headless, std::filesystem::
 
     m_assetDatabase = std::make_unique<EditorAssetDatabase>();
     AssetDatabaseLocator::Register(m_assetDatabase.get());
+
+    CreateAssets();
 
     if (!assetRootOverride.empty())
     {
@@ -338,9 +345,32 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
         DLOG(LogEditorCore, ELogLevel::VeryVerbose, "Drained {} commands", outResponses.size());
 }
 
-// void EditorMain::CreateAssets()
-//{
-//     // Default scene
+ void EditorCore::CreateAssets()
+ {
+     //const std::filesystem::path skyboxTexturePath = IOManager::GetEngineImportedAssetFullPath("SkyboxTexture");
+     //const std::filesystem::path skyboxTextureSourcePath = IOManager::GetEngineSourceAssetFullPath(L"SkyboxCubemap.dds");
+     //PA_Texture *skyboxTexture = PA_Texture::Create(DTexture::LoadFromFile(skyboxTextureSourcePath));
+     //m_assetDatabase->CreateAsset(skyboxTexturePath, skyboxTexture);
+
+     //const std::filesystem::path skyboxMaterialPath = IOManager::GetEngineImportedAssetFullPath("SkyboxMaterial");
+     //const std::filesystem::path skyboxShaderPath = IOManager::GetEngineImportedAssetFullPath("SkyboxShader");
+     //DShader *shader = CreateDObject<DShader>();
+     //shader->Initialize(L"Skybox.hlsl", L"VSMain", L"PSMain", L"vs_6_0", L"ps_6_0");
+     //PA_Shader *shaderAsset = PA_Shader::Create(shader);
+     //m_assetDatabase->CreateAsset(skyboxShaderPath, shaderAsset);
+
+     //DMaterial* material = CreateDObject<DMaterial>();
+     //material->Initialize(shader);
+     //
+     //PA_Material *materialAsset = PA_Material::Create(material);
+     //m_assetDatabase->CreateAsset(skyboxMaterialPath, materialAsset);
+
+     //const std::filesystem::path skyboxAssetPath = IOManager::GetEngineImportedAssetFullPath("DefaultSkybox");
+     //Skybox *skybox = CreateDObject<Skybox>();
+     //PA_Skybox *skyboxAsset = PA_Skybox::Create(skybox);
+     //m_assetDatabase->CreateAsset(skyboxAssetPath, skyboxAsset);
+
+     //     // Default scene
 //     const std::filesystem::path scenePath = IOManager::GetEngineImportedAssetFullPath("DefaultScene");
 //
 //     PA_DScene* sceneAsset = PA_DScene::Create("DefaultScene");
@@ -424,4 +454,4 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
 //             IOManager::GetEngineImportedAssetFullPath("HomeMesh"),
 //             PA_StaticMesh::Create(mesh));
 //     }
-// }
+}

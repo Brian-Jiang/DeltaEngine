@@ -40,7 +40,11 @@
           "objectId": "6c9e4502-3c02-463d-82b1-981d67808a8e"
         }
       ],
-      "m_name": "DefaultScene"
+      "m_name": "DefaultScene",
+      "m_skybox": {
+        "assetId": "8d7b931f-d6e7-43e8-85ec-e3ab6349ed85",
+        "objectId": "5a26843e-603e-4256-8fac-d4509864161f"
+      }
     },
     {
       "_class": "GameObject",
@@ -164,7 +168,7 @@
     {
       "_class": "Camera",
       "_objectId": "f06a1959-f14e-459a-813b-f96e6cb30528",
-      "m_aspectRatio": 1.2272974252700806,
+      "m_aspectRatio": 1.2332789897918701,
       "m_children": [],
       "m_far": 1000.0,
       "m_fov": 0.7853981852531433,

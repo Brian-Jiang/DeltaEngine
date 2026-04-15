@@ -17,6 +17,7 @@ DELTA_ENGINE_NS_BEGIN
 template <typename T>
 T* CreateDObject()
 {
+    DLOG(LogCore, ELogLevel::Error, "CreateDObject called without a specialization for type %s", typeid(T).name());
     return nullptr;
 }
 

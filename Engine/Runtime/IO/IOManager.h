@@ -14,7 +14,7 @@ public:
 	//static bool readFileToBuffer(const std::string &filePath, std::vector<char>& buffer);
 	//static std::wstring GetAssetFullPath(LPCWSTR assetName);
 	//static std::string GetAssetFullPath(const std::string & assetName);
-    static std::wstring GetEngineSourceAssetFullPath(std::wstring assetName);
+    DELTAENGINE_API static std::wstring GetEngineSourceAssetFullPath(std::wstring assetName);
     DELTAENGINE_API static std::string GetEditorSourceAssetFullPath(std::string assetName);
     DELTAENGINE_API static std::string GetEngineImportedAssetsFolder();
     DELTAENGINE_API static std::string GetEngineImportedAssetFullPath(std::string assetName, bool isJson = true);

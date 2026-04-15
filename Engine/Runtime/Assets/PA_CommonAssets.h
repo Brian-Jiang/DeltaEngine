@@ -12,6 +12,7 @@ class DShader;
 class DMaterial;
 class DTexture;
 class DMesh;
+class Skybox;
 
 DCLASS()
 class DELTAENGINE_API PA_Shader : public DPrimaryAsset
@@ -51,6 +52,16 @@ class DELTAENGINE_API PA_StaticMesh : public DPrimaryAsset
 public:
     static PA_StaticMesh* Create(DMesh* mesh);
     DMesh* GetStaticMesh() const;
+};
+
+DCLASS()
+class DELTAENGINE_API PA_Skybox : public DPrimaryAsset
+{
+    DGENERATED_BODY(PA_Skybox)
+
+  public:
+    static PA_Skybox *Create(Skybox *skybox);
+    Skybox *GetSkybox() const;
 };
 
 DELTA_ENGINE_NS_END

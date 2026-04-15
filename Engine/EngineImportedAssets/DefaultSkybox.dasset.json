@@ -1,0 +1,22 @@
+{
+  "header": {
+    "assetId": "8d7b931f-d6e7-43e8-85ec-e3ab6349ed85",
+    "className": "PA_Skybox",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "Skybox",
+      "_objectId": "5a26843e-603e-4256-8fac-d4509864161f",
+      "m_cubemapTexture": {
+        "assetId": "8edb0a7a-3ac1-43e3-84d2-efc8d68a9b79",
+        "objectId": "d208335f-fca1-4bec-adc9-7bbd95cf6fdf"
+      },
+      "m_material": {
+        "assetId": "9b6174a8-420e-45f2-b25b-2b489b8866f0",
+        "objectId": "18878079-9b3a-4d39-b3e6-81e0ac4dd3b3"
+      }
+    }
+  ]
+}

@@ -74,7 +74,7 @@ private:
 
 public:
     /// Creates and loads a texture from disk.
-    static DTexture* LoadFromFile(const std::wstring& filePath, bool sRGB = false);
+    DELTAENGINE_API static DTexture *LoadFromFile(const std::wstring &filePath, bool sRGB = false);
 };
 
 DELTA_ENGINE_NS_END
