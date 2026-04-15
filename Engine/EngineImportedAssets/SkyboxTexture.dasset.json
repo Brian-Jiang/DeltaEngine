@@ -4,7 +4,7 @@
     "bulkDataMap": {
       "0": {
         "file": "SkyboxTexture_Bulk0.bin",
-        "size": 4202560
+        "size": 6291520
       }
     },
     "className": "PA_Texture",
@@ -17,7 +17,7 @@
       "_objectId": "d208335f-fca1-4bec-adc9-7bbd95cf6fdf",
       "m_bulkData": {
         "_bulk": 0,
-        "size": 4202560
+        "size": 6291520
       },
       "m_sRGB": false,
       "m_sourcePath": "../../../Engine/EngineSourceAssets/SkyboxCubemap.dds"

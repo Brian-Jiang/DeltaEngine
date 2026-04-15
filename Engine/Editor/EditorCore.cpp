@@ -353,6 +353,7 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
      //m_assetDatabase->CreateAsset(skyboxTexturePath, skyboxTexture);
 
      //const std::filesystem::path skyboxMaterialPath = IOManager::GetEngineImportedAssetFullPath("SkyboxMaterial");
+     // 
      //const std::filesystem::path skyboxShaderPath = IOManager::GetEngineImportedAssetFullPath("SkyboxShader");
      //DShader *shader = CreateDObject<DShader>();
      //shader->Initialize(L"Skybox.hlsl", L"VSMain", L"PSMain", L"vs_6_0", L"ps_6_0");

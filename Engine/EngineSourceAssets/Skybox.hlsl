@@ -53,8 +53,8 @@ VSOut VSMain(uint vid : SV_VertexID)
     // eliminating camera translation while keeping rotation.
     // Matches the row-vector convention used by the rest of the engine
     // (mul(vec, matrix) = row-vector x matrix).
-    float4 viewDir = mul(float4(localPos, 0.0f), ViewMatrix);
-    float4 clipPos = mul(viewDir, ProjectionMatrix);
+    float4 viewDir = mul(ViewMatrix, float4(localPos, 0.0f));
+    float4 clipPos = mul(ProjectionMatrix, viewDir);
 
     VSOut o;
     // xyww: output.z = clipPos.w -> NDC depth = w/w = 1.0 (far plane).
