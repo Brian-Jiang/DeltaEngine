@@ -1,5 +1,9 @@
 ﻿{
   "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21
+  },
   "configurePresets": [
     {
       "name": "base",
@@ -10,14 +14,15 @@
       "binaryDir": "${sourceDir}/out/build/${presetName}",
       "installDir": "${sourceDir}/out/install/${presetName}"
     },
-
     {
       "name": "x64",
       "architecture": {
         "value": "x64",
         "strategy": "external"
       },
-      "cacheVariables": { "DIRECTX_ARCH": "x64" },
+      "cacheVariables": {
+        "DIRECTX_ARCH": "x64"
+      },
       "hidden": true
     },
     {
@@ -26,7 +31,9 @@
         "value": "x86",
         "strategy": "external"
       },
-      "cacheVariables": { "DIRECTX_ARCH": "x86" },
+      "cacheVariables": {
+        "DIRECTX_ARCH": "x86"
+      },
       "hidden": true
     },
     {
@@ -35,7 +42,9 @@
         "value": "arm64",
         "strategy": "external"
       },
-      "cacheVariables": { "DIRECTX_ARCH": "arm64" },
+      "cacheVariables": {
+        "DIRECTX_ARCH": "arm64"
+      },
       "hidden": true
     },
     {
@@ -44,29 +53,30 @@
         "value": "arm64ec",
         "strategy": "external"
       },
-      "cacheVariables": { "DIRECTX_ARCH": "arm64ec" },
+      "cacheVariables": {
+        "DIRECTX_ARCH": "arm64ec"
+      },
       "environment": {
         "CFLAGS": "/arm64EC",
         "CXXFLAGS": "/arm64EC"
       },
       "hidden": true
     },
-
     {
       "name": "Debug",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      },
       "hidden": true
     },
     {
       "name": "Release",
-      "cacheVariables":
-      {
-          "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-          "CMAKE_INTERPROCEDURAL_OPTIMIZATION": true
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": true
       },
       "hidden": true
     },
-
     {
       "name": "MSVC",
       "hidden": true,
@@ -116,7 +126,6 @@
         "strategy": "external"
       }
     },
-
     {
       "name": "XAudio2Redist",
       "cacheVariables": {
@@ -266,19 +275,16 @@
         "strategy": "external"
       }
     },
-
     {
       "name": "Analyze",
-      "cacheVariables":
-      {
+      "cacheVariables": {
         "ENABLE_CODE_ANALYSIS": true
       },
       "hidden": true
     },
     {
       "name": "Coverage",
-      "cacheVariables":
-      {
+      "cacheVariables": {
         "ENABLE_CODE_COVERAGE": true
       },
       "hidden": true
@@ -367,6 +373,9 @@
     { "name": "x86-Debug-Redist-Clang"  , "description": "Clang/LLVM for x86 (Debug) with XAudio2Redist", "inherits": [ "base", "x86", "Debug", "Clang", "Clang-X86", "XAudio2Redist", "VCPKG", "X64_X86" ] },
     { "name": "x86-Release-Redist-Clang", "description": "Clang/LLVM for x86 (Release) with XAudio2Redist", "inherits": [ "base", "x86", "Release", "Clang", "Clang-X86", "XAudio2Redist", "VCPKG", "X64_X86" ] },
 
+    { "name": "x64-Debug-GDK-Clang"   , "description": "Clang/LLVM for x64 (Debug) using GameInput", "inherits": [ "base", "x64", "Debug", "MSVC", "Clang", "GDK" ] },
+    { "name": "x64-Release-GDK-Clang" , "description": "Clang/LLVM for x64 (Release) using GameInput", "inherits": [ "base", "x64", "Release", "MSVC", "Clang", "GDK" ] },
+
     { "name": "x64-Debug-Scarlett-Clang"  , "description": "Clang/LLVM for x64 (Debug) for Xbox Series X|S", "inherits": [ "base", "x64", "Debug", "Clang", "Scarlett" ] },
     { "name": "x64-Release-Scarlett-Clang", "description": "Clang/LLVM for x64 (Release) for Xbox Series X|S", "inherits": [ "base", "x64", "Release", "Clang", "Scarlett" ] },
 
@@ -377,6 +386,9 @@
     { "name": "x64-Release-MinGW", "description": "MinG-W64 (Release)", "inherits": [ "base", "x64", "Release", "GNUC", "VCPKG", "XAudio2Redist", "MinGW64" ] },
     { "name": "x86-Debug-MinGW"  , "description": "MinG-W32 (Debug)", "inherits": [ "base", "x86", "Debug", "GNUC", "VCPKG", "XAudio2Redist", "MinGW32" ] },
     { "name": "x86-Release-MinGW", "description": "MinG-W32 (Release)", "inherits": [ "base", "x86", "Release", "GNUC", "VCPKG", "XAudio2Redist", "MinGW32" ] },
+
+    { "name": "x64-Debug-MinGW-GI"  , "description": "MinG-W64 (Debug) using GameInput", "inherits": [ "base", "x64", "Debug", "GNUC", "VCPKG", "XAudio2Redist", "MinGW64" ], "cacheVariables": { "BUILD_GAMEINPUT": "true" }  },
+    { "name": "x64-Release-MinGW-GI", "description": "MinG-W64 (Release) using GameInput", "inherits": [ "base", "x64", "Release", "GNUC", "VCPKG", "XAudio2Redist", "MinGW64" ], "cacheVariables": { "BUILD_GAMEINPUT": "true" }  },
 
     { "name": "x64-Debug-ICC"     , "description": "Intel Classic Compiler (Debug) for Windows 10", "inherits": [ "base", "x64", "Debug", "Intel" ] },
     { "name": "x64-Release-ICC"   , "description": "Intel Classic Compiler (Release) for Windows 10", "inherits": [ "base", "x64", "Release", "Intel" ] },
@@ -389,6 +401,7 @@
     { "name": "x64-Coverage-Clang", "description": "Clang/LLVM for x64 (Debug) w/ Code Coverage", "inherits": [ "base", "x64", "Debug", "Clang", "Coverage" ] },
     { "name": "x64-Fuzzing"       , "description": "MSVC for x64 (Release) with ASan", "inherits": [ "base", "x64", "Release", "MSVC", "Fuzzing" ] }
   ],
+
   "testPresets": [
     { "name": "x64-Debug"      , "configurePreset": "x64-Debug" },
     { "name": "x64-Release"    , "configurePreset": "x64-Release" },

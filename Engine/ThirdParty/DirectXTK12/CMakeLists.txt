@@ -3,7 +3,11 @@
 
 cmake_minimum_required (VERSION 3.21)
 
-set(DIRECTXTK12_VERSION 1.6.4)
+if(POLICY CMP0162)
+   cmake_policy(SET CMP0162 NEW)
+endif()
+
+set(DIRECTXTK12_VERSION 1.6.5)
 
 if(XBOX_CONSOLE_TARGET STREQUAL "durango")
   set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
@@ -59,24 +63,38 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 if(XBOX_CONSOLE_TARGET STREQUAL "scarlett")
   set(BUILD_GAMEINPUT ON)
-  set(BUILD_SCARLETT_SHADERS ON)
+  set(BUILD_WGI OFF)
+  set(BUILD_XINPUT OFF)
   set(BUILD_XAUDIO_REDIST OFF)
+  set(BUILD_SCARLETT_SHADERS ON)
 elseif(XBOX_CONSOLE_TARGET STREQUAL "xboxone")
   set(BUILD_GAMEINPUT ON)
-  set(BUILD_XBOXONE_SHADERS ON)
+  set(BUILD_WGI OFF)
+  set(BUILD_XINPUT OFF)
   set(BUILD_XAUDIO_REDIST OFF)
+  set(BUILD_XBOXONE_SHADERS ON)
 elseif(XBOX_CONSOLE_TARGET STREQUAL "durango")
   set(BUILD_GAMEINPUT OFF)
   set(BUILD_WGI OFF)
   set(BUILD_XINPUT OFF)
+  set(BUILD_XAUDIO_WIN10 ON)
+  set(BUILD_XAUDIO_REDIST OFF)
   set(BUILD_XBOXONE_SHADERS ON)
   set(BUILD_DXIL_SHADERS OFF)
-  set(BUILD_XAUDIO_WIN10 OFF)
-  set(BUILD_XAUDIO_WIN8 ON)
 elseif(WINDOWS_STORE)
   set(BUILD_GAMEINPUT OFF)
   set(BUILD_WGI ON)
+  set(BUILD_XINPUT OFF)
+  set(BUILD_XAUDIO_WIN10 ON)
   set(BUILD_XAUDIO_REDIST OFF)
+elseif(MINGW)
+  set(BUILD_WGI OFF)
+  set(BUILD_XAUDIO_WIN10 OFF)
+  if (NOT BUILD_GAMEINPUT)
+    set(BUILD_XINPUT ON)
+  endif()
+elseif(WIN32 AND (NOT BUILD_GAMEINPUT) AND (NOT BUILD_XINPUT))
+  set(BUILD_WGI ON)
 endif()
 
 include(GNUInstallDirs)
@@ -164,18 +182,12 @@ set(SHADER_SOURCES
 # These source files are identical in both DX11 and DX12 version.
 if(NOT BUILD_MIXED_DX11)
     set(LIBRARY_HEADERS ${LIBRARY_HEADERS}
-      Inc/GamePad.h
-      Inc/Keyboard.h
-      Inc/Mouse.h
       Inc/SimpleMath.h
       Inc/SimpleMath.inl)
 
     set(LIBRARY_SOURCES ${LIBRARY_SOURCES}
       Src/BinaryReader.cpp
-      Src/GamePad.cpp
       Src/Geometry.cpp
-      Src/Keyboard.cpp
-      Src/Mouse.cpp
       Src/SimpleMath.cpp)
 endif()
 
@@ -211,13 +223,19 @@ if(DEFINED XBOX_CONSOLE_TARGET)
       Src/XboxDDSTextureLoader.cpp)
 endif()
 
-if(MINGW)
-  set(BUILD_XAUDIO_WIN10 OFF)
+if(BUILD_XINPUT OR BUILD_WGI OR BUILD_GAMEINPUT)
+  set(LIBRARY_HEADERS ${LIBRARY_HEADERS}
+      Inc/GamePad.h
+      Inc/Keyboard.h
+      Inc/Mouse.h)
+
+  set(LIBRARY_SOURCES ${LIBRARY_SOURCES}
+      Src/GamePad.cpp
+      Src/Keyboard.cpp
+      Src/Mouse.cpp)
 endif()
 
-if(WINDOWS_STORE
-   OR BUILD_XAUDIO_WIN10 OR BUILD_XAUDIO_WIN8
-   OR BUILD_XAUDIO_REDIST)
+if(BUILD_XAUDIO_WIN10 OR BUILD_XAUDIO_REDIST)
     set(LIBRARY_HEADERS ${LIBRARY_HEADERS}
         Inc/Audio.h)
 
@@ -279,11 +297,13 @@ if(NOT USE_PREBUILT_SHADERS)
     elseif(BUILD_DXIL_SHADERS)
         find_program(DIRECTX_DXC_TOOL DXC.EXE
           HINTS "C:/Program Files (x86)/Windows Kits/10/bin/${CMAKE_SYSTEM_VERSION}/${DIRECTX_HOST_ARCH}"
+                "C:/Program Files (x86)/Windows Kits/10/bin/${CMAKE_SYSTEM_VERSION}.0/${DIRECTX_HOST_ARCH}"
                 "C:/Program Files (x86)/Windows Kits/10/bin/${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}/${DIRECTX_HOST_ARCH}")
         message(STATUS "Using DirectXShaderCompiler found in ${DIRECTX_DXC_TOOL}")
     else()
         find_program(DIRECTX_FXC_TOOL FXC.EXE
           HINTS "C:/Program Files (x86)/Windows Kits/10/bin/${CMAKE_SYSTEM_VERSION}/${DIRECTX_HOST_ARCH}"
+                "C:/Program Files (x86)/Windows Kits/10/bin/${CMAKE_SYSTEM_VERSION}.0/${DIRECTX_HOST_ARCH}"
                 "C:/Program Files (x86)/Windows Kits/10/bin/${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}/${DIRECTX_HOST_ARCH}")
         message(STATUS "Using LegacyShaderCompiler found in ${DIRECTX_FXC_TOOL}")
     endif()
@@ -297,6 +317,10 @@ if(NOT USE_PREBUILT_SHADERS)
         USES_TERMINAL)
 endif()
 
+add_library(${PROJECT_NAME})
+
+target_sources(${PROJECT_NAME} PRIVATE ${LIBRARY_HEADERS} ${LIBRARY_SOURCES})
+
 if(WIN32 AND BUILD_SHARED_LIBS)
   message(STATUS "Build library as a DLL")
 
@@ -304,7 +328,7 @@ if(WIN32 AND BUILD_SHARED_LIBS)
       "${CMAKE_CURRENT_SOURCE_DIR}/build/DirectXTK12.rc.in"
       "${CMAKE_CURRENT_BINARY_DIR}/DirectXTK12.rc" @ONLY)
 
-  add_library(${PROJECT_NAME} SHARED ${LIBRARY_SOURCES} ${LIBRARY_HEADERS} "${CMAKE_CURRENT_BINARY_DIR}/DirectXTK12.rc")
+  target_sources(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/DirectXTK12.rc")
 
   target_compile_definitions(${PROJECT_NAME} PRIVATE DIRECTX_TOOLKIT_EXPORT)
   target_compile_definitions(${PROJECT_NAME} INTERFACE DIRECTX_TOOLKIT_IMPORT)
@@ -319,11 +343,9 @@ if(WIN32 AND BUILD_SHARED_LIBS)
     target_link_libraries(${PROJECT_NAME} PRIVATE d3d12.lib)
   endif()
 
-  if(MINGW)
+  if(MINGW AND BUILD_XINPUT)
     target_link_libraries(${PROJECT_NAME} PRIVATE xinput1_4.lib)
   endif()
-else()
-  add_library(${PROJECT_NAME} ${LIBRARY_SOURCES} ${LIBRARY_HEADERS})
 endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${COMPILED_SHADERS} Src)
@@ -342,9 +364,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_11)
 
-if(WINDOWS_STORE
-   OR BUILD_XAUDIO_WIN10 OR BUILD_XAUDIO_WIN8
-   OR BUILD_XAUDIO_REDIST)
+if(BUILD_XAUDIO_WIN10 OR BUILD_XAUDIO_REDIST)
     target_include_directories(${PROJECT_NAME} PRIVATE Audio)
 endif()
 
@@ -371,8 +391,7 @@ if(directx-headers_FOUND)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USING_DIRECTX_HEADERS)
 endif()
 
-if(BUILD_XAUDIO_REDIST
-   AND (NOT BUILD_XAUDIO_WIN10) AND (NOT BUILD_XAUDIO_WIN8) AND (NOT WINDOWS_STORE))
+if(BUILD_XAUDIO_REDIST AND (NOT BUILD_XAUDIO_WIN10))
     message(STATUS "Using XAudio2Redist for DirectX Tool Kit for Audio.")
     find_package(xaudio2redist CONFIG REQUIRED)
     target_link_libraries(${PROJECT_NAME} PUBLIC Microsoft::XAudio2Redist)
@@ -532,7 +551,7 @@ if(WIN32)
 
     target_compile_definitions(${PROJECT_NAME} PRIVATE _WIN32_WINNT=${WINVER})
 
-    if(WINDOWS_STORE OR BUILD_XAUDIO_WIN10)
+    if(BUILD_XAUDIO_WIN10)
       message(STATUS "Using DirectX Tool Kit for Audio on XAudio 2.9 (Windows 10/Windows 11).")
     endif()
 
