@@ -3,7 +3,11 @@
 
 cmake_minimum_required (VERSION 3.21)
 
-set(DIRECTXTEX_VERSION 2.0.9)
+if(POLICY CMP0162)
+   cmake_policy(SET CMP0162 NEW)
+endif()
+
+set(DIRECTXTEX_VERSION 2.1.0)
 
 if(XBOX_CONSOLE_TARGET STREQUAL "durango")
   set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
@@ -142,7 +146,7 @@ if(DEFINED XBOX_CONSOLE_TARGET)
     endif()
 
 elseif((BUILD_XBOX_EXTS_XBOXONE OR BUILD_XBOX_EXTS_SCARLETT) AND WIN32)
-    if(DEFINED ENV{GameDKXboxLatest})
+    if((DEFINED ENV{GameDKXboxLatest}) AND (NOT ("$ENV{GameDKXboxLatest}" STREQUAL "")))
         cmake_path(SET GameDK_DIR "$ENV{GameDKXboxLatest}")
     elseif(DEFINED ENV{GameDKLatest})
         cmake_path(SET GameDK_DIR "$ENV{GameDKLatest}")
@@ -217,6 +221,7 @@ if(BUILD_DX11 AND WIN32 AND (NOT (XBOX_CONSOLE_TARGET STREQUAL "durango")))
     if(NOT USE_PREBUILT_SHADERS)
         find_program(DIRECTX_FXC_TOOL FXC.EXE
           HINTS "C:/Program Files (x86)/Windows Kits/10/bin/${CMAKE_SYSTEM_VERSION}/${DIRECTX_HOST_ARCH}"
+                "C:/Program Files (x86)/Windows Kits/10/bin/${CMAKE_SYSTEM_VERSION}.0/${DIRECTX_HOST_ARCH}"
                 "C:/Program Files (x86)/Windows Kits/10/bin/${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}/${DIRECTX_HOST_ARCH}")
         message(STATUS "Using LegacyShaderCompiler found in ${DIRECTX_FXC_TOOL}")
         add_custom_command(
@@ -230,6 +235,10 @@ if(BUILD_DX11 AND WIN32 AND (NOT (XBOX_CONSOLE_TARGET STREQUAL "durango")))
     endif()
 endif()
 
+add_library(${PROJECT_NAME})
+
+target_sources(${PROJECT_NAME} PRIVATE ${LIBRARY_HEADERS} ${LIBRARY_SOURCES})
+
 if(WIN32 AND BUILD_SHARED_LIBS)
   message(STATUS "Build library as a DLL")
 
@@ -237,7 +246,7 @@ if(WIN32 AND BUILD_SHARED_LIBS)
       "${CMAKE_CURRENT_SOURCE_DIR}/build/DirectXTex.rc.in"
       "${CMAKE_CURRENT_BINARY_DIR}/DirectXTex.rc" @ONLY)
 
-  add_library(${PROJECT_NAME} SHARED ${LIBRARY_SOURCES} ${LIBRARY_HEADERS} "${CMAKE_CURRENT_BINARY_DIR}/DirectXTex.rc")
+  target_sources(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/DirectXTex.rc")
 
   target_compile_definitions(${PROJECT_NAME} PRIVATE DIRECTX_TEX_EXPORT)
   target_compile_definitions(${PROJECT_NAME} INTERFACE DIRECTX_TEX_IMPORT)
@@ -249,8 +258,6 @@ if(WIN32 AND BUILD_SHARED_LIBS)
   elseif(XBOX_CONSOLE_TARGET MATCHES "durango")
     target_link_libraries(${PROJECT_NAME} PRIVATE kernelx.lib xg_x.lib combase.lib)
   endif()
-else()
-  add_library(${PROJECT_NAME} ${LIBRARY_SOURCES} ${LIBRARY_HEADERS})
 endif()
 
 if(BUILD_DX11 AND WIN32)
@@ -699,10 +706,8 @@ if(WIN32)
     elseif(BUILD_DX12 OR (${DIRECTX_ARCH} MATCHES "^arm64"))
         message(STATUS "Building with DirectX 12 Runtime support")
         set(WINVER 0x0A00)
-    elseif(${DIRECTX_ARCH} MATCHES "^arm")
-        set(WINVER 0x0602)
     else()
-        message(STATUS "Building with Windows 8.1 compatibility")
+        message(STATUS "Building for Windows 8.1")
         set(WINVER 0x0603)
     endif()
 

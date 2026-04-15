@@ -3,7 +3,7 @@
 #
 # https://go.microsoft.com/fwlink/?LinkId=248926
 
-name: 'CMake (Windows using VCPKG)'
+name: 'BVTs (Auxiliary)'
 
 on:
   push:
@@ -12,7 +12,9 @@ on:
       - '*.md'
       - LICENSE
       - '.azuredevops/**'
+      - '.nuget/*'
       - build/*.cmd
+      - build/*.json
       - build/*.props
       - build/*.ps1
       - build/*.targets
@@ -23,7 +25,9 @@ on:
       - '*.md'
       - LICENSE
       - '.azuredevops/**'
+      - '.nuget/*'
       - build/*.cmd
+      - build/*.json
       - build/*.props
       - build/*.ps1
       - build/*.targets
@@ -36,51 +40,25 @@ permissions:
 jobs:
   build:
     runs-on: windows-2022
+    timeout-minutes: 60
 
     strategy:
       fail-fast: false
 
       matrix:
         toolver: ['14.29', '14']
-        build_type: [x64-Debug-VCPKG]
+        build_type: [x64-Release]
         arch: [amd64]
-        shared: ['OFF']
-        include:
-          - toolver: '14'
-            build_type: x64-Debug-Clang-VCPKG
-            arch: amd64
-            shared: 'OFF'
-          - toolver: '14'
-            build_type: x86-Debug-VCPKG
-            arch: amd64_x86
-            shared: 'OFF'
-          - toolver: '14'
-            build_type: arm64-Debug-VCPKG
-            arch: amd64_arm64
-            shared: 'OFF'
-          - toolver: '14'
-            build_type: arm64ec-Debug-VCPKG
-            arch: amd64_arm64
-            shared: 'OFF'
-          - toolver: '14'
-            build_type: x64-Debug-MinGW
-            arch: amd64
-            shared: 'OFF'
-          - toolver: '14'
-            build_type: x64-Release-MinGW
-            arch: amd64
-            shared: 'OFF'
-          - toolver: '14'
-            build_type: x64-Debug-MinGW
-            arch: amd64
-            shared: 'ON'
-          - toolver: '14'
-            build_type: x64-Release-MinGW
-            arch: amd64
-            shared: 'ON'
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Clone test repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: walbourn/directxtextest
+          path: Tests
+          ref: main
 
       - name: 'Install Ninja'
         run: choco install ninja
@@ -95,14 +73,7 @@ jobs:
         run: |
           if ("${{ matrix.arch }}" -eq "amd64")
           {
-              if ("${{ matrix.build_type }}" -match "MinGW")
-              {
-                  echo "VCPKG_DEFAULT_TRIPLET=x64-mingw-static" >> $env:GITHUB_ENV
-              }
-              else
-              {
-                  echo "VCPKG_DEFAULT_TRIPLET=x64-windows" >> $env:GITHUB_ENV
-              }
+              echo "VCPKG_DEFAULT_TRIPLET=x64-windows" >> $env:GITHUB_ENV
           }
           elseif ("${{ matrix.arch }}" -eq "amd64_x86")
           {
@@ -150,13 +121,15 @@ jobs:
       - name: 'Configure CMake'
         working-directory: ${{ github.workspace }}
         run: >
-          cmake --preset=${{ matrix.build_type }} -DBUILD_TESTING=OFF
+          cmake --preset=${{ matrix.build_type }} -DBUILD_TESTING=ON -DBUILD_TOOLS=OFF -DBUILD_SAMPLE=OFF -DBUILD_BVT=ON
           -DENABLE_OPENEXR_SUPPORT=ON -DENABLE_LIBJPEG_SUPPORT=ON -DENABLE_LIBPNG_SUPPORT=ON
-          -DBUILD_SHARED_LIBS=${{ matrix.shared }}
-          -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake"
-          -DVCPKG_MANIFEST_DIR="${{ github.workspace }}/build"
+          -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_MANIFEST_DIR="${{ github.workspace }}/build"
           -DVCPKG_TARGET_TRIPLET="${env:VCPKG_DEFAULT_TRIPLET}"
 
       - name: 'Build'
         working-directory: ${{ github.workspace }}
         run: cmake --build out\build\${{ matrix.build_type }}
+
+      - name: 'Run BVTs'
+        working-directory: ${{ github.workspace }}
+        run: ctest --preset=${{ matrix.build_type }} --output-on-failure -L "EXR|JPG|PNG"
