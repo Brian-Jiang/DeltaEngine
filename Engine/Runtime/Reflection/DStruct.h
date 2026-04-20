@@ -25,7 +25,7 @@ public:
     virtual ~DStruct() = default;
 
     /// Adds a property declared directly on this type.
-    void AddProperty(DProperty* property);
+    DProperty* AddProperty(DProperty* property);
     /// Finds a property by name on this type or one of its reflected bases.
     DELTAENGINE_API DProperty* FindPropertyByName(const std::string& name) const;
 

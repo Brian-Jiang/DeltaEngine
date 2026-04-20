@@ -84,6 +84,10 @@ public:
 
     DELTAENGINE_API std::string GetMeta(const std::string& key, const std::string& defaultVal = "") const;
 
+    bool IsEditorOnly() const { return bEditorOnly; }
+
+    bool bEditorOnly = false;
+
 protected:
     std::string m_name;
     std::string m_type;

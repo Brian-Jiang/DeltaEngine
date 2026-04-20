@@ -45,6 +45,22 @@ TEST(ReflectionRegistryTests, CreatesAndDestroysObjectsByClassName)
     registry.DestroyObject(object);
 }
 
+TEST(ReflectionRegistryTests, EditorOnlyPropertyFlag)
+{
+    auto& registry = GetReflectionRegistry();
+
+    DClass* testClass = registry.FindClassByName("TestComponent");
+    ASSERT_NE(testClass, nullptr);
+
+    DProperty* editorOnlyProp = testClass->FindPropertyByName("m_editorOnlyFloat");
+    ASSERT_NE(editorOnlyProp, nullptr);
+    EXPECT_TRUE(editorOnlyProp->IsEditorOnly());
+
+    DProperty* regularProp = testClass->FindPropertyByName("m_testFloat");
+    ASSERT_NE(regularProp, nullptr);
+    EXPECT_FALSE(regularProp->IsEditorOnly());
+}
+
 TEST(ReflectionRegistryTests, ExposesFunctionMetadataAndInvocation)
 {
     auto& registry = GetReflectionRegistry();

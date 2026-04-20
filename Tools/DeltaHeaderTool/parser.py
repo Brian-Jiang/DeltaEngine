@@ -186,6 +186,7 @@ class PropertyInfo:
     inner_pointee_type: str = ""
     is_dstruct: bool = False
     dstruct_type_name: str = ""
+    editor_only: bool = False
 
 
 @dataclass
@@ -291,28 +292,28 @@ def _base_class_name_from_cursor(cursor) -> str:
     return name
 
 
-def _extract_dproperty_fields_from_source(source: str, class_name: str, class_start_line: int, class_end_line: int) -> list[tuple[str, str]]:
+def _extract_dproperty_fields_from_source(source: str, class_name: str, class_start_line: int, class_end_line: int) -> list[tuple[str, str, str]]:
     """Text-scan for DPROPERTY fields that may be missing from the AST (e.g. std::string when using stub types).
-    Returns list of (field_name, type_str) for fields preceded by DPROPERTY()."""
+    Returns list of (field_name, type_str, args_str) for fields preceded by DPROPERTY()."""
     lines = source.splitlines()
-    result: list[tuple[str, str]] = []
+    result: list[tuple[str, str, str]] = []
     i = class_start_line - 1  # 0-based
     while i < len(lines) and i < class_end_line:
         line = lines[i]
         if "DPROPERTY" in line and re.search(r"DPROPERTY\s*\(", line):
-            # Next non-empty line is the declaration
+            args_match = re.search(r"DPROPERTY\s*\((.*)\)", line)
+            args_str = args_match.group(1).strip() if args_match else ""
             j = i + 1
             while j < len(lines) and j < class_end_line:
                 decl_line = lines[j].strip()
                 if not decl_line or decl_line.startswith("//"):
                     j += 1
                     continue
-                # Match: type name; or type name = ...
                 m = re.match(r"^(.+?)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*[;=]", decl_line)
                 if m:
                     type_str = m.group(1).strip()
                     field_name = m.group(2)
-                    result.append((field_name, type_str))
+                    result.append((field_name, type_str, args_str))
                 break
             i = j
         i += 1
@@ -625,6 +626,7 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
             offset_bytes = offset_bits // 8 if offset_bits >= 0 else -1
             dprop_args = _extract_macro_args(tu, child, "DPROPERTY") or ""
             prop_metadata = _parse_dproperty_meta(dprop_args)
+            editor_only = bool(re.search(r'\bEditorOnly\b', dprop_args))
             info.properties.append(PropertyInfo(
                 name=child.spelling,
                 cpp_type=child.type.spelling,
@@ -640,6 +642,7 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
                 inner_pointee_type=inner_pointee,
                 is_dstruct=is_dstruct_field,
                 dstruct_type_name=dstruct_type_name,
+                editor_only=editor_only,
             ))
 
         elif child.kind == ci.CursorKind.FUNCTION_TEMPLATE:
@@ -699,7 +702,7 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
         text_fields = _extract_dproperty_fields_from_source(
             source, class_name, start_line, end_line
         )
-        for field_name, type_str in text_fields:
+        for field_name, type_str, args_str in text_fields:
             if field_name in existing_names:
                 continue
             resolved = resolve_type_from_string(type_str, field_name, class_name)
@@ -710,6 +713,7 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
                 inner_prop = resolved[4] if is_vec else ""
                 inner_is_obj_ptr = resolved[5] if len(resolved) >= 7 else False
                 inner_pointee = resolved[6] if len(resolved) >= 7 else ""
+                editor_only = bool(re.search(r'\bEditorOnly\b', args_str or ""))
                 info.properties.append(PropertyInfo(
                     name=field_name,
                     cpp_type=type_str,
@@ -722,6 +726,7 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
                     inner_property_class=inner_prop,
                     inner_is_object_ptr=inner_is_obj_ptr,
                     inner_pointee_type=inner_pointee,
+                    editor_only=editor_only,
                 ))
                 existing_names.add(field_name)
     except Exception:
