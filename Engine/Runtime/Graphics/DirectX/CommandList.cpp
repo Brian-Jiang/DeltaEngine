@@ -1204,6 +1204,13 @@ void CommandList::SetShaderResourceView(int32_t rootParameterIndex, uint32_t des
     }
 }
 
+void CommandList::SetShaderResourceView(uint32_t rootParameterIndex, uint32_t descriptorOffset,
+    D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle)
+{
+    m_DynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(
+        rootParameterIndex, descriptorOffset, 1, cpuHandle);
+}
+
 //void CommandList::SetShaderResourceView(uint32_t rootParameterIndex, const std::shared_ptr<DTexture>& texture,
 //    D3D12_RESOURCE_STATES stateAfter)
 //{
