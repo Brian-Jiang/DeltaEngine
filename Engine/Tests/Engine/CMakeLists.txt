@@ -2,6 +2,7 @@ set(DELTA_ENGINE_TEST_SOURCES
     Assets/DPrimaryAssetTests.cpp
     Assets/SceneAssetIntegrationTests.cpp
     Graphics/GraphicsStructureTests.cpp
+    Graphics/PostProcessTests_DataModel.cpp
     Graphics/RenderCoreTests.cpp
     Reflection/ReflectionRegistryTests.cpp
     Serialization/Core/UuidTests.cpp
