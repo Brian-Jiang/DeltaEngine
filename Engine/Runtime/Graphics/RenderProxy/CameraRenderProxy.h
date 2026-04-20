@@ -8,11 +8,14 @@
 DELTA_ENGINE_NS_BEGIN
 
 struct DXGraphicsContext;
+class PostProcessStack;
 
 class CameraRenderProxy
 {
 public:
     CameraRenderProxy(float fov, float aspectRatio, float nearPlane, float farPlane);
+
+    PostProcessStack* postProcessStack = nullptr;
 
     /// Updates the camera world transform.
     void UpdateTransform(DirectX::XMMATRIX worldMatrix);

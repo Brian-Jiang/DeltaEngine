@@ -1,5 +1,7 @@
 #include "Core/Camera.h"
 
+#include "Graphics/DXGraphicsContext.h"
+#include "Graphics/PostProcess/PostProcessStack.h"
 #include "Graphics/RenderProxy/CameraRenderProxy.h"
 
 using namespace DirectX;
@@ -33,6 +35,8 @@ void Camera::UpdateParameters(float fov, float aspectRatio, float nearPlane, flo
 
 void Camera::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext)
 {
+    m_renderProxy->postProcessStack = m_postProcessStack;
+    renderContext->camera = m_renderProxy.get();
     m_renderProxy->PreGatherDrawCalls(renderContext);
 }
 

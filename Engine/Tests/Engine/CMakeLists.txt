@@ -1,6 +1,7 @@
 set(DELTA_ENGINE_TEST_SOURCES
     Assets/DPrimaryAssetTests.cpp
     Assets/SceneAssetIntegrationTests.cpp
+    Graphics/CameraPostProcessStackTests.cpp
     Graphics/GraphicsStructureTests.cpp
     Graphics/PostProcessTests_DataModel.cpp
     Graphics/RenderCoreTests.cpp

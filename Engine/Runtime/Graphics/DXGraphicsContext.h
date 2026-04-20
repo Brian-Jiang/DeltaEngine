@@ -18,6 +18,7 @@ class Device;
 class CommandList;
 class RootSignature;
 class DXRenderManager;
+class CameraRenderProxy;
 
 /// Passed to every renderer's InitGraphicState / GatherDrawCalls.
 /// Camera data (view, projection, position) is constant for the frame;
@@ -48,6 +49,9 @@ struct DXGraphicsContext
     /// When set, overrides the scene camera matrices for this frame.
     /// Applied after PreGatherDrawCalls, before GatherDrawCalls.
     std::optional<CameraCB> cameraOverride;
+
+    /// Non-owning pointer to the active camera's render proxy for the frame.
+    CameraRenderProxy* camera = nullptr;
 };
 
 DELTA_ENGINE_NS_END

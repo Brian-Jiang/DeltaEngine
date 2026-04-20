@@ -11,6 +11,7 @@
 DELTA_ENGINE_NS_BEGIN
 
 class CameraRenderProxy;
+class PostProcessStack;
 struct DXGraphicsContext;
 
 DCLASS()
@@ -51,6 +52,9 @@ private:
 
     DPROPERTY()
     float m_aspectRatio;
+
+    DPROPERTY()
+    PostProcessStack* m_postProcessStack = nullptr;
 
     std::shared_ptr<CameraRenderProxy> m_renderProxy;
 };

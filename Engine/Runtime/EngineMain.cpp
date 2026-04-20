@@ -12,8 +12,10 @@
 #include "Graphics/Light/DirectionalLight.h"
 #include "Graphics/Light/PointLight.h"
 #include "Graphics/Light/SpotLight.h"
+#include "Graphics/PostProcess/PostProcessStack.h"
 #include "Graphics/Renderer/MeshRenderer.h"
 #include "Graphics/Renderer/Renderer.h"
+#include "Graphics/RenderProxy/CameraRenderProxy.h"
 #include "Graphics/DirectX/CommandList.h"
 #include "IO/IOManager.h"
 #include "Reflection/ReflectionRegistry.h"
@@ -101,6 +103,12 @@ void EngineMain::RecordSceneDraws(std::shared_ptr<DXGraphicsContext> context)
             context->commandList->SetGraphicsDynamicConstantBuffer(0, *context->cameraOverride);
         context->ApplyLightBuffersToCommandList();
         world->GatherDrawCalls(context);
+
+        PostProcessStack* stack = context->camera ? context->camera->postProcessStack : nullptr;
+        if (stack && stack->GetPassCount() > 0)
+        {
+            // TODO Phase 3: execute passes
+        }
     }
 }
 
