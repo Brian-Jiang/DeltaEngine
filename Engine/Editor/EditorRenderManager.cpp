@@ -104,7 +104,14 @@ void EditorRenderManager::PrepareViewportSceneTexture(CommandList& commandList)
         displayTexture = offscreenColor;
     }
 
-    const D3D12_CPU_DESCRIPTOR_HANDLE srcSrv = displayTexture->GetShaderResourceView();
+    D3D12_CPU_DESCRIPTOR_HANDLE srcSrv = displayTexture->GetShaderResourceView();
+    if (sampleCount == 1)
+    {
+        const D3D12_CPU_DESCRIPTOR_HANDLE finalSrv = m_sceneRenderer->GetFinalSceneSRV();
+        if (finalSrv.ptr != 0)
+            srcSrv = finalSrv;
+    }
+
     if (srcSrv.ptr != 0)
     {
         m_device->GetD3D12Device()->CopyDescriptorsSimple(1, m_imguiSrvCpuHandle, srcSrv, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);

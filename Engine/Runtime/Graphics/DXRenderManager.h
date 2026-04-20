@@ -9,6 +9,8 @@
 #include <d3dx12.h>
 #include <DirectXMath.h>
 
+#include <dxcapi.h>
+
 #include "DirectX/CommandQueue.h"
 #include "DirectX/UploadBuffer.h"
 #include "DirectX/DescriptorAllocator.h"
@@ -16,6 +18,7 @@
 #include "Structures/Camera.h"
 #include "Runtime/Graphics/DXGraphicsContext.h"
 #include "Runtime/Graphics/DirectX/Device.h"
+#include "Runtime/Graphics/DirectX/DirectX12Texture.h"
 #include "Runtime/Graphics/DirectX/RenderTarget.h"
 
 DELTA_ENGINE_NS_BEGIN
@@ -25,6 +28,14 @@ class CommandList;
 class RootSignature;
 class RenderTarget;
 class DWorld;
+class PostProcessStack;
+
+struct PostProcessTarget
+{
+    std::shared_ptr<DirectX12Texture> texture;
+    D3D12_CPU_DESCRIPTOR_HANDLE rtv{};
+    D3D12_CPU_DESCRIPTOR_HANDLE srv{};
+};
 
 /// Renders the scene to an offscreen render target. Does not own swap chain or window.
 /// Device and RenderTarget are provided externally (e.g. by Editor or game launcher).
@@ -59,7 +70,12 @@ public:
     inline std::shared_ptr<RenderTarget> GetRenderTarget() const { return m_renderTarget; }
     inline std::shared_ptr<CommandList> GetCurrentCommandList() const { return m_currentCommandList; }
 
+    DELTAENGINE_API D3D12_CPU_DESCRIPTOR_HANDLE GetFinalSceneSRV() const { return m_finalPostProcessSRV; }
+
 private:
+    void CreatePingPongTargets(UINT width, UINT height);
+    void ExecutePostProcessStack(DXGraphicsContext& ctx, PostProcessStack* stack, UINT width, UINT height);
+
 	D3D12_RECT m_scissorRect;
 	CD3DX12_VIEWPORT m_viewport;
 
@@ -67,6 +83,12 @@ private:
     std::shared_ptr<RenderTarget> m_renderTarget;
     std::shared_ptr<RootSignature> m_rootSignature;
 	std::shared_ptr<CommandList> m_currentCommandList;
+
+    PostProcessTarget m_pingPong[2];
+    Microsoft::WRL::ComPtr<IDxcBlob> m_postProcessVS;
+    D3D12_CPU_DESCRIPTOR_HANDLE m_finalPostProcessSRV{};
+
+    std::shared_ptr<DXGraphicsContext> m_currentContext;
 
     UINT m_width;
     UINT m_height;
