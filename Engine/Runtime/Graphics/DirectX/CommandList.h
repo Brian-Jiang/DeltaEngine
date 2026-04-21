@@ -381,6 +381,14 @@ public:
         UINT numSubresources = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 
     /**
+     * Stage a raw CPU descriptor handle into the dynamic descriptor heap for
+     * the given root parameter slot. Caller is responsible for ensuring the
+     * underlying resource is in the correct shader-resource state.
+     */
+    DELTAENGINE_API void SetShaderResourceView(uint32_t rootParameterIndex,
+        uint32_t descriptorOffset, D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle);
+
+    /**
      * Set an SRV on the graphics pipeline from an engine-level DTexture (handles transition and descriptor staging).
      */
     //void SetShaderResourceView(uint32_t rootParameterIndex, const std::shared_ptr<DTexture>& texture,
