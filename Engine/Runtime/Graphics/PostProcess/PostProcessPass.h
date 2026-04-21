@@ -33,6 +33,7 @@ public:
                          D3D12_CPU_DESCRIPTOR_HANDLE inputSRV,
                          D3D12_CPU_DESCRIPTOR_HANDLE outputRTV,
                          UINT width, UINT height) = 0;
+    virtual void Shutdown() {}
 };
 
 DELTA_ENGINE_NS_END

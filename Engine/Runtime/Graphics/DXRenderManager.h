@@ -4,6 +4,7 @@
 
 #include <chrono>
 #include <memory>
+#include <unordered_set>
 #include <dxgi1_6.h>
 #include <d3d12.h>
 #include <d3dx12.h>
@@ -29,6 +30,7 @@ class RootSignature;
 class RenderTarget;
 class DWorld;
 class PostProcessStack;
+class PostProcessPass;
 
 struct PostProcessTarget
 {
@@ -43,6 +45,7 @@ class DXRenderManager : public std::enable_shared_from_this<DXRenderManager>
 {
 public:
 	DELTAENGINE_API DXRenderManager(std::shared_ptr<Device> device, std::shared_ptr<RenderTarget> renderTarget, UINT width, UINT height);
+	DELTAENGINE_API ~DXRenderManager();
 	DELTAENGINE_API void LoadPipeline();
     DELTAENGINE_API void LoadAssets();
 
@@ -92,6 +95,8 @@ private:
 	std::shared_ptr<CommandList> m_currentCommandList;
 
     PostProcessTarget m_pingPong[2];
+    std::shared_ptr<DirectX12Texture> m_resolvedScene;
+    std::unordered_set<PostProcessPass*> m_trackedPasses;
     Microsoft::WRL::ComPtr<IDxcBlob> m_postProcessVS;
     D3D12_CPU_DESCRIPTOR_HANDLE m_finalPostProcessSRV{};
 

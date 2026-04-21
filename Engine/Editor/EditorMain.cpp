@@ -17,6 +17,7 @@
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/DirectX/SwapChain.h"
 #include "Runtime/Graphics/DirectX/CommandQueue.h"
+#include <d3d12.h>
 #include <backends/imgui_impl_dx12.h>
 #include <backends/imgui_impl_sdl3.h>
 #include <imgui.h>
@@ -323,7 +324,10 @@ void EditorMain::ProcessEvents()
 void EditorMain::Shutdown()
 {
     if (m_renderManager)
+    {
+        m_renderManager->GetDevice()->Flush();
         m_renderManager->OnDestroy();
+    }
 
     if (m_imguiDx12Initialized)
     {

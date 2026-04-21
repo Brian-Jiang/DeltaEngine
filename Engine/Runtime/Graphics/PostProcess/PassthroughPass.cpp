@@ -153,6 +153,13 @@ void PassthroughPass::LazyInitialize(DXGraphicsContext& ctx)
     m_initialized = true;
 }
 
+void PassthroughPass::Shutdown()
+{
+    m_pso.reset();
+    m_rootSignature.reset();
+    m_initialized = false;
+}
+
 void PassthroughPass::Execute(DXGraphicsContext& ctx,
                               D3D12_CPU_DESCRIPTOR_HANDLE inputSRV,
                               D3D12_CPU_DESCRIPTOR_HANDLE /*outputRTV*/,

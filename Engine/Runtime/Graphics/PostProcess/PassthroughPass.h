@@ -26,6 +26,7 @@ public:
                  D3D12_CPU_DESCRIPTOR_HANDLE inputSRV,
                  D3D12_CPU_DESCRIPTOR_HANDLE outputRTV,
                  UINT width, UINT height) override;
+    void Shutdown() override;
 
 private:
     void LazyInitialize(DXGraphicsContext& ctx);
