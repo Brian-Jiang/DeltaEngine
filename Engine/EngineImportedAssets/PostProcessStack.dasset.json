@@ -1,0 +1,26 @@
+{
+  "header": {
+    "assetId": "a521c98a-6402-46d4-b0d6-a61e1c232971",
+    "className": "PA_PostProcessStack",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "PostProcessStack",
+      "_objectId": "bd61905b-dc6c-49ac-9186-51f7cf4e5f24",
+      "m_passes": [
+        {
+          "assetId": "a521c98a-6402-46d4-b0d6-a61e1c232971",
+          "objectId": "b5996c86-d354-4b6f-8a96-dfb8d0cc54dc"
+        }
+      ]
+    },
+    {
+      "_class": "PassthroughPass",
+      "_objectId": "b5996c86-d354-4b6f-8a96-dfb8d0cc54dc",
+      "m_enabled": true,
+      "m_passName": ""
+    }
+  ]
+}
