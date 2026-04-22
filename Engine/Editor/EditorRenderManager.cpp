@@ -76,6 +76,38 @@ void EditorRenderManager::PrepareViewportSceneTexture(CommandList& commandList)
     if (!offscreenColor)
         return;
 
+    // Post-process produced output on a different command list. The ping-pong texture
+    // is not tracked by this (imgui) command list, so copy it into a display texture
+    // owned and tracked here. This guarantees correct resource lifetime and state.
+    if (m_sceneRenderer->HasPostProcessedOutput())
+    {
+        auto finalTex = m_sceneRenderer->GetFinalPostProcessTexture();
+        if (finalTex)
+        {
+            const UINT ppWidth = m_offscreenRenderTarget->GetWidth();
+            const UINT ppHeight = m_offscreenRenderTarget->GetHeight();
+            const DXGI_FORMAT ppFormat = finalTex->GetD3D12ResourceDesc().Format;
+            if (!m_viewportDisplayTexture ||
+                m_viewportDisplayTexture->GetD3D12ResourceDesc().Width != ppWidth ||
+                m_viewportDisplayTexture->GetD3D12ResourceDesc().Height != ppHeight ||
+                m_viewportDisplayTexture->GetD3D12ResourceDesc().Format != ppFormat)
+            {
+                const auto colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+                    ppFormat, ppWidth, ppHeight, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE);
+                m_viewportDisplayTexture = m_device->CreateTexture(colorDesc, nullptr);
+                m_viewportDisplayTexture->SetName(L"Viewport Display Target");
+            }
+            commandList.CopyResource(m_viewportDisplayTexture, finalTex);
+            commandList.TransitionBarrier(m_viewportDisplayTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+            commandList.FlushResourceBarriers();
+            const D3D12_CPU_DESCRIPTOR_HANDLE srv = m_viewportDisplayTexture->GetShaderResourceView();
+            if (srv.ptr != 0)
+                m_device->GetD3D12Device()->CopyDescriptorsSimple(1, m_imguiSrvCpuHandle, srv, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            return;
+        }
+    }
+
+    // Fallback: no post-process — resolve MSAA if needed, then display raw scene.
     const UINT sampleCount = offscreenColor->GetD3D12ResourceDesc().SampleDesc.Count;
     const UINT width = m_offscreenRenderTarget->GetWidth();
     const UINT height = m_offscreenRenderTarget->GetHeight();
@@ -99,19 +131,18 @@ void EditorRenderManager::PrepareViewportSceneTexture(CommandList& commandList)
     }
     else
     {
+        const D3D12_CPU_DESCRIPTOR_HANDLE finalSrv = m_sceneRenderer->GetFinalSceneSRV();
+        if (finalSrv.ptr != 0)
+        {
+            m_device->GetD3D12Device()->CopyDescriptorsSimple(1, m_imguiSrvCpuHandle, finalSrv, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            return;
+        }
         commandList.TransitionBarrier(offscreenColor, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         commandList.FlushResourceBarriers();
         displayTexture = offscreenColor;
     }
 
-    D3D12_CPU_DESCRIPTOR_HANDLE srcSrv = displayTexture->GetShaderResourceView();
-    if (sampleCount == 1)
-    {
-        const D3D12_CPU_DESCRIPTOR_HANDLE finalSrv = m_sceneRenderer->GetFinalSceneSRV();
-        if (finalSrv.ptr != 0)
-            srcSrv = finalSrv;
-    }
-
+    const D3D12_CPU_DESCRIPTOR_HANDLE srcSrv = displayTexture->GetShaderResourceView();
     if (srcSrv.ptr != 0)
     {
         m_device->GetD3D12Device()->CopyDescriptorsSimple(1, m_imguiSrvCpuHandle, srcSrv, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);

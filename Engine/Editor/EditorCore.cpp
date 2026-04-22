@@ -22,6 +22,7 @@
 #include "Runtime/Core/DShader.h"
 #include "Runtime/Core/DMaterial.h"
 #include "Runtime/Core/Skybox.h"
+#include "Runtime/Graphics/PostProcess/PA_PostProcessStack.h"
 #include <nlohmann/json.hpp>
 
 #include <cstdio>
@@ -347,6 +348,12 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
 
  void EditorCore::CreateAssets()
  {
+     //const std::filesystem::path ppStackPath = IOManager::GetEngineImportedAssetFullPath("PostProcessStack");
+     //PA_PostProcessStack *ppStack = PA_PostProcessStack::Create();
+     //ppStack->AddPass("PassthroughPass");
+     //ppStack->AddPass("TonemapPass");
+     //m_assetDatabase->CreateAsset(ppStackPath, ppStack);
+
      //const std::filesystem::path skyboxTexturePath = IOManager::GetEngineImportedAssetFullPath("SkyboxTexture");
      //const std::filesystem::path skyboxTextureSourcePath = IOManager::GetEngineSourceAssetFullPath(L"SkyboxCubemap.dds");
      //PA_Texture *skyboxTexture = PA_Texture::Create(DTexture::LoadFromFile(skyboxTextureSourcePath));

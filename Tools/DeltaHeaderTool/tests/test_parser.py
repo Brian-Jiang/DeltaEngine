@@ -33,6 +33,11 @@ def parse_no_annotation(fixtures_dir):
     return parse_header(fixtures_dir / "no_annotation.h", fixtures_dir)
 
 
+@pytest.fixture
+def parse_api_macro_class(fixtures_dir):
+    return parse_header(fixtures_dir / "api_macro_class.h", fixtures_dir)
+
+
 def test_simple_class_name_and_counts(parse_simple_class):
     r = parse_simple_class
     assert len(r.classes) == 1
@@ -97,3 +102,9 @@ def test_multi_class_two_results(parse_multi_class):
 
 def test_no_annotation_empty(parse_no_annotation):
     assert parse_no_annotation.classes == []
+
+
+def test_api_macro_class_base_names(parse_api_macro_class):
+    by_name = {c.name: c for c in parse_api_macro_class.classes}
+    assert by_name["ApiMacroBase"].base_name == "DObject"
+    assert by_name["ApiMacroDerived"].base_name == "ApiMacroBase"

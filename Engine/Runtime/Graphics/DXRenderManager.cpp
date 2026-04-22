@@ -1,6 +1,5 @@
 #include "DXRenderManager.h"
 
-#include <fstream>
 #include <iostream>
 #include <d3dcompiler.h>
 #include <dxcapi.h>
@@ -86,6 +85,8 @@ DXRenderManager::DXRenderManager(std::shared_ptr<Device> device, std::shared_ptr
     LoadPipeline();
     LoadAssets();
 }
+
+DXRenderManager::~DXRenderManager() = default;
 
 void DXRenderManager::LoadPipeline()
 {
@@ -230,7 +231,9 @@ void DXRenderManager::Resize(UINT width, UINT height)
     m_viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, static_cast<float>(m_width), static_cast<float>(m_height));
     m_renderTarget->Resize(m_width, m_height);
     CreatePingPongTargets(m_width, m_height);
+    m_resolvedScene.reset();
     m_finalPostProcessSRV = {};
+    m_finalPostProcessTexture.reset();
 }
 
 void DXRenderManager::ExecutePostProcessStack(DXGraphicsContext& ctx, PostProcessStack* stack, UINT width, UINT height)
@@ -241,11 +244,36 @@ void DXRenderManager::ExecutePostProcessStack(DXGraphicsContext& ctx, PostProces
     if (!stack || stack->GetPassCount() == 0)
     {
         m_finalPostProcessSRV = sceneSRV;
+        m_hasPostProcessedOutput = false;
+        m_finalPostProcessTexture.reset();
         return;
     }
 
     auto& cl = *m_currentCommandList;
-    cl.TransitionBarrier(sceneTex, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+    const auto sceneDesc = sceneTex->GetD3D12ResourceDesc();
+    if (sceneDesc.SampleDesc.Count > 1)
+    {
+        if (!m_resolvedScene ||
+            m_resolvedScene->GetD3D12ResourceDesc().Width != sceneDesc.Width ||
+            m_resolvedScene->GetD3D12ResourceDesc().Height != sceneDesc.Height ||
+            m_resolvedScene->GetD3D12ResourceDesc().Format != sceneDesc.Format)
+        {
+            auto resolvedDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+                sceneDesc.Format, sceneDesc.Width, static_cast<UINT>(sceneDesc.Height),
+                1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE);
+            m_resolvedScene = m_device->CreateTexture(resolvedDesc, nullptr);
+            m_resolvedScene->SetName(L"PostProcess Resolved Scene");
+        }
+
+        cl.ResolveSubresource(m_resolvedScene, sceneTex);
+        cl.TransitionBarrier(m_resolvedScene, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        sceneSRV = m_resolvedScene->GetShaderResourceView();
+    }
+    else
+    {
+        cl.TransitionBarrier(sceneTex, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    }
 
     D3D12_CPU_DESCRIPTOR_HANDLE readSRV = sceneSRV;
     int writeIdx = 0;
@@ -256,6 +284,8 @@ void DXRenderManager::ExecutePostProcessStack(DXGraphicsContext& ctx, PostProces
         PostProcessPass* pass = stack->GetPass(i);
         if (!pass)
             continue;
+
+        m_trackedPasses.insert(pass);
 
         auto& dst = m_pingPong[writeIdx];
         cl.TransitionBarrier(dst.texture, D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -274,6 +304,8 @@ void DXRenderManager::ExecutePostProcessStack(DXGraphicsContext& ctx, PostProces
     }
 
     m_finalPostProcessSRV = readSRV;
+    m_hasPostProcessedOutput = true;
+    m_finalPostProcessTexture = m_pingPong[1 - writeIdx].texture;
 }
 
 void DXRenderManager::CreatePingPongTargets(UINT width, UINT height)
@@ -300,7 +332,12 @@ void DXRenderManager::CreatePingPongTargets(UINT width, UINT height)
 
 void DXRenderManager::OnDestroy()
 {
-
+    for (PostProcessPass* pass : m_trackedPasses)
+    {
+        if (pass)
+            pass->Shutdown();
+    }
+    m_trackedPasses.clear();
 }
 
 std::shared_ptr<DXGraphicsContext> DeltaEngine::DXRenderManager::GetGraphicsContext()

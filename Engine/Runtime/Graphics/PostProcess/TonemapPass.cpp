@@ -1,4 +1,4 @@
-#include "Graphics/PostProcess/PassthroughPass.h"
+#include "Graphics/PostProcess/TonemapPass.h"
 
 #include <d3d12.h>
 #include <d3dx12.h>
@@ -22,7 +22,7 @@ using namespace DeltaEngine;
 
 namespace
 {
-    ComPtr<IDxcBlob> CompilePassthroughPixelShader()
+    ComPtr<IDxcBlob> CompileTonemapPixelShader()
     {
         ComPtr<IDxcUtils> dxcUtils;
         ComPtr<IDxcCompiler3> compiler;
@@ -31,7 +31,7 @@ namespace
         ThrowIfFailed(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils)));
         ThrowIfFailed(dxcUtils->CreateDefaultIncludeHandler(&includeHandler));
 
-        const std::wstring shaderPath = IOManager::GetEngineSourceAssetFullPath(L"PostProcess_Passthrough_PS.hlsl");
+        const std::wstring shaderPath = IOManager::GetEngineSourceAssetFullPath(L"PostProcess_Tonemap_PS.hlsl");
         ComPtr<IDxcBlobEncoding> sourceBlob;
         ThrowIfFailed(dxcUtils->LoadFile(shaderPath.c_str(), nullptr, &sourceBlob));
 
@@ -60,7 +60,7 @@ namespace
             if (error && error->GetBufferSize() > 0)
             {
                 const std::string errorMessage(static_cast<const char*>(error->GetBufferPointer()), error->GetBufferSize());
-                std::cerr << "PostProcess_Passthrough_PS compile error: " << errorMessage << std::endl;
+                std::cerr << "PostProcess_Tonemap_PS compile error: " << errorMessage << std::endl;
             }
             ThrowIfFailed(hr);
         }
@@ -71,21 +71,22 @@ namespace
     }
 }
 
-void PassthroughPass::Initialize(Device& /*device*/)
+void TonemapPass::Initialize(Device& /*device*/)
 {
 }
 
-void PassthroughPass::LazyInitialize(DXGraphicsContext& ctx)
+void TonemapPass::LazyInitialize(DXGraphicsContext& ctx)
 {
     Device& device = *ctx.device;
 
-    ComPtr<IDxcBlob> psBlob = CompilePassthroughPixelShader();
+    ComPtr<IDxcBlob> psBlob = CompileTonemapPixelShader();
 
     CD3DX12_DESCRIPTOR_RANGE1 srvRange{};
     srvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
 
-    CD3DX12_ROOT_PARAMETER1 rootParam{};
-    rootParam.InitAsDescriptorTable(1, &srvRange, D3D12_SHADER_VISIBILITY_PIXEL);
+    CD3DX12_ROOT_PARAMETER1 rootParams[2]{};
+    rootParams[0].InitAsDescriptorTable(1, &srvRange, D3D12_SHADER_VISIBILITY_PIXEL);
+    rootParams[1].InitAsConstants(1, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL);
 
     CD3DX12_STATIC_SAMPLER_DESC linearSampler(
         0,
@@ -102,7 +103,7 @@ void PassthroughPass::LazyInitialize(DXGraphicsContext& ctx)
         D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 
     CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rsDesc;
-    rsDesc.Init_1_1(1, &rootParam, 1, &linearSampler, flags);
+    rsDesc.Init_1_1(_countof(rootParams), rootParams, 1, &linearSampler, flags);
 
     m_rootSignature = device.CreateRootSignature(rsDesc.Desc_1_1);
 
@@ -153,17 +154,17 @@ void PassthroughPass::LazyInitialize(DXGraphicsContext& ctx)
     m_initialized = true;
 }
 
-void PassthroughPass::Shutdown()
+void TonemapPass::Shutdown()
 {
     m_pso.reset();
     m_rootSignature.reset();
     m_initialized = false;
 }
 
-void PassthroughPass::Execute(DXGraphicsContext& ctx,
-                              D3D12_CPU_DESCRIPTOR_HANDLE inputSRV,
-                              D3D12_CPU_DESCRIPTOR_HANDLE /*outputRTV*/,
-                              UINT width, UINT height)
+void TonemapPass::Execute(DXGraphicsContext& ctx,
+                          D3D12_CPU_DESCRIPTOR_HANDLE inputSRV,
+                          D3D12_CPU_DESCRIPTOR_HANDLE /*outputRTV*/,
+                          UINT width, UINT height)
 {
     if (!m_initialized)
         LazyInitialize(ctx);
@@ -176,6 +177,7 @@ void PassthroughPass::Execute(DXGraphicsContext& ctx,
     cl.SetGraphicsRootSignature(m_rootSignature);
     cl.SetPipelineState(m_pso);
     cl.SetShaderResourceView(0u, 0u, inputSRV);
+    cl.SetGraphics32BitConstants(1u, m_exposure);
 
     D3D12_VIEWPORT vp{ 0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f, 1.0f };
     D3D12_RECT sc{ 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) };

@@ -195,7 +195,11 @@
         0.0
       ],
       "m_name": "Main Camera",
-      "m_near": 0.10000000149011612
+      "m_near": 0.10000000149011612,
+      "m_postProcessStack": {
+        "assetId": "a521c98a-6402-46d4-b0d6-a61e1c232971",
+        "objectId": "bd61905b-dc6c-49ac-9186-51f7cf4e5f24"
+      }
     },
     {
       "_class": "GameObject",

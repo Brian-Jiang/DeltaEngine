@@ -335,7 +335,7 @@ def _extract_base_from_source(source: str, class_name: str, start_line: int) -> 
             break
     decl = " ".join(decl_parts)
     # Match ": base_specifiers" - after class/struct Name :
-    m = re.search(rf"\b(?:class|struct)\s+{re.escape(class_name)}\s*:\s*(.+?)(?:\{{|$)", decl, re.DOTALL)
+    m = re.search(rf"\b(?:class|struct)\s+(?:\w+\s+)*{re.escape(class_name)}\s*:\s*(.+?)(?:\{{|$)", decl, re.DOTALL)
     if not m:
         return ""
     bases_str = m.group(1).strip()

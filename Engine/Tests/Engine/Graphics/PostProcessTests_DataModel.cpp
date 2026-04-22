@@ -1,4 +1,5 @@
 #include "Runtime/Graphics/PostProcess/PA_PostProcessStack.h"
+#include "Runtime/Graphics/PostProcess/PassthroughPass.h"
 #include "Runtime/Graphics/PostProcess/PostProcessPass.h"
 #include "Runtime/Graphics/PostProcess/PostProcessStack.h"
 #include "Runtime/Reflection/DClass.h"
@@ -63,4 +64,17 @@ TEST(PostProcessDataModelTests, AddPassUnknownClassReturnsNullptr)
     ASSERT_NE(asset, nullptr);
     EXPECT_EQ(asset->AddPass("NonReflectedPassType"), nullptr);
     EXPECT_EQ(asset->m_stack->GetPassCount(), 0);
+}
+
+TEST(PostProcessDataModelTests, PassthroughPassIsConcreteSubclassOfPostProcessPass)
+{
+    DObject* obj = GetReflectionRegistry().CreateObject("PassthroughPass");
+    ASSERT_NE(obj, nullptr);
+    EXPECT_EQ(obj->GetClass()->GetName(), "PassthroughPass");
+
+    DClass* base = GetReflectionRegistry().FindClassByName("PostProcessPass");
+    ASSERT_NE(base, nullptr);
+    EXPECT_TRUE(obj->GetClass()->IsChildOf(base));
+
+    GetReflectionRegistry().DestroyObject(obj);
 }
