@@ -5,9 +5,7 @@
 #include <dxcapi.h>
 #include <wrl/client.h>
 
-#include <iostream>
-#include <string>
-
+#include "Core/DShader.h"
 #include "Graphics/DXGraphicsContext.h"
 #include "Graphics/DXRenderManager.h"
 #include "Graphics/DXUtils.h"
@@ -15,61 +13,9 @@
 #include "Graphics/DirectX/Device.h"
 #include "Graphics/DirectX/PipelineStateObject.h"
 #include "Graphics/DirectX/RootSignature.h"
-#include "IO/IOManager.h"
 
 using namespace Microsoft::WRL;
 using namespace DeltaEngine;
-
-namespace
-{
-    ComPtr<IDxcBlob> CompileTonemapPixelShader()
-    {
-        ComPtr<IDxcUtils> dxcUtils;
-        ComPtr<IDxcCompiler3> compiler;
-        ComPtr<IDxcIncludeHandler> includeHandler;
-        ThrowIfFailed(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)));
-        ThrowIfFailed(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils)));
-        ThrowIfFailed(dxcUtils->CreateDefaultIncludeHandler(&includeHandler));
-
-        const std::wstring shaderPath = IOManager::GetEngineSourceAssetFullPath(L"Shaders/PostProcess_Tonemap_PS.hlsl");
-        ComPtr<IDxcBlobEncoding> sourceBlob;
-        ThrowIfFailed(dxcUtils->LoadFile(shaderPath.c_str(), nullptr, &sourceBlob));
-
-        BOOL known = FALSE;
-        UINT32 encoding = 0;
-        ThrowIfFailed(sourceBlob->GetEncoding(&known, &encoding));
-        DxcBuffer sourceBuffer{ sourceBlob->GetBufferPointer(), sourceBlob->GetBufferSize(), encoding };
-
-        LPCWSTR args[] = {
-            shaderPath.c_str(),
-            L"-E", L"main",
-            L"-T", L"ps_6_0",
-            L"-Zi",
-            L"-Fd", L"./",
-        };
-
-        ComPtr<IDxcResult> result;
-        ThrowIfFailed(compiler->Compile(&sourceBuffer, args, _countof(args), includeHandler.Get(), IID_PPV_ARGS(&result)));
-
-        HRESULT hr = S_OK;
-        ThrowIfFailed(result->GetStatus(&hr));
-        if (FAILED(hr))
-        {
-            ComPtr<IDxcBlobEncoding> error;
-            result->GetErrorBuffer(&error);
-            if (error && error->GetBufferSize() > 0)
-            {
-                const std::string errorMessage(static_cast<const char*>(error->GetBufferPointer()), error->GetBufferSize());
-                std::cerr << "PostProcess_Tonemap_PS compile error: " << errorMessage << std::endl;
-            }
-            ThrowIfFailed(hr);
-        }
-
-        ComPtr<IDxcBlob> blob;
-        result->GetResult(&blob);
-        return blob;
-    }
-}
 
 void TonemapPass::Initialize(Device& /*device*/)
 {
@@ -79,7 +25,9 @@ void TonemapPass::LazyInitialize(DXGraphicsContext& ctx)
 {
     Device& device = *ctx.device;
 
-    ComPtr<IDxcBlob> psBlob = CompileTonemapPixelShader();
+    DShader* shader = ResolveShader(L"Shaders/PostProcess_Tonemap.hlsl");
+    IDxcBlob* vsBlob = shader->GetVertexShaderBlob();
+    IDxcBlob* psBlob = shader->GetPixelShaderBlob();
 
     CD3DX12_DESCRIPTOR_RANGE1 srvRange{};
     srvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
@@ -135,7 +83,7 @@ void TonemapPass::LazyInitialize(DXGraphicsContext& ctx)
 
     DXGI_SAMPLE_DESC sampleDesc{ 1, 0 };
 
-    D3D12_SHADER_BYTECODE vsBytecode = ctx.renderManager->GetPostProcessVSBytecode();
+    D3D12_SHADER_BYTECODE vsBytecode{ vsBlob->GetBufferPointer(), vsBlob->GetBufferSize() };
     D3D12_SHADER_BYTECODE psBytecode{ psBlob->GetBufferPointer(), psBlob->GetBufferSize() };
 
     pss.pRootSignature = m_rootSignature->GetD3D12RootSignature().Get();
@@ -158,6 +106,7 @@ void TonemapPass::Shutdown()
 {
     m_pso.reset();
     m_rootSignature.reset();
+    ReleaseFallbackShader();
     m_initialized = false;
 }
 

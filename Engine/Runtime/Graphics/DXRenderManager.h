@@ -10,8 +10,6 @@
 #include <d3dx12.h>
 #include <DirectXMath.h>
 
-#include <dxcapi.h>
-
 #include "DirectX/CommandQueue.h"
 #include "DirectX/UploadBuffer.h"
 #include "DirectX/DescriptorAllocator.h"
@@ -80,13 +78,6 @@ public:
         return m_hasPostProcessedOutput ? m_finalPostProcessTexture : nullptr;
     }
 
-    DELTAENGINE_API D3D12_SHADER_BYTECODE GetPostProcessVSBytecode() const
-    {
-        if (!m_postProcessVS)
-            return { nullptr, 0 };
-        return { m_postProcessVS->GetBufferPointer(), m_postProcessVS->GetBufferSize() };
-    }
-
 private:
     void CreatePingPongTargets(UINT width, UINT height);
     void ExecutePostProcessStack(DXGraphicsContext& ctx, PostProcessStack* stack, UINT width, UINT height);
@@ -102,7 +93,6 @@ private:
     PostProcessTarget m_pingPong[2];
     std::shared_ptr<DirectX12Texture> m_resolvedScene;
     std::unordered_set<PostProcessPass*> m_trackedPasses;
-    Microsoft::WRL::ComPtr<IDxcBlob> m_postProcessVS;
     D3D12_CPU_DESCRIPTOR_HANDLE m_finalPostProcessSRV{};
     bool m_hasPostProcessedOutput = false;
     std::shared_ptr<DirectX12Texture> m_finalPostProcessTexture;

@@ -24,14 +24,22 @@
       "_class": "PassthroughPass",
       "_objectId": "1ac4d4ba-9002-48de-80c4-38b7fa911b8e",
       "m_enabled": true,
-      "m_passName": ""
+      "m_passName": "",
+      "m_shader": {
+        "assetId": "40920546-8395-4a4f-a82b-9580ab130178",
+        "objectId": "5228835e-bd5f-4f6a-bd52-ede3e0afab36"
+      }
     },
     {
       "_class": "TonemapPass",
       "_objectId": "82a86343-28ce-4a52-8b00-9983f3a49a19",
       "m_enabled": true,
-      "m_exposure": 1.600000381469727,
-      "m_passName": ""
+      "m_exposure": 1.6000003814697266,
+      "m_passName": "",
+      "m_shader": {
+        "assetId": "5be5ecb5-60bb-4324-b4c2-7b38d1df176f",
+        "objectId": "8d589704-55b4-4801-b70c-2a4a49220dba"
+      }
     }
   ]
 }

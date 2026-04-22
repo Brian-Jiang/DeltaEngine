@@ -1,8 +1,6 @@
 #include "DXRenderManager.h"
 
-#include <iostream>
 #include <d3dcompiler.h>
-#include <dxcapi.h>
 #include <DirectXMath.h>
 #include <dxgidebug.h>
 
@@ -24,57 +22,6 @@
 using namespace Microsoft::WRL;
 using namespace DeltaEngine;
 using namespace DirectX;
-
-namespace
-{
-    ComPtr<IDxcBlob> CompilePostProcessVertexShader()
-    {
-        ComPtr<IDxcUtils> dxcUtils;
-        ComPtr<IDxcCompiler3> compiler;
-        ComPtr<IDxcIncludeHandler> includeHandler;
-        ThrowIfFailed(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)));
-        ThrowIfFailed(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils)));
-        ThrowIfFailed(dxcUtils->CreateDefaultIncludeHandler(&includeHandler));
-
-        const std::wstring shaderPath = IOManager::GetEngineSourceAssetFullPath(L"Shaders/PostProcess_VS.hlsl");
-        ComPtr<IDxcBlobEncoding> sourceBlob;
-        ThrowIfFailed(dxcUtils->LoadFile(shaderPath.c_str(), nullptr, &sourceBlob));
-
-        BOOL known = FALSE;
-        UINT32 encoding = 0;
-        ThrowIfFailed(sourceBlob->GetEncoding(&known, &encoding));
-        DxcBuffer sourceBuffer{ sourceBlob->GetBufferPointer(), sourceBlob->GetBufferSize(), encoding };
-
-        LPCWSTR args[] = {
-            shaderPath.c_str(),
-            L"-E", L"main",
-            L"-T", L"vs_6_0",
-            L"-Zi",
-            L"-Fd", L"./",
-        };
-
-        ComPtr<IDxcResult> result;
-        ThrowIfFailed(compiler->Compile(&sourceBuffer, args, _countof(args), includeHandler.Get(), IID_PPV_ARGS(&result)));
-
-        HRESULT hr = S_OK;
-        ThrowIfFailed(result->GetStatus(&hr));
-        if (FAILED(hr))
-        {
-            ComPtr<IDxcBlobEncoding> error;
-            result->GetErrorBuffer(&error);
-            if (error && error->GetBufferSize() > 0)
-            {
-                const std::string errorMessage(static_cast<const char*>(error->GetBufferPointer()), error->GetBufferSize());
-                std::cerr << "PostProcess_VS compile error: " << errorMessage << std::endl;
-            }
-            ThrowIfFailed(hr);
-        }
-
-        ComPtr<IDxcBlob> blob;
-        result->GetResult(&blob);
-        return blob;
-    }
-}
 
 DXRenderManager::DXRenderManager(std::shared_ptr<Device> device, std::shared_ptr<RenderTarget> renderTarget, UINT width, UINT height)
     : m_device(std::move(device)), m_renderTarget(std::move(renderTarget)), m_width(width), m_height(height),
@@ -137,8 +84,6 @@ void DXRenderManager::LoadAssets()
     rootSignatureDescription.Init_1_1(static_cast<UINT>(RootParameterType::NumRootParameterTypes), rootParameters, 1, &anisotropicSampler, rootSignatureFlags);
 
     m_rootSignature = m_device->CreateRootSignature(rootSignatureDescription.Desc_1_1);
-
-    m_postProcessVS = CompilePostProcessVertexShader();
 }
 
 void DXRenderManager::InitWorldRenderers(DWorld& world)

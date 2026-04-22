@@ -14,6 +14,7 @@ typedef unsigned int UINT;
 DELTA_ENGINE_NS_BEGIN
 
 class Device;
+class DShader;
 struct DXGraphicsContext;
 
 DCLASS(abstract)
@@ -28,12 +29,29 @@ public:
     DPROPERTY()
     bool m_enabled = true;
 
+    DPROPERTY()
+    DShader* m_shader = nullptr;
+
+    virtual ~PostProcessPass();
+
     virtual void Initialize(Device& device) = 0;
     virtual void Execute(DXGraphicsContext& ctx,
                          D3D12_CPU_DESCRIPTOR_HANDLE inputSRV,
                          D3D12_CPU_DESCRIPTOR_HANDLE outputRTV,
                          UINT width, UINT height) = 0;
     virtual void Shutdown() {}
+
+protected:
+    DShader* ResolveShader(const std::wstring& fallbackPath,
+                           const std::wstring& vsEntry = L"VSMain",
+                           const std::wstring& psEntry = L"PSMain",
+                           const std::wstring& vsProfile = L"vs_6_0",
+                           const std::wstring& psProfile = L"ps_6_0");
+
+    void ReleaseFallbackShader();
+
+private:
+    DShader* m_fallbackShader = nullptr;
 };
 
 DELTA_ENGINE_NS_END

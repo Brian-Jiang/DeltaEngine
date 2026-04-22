@@ -348,6 +348,22 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
 
  void EditorCore::CreateAssets()
  {
+     //{
+     //    const std::filesystem::path psShaderPath = IOManager::GetEngineImportedAssetFullPath("PassthroughShader");
+     //    DShader *psShader = CreateDObject<DShader>();
+     //    psShader->Initialize(L"Shaders/PostProcess_Passthrough.hlsl", L"VSMain", L"PSMain", L"vs_6_0", L"ps_6_0");
+     //    PA_Shader *psShaderPA = PA_Shader::Create(psShader);
+     //    m_assetDatabase->CreateAsset(psShaderPath, psShaderPA);
+     //}
+
+     //{
+     //    const std::filesystem::path psShaderPath = IOManager::GetEngineImportedAssetFullPath("TonemapShader");
+     //    DShader *psShader = CreateDObject<DShader>();
+     //    psShader->Initialize(L"Shaders/PostProcess_Tonemap.hlsl", L"VSMain", L"PSMain", L"vs_6_0", L"ps_6_0");
+     //    PA_Shader *psShaderPA = PA_Shader::Create(psShader);
+     //    m_assetDatabase->CreateAsset(psShaderPath, psShaderPA);
+     //}
+
      //const std::filesystem::path ppStackPath = IOManager::GetEngineImportedAssetFullPath("PostProcessStack");
      //PA_PostProcessStack *ppStack = PA_PostProcessStack::Create();
      //ppStack->AddPass("PassthroughPass");

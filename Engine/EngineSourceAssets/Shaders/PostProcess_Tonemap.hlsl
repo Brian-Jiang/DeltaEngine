@@ -6,11 +6,20 @@ cbuffer TonemapParams : register(b0)
     float g_exposure;
 }
 
-struct PSIn
+struct VSOut
 {
     float4 pos : SV_Position;
     float2 texCoord : TEXCOORD0;
 };
+
+VSOut VSMain(uint id : SV_VertexID)
+{
+    float2 uv = float2((id << 1) & 2, id & 2);
+    VSOut o;
+    o.pos = float4(uv * 2.0f - 1.0f, 0.0f, 1.0f);
+    o.texCoord = float2(uv.x, 1.0f - uv.y);
+    return o;
+}
 
 float3 PBRNeutralTonemap(float3 color)
 {
@@ -32,7 +41,7 @@ float3 PBRNeutralTonemap(float3 color)
     return lerp(color, float3(newPeak, newPeak, newPeak), g);
 }
 
-float4 main(PSIn input) : SV_Target
+float4 PSMain(VSOut input) : SV_Target
 {
     float3 c = inputTex.Sample(linearSampler, input.texCoord).rgb;
     c = max(c * g_exposure, 0.0);

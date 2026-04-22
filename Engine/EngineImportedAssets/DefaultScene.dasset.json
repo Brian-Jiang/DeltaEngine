@@ -367,6 +367,7 @@
     {
       "_class": "TestComponent",
       "_objectId": "693d859e-7a40-4cf7-b30c-85a861bd06b6",
+      "m_editorOnlyFloat": 0.0,
       "m_gameObject": {
         "assetId": "097992b4-c850-4c69-a612-ec83528b0c30",
         "objectId": "8dc31e8d-ce58-4280-bde5-de5b5723d6d5"

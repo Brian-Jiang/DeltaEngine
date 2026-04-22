@@ -4,34 +4,14 @@
 #include "Assets/DPrimaryAsset.h"
 #include "Assets/IAssetDatabase.h"
 #include "Graphics/DXUtils.h"
+#include "Graphics/ShaderCompile.h"
 #include "IO/IOManager.h"
 
 #include <cassert>
-#include <cstdio>
 #include <cstring>
-#include <iostream>
 
 namespace
 {
-void WriteShaderPdb(IDxcResult* result)
-{
-    if (!result)
-        return;
-
-    Microsoft::WRL::ComPtr<IDxcBlob> pdb;
-    Microsoft::WRL::ComPtr<IDxcBlobUtf16> pdbName;
-    result->GetOutput(DXC_OUT_PDB, IID_PPV_ARGS(&pdb), &pdbName);
-    if (!pdb || !pdbName || !pdbName->GetStringPointer())
-        return;
-
-    FILE* file = nullptr;
-    if (_wfopen_s(&file, pdbName->GetStringPointer(), L"wb") != 0 || file == nullptr)
-        return;
-
-    std::fwrite(pdb->GetBufferPointer(), pdb->GetBufferSize(), 1, file);
-    std::fclose(file);
-}
-
 DeltaEngine::TBulkData SerializeShaderBlobs(
     const Microsoft::WRL::ComPtr<IDxcBlob>& vertexBlob,
     const Microsoft::WRL::ComPtr<IDxcBlob>& pixelBlob)
@@ -281,67 +261,8 @@ void DShader::SetInputLayout(const std::vector<D3D12_INPUT_ELEMENT_DESC>& inputL
 
 void DShader::CompileShader()
 {
-    ComPtr<IDxcUtils> dxcUtils;
-    ComPtr<IDxcCompiler3> compiler;
-    ComPtr<IDxcIncludeHandler> includeHandler;
-    ThrowIfFailed(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)));
-    ThrowIfFailed(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils)));
-    ThrowIfFailed(dxcUtils->CreateDefaultIncludeHandler(&includeHandler));
-
-    const std::wstring shaderPath = IOManager::GetEngineSourceAssetFullPath(m_sourcePath);
-    ComPtr<IDxcBlobEncoding> sourceBlob;
-    ThrowIfFailed(dxcUtils->LoadFile(shaderPath.c_str(), nullptr, &sourceBlob));
-
-    BOOL known = FALSE;
-    UINT32 encoding = 0;
-    ThrowIfFailed(sourceBlob->GetEncoding(&known, &encoding));
-    DxcBuffer sourceBuffer { .Ptr = sourceBlob->GetBufferPointer(), .Size = sourceBlob->GetBufferSize(), .Encoding = encoding };
-
-    LPCWSTR vertexArgs[] = {
-        shaderPath.c_str(),
-        L"-E", m_vertexShaderEntryPoint.c_str(),
-        L"-T", m_vertexShaderTargetProfile.c_str(),
-        L"-Zi",
-        L"-Fd", L"./",
-    };
-
-    ComPtr<IDxcResult> vertexResult;
-    ThrowIfFailed(compiler->Compile(&sourceBuffer, vertexArgs, _countof(vertexArgs), includeHandler.Get(), IID_PPV_ARGS(&vertexResult)));
-
-    HRESULT hr = S_OK;
-    ThrowIfFailed(vertexResult->GetStatus(&hr));
-    if (FAILED(hr))
-    {
-        ComPtr<IDxcBlobEncoding> error;
-        vertexResult->GetErrorBuffer(&error);
-        const std::string errorMessage(static_cast<const char*>(error->GetBufferPointer()), error->GetBufferSize());
-        std::cerr << errorMessage << std::endl;
-    }
-
-    vertexResult->GetResult(&m_vertexShaderBlob);
-    WriteShaderPdb(vertexResult.Get());
-
-    LPCWSTR pixelArgs[] = {
-        shaderPath.c_str(),
-        L"-E", m_pixelShaderEntryPoint.c_str(),
-        L"-T", m_pixelShaderTargetProfile.c_str(),
-        L"-Zi",
-        L"-Fd", L"./",
-    };
-
-    ComPtr<IDxcResult> pixelResult;
-    ThrowIfFailed(compiler->Compile(&sourceBuffer, pixelArgs, _countof(pixelArgs), includeHandler.Get(), IID_PPV_ARGS(&pixelResult)));
-    ThrowIfFailed(pixelResult->GetStatus(&hr));
-    if (FAILED(hr))
-    {
-        ComPtr<IDxcBlobEncoding> error;
-        pixelResult->GetErrorBuffer(&error);
-        const std::string errorMessage(static_cast<const char*>(error->GetBufferPointer()), error->GetBufferSize());
-        std::cerr << errorMessage << std::endl;
-    }
-
-    pixelResult->GetResult(&m_pixelShaderBlob);
-    WriteShaderPdb(pixelResult.Get());
+    m_vertexShaderBlob = CompileHLSLStage(m_sourcePath, m_vertexShaderEntryPoint, m_vertexShaderTargetProfile, "DShader VS");
+    m_pixelShaderBlob = CompileHLSLStage(m_sourcePath, m_pixelShaderEntryPoint, m_pixelShaderTargetProfile, "DShader PS");
 }
 
 void DShader::OnBeforeSerialize()
