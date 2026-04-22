@@ -33,6 +33,8 @@ public:
     virtual DObject* FindObject(const AssetId& assetId, const ObjectId& objId) const = 0;
     /// Resolves an asset id from a source path.
     virtual AssetId FindAssetIdByPath(const std::filesystem::path& path) const = 0;
+    /// Persists the asset to disk (writes JSON header/body and bulk sidecars).
+    virtual void SaveAsset(const AssetId& id) = 0;
 };
 
 DELTA_ENGINE_NS_END

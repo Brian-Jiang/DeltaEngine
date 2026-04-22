@@ -29,7 +29,7 @@
         "_bulk": 0,
         "size": 15300
       },
-      "m_sourcePath": "Shaders.hlsl",
+      "m_sourcePath": "Shaders/Shaders.hlsl",
       "m_vertexShaderEntryPoint": "VSMain",
       "m_vertexShaderTargetProfile": "vs_6_0"
     }

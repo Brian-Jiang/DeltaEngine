@@ -29,7 +29,7 @@
         "_bulk": 0,
         "size": 9112
       },
-      "m_sourcePath": "Skybox.hlsl",
+      "m_sourcePath": "Shaders/Skybox.hlsl",
       "m_vertexShaderEntryPoint": "VSMain",
       "m_vertexShaderTargetProfile": "vs_6_0"
     }

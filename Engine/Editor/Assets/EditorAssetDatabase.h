@@ -51,7 +51,7 @@ public:
     DObject* FindObject(const AssetId& assetId, const ObjectId& objId) const override;
 
     void SaveDirtyAssets();
-    void SaveAsset(const AssetId& id);
+    void SaveAsset(const AssetId& id) override;
     AssetId DuplicateAsset(const AssetId& id);
     bool    DeleteAsset(const AssetId& id);
 

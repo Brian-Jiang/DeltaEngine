@@ -45,6 +45,13 @@ public:
         std::cerr << "[AssetDatabase] NullAssetDatabase: no IAssetDatabase registered - FindAssetIdByPath returning null AssetId\n";
         return AssetId::Null();
     }
+
+    /// No-op; logs a warning.
+    void SaveAsset(const AssetId& id) override
+    {
+        (void)id;
+        std::cerr << "[AssetDatabase] NullAssetDatabase: no IAssetDatabase registered - SaveAsset ignored\n";
+    }
 };
 
 DELTA_ENGINE_NS_END

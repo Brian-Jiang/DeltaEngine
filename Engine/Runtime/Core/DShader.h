@@ -45,6 +45,11 @@ public:
     /// Updates the pixel shader target profile and recompiles.
     DFUNCTION()
     DELTAENGINE_API void SetPixelShaderTargetProfile(const std::wstring& targetProfile);
+
+    /// Recompiles the shader from m_sourcePath and replaces the serialized bulk data.
+    DFUNCTION(ShowAsButton)
+    DELTAENGINE_API void Reimport();
+
     
     /// Copies the input layout and keeps semantic-name storage alive.
     DELTAENGINE_API void SetInputLayout(const std::vector<D3D12_INPUT_ELEMENT_DESC>& inputLayout);

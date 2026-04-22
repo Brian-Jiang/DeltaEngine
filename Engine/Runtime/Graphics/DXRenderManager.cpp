@@ -36,7 +36,7 @@ namespace
         ThrowIfFailed(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils)));
         ThrowIfFailed(dxcUtils->CreateDefaultIncludeHandler(&includeHandler));
 
-        const std::wstring shaderPath = IOManager::GetEngineSourceAssetFullPath(L"PostProcess_VS.hlsl");
+        const std::wstring shaderPath = IOManager::GetEngineSourceAssetFullPath(L"Shaders/PostProcess_VS.hlsl");
         ComPtr<IDxcBlobEncoding> sourceBlob;
         ThrowIfFailed(dxcUtils->LoadFile(shaderPath.c_str(), nullptr, &sourceBlob));
 

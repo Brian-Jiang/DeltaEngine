@@ -134,7 +134,7 @@ All DirectX 12 objects are wrapped:
 
 - **Models:** `DMesh::Initialize(...)` currently imports directly via Assimp and builds submesh/material/texture data.
 - **Textures:** `DTexture` initialization currently goes through `TextureImporter`; the standalone importer layer exists in `Engine/Runtime/Importers/` but is not an active high-level pipeline right now.
-- **Shaders:** `DShader` compiles HLSL at runtime using DXC (`dxcompiler.dll`). Sources in `Engine/Runtime/Shaders/`.
+- **Shaders:** `DShader` compiles HLSL at runtime using DXC (`dxcompiler.dll`). Sources in `Engine/EngineSourceAssets/Shaders/`.
 
 ### Editor UI (`Engine/Editor/`)
 
@@ -379,7 +379,7 @@ Python is **build-time only**. The bundled `Tools/Python/python.exe` runs `Delta
 - **Headers only for declarations/implementations split:** most files use `.h` + `.cpp` pairs under the same directory.
 - **Mixed ownership model:** subsystems use RAII smart pointers, while reflected `DObject` relationships and scene/component links are typically raw pointers.
 - **No raw `new`/`delete`** for reflected engine objects — use `CreateDObject<T>()`; asset ownership/lifetime is handled by reflection registry + `DPrimaryAsset`.
-- **HLSL shaders** live alongside engine source in `Engine/Runtime/Shaders/` and are compiled at runtime (not offline). The `StandardObject.hlsl` / `StandardLighting.hlsl` / `StandardConstantStructs.hlsl` trio forms the standard material shader.
+- **HLSL shaders** live in `Engine/EngineSourceAssets/Shaders/` and are compiled at runtime (not offline). The `StandardObject.hlsl` / `StandardLighting.hlsl` / `StandardConstantStructs.hlsl` trio forms the standard material shader.
 - **`DXGraphicsContext`** is the primary way to pass rendering state down the call stack — do not add global graphics state.
 - **Adding a new reflected class:** annotate with `DCLASS()` + `DGENERATED_BODY(Name)`, add `DPROPERTY()`/`DFUNCTION()` annotations, then build (or run `delta_header_generate.bat`) — the tool regenerates the `.generated.h/.cpp` pair automatically.
 - **Do not hand-edit generated files** in `Intermediate/DeltaHeaderTool/Generated/` — they are overwritten on every build.

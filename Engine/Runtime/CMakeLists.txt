@@ -39,8 +39,6 @@ target_link_libraries(${TARGET_NAME} PUBLIC d3d12.lib)
 target_link_libraries(${TARGET_NAME} PUBLIC dxguid.lib dxgi.lib d3dcompiler.lib)
 target_link_libraries(${TARGET_NAME} PUBLIC dxcompiler.dll)
 
-# add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Shaders")
-
 # ── DeltaHeaderTool integration ──────────────────────────────
 
 include("${CMAKE_SOURCE_DIR}/Tools/CMake/PythonSetup.cmake")

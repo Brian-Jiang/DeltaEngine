@@ -1,5 +1,8 @@
 #include "DShader.h"
 
+#include "Assets/AssetDatabaseLocator.h"
+#include "Assets/DPrimaryAsset.h"
+#include "Assets/IAssetDatabase.h"
 #include "Graphics/DXUtils.h"
 #include "IO/IOManager.h"
 
@@ -247,6 +250,17 @@ void DShader::SetPixelShaderTargetProfile(const std::wstring& targetProfile)
 {
     m_pixelShaderTargetProfile = targetProfile;
     CompileShader();
+}
+
+void DShader::Reimport()
+{
+    CompileShader();
+    OnBeforeSerialize();
+    if (DPrimaryAsset* asset = GetOwningAsset())
+    {
+        asset->MarkDirty();
+        AssetDatabaseLocator::Get().SaveAsset(asset->GetAssetId());
+    }
 }
 
 void DShader::SetInputLayout(const std::vector<D3D12_INPUT_ELEMENT_DESC>& inputLayout)
