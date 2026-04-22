@@ -233,6 +233,7 @@ void DXRenderManager::Resize(UINT width, UINT height)
     CreatePingPongTargets(m_width, m_height);
     m_resolvedScene.reset();
     m_finalPostProcessSRV = {};
+    m_finalPostProcessTexture.reset();
 }
 
 void DXRenderManager::ExecutePostProcessStack(DXGraphicsContext& ctx, PostProcessStack* stack, UINT width, UINT height)
@@ -243,6 +244,8 @@ void DXRenderManager::ExecutePostProcessStack(DXGraphicsContext& ctx, PostProces
     if (!stack || stack->GetPassCount() == 0)
     {
         m_finalPostProcessSRV = sceneSRV;
+        m_hasPostProcessedOutput = false;
+        m_finalPostProcessTexture.reset();
         return;
     }
 
@@ -301,6 +304,8 @@ void DXRenderManager::ExecutePostProcessStack(DXGraphicsContext& ctx, PostProces
     }
 
     m_finalPostProcessSRV = readSRV;
+    m_hasPostProcessedOutput = true;
+    m_finalPostProcessTexture = m_pingPong[1 - writeIdx].texture;
 }
 
 void DXRenderManager::CreatePingPongTargets(UINT width, UINT height)

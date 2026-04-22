@@ -74,6 +74,11 @@ public:
     inline std::shared_ptr<CommandList> GetCurrentCommandList() const { return m_currentCommandList; }
 
     DELTAENGINE_API D3D12_CPU_DESCRIPTOR_HANDLE GetFinalSceneSRV() const { return m_finalPostProcessSRV; }
+    DELTAENGINE_API bool HasPostProcessedOutput() const { return m_hasPostProcessedOutput; }
+    DELTAENGINE_API std::shared_ptr<DirectX12Texture> GetFinalPostProcessTexture() const
+    {
+        return m_hasPostProcessedOutput ? m_finalPostProcessTexture : nullptr;
+    }
 
     DELTAENGINE_API D3D12_SHADER_BYTECODE GetPostProcessVSBytecode() const
     {
@@ -99,6 +104,8 @@ private:
     std::unordered_set<PostProcessPass*> m_trackedPasses;
     Microsoft::WRL::ComPtr<IDxcBlob> m_postProcessVS;
     D3D12_CPU_DESCRIPTOR_HANDLE m_finalPostProcessSRV{};
+    bool m_hasPostProcessedOutput = false;
+    std::shared_ptr<DirectX12Texture> m_finalPostProcessTexture;
 
     std::shared_ptr<DXGraphicsContext> m_currentContext;
 
