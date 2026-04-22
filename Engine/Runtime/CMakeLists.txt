@@ -18,6 +18,7 @@ target_include_directories(${TARGET_NAME} PUBLIC "${CMAKE_SOURCE_DIR}/Engine")
 
 add_dependencies(${TARGET_NAME} CopyDx12AgilityBin)
 add_dependencies(${TARGET_NAME} CopyDxcBin)
+add_dependencies(${TARGET_NAME} CopySlangBin)
 
 target_compile_options(${TARGET_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->")
 target_compile_options(${TARGET_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/WX->")
@@ -34,6 +35,7 @@ target_link_libraries(${TARGET_NAME} PUBLIC ThirdParty::DirectXTex)
 target_link_libraries(${TARGET_NAME} PUBLIC ThirdParty::nlohmann_json)
 target_link_libraries(${TARGET_NAME} PUBLIC ThirdParty::spdlog)
 target_link_libraries(${TARGET_NAME} PUBLIC ThirdParty::asio)
+target_link_libraries(${TARGET_NAME} PUBLIC ThirdParty::slang)
 
 target_link_libraries(${TARGET_NAME} PUBLIC d3d12.lib)
 target_link_libraries(${TARGET_NAME} PUBLIC dxguid.lib dxgi.lib d3dcompiler.lib)
