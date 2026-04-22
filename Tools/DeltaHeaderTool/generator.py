@@ -43,6 +43,30 @@ from templates import (
 
 _OBJECT_PTR_PROP_RE = re.compile(r"^DObjectPtrProperty<(.+)>$")
 
+def _apply_editor_only(code: str) -> str:
+    """Splice ->bEditorOnly = true before the final semicolon on the last
+    cls->AddProperty(...) call in the given code chunk."""
+    idx = code.rfind("cls->AddProperty(")
+    if idx < 0:
+        return code
+    depth = 0
+    end = -1
+    for i in range(idx, len(code)):
+        ch = code[i]
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                end = i + 1
+                break
+    if end < 0:
+        return code
+    semi = code.find(";", end)
+    if semi < 0:
+        return code
+    return code[:end] + "->bEditorOnly = true" + code[end:semi] + code[semi:]
+
 EXTRA_PROPERTY_HEADERS = {
     "DBulkDataProperty": "Runtime/Reflection/DBulkDataProperty.h",
     "DVectorProperty": "Runtime/Reflection/DVectorProperty.h",
@@ -521,32 +545,38 @@ def _generate_class_registration(cls: ClassInfo) -> str:
         if prop.is_vector:
             code = _generate_vector_prop_code(prop, cls.name)
             if code:
+                if prop.editor_only:
+                    code = _apply_editor_only(code)
                 parts.append(code)
+            continue
         elif prop.is_dstruct:
-            parts.append(DPROPERTY_DSTRUCT.substitute(
+            code = DPROPERTY_DSTRUCT.substitute(
                 field_name=prop.name,
                 class_name=cls.name,
                 dstruct_type_name=prop.dstruct_type_name,
-            ))
+            )
         elif prop.is_object_ptr:
-            parts.append(DPROPERTY_OBJECT_PTR.substitute(
+            code = DPROPERTY_OBJECT_PTR.substitute(
                 pointee_type=prop.pointee_type,
                 field_name=prop.name,
                 class_name=cls.name,
-            ))
+            )
         elif prop.metadata:
-            parts.append(DPROPERTY_WITH_META.substitute(
+            code = DPROPERTY_WITH_META.substitute(
                 property_type=prop.property_class,
                 field_name=prop.name,
                 class_name=cls.name,
                 meta_init=_format_meta_init(prop.metadata),
-            ))
+            )
         else:
-            parts.append(DPROPERTY.substitute(
+            code = DPROPERTY.substitute(
                 property_type=prop.property_class,
                 field_name=prop.name,
                 class_name=cls.name,
-            ))
+            )
+        if prop.editor_only:
+            code = _apply_editor_only(code)
+        parts.append(code)
 
     for fn in cls.functions:
         parts.append(_generate_function_registration(cls, fn))

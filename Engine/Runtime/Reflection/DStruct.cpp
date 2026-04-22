@@ -17,13 +17,14 @@ DStruct::DStruct(std::string name,
 {
 }
 
-void DStruct::AddProperty(DProperty* property)
+DProperty* DStruct::AddProperty(DProperty* property)
 {
     property->m_declaringStruct = this;
 
     property->m_next = m_ownProperties;
     property->m_hierarchyNext = m_ownProperties;
     m_ownProperties = property;
+    return property;
 }
 
 DProperty* DStruct::FindPropertyByName(const std::string& name) const

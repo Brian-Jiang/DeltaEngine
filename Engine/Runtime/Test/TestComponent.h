@@ -54,6 +54,9 @@ private:
 
     DPROPERTY()
     DTexture* m_texture = nullptr;
+
+    DPROPERTY(EditorOnly)
+    float m_editorOnlyFloat = 0.0f;
 };
 
 DELTA_ENGINE_NS_END

@@ -87,6 +87,13 @@ public:
         return { m_postProcessVS->GetBufferPointer(), m_postProcessVS->GetBufferSize() };
     }
 
+    DELTAENGINE_API D3D12_SHADER_BYTECODE GetPostProcessVSBytecode() const
+    {
+        if (!m_postProcessVS)
+            return { nullptr, 0 };
+        return { m_postProcessVS->GetBufferPointer(), m_postProcessVS->GetBufferSize() };
+    }
+
 private:
     void CreatePingPongTargets(UINT width, UINT height);
     void ExecutePostProcessStack(DXGraphicsContext& ctx, PostProcessStack* stack, UINT width, UINT height);
