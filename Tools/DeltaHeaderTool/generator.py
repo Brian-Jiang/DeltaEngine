@@ -26,6 +26,7 @@ from templates import (
     DPROPERTY_VECTOR_DSTRUCT,
     DFUNCTION_VOID_NO_PARAMS,
     DFUNCTION_WITH_PARAMS,
+    DFUNCTION_SET_METADATA,
     DFUNCTION_PARAM,
     DFUNCTION_PARAM_OBJECT_PTR,
     DFUNCTION_PARAM_VECTOR,
@@ -385,10 +386,17 @@ def _generate_function_registration(cls: ClassInfo, fn: FunctionInfo) -> str:
     is_void = fn.return_type == "void"
     has_params = bool(fn.params)
 
+    metadata_call = ""
+    if fn.metadata:
+        metadata_call = DFUNCTION_SET_METADATA.substitute(
+            meta_init=_format_meta_init(fn.metadata),
+        )
+
     if is_void and not has_params:
         return DFUNCTION_VOID_NO_PARAMS.substitute(
             func_name=fn.name,
             thunk_suffix=thunk_suffix,
+            metadata_call=metadata_call,
         )
 
     param_registrations = ""
@@ -426,6 +434,8 @@ def _generate_function_registration(cls: ClassInfo, fn: FunctionInfo) -> str:
             f'{len(fn.params)}, sizeof({struct_name}), 0);',
         ]
         lines.append(param_registrations.rstrip("\n"))
+        if metadata_call:
+            lines.append(metadata_call.rstrip("\n"))
         lines.append("        cls->AddFunction(fn);")
         lines.append("    }")
         return "\n".join(lines) + "\n"
@@ -459,6 +469,7 @@ def _generate_function_registration(cls: ClassInfo, fn: FunctionInfo) -> str:
         num_params=len(fn.params),
         param_registrations=param_registrations,
         return_registration=return_registration,
+        metadata_call=metadata_call,
         thunk_suffix=thunk_suffix,
         params_struct_suffix=params_struct_suffix,
     )

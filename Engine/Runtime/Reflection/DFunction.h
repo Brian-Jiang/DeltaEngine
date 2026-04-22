@@ -3,6 +3,7 @@
 #include "EngineIncludes.h"
 
 #include <string>
+#include <unordered_map>
 #include <vector>
 #include <cstdint>
 
@@ -43,6 +44,18 @@ public:
     DELTAENGINE_API DProperty* GetReturnProperty() const;
     DELTAENGINE_API bool HasReturnValue() const;
 
+    void SetMetadata(std::unordered_map<std::string, std::string> metadata)
+    {
+        m_metadata = std::move(metadata);
+    }
+
+    bool HasMeta(const std::string& key) const
+    {
+        return m_metadata.count(key) > 0;
+    }
+
+    DELTAENGINE_API std::string GetMeta(const std::string& key, const std::string& defaultVal = "") const;
+
 private:
     std::string m_name;
     DClass* m_declaringClass = nullptr;
@@ -53,6 +66,7 @@ private:
 
     std::vector<DProperty*> m_params;
     DProperty* m_returnProperty = nullptr;
+    std::unordered_map<std::string, std::string> m_metadata;
 };
 
 DELTA_ENGINE_NS_END

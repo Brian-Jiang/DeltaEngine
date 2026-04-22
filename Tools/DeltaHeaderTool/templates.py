@@ -218,6 +218,7 @@ DPROPERTY_VECTOR_DSTRUCT = Template("""\
 DFUNCTION_VOID_NO_PARAMS = Template("""\
     {
         DFunction* fn = new DFunction("${func_name}", &${func_name}_Thunk${thunk_suffix}, 0, 0, 0);
+${metadata_call}\
         cls->AddFunction(fn);
     }
 """)
@@ -227,8 +228,13 @@ DFUNCTION_WITH_PARAMS = Template("""\
         DFunction* fn = new DFunction("${func_name}", &${func_name}_Thunk${thunk_suffix}, ${num_params}, sizeof(${class_name}_${func_name}_Params${params_struct_suffix}), offsetof(${class_name}_${func_name}_Params${params_struct_suffix}, returnValue));
 ${param_registrations}\
 ${return_registration}\
+${metadata_call}\
         cls->AddFunction(fn);
     }
+""")
+
+DFUNCTION_SET_METADATA = Template("""\
+        fn->SetMetadata(${meta_init});
 """)
 
 DFUNCTION_PARAM = Template("""\

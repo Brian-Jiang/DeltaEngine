@@ -39,6 +39,22 @@ def test_generate_source_contains_expected_markers(fixtures_dir):
     assert "offsetof(SimpleReflectClass, myInt)" in cpp
 
 
+def test_generate_source_emits_show_as_button_metadata(fixtures_dir):
+    path = fixtures_dir / "show_as_button.h"
+    result = parse_header(path, fixtures_dir)
+    cpp = generate_source_file(result.classes, path.stem, {})
+    assert 'DFunction("DoAction"' in cpp
+    assert 'DFunction("ComputeAndReport"' in cpp
+    assert 'DFunction("BadlyAnnotated"' in cpp
+    assert 'DFunction("PlainFn"' in cpp
+    do_action_idx = cpp.find('DFunction("DoAction"')
+    do_action_add = cpp.find("cls->AddFunction", do_action_idx)
+    assert 'SetMetadata({{"ShowAsButton", "true"}})' in cpp[do_action_idx:do_action_add]
+    plain_idx = cpp.find('DFunction("PlainFn"')
+    plain_add = cpp.find("cls->AddFunction", plain_idx)
+    assert "SetMetadata" not in cpp[plain_idx:plain_add]
+
+
 def test_snapshots_simple_class(fixtures_dir, snapshot_dir, snapshot_update):
     path = fixtures_dir / "simple_class.h"
     result = parse_header(path, fixtures_dir)

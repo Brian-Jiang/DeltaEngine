@@ -213,6 +213,7 @@ class FunctionInfo:
     return_inner_property_class: str = ""
     return_inner_is_object_ptr: bool = False
     return_inner_pointee_type: str = ""
+    metadata: dict[str, str] = field(default_factory=dict)
 
     @property
     def has_params_struct(self) -> bool:
@@ -474,14 +475,81 @@ def _parse_dproperty_meta(args_str: str) -> dict[str, str]:
     return result
 
 
-def _collect_dfunction_lines(tu, class_cursor) -> list[int]:
-    """Collect line numbers of all DFUNCTION tokens within the class body."""
+def _collect_dfunction_lines(tu, class_cursor) -> list[tuple[int, str]]:
+    """Collect (line, args_str) of all DFUNCTION macro invocations within the class body."""
     tokens = list(tu.get_tokens(extent=class_cursor.extent))
-    lines: list[int] = []
-    for tok in tokens:
+    result: list[tuple[int, str]] = []
+    i = 0
+    while i < len(tokens):
+        tok = tokens[i]
         if tok.spelling == "DFUNCTION":
-            lines.append(tok.location.line)
-    return lines
+            line = tok.location.line
+            args_str = ""
+            if i + 1 < len(tokens) and tokens[i + 1].spelling == "(":
+                depth = 0
+                arg_tokens: list[str] = []
+                j = i + 1
+                while j < len(tokens):
+                    t = tokens[j]
+                    if t.spelling == "(":
+                        depth += 1
+                        if depth > 1:
+                            arg_tokens.append(t.spelling)
+                    elif t.spelling == ")":
+                        depth -= 1
+                        if depth == 0:
+                            j += 1
+                            break
+                        arg_tokens.append(t.spelling)
+                    else:
+                        arg_tokens.append(t.spelling)
+                    j += 1
+                args_str = "".join(arg_tokens).strip()
+                i = j
+                result.append((line, args_str))
+                continue
+            result.append((line, args_str))
+        i += 1
+    return result
+
+
+def _parse_dfunction_meta(args_str: str) -> dict[str, str]:
+    """Parse DFUNCTION(...) arguments into a metadata dict.
+
+    Supports bare identifiers (treated as flags with value "true") and key="value" pairs,
+    plus meta=(key="value", ...) nested form for forward compatibility with DPROPERTY syntax.
+
+    Examples:
+      'ShowAsButton'                 -> {'ShowAsButton': 'true'}
+      'ShowAsButton, Category="Dbg"' -> {'ShowAsButton': 'true', 'Category': 'Dbg'}
+      'meta=(UIType="Color")'        -> {'UIType': 'Color'}
+    """
+    if not args_str:
+        return {}
+    result: dict[str, str] = {}
+
+    # Strip and capture meta=(...) block first so it doesn't interfere with outer splitting.
+    remainder = args_str
+    meta_match = re.search(r'meta\s*=\s*\(([^)]*)\)', remainder)
+    if meta_match:
+        inner = meta_match.group(1)
+        for kv in re.finditer(r'(\w+)\s*=\s*"([^"]*)"', inner):
+            result[kv.group(1)] = kv.group(2)
+        remainder = remainder[:meta_match.start()] + remainder[meta_match.end():]
+
+    # Split remaining top-level args by commas.
+    for part in remainder.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        kv = re.match(r'(\w+)\s*=\s*"([^"]*)"\s*$', part)
+        if kv:
+            result[kv.group(1)] = kv.group(2)
+            continue
+        bare = re.match(r'(\w+)\s*$', part)
+        if bare:
+            result[bare.group(1)] = "true"
+    return result
 
 
 # ── AST walking ──────────────────────────────────────────────
@@ -648,7 +716,7 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
         elif child.kind == ci.CursorKind.FUNCTION_TEMPLATE:
             # Check if a DFUNCTION annotation precedes this template method
             method_line = child.location.line
-            for dl in dfunction_lines:
+            for dl, _dargs in dfunction_lines:
                 if dl in consumed_dfunction_lines:
                     continue
                 if dl < method_line:
@@ -667,11 +735,13 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
 
             method_line = child.location.line
             matched = False
-            for dl in dfunction_lines:
+            matched_args = ""
+            for dl, dargs in dfunction_lines:
                 if dl in consumed_dfunction_lines:
                     continue
                 if dl < method_line:
                     matched = True
+                    matched_args = dargs
                     consumed_dfunction_lines.add(dl)
                     break
 
@@ -689,6 +759,13 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
                                  diag=diag, source_file=file_name)
             if fn is None:
                 continue
+            fn.metadata = _parse_dfunction_meta(matched_args)
+            if "ShowAsButton" in fn.metadata and len(fn.params) != 0 and diag:
+                src_line = method_line - _PREAMBLE_LINE_COUNT
+                diag.warn(file_name, src_line,
+                          f"DFUNCTION(ShowAsButton) '{fn.name}' has "
+                          f"{len(fn.params)} parameter(s); the details panel "
+                          f"only renders a button for 0-parameter functions")
             same_name_count = sum(1 for f in info.functions if f.name == fn.name)
             fn.overload_index = same_name_count + 1
             info.functions.append(fn)

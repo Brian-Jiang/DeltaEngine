@@ -108,3 +108,37 @@ def test_api_macro_class_base_names(parse_api_macro_class):
     by_name = {c.name: c for c in parse_api_macro_class.classes}
     assert by_name["ApiMacroBase"].base_name == "DObject"
     assert by_name["ApiMacroDerived"].base_name == "ApiMacroBase"
+
+
+@pytest.fixture
+def parse_show_as_button(fixtures_dir):
+    return parse_header(fixtures_dir / "show_as_button.h", fixtures_dir)
+
+
+def test_show_as_button_metadata(parse_show_as_button):
+    c = parse_show_as_button.classes[0]
+    assert c.name == "ShowAsButtonClass"
+    by_name = {f.name: f for f in c.functions}
+    assert by_name["DoAction"].metadata == {"ShowAsButton": "true"}
+    assert by_name["ComputeAndReport"].metadata == {"ShowAsButton": "true"}
+    assert by_name["BadlyAnnotated"].metadata == {"ShowAsButton": "true"}
+    assert by_name["PlainFn"].metadata == {}
+
+
+def test_show_as_button_warns_on_nonzero_params(parse_show_as_button):
+    diags = parse_show_as_button.diagnostics
+    messages = [w.message for w in diags.warnings]
+    assert any("ShowAsButton" in m and "BadlyAnnotated" in m for m in messages)
+    assert not any("ShowAsButton" in m and "DoAction" in m for m in messages)
+
+
+def test_dfunction_meta_parser_bare_identifier():
+    from parser import _parse_dfunction_meta
+    assert _parse_dfunction_meta("ShowAsButton") == {"ShowAsButton": "true"}
+    assert _parse_dfunction_meta("") == {}
+    assert _parse_dfunction_meta('Category="Debug"') == {"Category": "Debug"}
+    assert _parse_dfunction_meta('ShowAsButton, Category="Debug"') == {
+        "ShowAsButton": "true",
+        "Category": "Debug",
+    }
+    assert _parse_dfunction_meta('meta=(UIType="Color")') == {"UIType": "Color"}

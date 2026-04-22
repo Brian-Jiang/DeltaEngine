@@ -38,3 +38,9 @@ uint32_t DFunction::GetReturnValueOffset() const { return m_returnValueOffset; }
 const std::vector<DProperty*>& DFunction::GetParams() const { return m_params; }
 DProperty* DFunction::GetReturnProperty() const { return m_returnProperty; }
 bool DFunction::HasReturnValue() const { return m_returnProperty != nullptr; }
+
+std::string DFunction::GetMeta(const std::string& key, const std::string& defaultVal) const
+{
+    auto it = m_metadata.find(key);
+    return (it != m_metadata.end()) ? it->second : defaultVal;
+}

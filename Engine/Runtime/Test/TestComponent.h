@@ -21,7 +21,7 @@ class TestComponent : public DComponent
     DGENERATED_BODY(TestComponent)
 
 public:
-    DFUNCTION()
+    DFUNCTION(ShowAsButton)
     void TestFunction();
 
     DFUNCTION()

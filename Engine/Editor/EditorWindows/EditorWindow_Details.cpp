@@ -17,6 +17,7 @@
 #include "Runtime/Core/SceneComponent.h"
 #include "Runtime/Reflection/DBulkDataProperty.h"
 #include "Runtime/Reflection/DClass.h"
+#include "Runtime/Reflection/DFunction.h"
 #include "Runtime/Reflection/DProperty.h"
 #include "Runtime/Utils/StringUtils.h"
 
@@ -27,7 +28,10 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstddef>
 #include <string>
+#include <unordered_set>
+#include <vector>
 
 using namespace DeltaEngine;
 using namespace DirectX::SimpleMath;
@@ -551,6 +555,59 @@ void EditorWindow_Details::DrawPropertyEditor(DObject* instance, DClass* dclass,
 
             ImGui::PopID();
         }
+    }
+
+    if (depth == 0)
+        DrawFunctionButtons(instance, dclass);
+}
+
+void EditorWindow_Details::DrawFunctionButtons(DObject* instance, DClass* dclass)
+{
+    if (!instance || !dclass)
+        return;
+
+    std::vector<DFunction*> buttons;
+    std::unordered_set<std::string> seen;
+    for (DStruct* s = dclass; s; s = s->GetSuper())
+    {
+        DClass* c = dynamic_cast<DClass*>(s);
+        if (!c)
+            continue;
+        for (const auto& [name, fn] : c->GetFunctions())
+        {
+            if (!fn || !fn->HasMeta("ShowAsButton"))
+                continue;
+            if (fn->GetNumParams() != 0)
+                continue;
+            if (!seen.insert(name).second)
+                continue;
+            buttons.push_back(fn);
+        }
+    }
+
+    if (buttons.empty())
+        return;
+
+    ImGui::Separator();
+    if (!ImGui::CollapsingHeader("Actions", ImGuiTreeNodeFlags_DefaultOpen))
+        return;
+
+    for (DFunction* fn : buttons)
+    {
+        ImGui::PushID(fn);
+        if (ImGui::Button(fn->GetName().c_str()))
+        {
+            if (fn->HasReturnValue())
+            {
+                std::vector<std::byte> buf(fn->GetTotalSize());
+                fn->Invoke(instance, buf.data());
+            }
+            else
+            {
+                fn->Invoke(instance, nullptr);
+            }
+        }
+        ImGui::PopID();
     }
 }
 
