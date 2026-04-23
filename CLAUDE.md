@@ -94,6 +94,7 @@ The scene renders to an **offscreen render target** inside `DXRenderManager`; `E
 
 ```
 DWorld
+└── DScene (active scene — serializable, owns GameObjects + optional Skybox)
 └── GameObject[]
       ├── SceneComponent (root transform, parent-child tree)
       │     ├── MeshRenderer  → DMesh + DMaterial[]
@@ -102,6 +103,8 @@ DWorld
       │     └── (nested SceneComponents)
       └── DComponent  (non-spatial components)
 ```
+
+`DScene` is the serialized scene representation (stored in `PA_DScene` asset). It holds `m_gameObjects`, `m_components`, and an optional `Skybox* m_skybox`. `DWorld` is the runtime container; it syncs the skybox from the active `DScene` and draws it last in `GatherDrawCalls`.
 
 - `DObject` is the base for everything. `GameObject`, `DComponent`, `SceneComponent` all inherit from it.
 - `DObject`-derived relationships in reflected/runtime gameplay data are represented with raw pointers (`T*`).
@@ -128,13 +131,31 @@ All DirectX 12 objects are wrapped:
 
 `Renderer` (base) → `MeshRenderer`, `SpriteRenderer`. Renderers are `SceneComponent` subclasses and implement `GatherDrawCalls(DXGraphicsContext&)`.
 
-**RenderProxy** objects (`MeshRenderProxy`, `CameraRenderProxy`, etc.) decouple scene data from the GPU submission.
+**RenderProxy** objects (`MeshRenderProxy`, `CameraRenderProxy`, `SkyboxRenderProxy`, etc.) decouple scene data from the GPU submission.
+
+### Skybox (`Engine/Runtime/Core/Skybox.h`)
+
+`Skybox` is a reflected `DObject` with two DPROPERTYs: `DTexture* m_cubemapTexture` (must be a DDS cubemap) and `DMaterial* m_material` (holds the compiled skybox shader). Call `Initialize()` once after both are set; then `GatherDrawCalls(context)` records the draw. The scene-level asset wrapper is `PA_Skybox`. `Skybox.slang` is the skybox shader.
+
+### Post-Processing (`Engine/Runtime/Graphics/PostProcess/`)
+
+A reflected, extensible post-process pipeline:
+
+| Class | Role |
+|---|---|
+| `PostProcessPass` | Abstract DCLASS base; `m_passName`, `m_enabled`, `m_shader`; subclasses implement `Initialize` + `Execute` |
+| `PostProcessStack` | DCLASS owning a `std::vector<PostProcessPass*> m_passes` |
+| `PA_PostProcessStack` | Primary asset wrapper for a `PostProcessStack` |
+| `PassthroughPass` | Pass-through blit |
+| `TonemapPass` | HDR → LDR tone-mapping |
+
+New post-process passes subclass `PostProcessPass`, annotate with `DCLASS()`, and call `ResolveShader` (or set `m_shader`) in `Initialize`.
 
 ### Asset Pipeline
 
 - **Models:** `DMesh::Initialize(...)` currently imports directly via Assimp and builds submesh/material/texture data.
 - **Textures:** `DTexture` initialization currently goes through `TextureImporter`; the standalone importer layer exists in `Engine/Runtime/Importers/` but is not an active high-level pipeline right now.
-- **Shaders:** `DShader` compiles HLSL at runtime using DXC (`dxcompiler.dll`). Sources in `Engine/EngineSourceAssets/Shaders/`.
+- **Shaders:** `DShader` compiles shaders at runtime. Sources in `Engine/EngineSourceAssets/Shaders/`. Shaders are now written in **Slang** (`.slang` files). `CompileSlangStage(engineRelativePath, entryPoint, targetProfile)` compiles a single stage via the Slang C++ API; `CompileHLSLStage` remains for legacy use. Both functions live in `Engine/Runtime/Graphics/ShaderCompile.h`.
 
 ### Editor UI (`Engine/Editor/`)
 
@@ -149,10 +170,10 @@ The editor now has a fixed-position chrome layer plus docked content windows:
 ### Editor Windows (`Engine/Editor/EditorWindows/`)
 
 All editor windows implement `EditorWindow` interface. Current windows:
-- `EditorWindow_Viewport` — displays scene texture, fly camera (WASD + mouse); supports viewport presets (`EditorWindow_ViewportPresets.h`)
+- `EditorWindow_Viewport` — displays scene texture, fly camera (WASD + mouse); supports viewport presets (`EditorWindow_ViewportPresets.h`); renders **ImGuizmo** transform gizmos on the selected `SceneComponent` (translate/rotate/scale), creating an undo entry on release
 - `EditorWindow_WorldOutliner` — scene hierarchy tree
 - `EditorWindow_ComponentsHierarchy` — components of selected GameObject
-- `EditorWindow_Details` — property inspector (reflection-driven: reads DClass/DProperty to display fields; fires `WidgetEditEvent` on edits, dispatching `EditorCommand_SetProperty` through the command system)
+- `EditorWindow_Details` — property inspector (reflection-driven: reads DClass/DProperty to display fields; fires `WidgetEditEvent` on edits, dispatching `EditorCommand_SetProperty`; also shows `DFUNCTION()`-annotated methods as invocable buttons)
 - `EditorWindow_AssetBrowser` — folder tree of imported assets with select/duplicate/delete actions
 
 `EditorSelectionState` is the shared selection model; it is owned by `EditorCore` (not `EditorMain`) and accessed via `EditorCore::GetSelectionState()`.
@@ -191,6 +212,28 @@ Concrete commands:
 - `EditorAuxiliarySceneCommands` — auxiliary (non-undoable) scene operations
 
 Commands serialize to/from JSON, enabling undo-stack persistence and replay across sessions.
+
+### MCP (Model Context Protocol) Integration
+
+DeltaEngine ships a full MCP bridge that lets AI agents (Claude Code, etc.) query and manipulate the live editor over a local TCP socket.
+
+**C++ side (`Engine/Editor/Mcp/` + `Engine/Editor/McpSocketServer.h`):**
+
+- `McpSocketServer` — async TCP server (Asio); listens on port 57340 by default; dispatches newline-delimited JSON to a command handler or query handler.
+- `IMcpSystem` — interface for a named system that registers tools into `McpRegistry`.
+- `McpQueryRouter` — routes incoming JSON `{ "system", "operation"/"command", "params" }` to the correct registered handler.
+- **Systems** (`Engine/Editor/Mcp/Systems/`): `McpSceneSystem`, `McpAssetsSystem`, `McpReflectionSystem`, `McpSelectionSystem`, `McpUndoSystem`, `McpViewportSystem`, `McpProjectSystem`, `McpMetaSystem`, `McpCommonSystem`.
+
+**Python side (`Tools/DeltaMCP/`):**
+
+- `delta_mcp_server.py` — FastMCP server. Exposes three MCP tools:
+  - `list_operations` — returns all systems with their query operations and commands.
+  - `describe_operations` — returns parameter schemas for requested operations/commands.
+  - `execute_batch` — executes a list of `{ type: "query"|"command", system, operation/command, params }` entries sequentially.
+- Schema JSON files live in `Tools/DeltaMCP/Schemas/` (one per system: `scene.json`, `assets.json`, `reflection.json`, etc.).
+- MCP tests are in `Engine/Tests/Editor/Mcp/` (one file per system) using `McpCoreFixture`.
+
+**Workflow for AI callers:** `list_operations` → `describe_operations` → query scene state for IDs → `execute_batch` with commands.
 
 ---
 
@@ -241,7 +284,9 @@ Engine/Tests/
 │   ├── EditorCommandTests_Scene_SaveLoad.cpp
 │   ├── EditorCommandTests_SetProperty.cpp
 │   ├── EditorCommandTests_CommandQueue.cpp
+│   ├── EditorCommandTests_McpPath.cpp
 │   ├── EditorCoreFixture.h   — shared headless EditorCore setup
+│   ├── Mcp/          — per-system MCP tests (McpCoreFixture + one file per system)
 │   ├── State/        — EditorSelectionState
 │   ├── EditorWindows/— window concept + viewport preset tests
 │   ├── Serialization/— snapshot round-trip, bulk data, references
@@ -265,7 +310,7 @@ DeltaEngine has a full static reflection system. Source classes annotated with m
 |---|---|---|
 | `DCLASS()` | class | Marks for reflection; DeltaHeaderTool generates `.generated.h/.cpp` |
 | `DSTRUCT()` | struct | Same as DCLASS, generates DStruct metadata instead of DClass |
-| `DPROPERTY()` | field | Reflects the field; type and offset captured via AST |
+| `DPROPERTY()` | field | Reflects the field; type and offset captured via AST. Optional tag `EditorOnly` (`DPROPERTY(EditorOnly)`) sets `DProperty::bEditorOnly = true`, hiding the property from runtime serialization |
 | `DFUNCTION()` | method | Reflects the method; thunk + params struct generated |
 | `DGENERATED_BODY(Name)` | class body | Injects `friend` declaration and `GetClass()` override |
 
@@ -299,12 +344,15 @@ Generated:  Intermediate/DeltaHeaderTool/Generated/Foo.generated.h
 
 `Foo.generated.h` is `#include`d at the top of `Foo.h` (before the class body) to expose forward declarations required by `DGENERATED_BODY`. The generated `.cpp` files are compiled as part of `DeltaEngine` via the manifest.
 
-### Currently Reflected Classes (24)
+### Currently Reflected Classes (40)
 
-Core / Scene: `DObject`, `GameObject`, `DComponent`, `SceneComponent`, `DWorld`, `Camera`
-Rendering / Assets: `Renderer`, `MeshRenderer`, `DMesh`, `DMaterial`, `DTexture`, `DShader`, `DPrimaryAsset`
+Core / Scene: `DObject`, `GameObject`, `DComponent`, `SceneComponent`, `DWorld`, `Camera`, `DScene`
+Skybox: `Skybox`
+Rendering: `Renderer`, `MeshRenderer` (DSTRUCT), `DMesh`, `DMaterial`, `DTexture`, `DShader`
+Post-processing: `PostProcessPass` (abstract), `PostProcessStack`, `PassthroughPass`, `TonemapPass`
+Assets: `DPrimaryAsset`, `PA_DScene`, `PA_Shader`, `PA_Material`, `PA_Texture`, `PA_StaticMesh`, `PA_Skybox`, `PA_PostProcessStack`
 Lighting: `LightComponent`, `DirectionalLight`, `PointLight`, `SpotLight`
-Test / Serialization: `TestComponent`, `TestComponent2`, `DTestObjectA`, `DTestObjectB`, `PA_TestAsset`, `DTestMeshData`, `PA_TestMesh`
+Test / Serialization: `TestComponent`, `TestComponent2`, `DTestObjectA`, `DTestObjectB`, `PA_TestAsset`, `DTestMeshData`, `PA_TestMesh`, `DSnapshotTestComponentA`, `DSnapshotTestComponentB`, `DSnapshotTestSceneComponent`
 
 ### Reflection Limitations
 
@@ -327,6 +375,9 @@ Tools/
 │   ├── Lib/
 │   └── DLLs/
 ├── Clang/               # LLVM libclang.dll + Python bindings (used by DeltaHeaderTool)
+├── DeltaMCP/            # Python FastMCP server for AI-agent editor control
+│   ├── delta_mcp_server.py  # MCP tools: list_operations, describe_operations, execute_batch
+│   └── Schemas/             # JSON schemas per system (scene.json, assets.json, …)
 ├── DeltaHeaderTool/     # Reflection code generator (~1,900 lines Python)
 │   ├── main.py          # Driver: two-pass pipeline, multiprocessing pool
 │   ├── parser.py        # libclang AST parser → ClassInfo / PropertyInfo / FunctionInfo
@@ -379,7 +430,7 @@ Python is **build-time only**. The bundled `Tools/Python/python.exe` runs `Delta
 - **Headers only for declarations/implementations split:** most files use `.h` + `.cpp` pairs under the same directory.
 - **Mixed ownership model:** subsystems use RAII smart pointers, while reflected `DObject` relationships and scene/component links are typically raw pointers.
 - **No raw `new`/`delete`** for reflected engine objects — use `CreateDObject<T>()`; asset ownership/lifetime is handled by reflection registry + `DPrimaryAsset`.
-- **HLSL shaders** live in `Engine/EngineSourceAssets/Shaders/` and are compiled at runtime (not offline). The `StandardObject.hlsl` / `StandardLighting.hlsl` / `StandardConstantStructs.hlsl` trio forms the standard material shader.
+- **Slang shaders** live in `Engine/EngineSourceAssets/Shaders/` as `.slang` files and are compiled at runtime via `CompileSlangStage`. The `StandardObject.slang` / `StandardLighting.slang` / `StandardConstantStructs.slang` / `StandardInputs.slang` quartet forms the standard material shader.
 - **`DXGraphicsContext`** is the primary way to pass rendering state down the call stack — do not add global graphics state.
 - **Adding a new reflected class:** annotate with `DCLASS()` + `DGENERATED_BODY(Name)`, add `DPROPERTY()`/`DFUNCTION()` annotations, then build (or run `delta_header_generate.bat`) — the tool regenerates the `.generated.h/.cpp` pair automatically.
 - **Do not hand-edit generated files** in `Intermediate/DeltaHeaderTool/Generated/` — they are overwritten on every build.
