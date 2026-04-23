@@ -276,6 +276,7 @@ Device::Device(std::shared_ptr<Adapter> adapter)
 
             D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE, // This warning occurs when using capture frame while graphics
                                                       // debugging.
+            // D3D12_MESSAGE_ID_GETGPUVIRTUALADDRESS_INVALID_RESOURCE_DIMENSION // Nsight Graphics causes this warning
         };
 
         D3D12_INFO_QUEUE_FILTER NewFilter = {};
