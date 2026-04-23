@@ -38,10 +38,10 @@ void SkyboxRenderProxy::BuildPipelineStateObject(std::shared_ptr<DXGraphicsConte
 
     CD3DX12_BLEND_DESC blendDesc(D3D12_DEFAULT);
 
-    IDxcBlob* vs = m_material->GetShader()->GetVertexShaderBlob();
-    IDxcBlob* ps = m_material->GetShader()->GetPixelShaderBlob();
-    CD3DX12_SHADER_BYTECODE vsBytecode{ static_cast<UINT8*>(vs->GetBufferPointer()), vs->GetBufferSize() };
-    CD3DX12_SHADER_BYTECODE psBytecode{ static_cast<UINT8*>(ps->GetBufferPointer()), ps->GetBufferSize() };
+    ISlangBlob* vs = m_material->GetShader()->GetVertexShaderBlob();
+    ISlangBlob* ps = m_material->GetShader()->GetPixelShaderBlob();
+    CD3DX12_SHADER_BYTECODE vsBytecode{ const_cast<void*>(vs->getBufferPointer()), vs->getBufferSize() };
+    CD3DX12_SHADER_BYTECODE psBytecode{ const_cast<void*>(ps->getBufferPointer()), ps->getBufferSize() };
 
     DXGI_FORMAT backBufFmt  = DXGI_FORMAT_R8G8B8A8_UNORM;
     DXGI_FORMAT depthFmt    = DXGI_FORMAT_D32_FLOAT;

@@ -22,9 +22,9 @@ void Skybox::Initialize()
     {
         DShader* shader = CreateDObject<DShader>();
         shader->Initialize(
-            L"Skybox.hlsl",
+            L"Skybox.slang",
             L"VSMain", L"PSMain",
-            L"vs_6_0", L"ps_6_0");
+            L"vs_6_6", L"ps_6_6");
 
         m_material = CreateDObject<DMaterial>();
         m_material->Initialize(shader);

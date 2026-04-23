@@ -20,7 +20,7 @@
       "_class": "DShader",
       "_objectId": "8d589704-55b4-4801-b70c-2a4a49220dba",
       "m_pixelShaderEntryPoint": "PSMain",
-      "m_pixelShaderTargetProfile": "ps_6_0",
+      "m_pixelShaderTargetProfile": "ps_6_6",
       "m_serializedInputLayout": {
         "_bulk": 1,
         "size": 4
@@ -29,9 +29,9 @@
         "_bulk": 0,
         "size": 7780
       },
-      "m_sourcePath": "Shaders/PostProcess_Tonemap.hlsl",
+      "m_sourcePath": "Shaders/PostProcess_Tonemap.slang",
       "m_vertexShaderEntryPoint": "VSMain",
-      "m_vertexShaderTargetProfile": "vs_6_0"
+      "m_vertexShaderTargetProfile": "vs_6_6"
     }
   ]
 }

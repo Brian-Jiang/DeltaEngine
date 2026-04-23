@@ -7,7 +7,8 @@
 #include "Runtime/Serialization/ISerializationCallbackReceiver.h"
 #include "Runtime/Serialization/TBulkData.h"
 
-#include <dxcapi.h>
+#include <slang.h>
+#include <slang-com-ptr.h>
 #include <string>
 #include <vector>
 #include <wrl/client.h>
@@ -60,9 +61,9 @@ public:
     void OnAfterDeserialize() override;
 
     /// Returns the compiled vertex shader blob.
-    inline IDxcBlob* GetVertexShaderBlob() const { return m_vertexShaderBlob.Get(); }
+    inline ISlangBlob* GetVertexShaderBlob() const { return m_vertexShaderBlob.get(); }
     /// Returns the compiled pixel shader blob.
-    inline IDxcBlob* GetPixelShaderBlob() const { return m_pixelShaderBlob.Get(); }
+    inline ISlangBlob* GetPixelShaderBlob() const { return m_pixelShaderBlob.get(); }
     /// Returns the current input layout descriptors.
     inline const std::vector<D3D12_INPUT_ELEMENT_DESC>& GetInputLayout() const { return m_inputLayout; }
 
@@ -70,8 +71,8 @@ private:
     void CompileShader();
 
 private:
-    Microsoft::WRL::ComPtr<IDxcBlob> m_vertexShaderBlob;
-    Microsoft::WRL::ComPtr<IDxcBlob> m_pixelShaderBlob;
+    Slang::ComPtr<ISlangBlob> m_vertexShaderBlob;
+    Slang::ComPtr<ISlangBlob> m_pixelShaderBlob;
     std::vector<D3D12_INPUT_ELEMENT_DESC> m_inputLayout;
     std::vector<std::string> m_inputLayoutSemanticNames;
 

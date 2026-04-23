@@ -93,11 +93,11 @@ void DeltaEngine::MeshRenderProxy::BuildPipelineStateObject(std::shared_ptr<DXGr
         CD3DX12_BLEND_DESC blendDesc = material->GetBlendState();
         CD3DX12_DEPTH_STENCIL_DESC depthStencilState = material->GetDepthStencilState();
 
-        IDxcBlob* vertexShader = material->GetShader()->GetVertexShaderBlob();
-        CD3DX12_SHADER_BYTECODE vertexShaderBytecode { static_cast<UINT8*>(vertexShader->GetBufferPointer()), vertexShader->GetBufferSize() };
+        ISlangBlob* vertexShader = material->GetShader()->GetVertexShaderBlob();
+        CD3DX12_SHADER_BYTECODE vertexShaderBytecode { const_cast<void*>(vertexShader->getBufferPointer()), vertexShader->getBufferSize() };
 
-        IDxcBlob* pixelShader = material->GetShader()->GetPixelShaderBlob();
-        CD3DX12_SHADER_BYTECODE pixelShaderBytecode { static_cast<UINT8*>(pixelShader->GetBufferPointer()), pixelShader->GetBufferSize() };
+        ISlangBlob* pixelShader = material->GetShader()->GetPixelShaderBlob();
+        CD3DX12_SHADER_BYTECODE pixelShaderBytecode { const_cast<void*>(pixelShader->getBufferPointer()), pixelShader->getBufferSize() };
 
         std::vector<D3D12_INPUT_ELEMENT_DESC> layout = material->GetShader()->GetInputLayout();
         pipelineStateStream.InputLayout = { layout.data(), static_cast<UINT>(layout.size()) };
@@ -158,7 +158,7 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
         uint32_t useInstanceMatrix;
     } obj;
 
-    obj.worldMatrix = m_worldMatrix;
+    obj.worldMatrix = XMMatrixTranspose(m_worldMatrix);
     obj.color = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
     obj.useInstanceMatrix = 0;
 

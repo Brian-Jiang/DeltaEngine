@@ -13,13 +13,13 @@
 namespace
 {
 DeltaEngine::TBulkData SerializeShaderBlobs(
-    const Microsoft::WRL::ComPtr<IDxcBlob>& vertexBlob,
-    const Microsoft::WRL::ComPtr<IDxcBlob>& pixelBlob)
+    const Slang::ComPtr<ISlangBlob>& vertexBlob,
+    const Slang::ComPtr<ISlangBlob>& pixelBlob)
 {
     assert(vertexBlob && pixelBlob);
 
-    const uint64_t vertexSize = static_cast<uint64_t>(vertexBlob->GetBufferSize());
-    const uint64_t pixelSize = static_cast<uint64_t>(pixelBlob->GetBufferSize());
+    const uint64_t vertexSize = static_cast<uint64_t>(vertexBlob->getBufferSize());
+    const uint64_t pixelSize = static_cast<uint64_t>(pixelBlob->getBufferSize());
     const uint64_t totalSize = sizeof(uint64_t) + vertexSize + sizeof(uint64_t) + pixelSize;
 
     auto* buffer = new uint8_t[totalSize];
@@ -27,12 +27,12 @@ DeltaEngine::TBulkData SerializeShaderBlobs(
 
     std::memcpy(cursor, &vertexSize, sizeof(uint64_t));
     cursor += sizeof(uint64_t);
-    std::memcpy(cursor, vertexBlob->GetBufferPointer(), vertexSize);
+    std::memcpy(cursor, vertexBlob->getBufferPointer(), vertexSize);
     cursor += vertexSize;
 
     std::memcpy(cursor, &pixelSize, sizeof(uint64_t));
     cursor += sizeof(uint64_t);
-    std::memcpy(cursor, pixelBlob->GetBufferPointer(), pixelSize);
+    std::memcpy(cursor, pixelBlob->getBufferPointer(), pixelSize);
 
     DeltaEngine::TBulkData bulk;
     bulk.Set(buffer, totalSize);
@@ -42,29 +42,25 @@ DeltaEngine::TBulkData SerializeShaderBlobs(
 
 bool DeserializeShaderBlobs(
     const DeltaEngine::TBulkData& bulk,
-    Microsoft::WRL::ComPtr<IDxcBlob>& outVertexBlob,
-    Microsoft::WRL::ComPtr<IDxcBlob>& outPixelBlob)
+    Slang::ComPtr<ISlangBlob>& outVertexBlob,
+    Slang::ComPtr<ISlangBlob>& outPixelBlob)
 {
     if (!bulk.IsValid())
         return false;
 
     const uint8_t* cursor = bulk.m_data;
 
-    auto readBlob = [&](Microsoft::WRL::ComPtr<IDxcBlob>& outBlob) -> bool
+    auto readBlob = [&](Slang::ComPtr<ISlangBlob>& outBlob) -> bool
     {
         uint64_t size = 0;
         std::memcpy(&size, cursor, sizeof(uint64_t));
         cursor += sizeof(uint64_t);
 
-        Microsoft::WRL::ComPtr<IDxcUtils> utils;
-        if (FAILED(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&utils))))
+        ISlangBlob* blob = slang_createBlob(cursor, static_cast<size_t>(size));
+        if (!blob)
             return false;
 
-        Microsoft::WRL::ComPtr<IDxcBlobEncoding> blob;
-        if (FAILED(utils->CreateBlobFromPinned(cursor, static_cast<uint32_t>(size), DXC_CP_ACP, &blob)))
-            return false;
-
-        outBlob = blob;
+        outBlob.attach(blob);
         cursor += size;
         return true;
     };
@@ -261,8 +257,8 @@ void DShader::SetInputLayout(const std::vector<D3D12_INPUT_ELEMENT_DESC>& inputL
 
 void DShader::CompileShader()
 {
-    m_vertexShaderBlob = CompileHLSLStage(m_sourcePath, m_vertexShaderEntryPoint, m_vertexShaderTargetProfile, "DShader VS");
-    m_pixelShaderBlob = CompileHLSLStage(m_sourcePath, m_pixelShaderEntryPoint, m_pixelShaderTargetProfile, "DShader PS");
+    m_vertexShaderBlob = CompileSlangStage(m_sourcePath, m_vertexShaderEntryPoint, m_vertexShaderTargetProfile, "DShader VS");
+    m_pixelShaderBlob = CompileSlangStage(m_sourcePath, m_pixelShaderEntryPoint, m_pixelShaderTargetProfile, "DShader PS");
 }
 
 void DShader::OnBeforeSerialize()

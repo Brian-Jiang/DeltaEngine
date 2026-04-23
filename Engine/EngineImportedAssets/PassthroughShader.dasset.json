@@ -20,7 +20,7 @@
       "_class": "DShader",
       "_objectId": "5228835e-bd5f-4f6a-bd52-ede3e0afab36",
       "m_pixelShaderEntryPoint": "PSMain",
-      "m_pixelShaderTargetProfile": "ps_6_0",
+      "m_pixelShaderTargetProfile": "ps_6_6",
       "m_serializedInputLayout": {
         "_bulk": 1,
         "size": 4
@@ -29,9 +29,9 @@
         "_bulk": 0,
         "size": 6996
       },
-      "m_sourcePath": "Shaders/PostProcess_Passthrough.hlsl",
+      "m_sourcePath": "Shaders/PostProcess_Passthrough.slang",
       "m_vertexShaderEntryPoint": "VSMain",
-      "m_vertexShaderTargetProfile": "vs_6_0"
+      "m_vertexShaderTargetProfile": "vs_6_6"
     }
   ]
 }

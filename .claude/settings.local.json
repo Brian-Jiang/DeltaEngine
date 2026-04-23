@@ -9,7 +9,9 @@
       "Bash(Tools/Scripts/test-delta-header-tool.bat --automatic)",
       "Bash(Tools/Scripts/delta_header_force_generate.bat --automatic)",
       "Bash(Build/x64-Debug/bin/DeltaEngineTests.exe *)",
-      "Bash(Tools/Scripts/build-x64-debug-engine-tests.bat --automatic)"
+      "Bash(Tools/Scripts/build-x64-debug-engine-tests.bat --automatic)",
+      "Bash(Tools/Scripts/rebuild-x64-debug.bat --automatic)",
+      "Bash(echo \"EXIT=$?\")"
     ]
   }
 }

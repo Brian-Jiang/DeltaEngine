@@ -4,7 +4,7 @@
     "bulkDataMap": {
       "0": {
         "file": "DefaultShader_Bulk0.bin",
-        "size": 15300
+        "size": 16084
       },
       "1": {
         "file": "DefaultShader_Bulk1.bin",
@@ -20,18 +20,18 @@
       "_class": "DShader",
       "_objectId": "bf9eb754-d026-449f-893f-9a903bbacbb6",
       "m_pixelShaderEntryPoint": "PSMain",
-      "m_pixelShaderTargetProfile": "ps_6_0",
+      "m_pixelShaderTargetProfile": "ps_6_6",
       "m_serializedInputLayout": {
         "_bulk": 1,
         "size": 143
       },
       "m_serializedShaderBlobs": {
         "_bulk": 0,
-        "size": 15300
+        "size": 16084
       },
-      "m_sourcePath": "Shaders/Shaders.hlsl",
+      "m_sourcePath": "Shaders/StandardObject.slang",
       "m_vertexShaderEntryPoint": "VSMain",
-      "m_vertexShaderTargetProfile": "vs_6_0"
+      "m_vertexShaderTargetProfile": "vs_6_6"
     }
   ]
 }

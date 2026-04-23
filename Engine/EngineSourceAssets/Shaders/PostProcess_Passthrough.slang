@@ -7,6 +7,7 @@ struct VSOut
     float2 texCoord : TEXCOORD0;
 };
 
+[shader("vertex")]
 VSOut VSMain(uint id : SV_VertexID)
 {
     float2 uv = float2((id << 1) & 2, id & 2);
@@ -16,6 +17,7 @@ VSOut VSMain(uint id : SV_VertexID)
     return o;
 }
 
+[shader("fragment")]
 float4 PSMain(VSOut input) : SV_Target
 {
     return inputTex.Sample(linearSampler, input.texCoord);

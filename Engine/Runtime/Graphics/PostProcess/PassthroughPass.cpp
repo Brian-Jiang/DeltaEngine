@@ -25,9 +25,9 @@ void PassthroughPass::LazyInitialize(DXGraphicsContext& ctx)
 {
     Device& device = *ctx.device;
 
-    DShader* shader = ResolveShader(L"Shaders/PostProcess_Passthrough.hlsl");
-    IDxcBlob* vsBlob = shader->GetVertexShaderBlob();
-    IDxcBlob* psBlob = shader->GetPixelShaderBlob();
+    DShader* shader = ResolveShader(L"Shaders/PostProcess_Passthrough.slang", L"VSMain", L"PSMain", L"vs_6_6", L"ps_6_6");
+    ISlangBlob* vsBlob = shader->GetVertexShaderBlob();
+    ISlangBlob* psBlob = shader->GetPixelShaderBlob();
 
     CD3DX12_DESCRIPTOR_RANGE1 srvRange{};
     srvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
@@ -82,8 +82,8 @@ void PassthroughPass::LazyInitialize(DXGraphicsContext& ctx)
 
     DXGI_SAMPLE_DESC sampleDesc{ 1, 0 };
 
-    D3D12_SHADER_BYTECODE vsBytecode{ vsBlob->GetBufferPointer(), vsBlob->GetBufferSize() };
-    D3D12_SHADER_BYTECODE psBytecode{ psBlob->GetBufferPointer(), psBlob->GetBufferSize() };
+    D3D12_SHADER_BYTECODE vsBytecode{ vsBlob->getBufferPointer(), vsBlob->getBufferSize() };
+    D3D12_SHADER_BYTECODE psBytecode{ psBlob->getBufferPointer(), psBlob->getBufferSize() };
 
     pss.pRootSignature = m_rootSignature->GetD3D12RootSignature().Get();
     pss.VS = vsBytecode;

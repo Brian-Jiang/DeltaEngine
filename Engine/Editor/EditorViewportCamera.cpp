@@ -20,12 +20,12 @@ CameraCB EditorViewportCamera::BuildCameraCB(float w, float h) const
     XMVECTOR pos  = XMLoadFloat3(&position);
 
     CameraCB cb{};
-    cb.viewMatrix       = XMMatrixLookToLH(pos, fwd, up);
-    cb.projectionMatrix = XMMatrixPerspectiveFovLH(
+    cb.viewMatrix = XMMatrixTranspose(XMMatrixLookToLH(pos, fwd, up));
+    cb.projectionMatrix = XMMatrixTranspose(XMMatrixPerspectiveFovLH(
         XMConvertToRadians(fov),
         GetAspectRatio(w, h),
         nearPlane,
-        farPlane);
+        farPlane));
     cb.position = pos;
     return cb;
 }

@@ -40,8 +40,8 @@ void DeltaEngine::CameraRenderProxy::UpdateParameters(float fov, float aspectRat
 void DeltaEngine::CameraRenderProxy::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext)
 {
     CameraCB cameraData = {};
-    cameraData.viewMatrix = m_viewMatrix;
-    cameraData.projectionMatrix = m_projectionMatrix;
+    cameraData.viewMatrix = XMMatrixTranspose(m_viewMatrix);
+    cameraData.projectionMatrix = XMMatrixTranspose(m_projectionMatrix);
     cameraData.position = m_worldMatrix.r[3];
 
     std::shared_ptr<CommandList> commandList = renderContext->commandList;
