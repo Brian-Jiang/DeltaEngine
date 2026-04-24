@@ -68,7 +68,7 @@ public StructuredBuffer<DirectionalLight> DirectionalLights : register(t2);
 
 // ==== SRV for Textures ====
 
-public Texture2D g_texture : register(t0, space1);
+//public Texture2D g_texture : register(t0, space1);
 
 // ==== Sampler ====
 

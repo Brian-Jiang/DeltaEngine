@@ -26,7 +26,7 @@ StandardPSInput VSMain(StandardVSInput input)
 [shader("fragment")]
 float4 PSMain(StandardPSInput input) : SV_TARGET
 {
-    float4 textureColor = g_texture.Sample(g_sampler, input.uv);
+    float4 textureColor = g_matTextures[0].Sample(g_sampler, input.uv);
     float4 objectColor = input.color * textureColor;
 
     float3 V = normalize(CameraCB.position.xyz - input.worldPosition);
