@@ -14,6 +14,8 @@
 #include "Runtime/Graphics/DirectX/DirectX12Texture.h"
 #include "Runtime/Graphics/DirectX/Adapter.h"
 #include "Runtime/Graphics/Structures/RootParameterType.h"
+#include "Runtime/Graphics/MaterialConstants.h"
+#include "Runtime/Graphics/DefaultTextures.h"
 #include "Runtime/Graphics/PostProcess/PostProcessStack.h"
 #include "Runtime/Graphics/PostProcess/PostProcessPass.h"
 #include "Runtime/Graphics/RenderProxy/CameraRenderProxy.h"
@@ -61,6 +63,8 @@ void DXRenderManager::LoadAssets()
     rootParameters[static_cast<UINT>(RootParameterType::ObjectCB)].InitAsConstantBufferView(1);
     // Light (b2)
     rootParameters[static_cast<UINT>(RootParameterType::LightCB)].InitAsConstantBufferView(2);
+    // Material (b3)
+    rootParameters[static_cast<UINT>(RootParameterType::MaterialCB)].InitAsConstantBufferView(3);
 
 
     // ==== SRV (t) ====
@@ -69,19 +73,36 @@ void DXRenderManager::LoadAssets()
     rootParameters[static_cast<UINT>(RootParameterType::SpotLights)].InitAsShaderResourceView(1);
     rootParameters[static_cast<UINT>(RootParameterType::DirectionalLights)].InitAsShaderResourceView(2);
 
-    // Textures (t0+, space1)
+    // Material textures (t0..t4, space1)
     CD3DX12_DESCRIPTOR_RANGE1 ranges[1] {};
-    ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 1, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
+    ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, static_cast<UINT>(MaterialTextureSlot::Count), 0, 1,
+        D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
     rootParameters[static_cast<UINT>(RootParameterType::Texture)].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
     
 
     // ==== Sampler (s) ====
-    // Anisotropic sampler (s0)
-    CD3DX12_STATIC_SAMPLER_DESC anisotropicSampler(0, D3D12_FILTER_ANISOTROPIC);
+    // Anisotropic sampler (s0) — scene samplers
+    CD3DX12_STATIC_SAMPLER_DESC staticSamplers[2] {};
+    staticSamplers[0] = CD3DX12_STATIC_SAMPLER_DESC(0, D3D12_FILTER_ANISOTROPIC);
+    // Anisotropic wrap sampler (s1) — material textures
+    staticSamplers[1] = CD3DX12_STATIC_SAMPLER_DESC(
+        1,
+        D3D12_FILTER_ANISOTROPIC,
+        D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+        D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+        D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+        0.0f,
+        16u,
+        D3D12_COMPARISON_FUNC_LESS_EQUAL,
+        D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+        0.0f,
+        D3D12_FLOAT32_MAX,
+        D3D12_SHADER_VISIBILITY_PIXEL);
 
 
     CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
-    rootSignatureDescription.Init_1_1(static_cast<UINT>(RootParameterType::NumRootParameterTypes), rootParameters, 1, &anisotropicSampler, rootSignatureFlags);
+    rootSignatureDescription.Init_1_1(static_cast<UINT>(RootParameterType::NumRootParameterTypes), rootParameters,
+        _countof(staticSamplers), staticSamplers, rootSignatureFlags);
 
     m_rootSignature = m_device->CreateRootSignature(rootSignatureDescription.Desc_1_1);
 }
@@ -128,6 +149,8 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
     CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
     auto commandList = directCommandQueue.GetCommandList();
     m_currentCommandList = commandList;
+
+    DefaultTextures::Initialize(*m_device, *commandList);
 
     auto context = GetGraphicsContext();
     world.InitRenderers(context);
@@ -283,6 +306,8 @@ void DXRenderManager::OnDestroy()
             pass->Shutdown();
     }
     m_trackedPasses.clear();
+
+    DefaultTextures::Shutdown();
 }
 
 std::shared_ptr<DXGraphicsContext> DeltaEngine::DXRenderManager::GetGraphicsContext()

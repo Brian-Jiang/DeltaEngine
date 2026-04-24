@@ -27,6 +27,9 @@ enum class RootParameterType
     /// Directional light buffer slot.
     DirectionalLights,
 
+    /// Per-material constant buffer slot.
+    MaterialCB,
+
     /// Total number of root parameters.
     NumRootParameterTypes
 };

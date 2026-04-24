@@ -50,3 +50,17 @@ DShader* DMaterial::GetShader() const { return m_shader; }
 CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC DMaterial::GetBlendState() const { return m_blendDesc; }
 
 CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL DMaterial::GetDepthStencilState() const { return m_depthStencilState; }
+
+void DMaterial::FillMaterialCB(MaterialCB& outCB) const
+{
+    outCB.baseColor         = m_baseColor;
+    outCB.metallic          = m_metallic;
+    outCB.roughness         = m_roughness;
+    outCB.emissiveIntensity = m_emissiveIntensity;
+    outCB.alphaCutoff       = m_alphaCutoff;
+    outCB.emissiveColor     = m_emissiveColor;
+    outCB.flags             = m_flags;
+    outCB._pad[0]           = 0u;
+    outCB._pad[1]           = 0u;
+    outCB._pad[2]           = 0u;
+}

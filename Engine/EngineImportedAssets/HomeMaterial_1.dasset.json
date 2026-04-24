@@ -9,6 +9,23 @@
     {
       "_class": "DMaterial",
       "_objectId": "f4013a67-dbd7-4062-8e14-2bef34555369",
+      "m_alphaCutoff": 0.5,
+      "m_baseColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "m_emissiveColor": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "m_emissiveIntensity": 1.0,
+      "m_flags": 0,
+      "m_metallic": 0.0,
+      "m_roughness": 0.5,
       "m_shader": {
         "assetId": "be34d169-1442-40f3-885d-61a357a0ea40",
         "objectId": "bf9eb754-d026-449f-893f-9a903bbacbb6"

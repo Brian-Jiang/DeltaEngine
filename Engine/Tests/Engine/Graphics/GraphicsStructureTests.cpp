@@ -42,7 +42,8 @@ TEST(GraphicsStructureTests, RootParameterOrderMatchesShaderSlots)
     EXPECT_EQ(static_cast<int>(RootParameterType::PointLights), 4);
     EXPECT_EQ(static_cast<int>(RootParameterType::SpotLights), 5);
     EXPECT_EQ(static_cast<int>(RootParameterType::DirectionalLights), 6);
-    EXPECT_EQ(static_cast<int>(RootParameterType::NumRootParameterTypes), 7);
+    EXPECT_EQ(static_cast<int>(RootParameterType::MaterialCB), 7);
+    EXPECT_EQ(static_cast<int>(RootParameterType::NumRootParameterTypes), 8);
 }
 
 TEST(GraphicsStructureTests, VertexLayoutMatchesInputLayoutExpectations)

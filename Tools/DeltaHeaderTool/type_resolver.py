@@ -23,7 +23,9 @@ TYPE_MAP = {
     "DirectX::SimpleMath::Vector3":       "DVector3Property",
     "DirectX::SimpleMath::Quaternion":    "DQuaternionProperty",
     "DirectX::XMMATRIX":                  "DFloat4x4Property",
+    "DirectX::XMFLOAT4X4":                "DFloat4x4Property",
     "DirectX::XMVECTOR":                  "DFloat4Property",
+    "DirectX::XMFLOAT4":                  "DFloat4Property",
     "TBulkData":                          "DBulkDataProperty",
     "DeltaEngine::TBulkData":             "DBulkDataProperty",
 }
