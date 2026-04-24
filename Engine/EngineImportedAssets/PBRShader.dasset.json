@@ -1,0 +1,37 @@
+{
+  "header": {
+    "assetId": "b86b6eb1-e3cf-4f2b-89da-0165f2b1bfca",
+    "bulkDataMap": {
+      "0": {
+        "file": "PBRShader_Bulk0.bin",
+        "size": 18972
+      },
+      "1": {
+        "file": "PBRShader_Bulk1.bin",
+        "size": 178
+      }
+    },
+    "className": "PA_Shader",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DShader",
+      "_objectId": "61248552-7e92-4231-9f82-763f6a2f2ff7",
+      "m_pixelShaderEntryPoint": "PSMain",
+      "m_pixelShaderTargetProfile": "ps_6_6",
+      "m_serializedInputLayout": {
+        "_bulk": 1,
+        "size": 178
+      },
+      "m_serializedShaderBlobs": {
+        "_bulk": 0,
+        "size": 18972
+      },
+      "m_sourcePath": "Shaders/PBRObject.slang",
+      "m_vertexShaderEntryPoint": "VSMain",
+      "m_vertexShaderTargetProfile": "vs_6_6"
+    }
+  ]
+}

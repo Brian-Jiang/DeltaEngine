@@ -353,7 +353,7 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
     //    DShader *shader = CreateDObject<DShader>();
     //    {
     //        shader->Initialize(
-    //            L"Shaders/StandardObject.slang",
+    //            L"Shaders/PBRObject.slang",
     //            L"VSMain", L"PSMain",
     //            L"vs_6_6", L"ps_6_6");
     //     
@@ -366,7 +366,7 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
     //        });
     //     
     //        m_assetDatabase->CreateAsset(
-    //            IOManager::GetEngineImportedAssetFullPath("DefaultShader"),
+    //            IOManager::GetEngineImportedAssetFullPath("PBRShader"),
     //            PA_Shader::Create(shader));
     //    }
     //}
