@@ -19,7 +19,10 @@
 #include "Runtime/Graphics/PostProcess/PostProcessStack.h"
 #include "Runtime/Graphics/PostProcess/PostProcessPass.h"
 #include "Runtime/Graphics/RenderProxy/CameraRenderProxy.h"
+#include "Runtime/Graphics/RenderProxy/SkyboxRenderProxy.h"
 #include "Runtime/Core/DWorld.h"
+#include "Runtime/Core/Skybox.h"
+#include "Runtime/Core/DTexture.h"
 
 using namespace Microsoft::WRL;
 using namespace DeltaEngine;
@@ -74,15 +77,20 @@ void DXRenderManager::LoadAssets()
     rootParameters[static_cast<UINT>(RootParameterType::DirectionalLights)].InitAsShaderResourceView(2);
 
     // Material textures (t0..t4, space1)
-    CD3DX12_DESCRIPTOR_RANGE1 ranges[1] {};
+    CD3DX12_DESCRIPTOR_RANGE1 ranges[2] {};
     ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, static_cast<UINT>(MaterialTextureSlot::Count), 0, 1,
         D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
     rootParameters[static_cast<UINT>(RootParameterType::Texture)].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
-    
+
+    // IBL textures (t0..t2, space2)
+    ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3u, 0, 2,
+        D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+    rootParameters[static_cast<UINT>(RootParameterType::IBLTextures)].InitAsDescriptorTable(1, &ranges[1], D3D12_SHADER_VISIBILITY_PIXEL);
+
 
     // ==== Sampler (s) ====
     // Anisotropic sampler (s0) — scene samplers
-    CD3DX12_STATIC_SAMPLER_DESC staticSamplers[2] {};
+    CD3DX12_STATIC_SAMPLER_DESC staticSamplers[3] {};
     staticSamplers[0] = CD3DX12_STATIC_SAMPLER_DESC(0, D3D12_FILTER_ANISOTROPIC);
     // Anisotropic wrap sampler (s1) — material textures
     staticSamplers[1] = CD3DX12_STATIC_SAMPLER_DESC(
@@ -98,6 +106,20 @@ void DXRenderManager::LoadAssets()
         0.0f,
         D3D12_FLOAT32_MAX,
         D3D12_SHADER_VISIBILITY_PIXEL);
+    // Trilinear clamp sampler (s2) — IBL sampling
+    staticSamplers[2] = CD3DX12_STATIC_SAMPLER_DESC(
+        2,
+        D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+        D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+        D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+        D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+        0.0f,
+        0u,
+        D3D12_COMPARISON_FUNC_LESS_EQUAL,
+        D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK,
+        0.0f,
+        D3D12_FLOAT32_MAX,
+        D3D12_SHADER_VISIBILITY_PIXEL);
 
 
     CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
@@ -105,12 +127,14 @@ void DXRenderManager::LoadAssets()
         _countof(staticSamplers), staticSamplers, rootSignatureFlags);
 
     m_rootSignature = m_device->CreateRootSignature(rootSignatureDescription.Desc_1_1);
+
+    m_iblBaker.Initialize(*m_device);
 }
 
 void DXRenderManager::InitWorldRenderers(DWorld& world)
 {
     // Create a color buffer with sRGB for gamma correction.
-    DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+    DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
     DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT;
 
     // Check the best multisample quality level that can be used for the given back buffer format.
@@ -152,6 +176,8 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
 
     DefaultTextures::Initialize(*m_device, *commandList);
 
+    m_currentWorld = &world;
+
     auto context = GetGraphicsContext();
     world.InitRenderers(context);
 
@@ -163,6 +189,11 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
 void DXRenderManager::PrepareFrame()
 {
     m_device->ReleaseStaleDescriptors();
+
+    DTexture* skyboxCube = nullptr;
+    if (m_currentWorld && m_currentWorld->GetSkybox())
+        skyboxCube = m_currentWorld->GetSkybox()->m_cubemapTexture;
+    UpdateIBL(skyboxCube);
 
     CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
     auto commandList = directCommandQueue.GetCommandList();
@@ -177,6 +208,71 @@ void DXRenderManager::PrepareFrame()
     commandList->SetScissorRect(m_scissorRect);
     commandList->SetRenderTarget(*m_renderTarget);
     commandList->SetGraphicsRootSignature(m_rootSignature);
+
+    StageIBLDescriptors(*commandList);
+}
+
+void DXRenderManager::EnsureIBLFallback()
+{
+    if (m_iblFallbackReady)
+        return;
+
+    auto blackCube = DefaultTextures::GetBlackCubeTexture();
+    auto blackRG   = DefaultTextures::GetBlackRGTexture();
+    if (!blackCube || !blackRG)
+        return;
+
+    m_iblResources.irradianceCube = blackCube;
+    m_iblResources.specularCube   = blackCube;
+    m_iblResources.brdfLut        = m_iblBaker.GetStaticLut().brdfLut ? m_iblBaker.GetStaticLut().brdfLut : blackRG;
+    m_iblResources.irradianceSRV  = blackCube->GetShaderResourceView();
+    m_iblResources.specularSRV    = blackCube->GetShaderResourceView();
+    m_iblResources.brdfLutSRV     = m_iblBaker.GetStaticLut().brdfLutSRV.ptr
+        ? m_iblBaker.GetStaticLut().brdfLutSRV
+        : blackRG->GetShaderResourceView();
+    m_iblFallbackReady = true;
+}
+
+void DXRenderManager::UpdateIBL(DTexture* skyboxCubemap)
+{
+    if (skyboxCubemap == m_lastSkyboxTexture && (m_lastSkyboxTexture != nullptr || m_iblFallbackReady))
+        return;
+
+    if (!skyboxCubemap)
+    {
+        EnsureIBLFallback();
+        m_lastSkyboxTexture = nullptr;
+        return;
+    }
+
+    Skybox* skybox = m_currentWorld ? m_currentWorld->GetSkybox() : nullptr;
+    std::shared_ptr<DirectX12Texture> gpuCube;
+    if (skybox && skybox->GetRenderProxy())
+        gpuCube = skybox->GetRenderProxy()->GetGpuCubemap();
+
+    if (!gpuCube)
+    {
+        EnsureIBLFallback();
+        return;
+    }
+
+    m_iblResources = m_iblBaker.Bake(*m_device, gpuCube);
+    m_lastSkyboxTexture = skyboxCubemap;
+    m_iblFallbackReady  = false;
+}
+
+void DXRenderManager::StageIBLDescriptors(CommandList& commandList)
+{
+    if (!m_iblResources.irradianceCube || !m_iblResources.specularCube || !m_iblResources.brdfLut)
+        return;
+
+    const int32_t rp = static_cast<int32_t>(RootParameterType::IBLTextures);
+    commandList.SetShaderResourceView(rp, 0, m_iblResources.irradianceCube,
+        D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    commandList.SetShaderResourceView(rp, 1, m_iblResources.specularCube,
+        D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    commandList.SetShaderResourceView(rp, 2, m_iblResources.brdfLut,
+        D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 }
 
 void DXRenderManager::RenderFrame()
@@ -306,6 +402,9 @@ void DXRenderManager::OnDestroy()
             pass->Shutdown();
     }
     m_trackedPasses.clear();
+
+    m_iblResources = {};
+    m_iblBaker.Shutdown();
 
     DefaultTextures::Shutdown();
 }

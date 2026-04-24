@@ -19,6 +19,7 @@
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/DirectX/DirectX12Texture.h"
 #include "Runtime/Graphics/DirectX/RenderTarget.h"
+#include "Runtime/Graphics/IBL/IBLBaker.h"
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -27,6 +28,7 @@ class CommandList;
 class RootSignature;
 class RenderTarget;
 class DWorld;
+class DTexture;
 class PostProcessStack;
 class PostProcessPass;
 
@@ -81,6 +83,9 @@ public:
 private:
     void CreatePingPongTargets(UINT width, UINT height);
     void ExecutePostProcessStack(DXGraphicsContext& ctx, PostProcessStack* stack, UINT width, UINT height);
+    void UpdateIBL(DTexture* skyboxCubemap);
+    void EnsureIBLFallback();
+    void StageIBLDescriptors(CommandList& commandList);
 
 	D3D12_RECT m_scissorRect;
 	CD3DX12_VIEWPORT m_viewport;
@@ -98,6 +103,12 @@ private:
     std::shared_ptr<DirectX12Texture> m_finalPostProcessTexture;
 
     std::shared_ptr<DXGraphicsContext> m_currentContext;
+
+    IBLBaker m_iblBaker;
+    IBLBaker::IBLResources m_iblResources;
+    DTexture* m_lastSkyboxTexture = nullptr;
+    bool m_iblFallbackReady = false;
+    DWorld* m_currentWorld = nullptr;
 
     UINT m_width;
     UINT m_height;

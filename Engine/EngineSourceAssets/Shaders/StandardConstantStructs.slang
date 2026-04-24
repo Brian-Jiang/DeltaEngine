@@ -109,3 +109,13 @@ public static const uint MAT_ALPHA_TEST              = 1u << 6;
 public static const uint MAT_DOUBLE_SIDED            = 1u << 7;
 
 public bool MatHasFlag(uint flags, uint bit) { return (flags & bit) != 0u; }
+
+// ==== IBL Resources (t0..t2, space2) ====
+
+public TextureCube  g_irradianceMap : register(t0, space2);
+public TextureCube  g_specularMap   : register(t1, space2);
+public Texture2D    g_brdfLut       : register(t2, space2);
+
+public SamplerState g_iblSampler : register(s2);
+
+public static const float IBL_SPECULAR_MAX_MIP = 6.0;

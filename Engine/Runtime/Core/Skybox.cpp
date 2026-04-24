@@ -13,7 +13,7 @@ Skybox::Skybox()
 {
 }
 
-void Skybox::Initialize()
+void Skybox::Initialize(std::shared_ptr<DXGraphicsContext> context)
 {
     if (!m_cubemapTexture)
         return;
@@ -31,6 +31,7 @@ void Skybox::Initialize()
     }
 
     m_renderProxy = std::make_shared<SkyboxRenderProxy>(m_cubemapTexture, m_material);
+    m_renderProxy->Initialize(context);
 }
 
 void Skybox::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context)

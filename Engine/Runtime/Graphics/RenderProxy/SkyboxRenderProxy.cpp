@@ -43,7 +43,7 @@ void SkyboxRenderProxy::BuildPipelineStateObject(std::shared_ptr<DXGraphicsConte
     CD3DX12_SHADER_BYTECODE vsBytecode{ const_cast<void*>(vs->getBufferPointer()), vs->getBufferSize() };
     CD3DX12_SHADER_BYTECODE psBytecode{ const_cast<void*>(ps->getBufferPointer()), ps->getBufferSize() };
 
-    DXGI_FORMAT backBufFmt  = DXGI_FORMAT_R8G8B8A8_UNORM;
+    DXGI_FORMAT backBufFmt  = DXGI_FORMAT_R16G16B16A16_FLOAT;
     DXGI_FORMAT depthFmt    = DXGI_FORMAT_D32_FLOAT;
     DXGI_SAMPLE_DESC sample = renderContext->device->GetMultisampleQualityLevels(backBufFmt);
 
@@ -80,16 +80,21 @@ void SkyboxRenderProxy::BuildPipelineStateObject(std::shared_ptr<DXGraphicsConte
     m_pso = renderContext->device->CreatePipelineStateObject(stream);
 }
 
-void SkyboxRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext)
+void SkyboxRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext> renderContext)
 {
+    if (m_initialized)
+        return;
     if (!m_cubemapTexture || !m_material || !m_material->GetShader())
         return;
 
+    BuildPipelineStateObject(renderContext);
+    m_initialized = true;
+}
+
+void SkyboxRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext)
+{
     if (!m_initialized)
-    {
-        BuildPipelineStateObject(renderContext);
-        m_initialized = true;
-    }
+        return;
 
     auto& commandList = renderContext->commandList;
     commandList->SetPipelineState(m_pso);

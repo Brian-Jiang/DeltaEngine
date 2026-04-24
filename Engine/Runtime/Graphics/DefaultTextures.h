@@ -28,6 +28,14 @@ public:
     /// Returns the underlying texture (may be null if not yet initialized).
     DELTAENGINE_API static std::shared_ptr<DirectX12Texture> GetWhiteTexture();
 
+    /// Default 1x1x6 black R16G16B16A16_FLOAT cubemap with a TextureCube SRV.
+    DELTAENGINE_API static std::shared_ptr<DirectX12Texture> GetBlackCubeTexture();
+    DELTAENGINE_API static D3D12_CPU_DESCRIPTOR_HANDLE GetBlackCubeSRV();
+
+    /// Default 1x1 black R16G16B16A16_FLOAT 2D texture (BRDF LUT fallback).
+    DELTAENGINE_API static std::shared_ptr<DirectX12Texture> GetBlackRGTexture();
+    DELTAENGINE_API static D3D12_CPU_DESCRIPTOR_HANDLE GetBlackRGSRV();
+
     /// Releases any cached textures. Call during renderer shutdown.
     DELTAENGINE_API static void Shutdown();
 };

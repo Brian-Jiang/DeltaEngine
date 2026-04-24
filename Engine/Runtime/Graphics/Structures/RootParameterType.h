@@ -30,6 +30,9 @@ enum class RootParameterType
     /// Per-material constant buffer slot.
     MaterialCB,
 
+    /// IBL descriptor table: t0..t2, space2 (irradiance cube, specular cube, BRDF LUT).
+    IBLTextures,
+
     /// Total number of root parameters.
     NumRootParameterTypes
 };

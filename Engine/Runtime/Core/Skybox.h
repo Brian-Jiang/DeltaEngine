@@ -23,12 +23,16 @@ class Skybox : public DObject
 public:
     DELTAENGINE_API Skybox();
 
-    /// Compiles the skybox shader and constructs the render proxy.
+    /// Compiles the skybox shader, constructs the render proxy, and eagerly uploads the
+    /// cubemap + builds the PSO so the GPU cubemap is ready before the first frame.
     /// Call once after m_cubemapTexture and m_material are both set.
-    DELTAENGINE_API void Initialize();
+    DELTAENGINE_API void Initialize(std::shared_ptr<DXGraphicsContext> context);
 
     /// Records the skybox draw call into the active command list.
     DELTAENGINE_API void GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context);
+
+    /// Returns the render proxy, which owns the GPU cubemap texture (may be null until Initialize runs).
+    DELTAENGINE_API const std::shared_ptr<SkyboxRenderProxy>& GetRenderProxy() const { return m_renderProxy; }
 
     /** Cubemap texture to sample. Must be a DDS cubemap. */
     DPROPERTY()

@@ -89,7 +89,21 @@ float4 PSMain(PBRPSInput input) : SV_TARGET
         Lo += EvaluateSpotPBR(SpotLights[k], P, N, V, baseColor, metallic, roughness);
     }
 
-    float3 ambient = 0.03 * baseColor * ao;
+    float  NdotV = max(dot(N, V), 0.0);
+    float3 R     = reflect(-V, N);
+    float3 F0    = lerp(float3(0.04, 0.04, 0.04), baseColor, metallic);
+
+    float3 irradiance  = g_irradianceMap.Sample(g_iblSampler, N).rgb;
+    float3 F_ambient   = F_Schlick(NdotV, F0);
+    float3 kD_ambient  = (1.0 - F_ambient) * (1.0 - metallic);
+    float3 diffuseIBL  = kD_ambient * irradiance * baseColor;
+
+    float  lod              = roughness * IBL_SPECULAR_MAX_MIP;
+    float3 prefilteredColor = g_specularMap.SampleLevel(g_iblSampler, R, lod).rgb;
+    float2 brdf             = g_brdfLut.Sample(g_iblSampler, float2(NdotV, roughness)).rg;
+    float3 specularIBL      = prefilteredColor * (F_ambient * brdf.x + brdf.y);
+
+    float3 ambient = (diffuseIBL + specularIBL) * ao;
     float3 color   = ambient + Lo + emissive;
 
     return float4(color, alpha);

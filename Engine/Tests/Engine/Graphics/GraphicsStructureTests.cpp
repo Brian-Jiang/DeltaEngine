@@ -43,7 +43,8 @@ TEST(GraphicsStructureTests, RootParameterOrderMatchesShaderSlots)
     EXPECT_EQ(static_cast<int>(RootParameterType::SpotLights), 5);
     EXPECT_EQ(static_cast<int>(RootParameterType::DirectionalLights), 6);
     EXPECT_EQ(static_cast<int>(RootParameterType::MaterialCB), 7);
-    EXPECT_EQ(static_cast<int>(RootParameterType::NumRootParameterTypes), 8);
+    EXPECT_EQ(static_cast<int>(RootParameterType::IBLTextures), 8);
+    EXPECT_EQ(static_cast<int>(RootParameterType::NumRootParameterTypes), 9);
 }
 
 TEST(GraphicsStructureTests, VertexLayoutMatchesInputLayoutExpectations)
@@ -57,5 +58,6 @@ TEST(GraphicsStructureTests, VertexLayoutMatchesInputLayoutExpectations)
     EXPECT_EQ(offsetof(Vertex, position), 0u);
     EXPECT_EQ(offsetof(Vertex, color), sizeof(DirectX::XMFLOAT3));
     EXPECT_EQ(offsetof(Vertex, normal), sizeof(DirectX::XMFLOAT3) + sizeof(DirectX::XMFLOAT4));
-    EXPECT_EQ(offsetof(Vertex, uv), sizeof(DirectX::XMFLOAT3) + sizeof(DirectX::XMFLOAT4) + sizeof(DirectX::XMFLOAT3));
+    EXPECT_EQ(offsetof(Vertex, uv), sizeof(DirectX::XMFLOAT3) + sizeof(DirectX::XMFLOAT4) + sizeof(DirectX::XMFLOAT3) +
+                                        sizeof(DirectX::XMFLOAT3));
 }
