@@ -4,7 +4,7 @@
     "bulkDataMap": {
       "0": {
         "file": "StarMesh_Bulk0.bin",
-        "size": 345608
+        "size": 432008
       },
       "1": {
         "file": "StarMesh_Bulk1.bin",
@@ -25,15 +25,15 @@
       },
       "m_materials": [
         {
-          "assetId": "5dc55bb7-410b-47d4-a99b-2983bad66579",
-          "objectId": "78303fbf-2af6-4bc7-9e1d-4eefc4dcfd60"
+          "assetId": "90ac31c6-1058-4a1a-80e3-eb34895b3d79",
+          "objectId": "1f87bb93-43c2-4c02-ba37-ba9102c8b715"
         }
       ],
       "m_sourcePath": "Star.obj",
       "m_textures": [],
       "m_vertexData": {
         "_bulk": 0,
-        "size": 345608
+        "size": 432008
       }
     }
   ]

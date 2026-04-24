@@ -1,6 +1,6 @@
 {
   "header": {
-    "assetId": "5dc55bb7-410b-47d4-a99b-2983bad66579",
+    "assetId": "90ac31c6-1058-4a1a-80e3-eb34895b3d79",
     "className": "PA_Material",
     "magic": "DLTA",
     "version": 1
@@ -8,7 +8,7 @@
   "objects": [
     {
       "_class": "DMaterial",
-      "_objectId": "78303fbf-2af6-4bc7-9e1d-4eefc4dcfd60",
+      "_objectId": "1f87bb93-43c2-4c02-ba37-ba9102c8b715",
       "m_alphaCutoff": 0.5,
       "m_baseColor": [
         1.0,

@@ -23,6 +23,7 @@
 #include "Runtime/Core/DMaterial.h"
 #include "Runtime/Core/Skybox.h"
 #include "Runtime/Graphics/PostProcess/PA_PostProcessStack.h"
+#include "Runtime/Core/DMesh.h"
 #include <nlohmann/json.hpp>
 
 #include <cstdio>
@@ -348,6 +349,28 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
 
  void EditorCore::CreateAssets()
  {
+    //{
+    //    DShader *shader = CreateDObject<DShader>();
+    //    {
+    //        shader->Initialize(
+    //            L"Shaders/StandardObject.slang",
+    //            L"VSMain", L"PSMain",
+    //            L"vs_6_6", L"ps_6_6");
+    //     
+    //        shader->SetInputLayout({
+    //            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    //            { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    //            { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    //            { "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    //            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    //        });
+    //     
+    //        m_assetDatabase->CreateAsset(
+    //            IOManager::GetEngineImportedAssetFullPath("DefaultShader"),
+    //            PA_Shader::Create(shader));
+    //    }
+    //}
+
      //{
      //    const std::filesystem::path psShaderPath = IOManager::GetEngineImportedAssetFullPath("PassthroughShader");
      //    DShader *psShader = CreateDObject<DShader>();
@@ -421,61 +444,61 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
 //             PA_Shader::Create(shader));
 //     }
 //
-//     // Star mesh and material
-//     {
-//         DMesh* mesh = CreateDObject<DMesh>();
-//         mesh->Initialize(std::wstring(L"Star.obj"));
-//         std::vector<DTexture*> textures = mesh->GetTextures();
-//         std::vector<DMaterial*> materials;
-//         for (int i = 0; i < mesh->GetSubMeshCount(); i++) {
-//             DMaterial* material = CreateDObject<DMaterial>();
-//             material->Initialize(shader);
-//             if (i < textures.size()) {
-//                 m_assetDatabase->CreateAsset(
-//                     IOManager::GetEngineImportedAssetFullPath("StarTexture_" + std::to_string(i)),
-//                     PA_Texture::Create(textures[i]));
-//                 material->AddTexture(textures[i]);
-//             }
-//             materials.push_back(material);
-//
-//             m_assetDatabase->CreateAsset(
-//                 IOManager::GetEngineImportedAssetFullPath("StarMaterial_" + std::to_string(i)),
-//                 PA_Material::Create(material));
-//         }
-//
-//         mesh->SetMaterials(materials);
-//
-//         m_assetDatabase->CreateAsset(
-//             IOManager::GetEngineImportedAssetFullPath("StarMesh"),
-//             PA_StaticMesh::Create(mesh));
-//     }
-//
-//     // Home mesh and material
-//     {
-//         DMesh* mesh = CreateDObject<DMesh>();
-//         mesh->Initialize(std::wstring(L"home/source/home.fbx"));
-//         std::vector<DTexture*> textures = mesh->GetTextures();
-//         std::vector<DMaterial*> materials;
-//         for (int i = 0; i < mesh->GetSubMeshCount(); i++) {
-//             DMaterial* material = CreateDObject<DMaterial>();
-//             material->Initialize(shader);
-//             if (i < textures.size()) {
-//                 m_assetDatabase->CreateAsset(
-//                     IOManager::GetEngineImportedAssetFullPath("HomeTexture_" + std::to_string(i)),
-//                     PA_Texture::Create(textures[i]));
-//                 material->AddTexture(textures[i]);
-//             }
-//             materials.push_back(material);
-//
-//             m_assetDatabase->CreateAsset(
-//                 IOManager::GetEngineImportedAssetFullPath("HomeMaterial_" + std::to_string(i)),
-//                 PA_Material::Create(material));
-//         }
-//
-//         mesh->SetMaterials(materials);
-//
-//         m_assetDatabase->CreateAsset(
-//             IOManager::GetEngineImportedAssetFullPath("HomeMesh"),
-//             PA_StaticMesh::Create(mesh));
-//     }
+     //// Star mesh and material
+     //{
+     //    DMesh* mesh = CreateDObject<DMesh>();
+     //    mesh->Initialize(std::wstring(L"Star.obj"));
+     //    std::vector<DTexture*> textures = mesh->GetTextures();
+     //    std::vector<DMaterial*> materials;
+     //    for (int i = 0; i < mesh->GetSubMeshCount(); i++) {
+     //        DMaterial* material = CreateDObject<DMaterial>();
+     //        material->Initialize(nullptr);
+     //        if (i < textures.size()) {
+     //            m_assetDatabase->CreateAsset(
+     //                IOManager::GetEngineImportedAssetFullPath("StarTexture_" + std::to_string(i)),
+     //                PA_Texture::Create(textures[i]));
+     //            material->AddTexture(textures[i]);
+     //        }
+     //        materials.push_back(material);
+
+     //        m_assetDatabase->CreateAsset(
+     //            IOManager::GetEngineImportedAssetFullPath("StarMaterial_" + std::to_string(i)),
+     //            PA_Material::Create(material));
+     //    }
+
+     //    mesh->SetMaterials(materials);
+
+     //    m_assetDatabase->CreateAsset(
+     //        IOManager::GetEngineImportedAssetFullPath("StarMesh"),
+     //        PA_StaticMesh::Create(mesh));
+     //}
+
+     //// Home mesh and material
+     //{
+     //    DMesh* mesh = CreateDObject<DMesh>();
+     //    mesh->Initialize(std::wstring(L"home/source/home.fbx"));
+     //    std::vector<DTexture*> textures = mesh->GetTextures();
+     //    std::vector<DMaterial*> materials;
+     //    for (int i = 0; i < mesh->GetSubMeshCount(); i++) {
+     //        DMaterial* material = CreateDObject<DMaterial>();
+     //        material->Initialize(nullptr);
+     //        if (i < textures.size()) {
+     //            m_assetDatabase->CreateAsset(
+     //                IOManager::GetEngineImportedAssetFullPath("HomeTexture_" + std::to_string(i)),
+     //                PA_Texture::Create(textures[i]));
+     //            material->AddTexture(textures[i]);
+     //        }
+     //        materials.push_back(material);
+
+     //        m_assetDatabase->CreateAsset(
+     //            IOManager::GetEngineImportedAssetFullPath("HomeMaterial_" + std::to_string(i)),
+     //            PA_Material::Create(material));
+     //    }
+
+     //    mesh->SetMaterials(materials);
+
+     //    m_assetDatabase->CreateAsset(
+     //        IOManager::GetEngineImportedAssetFullPath("HomeMesh"),
+     //        PA_StaticMesh::Create(mesh));
+     //}
 }

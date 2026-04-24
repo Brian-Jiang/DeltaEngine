@@ -42,6 +42,9 @@ struct Vertex {
     /// Object-space vertex normal.
 	DirectX::XMFLOAT3 normal;
 
+    /// Object-space vertex tangent.
+	DirectX::XMFLOAT3 tangent;
+
     /// Texture coordinates.
 	DirectX::XMFLOAT2 uv;
 };

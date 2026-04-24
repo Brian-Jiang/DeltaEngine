@@ -5,6 +5,7 @@ public struct StandardVSInput
     public float3 position : POSITION;
     public float4 color : COLOR;
     public float3 normal : NORMAL;
+    public float3 tangent : TANGENT;
     public float2 uv : TEXCOORD;
 };
 

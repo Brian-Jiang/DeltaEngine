@@ -190,7 +190,8 @@ void DMesh::ImportMesh()
         aiProcess_ImproveCacheLocality |
         aiProcess_FlipWindingOrder |
         aiProcess_TransformUVCoords |
-        aiProcess_PreTransformVertices;
+        aiProcess_PreTransformVertices |
+        aiProcess_CalcTangentSpace;
 
             //// aiProcess_CalcTangentSpace |
             //// aiProcess_JoinIdenticalVertices |
@@ -262,6 +263,9 @@ void DMesh::ProcessMesh(aiMesh* mesh, const aiScene* scene)
         vertex.color = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
         vertex.position = DirectX::XMFLOAT3(&mesh->mVertices[vertexIndex].x);
         vertex.normal = DirectX::XMFLOAT3(&mesh->mNormals[vertexIndex].x);
+
+        if (mesh->HasTangentsAndBitangents())
+            vertex.tangent = DirectX::XMFLOAT3(&mesh->mTangents[vertexIndex].x);
 
         if (mesh->mTextureCoords[0])
         {
