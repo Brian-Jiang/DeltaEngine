@@ -1,0 +1,40 @@
+{
+  "header": {
+    "assetId": "9bdff5d8-c0e0-4964-bcec-519fbfef987a",
+    "bulkDataMap": {
+      "0": {
+        "file": "SphereMesh_Bulk0.bin",
+        "size": 33548
+      },
+      "1": {
+        "file": "SphereMesh_Bulk1.bin",
+        "size": 11528
+      }
+    },
+    "className": "PA_StaticMesh",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DMesh",
+      "_objectId": "d08c2038-5fd0-4cb7-9845-45fc48452f60",
+      "m_indexData": {
+        "_bulk": 1,
+        "size": 11528
+      },
+      "m_materials": [
+        {
+          "assetId": "df401796-9fad-4ab6-8279-75872b338559",
+          "objectId": "196bc697-5753-47bb-a68f-c5fde5c0bd4b"
+        }
+      ],
+      "m_sourcePath": "sphere.fbx",
+      "m_textures": [],
+      "m_vertexData": {
+        "_bulk": 0,
+        "size": 33548
+      }
+    }
+  ]
+}

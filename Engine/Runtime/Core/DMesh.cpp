@@ -185,6 +185,7 @@ void DMesh::ImportMesh()
         aiProcess_JoinIdenticalVertices |
         aiProcess_Triangulate |
         aiProcess_GenBoundingBoxes |
+        aiProcess_GenSmoothNormals |
         aiProcess_FlipUVs |
         aiProcess_MakeLeftHanded |
         aiProcess_ImproveCacheLocality |
@@ -193,11 +194,7 @@ void DMesh::ImportMesh()
         aiProcess_PreTransformVertices |
         aiProcess_CalcTangentSpace;
 
-            //// aiProcess_CalcTangentSpace |
-            //// aiProcess_JoinIdenticalVertices |
-            //// aiProcess_Triangulate |
             //// aiProcess_RemoveComponent |
-            //// aiProcess_GenSmoothNormals |
             //// aiProcess_SplitLargeMeshes |
             //// aiProcess_ValidateDataStructure |
             //////aiProcess_ImproveCacheLocality | // handled by optimizePostTransform()
@@ -209,11 +206,7 @@ void DMesh::ImportMesh()
             //// aiProcess_OptimizeMeshes |
             //// aiProcess_OptimizeGraph;
 
-            //// aiProcess_CalcTangentSpace |
-            //aiProcess_JoinIdenticalVertices |
-            //aiProcess_Triangulate |
             //// aiProcess_RemoveComponent |
-            //// aiProcess_GenSmoothNormals |
             //aiProcess_GenBoundingBoxes |
             //////aiProcess_SplitLargeMeshes |
             //////aiProcess_ValidateDataStructure |

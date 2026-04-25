@@ -400,10 +400,48 @@
       "m_components": [],
       "m_name": "New GameObject",
       "m_rootSceneComponent": {
-        "assetId": "00000000-0000-0000-0000-000000000000",
-        "objectId": "00000000-0000-0000-0000-000000000000"
+        "assetId": "097992b4-c850-4c69-a612-ec83528b0c30",
+        "objectId": "94d64da4-b3cb-41f0-b621-7d8d906f5a67"
       },
-      "m_sceneComponents": []
+      "m_sceneComponents": [
+        {
+          "assetId": "097992b4-c850-4c69-a612-ec83528b0c30",
+          "objectId": "94d64da4-b3cb-41f0-b621-7d8d906f5a67"
+        }
+      ]
+    },
+    {
+      "_class": "MeshRenderer",
+      "_objectId": "94d64da4-b3cb-41f0-b621-7d8d906f5a67",
+      "m_children": [],
+      "m_gameObject": {
+        "assetId": "097992b4-c850-4c69-a612-ec83528b0c30",
+        "objectId": "6c9e4502-3c02-463d-82b1-981d67808a8e"
+      },
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -319.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_mesh": {
+        "assetId": "9bdff5d8-c0e0-4964-bcec-519fbfef987a",
+        "objectId": "d08c2038-5fd0-4cb7-9845-45fc48452f60"
+      },
+      "m_name": "New MeshRenderer",
+      "m_settings": {}
     }
   ]
 }

@@ -349,6 +349,21 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
 
  void EditorCore::CreateAssets()
  {
+     //{
+     //    DMesh *mesh = CreateDObject<DMesh>();
+     //    mesh->Initialize(std::wstring(L"sphere.fbx"));
+     //    //DMaterial *material = CreateDObject<DMaterial>();
+     //    //material->Initialize(nullptr);
+     //    //m_assetDatabase->CreateAsset(
+     //    //        IOManager::GetEngineImportedAssetFullPath("SphereMaterial_0"),
+     //    //        PA_Material::Create(material));
+     //    //std::vector<DMaterial *> materials{material};
+     //    //mesh->SetMaterials(materials);
+     //    m_assetDatabase->CreateAsset(
+     //            IOManager::GetEngineImportedAssetFullPath("SphereMesh"),
+     //            PA_StaticMesh::Create(mesh));
+     //}
+
     //{
     //    DShader *shader = CreateDObject<DShader>();
     //    {
