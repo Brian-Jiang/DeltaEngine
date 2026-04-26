@@ -127,15 +127,30 @@ All DirectX 12 objects are wrapped:
 
 `DXGraphicsContext` is passed through the render call stack carrying the device, command list, camera, and light data for the current frame.
 
+**PBR / IBL support (`Engine/Runtime/Graphics/IBL/`, `Engine/Runtime/Graphics/`):**
+
+| Class / File | Role |
+|---|---|
+| `IBLBaker` | Bakes irradiance cube, specular cube, and BRDF LUT from a source HDR cubemap; owned by `DXRenderManager` |
+| `IBLBaker::IBLResources` | Holds the three baked `DirectX12Texture` objects + their CPU SRV handles |
+| `DefaultTextures` | Static singleton providing engine-wide fallback textures: 1×1 white 2D, 1×1×6 black cubemap, 1×1 black RG (BRDF LUT fallback); call `Initialize(device, commandList)` once |
+| `MaterialConstants.h` | `MaterialFlags` enum (HasAlbedoMap … DoubleSided), `MaterialTextureSlot` enum, `MaterialCB` (256-byte aligned constant buffer: baseColor, metallic, roughness, emissiveColor, emissiveIntensity, alphaCutoff, flags) |
+
+`DXRenderManager` calls `UpdateIBL(cubemap)` whenever the active skybox cubemap changes and binds the resulting `IBLResources` to the `IBLTextures` root parameter slot each frame.
+
 ### Rendering Components (`Engine/Runtime/Graphics/Renderer/`)
 
 `Renderer` (base) → `MeshRenderer`, `SpriteRenderer`. Renderers are `SceneComponent` subclasses and implement `GatherDrawCalls(DXGraphicsContext&)`.
 
 **RenderProxy** objects (`MeshRenderProxy`, `CameraRenderProxy`, `SkyboxRenderProxy`, etc.) decouple scene data from the GPU submission.
 
+**Vertex layout** (`Engine/Runtime/Graphics/Structures/Vertex.h`): `position` (XMFLOAT3), `normal` (XMFLOAT3), `tangent` (XMFLOAT3), `uv` (XMFLOAT2).
+
+**Root parameter slots** (`RootParameterType.h`): `PerObject`, `PerFrame`, `Textures`, `PointLights`, `DirectionalLights`, `MaterialCB` (per-material constant buffer), `IBLTextures` (t0–t2 space2: irradiance cube, specular cube, BRDF LUT).
+
 ### Skybox (`Engine/Runtime/Core/Skybox.h`)
 
-`Skybox` is a reflected `DObject` with two DPROPERTYs: `DTexture* m_cubemapTexture` (must be a DDS cubemap) and `DMaterial* m_material` (holds the compiled skybox shader). Call `Initialize()` once after both are set; then `GatherDrawCalls(context)` records the draw. The scene-level asset wrapper is `PA_Skybox`. `Skybox.slang` is the skybox shader.
+`Skybox` is a reflected `DObject` with two DPROPERTYs: `DTexture* m_cubemapTexture` (must be a DDS cubemap) and `DMaterial* m_material` (holds the compiled skybox shader). Call `Initialize(context)` once after both are set — it compiles the shader, uploads the cubemap to the GPU, and builds the PSO. `GetRenderProxy()` returns the `SkyboxRenderProxy` (owns the GPU cubemap). `GatherDrawCalls(context)` records the draw. The scene-level asset wrapper is `PA_Skybox`. `Skybox.slang` is the skybox shader.
 
 ### Post-Processing (`Engine/Runtime/Graphics/PostProcess/`)
 
@@ -156,6 +171,9 @@ New post-process passes subclass `PostProcessPass`, annotate with `DCLASS()`, an
 - **Models:** `DMesh::Initialize(...)` currently imports directly via Assimp and builds submesh/material/texture data.
 - **Textures:** `DTexture` initialization currently goes through `TextureImporter`; the standalone importer layer exists in `Engine/Runtime/Importers/` but is not an active high-level pipeline right now.
 - **Shaders:** `DShader` compiles shaders at runtime. Sources in `Engine/EngineSourceAssets/Shaders/`. Shaders are now written in **Slang** (`.slang` files). `CompileSlangStage(engineRelativePath, entryPoint, targetProfile)` compiles a single stage via the Slang C++ API; `CompileHLSLStage` remains for legacy use. Both functions live in `Engine/Runtime/Graphics/ShaderCompile.h`.
+  - **Standard shader quartet:** `StandardObject.slang` / `StandardLighting.slang` / `StandardConstantStructs.slang` / `StandardInputs.slang`
+  - **PBR shader set:** `PBRObject.slang` / `PBRLighting.slang` / `PBRInputs.slang` — physically-based rendering with IBL support
+  - **IBL bake shaders:** `IBL_BrdfLut.slang`, `IBL_IrradianceConvolve.slang`, `IBL_SpecularPrefilter.slang`, `IBL_Math.slang`
 
 ### Editor UI (`Engine/Editor/`)
 
@@ -348,7 +366,7 @@ Generated:  Intermediate/DeltaHeaderTool/Generated/Foo.generated.h
 
 Core / Scene: `DObject`, `GameObject`, `DComponent`, `SceneComponent`, `DWorld`, `Camera`, `DScene`
 Skybox: `Skybox`
-Rendering: `Renderer`, `MeshRenderer` (DSTRUCT), `DMesh`, `DMaterial`, `DTexture`, `DShader`
+Rendering: `Renderer`, `MeshRenderer` (DSTRUCT), `DMesh`, `DMaterial` (PBR properties: baseColor, metallic, roughness, emissive; flags via `MaterialFlags`), `DTexture`, `DShader`
 Post-processing: `PostProcessPass` (abstract), `PostProcessStack`, `PassthroughPass`, `TonemapPass`
 Assets: `DPrimaryAsset`, `PA_DScene`, `PA_Shader`, `PA_Material`, `PA_Texture`, `PA_StaticMesh`, `PA_Skybox`, `PA_PostProcessStack`
 Lighting: `LightComponent`, `DirectionalLight`, `PointLight`, `SpotLight`
@@ -430,7 +448,7 @@ Python is **build-time only**. The bundled `Tools/Python/python.exe` runs `Delta
 - **Headers only for declarations/implementations split:** most files use `.h` + `.cpp` pairs under the same directory.
 - **Mixed ownership model:** subsystems use RAII smart pointers, while reflected `DObject` relationships and scene/component links are typically raw pointers.
 - **No raw `new`/`delete`** for reflected engine objects — use `CreateDObject<T>()`; asset ownership/lifetime is handled by reflection registry + `DPrimaryAsset`.
-- **Slang shaders** live in `Engine/EngineSourceAssets/Shaders/` as `.slang` files and are compiled at runtime via `CompileSlangStage`. The `StandardObject.slang` / `StandardLighting.slang` / `StandardConstantStructs.slang` / `StandardInputs.slang` quartet forms the standard material shader.
+- **Slang shaders** live in `Engine/EngineSourceAssets/Shaders/` as `.slang` files and are compiled at runtime via `CompileSlangStage`. The `StandardObject.slang` / `StandardLighting.slang` / `StandardConstantStructs.slang` / `StandardInputs.slang` quartet forms the standard material shader. `PBRObject.slang` / `PBRLighting.slang` / `PBRInputs.slang` form the PBR material shader set (uses IBL).
 - **`DXGraphicsContext`** is the primary way to pass rendering state down the call stack — do not add global graphics state.
 - **Adding a new reflected class:** annotate with `DCLASS()` + `DGENERATED_BODY(Name)`, add `DPROPERTY()`/`DFUNCTION()` annotations, then build (or run `delta_header_generate.bat`) — the tool regenerates the `.generated.h/.cpp` pair automatically.
 - **Do not hand-edit generated files** in `Intermediate/DeltaHeaderTool/Generated/` — they are overwritten on every build.
