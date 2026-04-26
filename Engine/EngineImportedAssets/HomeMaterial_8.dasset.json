@@ -1,6 +1,6 @@
 {
   "header": {
-    "assetId": "99aeb96b-75f6-40e2-9fe6-a40844d89e7d",
+    "assetId": "c1016945-38b9-4fea-a3cf-74fd96ce6e73",
     "className": "PA_Material",
     "magic": "DLTA",
     "version": 1
@@ -8,14 +8,23 @@
   "objects": [
     {
       "_class": "DMaterial",
-      "_objectId": "9cafa955-a773-4764-896d-f232dfb6428b",
+      "_objectId": "e2ac8357-d128-4b18-a43d-b9e42c77d2d9",
+      "m_albedoTexture": {
+        "assetId": "7b6b8128-8144-4ed9-8742-ca826f9afd2d",
+        "objectId": "421039e3-321e-4e95-b6c9-bbb0198e784a"
+      },
       "m_alphaCutoff": 0.5,
+      "m_alphaMaskTexture": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "00000000-0000-0000-0000-000000000000"
+      },
       "m_baseColor": [
         1.0,
         1.0,
         1.0,
         1.0
       ],
+      "m_doubleSided": false,
       "m_emissiveColor": [
         0.0,
         0.0,
@@ -23,19 +32,29 @@
         0.0
       ],
       "m_emissiveIntensity": 1.0,
-      "m_flags": 1,
+      "m_emissiveMaskTexture": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "00000000-0000-0000-0000-000000000000"
+      },
       "m_metallic": 0.0,
+      "m_metallicRoughnessTexture": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "00000000-0000-0000-0000-000000000000"
+      },
+      "m_normalTexture": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "00000000-0000-0000-0000-000000000000"
+      },
+      "m_occlusionTexture": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "00000000-0000-0000-0000-000000000000"
+      },
+      "m_renderMode": 0,
       "m_roughness": 0.5,
       "m_shader": {
         "assetId": "b86b6eb1-e3cf-4f2b-89da-0165f2b1bfca",
         "objectId": "61248552-7e92-4231-9f82-763f6a2f2ff7"
-      },
-      "m_textures": [
-        {
-          "assetId": "c5bc7564-be7b-4d85-b5a6-1d8eb80fc0f2",
-          "objectId": "7b514c03-419d-4f2b-a80f-430aba50788c"
-        }
-      ]
+      }
     }
   ]
 }

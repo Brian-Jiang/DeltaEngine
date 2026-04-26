@@ -501,7 +501,7 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
      //            m_assetDatabase->CreateAsset(
      //                IOManager::GetEngineImportedAssetFullPath("HomeTexture_" + std::to_string(i)),
      //                PA_Texture::Create(textures[i]));
-     //            material->AddTexture(textures[i]);
+     //            material->SetAlbedoTexture(textures[i]);
      //        }
      //        materials.push_back(material);
 
