@@ -6,7 +6,6 @@
 #include <d3d12.h>
 #include <d3dx12.h>
 #include <DirectXMath.h>
-#include <vector>
 
 #include "Runtime/Core/DObject.h"
 #include "Runtime/Graphics/MaterialConstants.h"
@@ -17,6 +16,12 @@ DELTA_ENGINE_NS_BEGIN
 
 class DShader;
 class DTexture;
+
+enum class ERenderMode : uint32_t
+{
+    Opaque = 0,
+    Masked = 1,
+};
 
 DCLASS()
 class DMaterial : public DObject
@@ -36,17 +41,31 @@ public:
 
     /// Sets the pipeline blend state used by this material.
     DELTAENGINE_API void SetBlendState(const CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC& blendDesc);
-    
+
     /// Sets the pipeline depth-stencil state used by this material.
     DELTAENGINE_API void SetDepthStencilState(const CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL& depthStencilState);
 
-    /// Appends a texture to the material texture list.
     DFUNCTION()
-    DELTAENGINE_API void AddTexture(DTexture* texture);
+    DELTAENGINE_API void SetAlbedoTexture(DTexture* texture);
+
+    DFUNCTION()
+    DELTAENGINE_API void SetNormalTexture(DTexture* texture);
+
+    DFUNCTION()
+    DELTAENGINE_API void SetMetallicRoughnessTexture(DTexture* texture);
+
+    DFUNCTION()
+    DELTAENGINE_API void SetOcclusionTexture(DTexture* texture);
+
+    DFUNCTION()
+    DELTAENGINE_API void SetEmissiveMaskTexture(DTexture* texture);
+
+    DFUNCTION()
+    DELTAENGINE_API void SetAlphaMaskTexture(DTexture* texture);
 
     /// Returns the texture at the requested slot, or nullptr.
     DFUNCTION()
-    DELTAENGINE_API DTexture* GetTexture(int index) const;
+    DELTAENGINE_API DTexture* GetTexture(int slot) const;
 
     /// Returns the shader currently assigned to the material.
     DFUNCTION()
@@ -57,21 +76,38 @@ public:
     /// Returns the current depth-stencil state descriptor.
     DELTAENGINE_API CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL GetDepthStencilState() const;
 
-    DELTAENGINE_API MaterialFlags GetFlags() const { return static_cast<MaterialFlags>(m_flags); }
-    DELTAENGINE_API void SetFlags(MaterialFlags flags) { m_flags = static_cast<uint32_t>(flags); }
+    DELTAENGINE_API MaterialFlags GetFlags() const;
 
     DELTAENGINE_API void FillMaterialCB(MaterialCB& outCB) const;
+
+private:
+    MaterialFlags ComputeFlags() const;
 
 private:
     DPROPERTY()
     DShader* m_shader;
 
     CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC m_blendDesc;
-    
+
     CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL m_depthStencilState;
 
     DPROPERTY()
-    std::vector<DTexture*> m_textures;
+    DTexture* m_albedoTexture { nullptr };
+
+    DPROPERTY()
+    DTexture* m_normalTexture { nullptr };
+
+    DPROPERTY()
+    DTexture* m_metallicRoughnessTexture { nullptr };
+
+    DPROPERTY()
+    DTexture* m_occlusionTexture { nullptr };
+
+    DPROPERTY()
+    DTexture* m_emissiveMaskTexture { nullptr };
+
+    DPROPERTY()
+    DTexture* m_alphaMaskTexture { nullptr };
 
     DPROPERTY()
     DirectX::XMFLOAT4 m_baseColor { 1.f, 1.f, 1.f, 1.f };
@@ -92,7 +128,10 @@ private:
     float m_alphaCutoff { 0.5f };
 
     DPROPERTY()
-    uint32_t m_flags { 0u };
+    bool m_doubleSided { false };
+
+    DPROPERTY()
+    uint32_t m_renderMode { 0u };
 };
 
 DELTA_ENGINE_NS_END

@@ -91,7 +91,7 @@ public ConstantBuffer<Material> MaterialCB : register(b3);
 
 // ==== Material Textures (t0..t4, space1) ====
 
-public Texture2D g_matTextures[5] : register(t0, space1);
+public Texture2D g_matTextures[6] : register(t0, space1);
 
 // ==== Material Sampler ====
 
@@ -107,6 +107,7 @@ public static const uint MAT_HAS_EMISSIVE            = 1u << 4;
 public static const uint MAT_ALPHA_BLEND             = 1u << 5;
 public static const uint MAT_ALPHA_TEST              = 1u << 6;
 public static const uint MAT_DOUBLE_SIDED            = 1u << 7;
+public static const uint MAT_HAS_ALPHA_MASK          = 1u << 8;
 
 public bool MatHasFlag(uint flags, uint bit) { return (flags & bit) != 0u; }
 

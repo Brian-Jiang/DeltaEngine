@@ -14,6 +14,7 @@ enum class MaterialFlags : uint32_t
     AlphaBlend              = 1u << 5,
     AlphaTest               = 1u << 6,
     DoubleSided             = 1u << 7,
+    HasAlphaMask            = 1u << 8,
 };
 
 inline MaterialFlags operator|(MaterialFlags a, MaterialFlags b)
@@ -44,7 +45,8 @@ enum class MaterialTextureSlot : uint32_t
     MetallicRoughness = 2,
     AO                = 3,
     Emissive          = 4,
-    Count             = 5,
+    AlphaMask         = 5,
+    Count             = 6,
 };
 
 struct alignas(256) MaterialCB

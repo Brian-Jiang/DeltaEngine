@@ -36,17 +36,28 @@ float4 PSMain(PBRPSInput input) : SV_TARGET
     float3 baseColor = albedoSample.rgb * MaterialCB.baseColor.rgb * input.color.rgb;
     float  alpha     = albedoSample.a   * MaterialCB.baseColor.a   * input.color.a;
 
+    if (MatHasFlag(flags, MAT_HAS_ALPHA_MASK))
+        alpha *= g_matTextures[5].Sample(g_matSampler, input.uv).r;
+
     if (MatHasFlag(flags, MAT_ALPHA_TEST))
     {
         if (alpha < MaterialCB.alphaCutoff)
             discard;
     }
 
-    float2 mrSample = MatHasFlag(flags, MAT_HAS_METALLIC_ROUGHNESS)
-        ? g_matTextures[2].Sample(g_matSampler, input.uv).gb
-        : float2(MaterialCB.roughness, MaterialCB.metallic);
-    float roughness = mrSample.x;
-    float metallic  = mrSample.y;
+    float roughness;
+    float metallic;
+    if (MatHasFlag(flags, MAT_HAS_METALLIC_ROUGHNESS))
+    {
+        float2 mrSample = g_matTextures[2].Sample(g_matSampler, input.uv).gb;
+        roughness = mrSample.x * MaterialCB.roughness;
+        metallic  = mrSample.y * MaterialCB.metallic;
+    }
+    else
+    {
+        roughness = MaterialCB.roughness;
+        metallic  = MaterialCB.metallic;
+    }
 
     float3 N = normalize(input.normalWS);
     if (MatHasFlag(flags, MAT_HAS_NORMAL))

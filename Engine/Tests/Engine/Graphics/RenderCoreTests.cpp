@@ -49,14 +49,14 @@ TEST(RenderCoreTests, MaterialPreservesShaderTextureStateAndRejectsInvalidIndice
     EXPECT_EQ(material.GetShader(), &initialShader);
 
     material.SetShader(&replacementShader);
-    material.AddTexture(&albedo);
-    material.AddTexture(&normal);
+    material.SetAlbedoTexture(&albedo);
+    material.SetNormalTexture(&normal);
 
     EXPECT_EQ(material.GetShader(), &replacementShader);
     EXPECT_EQ(material.GetTexture(0), &albedo);
     EXPECT_EQ(material.GetTexture(1), &normal);
     EXPECT_EQ(material.GetTexture(-1), nullptr);
-    EXPECT_EQ(material.GetTexture(2), nullptr);
+    EXPECT_EQ(material.GetTexture(6), nullptr);
 }
 
 TEST(RenderCoreTests, MeshReturnsAssignedMaterialsAndStartsWithoutSubmeshes)

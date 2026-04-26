@@ -31,18 +31,25 @@ void DMaterial::SetDepthStencilState(const CD3DX12_PIPELINE_STATE_STREAM_DEPTH_S
     m_depthStencilState = depthStencilState;
 }
 
-void DMaterial::AddTexture(DTexture* texture)
-{
-    m_textures.push_back(texture);
-}
+void DMaterial::SetAlbedoTexture(DTexture* texture)            { m_albedoTexture = texture; }
+void DMaterial::SetNormalTexture(DTexture* texture)            { m_normalTexture = texture; }
+void DMaterial::SetMetallicRoughnessTexture(DTexture* texture) { m_metallicRoughnessTexture = texture; }
+void DMaterial::SetOcclusionTexture(DTexture* texture)         { m_occlusionTexture = texture; }
+void DMaterial::SetEmissiveMaskTexture(DTexture* texture)      { m_emissiveMaskTexture = texture; }
+void DMaterial::SetAlphaMaskTexture(DTexture* texture)         { m_alphaMaskTexture = texture; }
 
-DTexture* DMaterial::GetTexture(int index) const
+DTexture* DMaterial::GetTexture(int slot) const
 {
-    if (index < 0)
-        return nullptr;
-
-    const size_t textureIndex = static_cast<size_t>(index);
-    return textureIndex < m_textures.size() ? m_textures[textureIndex] : nullptr;
+    switch (static_cast<MaterialTextureSlot>(slot))
+    {
+    case MaterialTextureSlot::Albedo:            return m_albedoTexture;
+    case MaterialTextureSlot::Normal:            return m_normalTexture;
+    case MaterialTextureSlot::MetallicRoughness: return m_metallicRoughnessTexture;
+    case MaterialTextureSlot::AO:                return m_occlusionTexture;
+    case MaterialTextureSlot::Emissive:          return m_emissiveMaskTexture;
+    case MaterialTextureSlot::AlphaMask:         return m_alphaMaskTexture;
+    default:                                     return nullptr;
+    }
 }
 
 DShader* DMaterial::GetShader() const { return m_shader; }
@@ -50,6 +57,26 @@ DShader* DMaterial::GetShader() const { return m_shader; }
 CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC DMaterial::GetBlendState() const { return m_blendDesc; }
 
 CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL DMaterial::GetDepthStencilState() const { return m_depthStencilState; }
+
+MaterialFlags DMaterial::ComputeFlags() const
+{
+    MaterialFlags flags = MaterialFlags::None;
+    if (m_albedoTexture)            flags |= MaterialFlags::HasAlbedoMap;
+    if (m_normalTexture)            flags |= MaterialFlags::HasNormalMap;
+    if (m_metallicRoughnessTexture) flags |= MaterialFlags::HasMetallicRoughnessMap;
+    if (m_occlusionTexture)         flags |= MaterialFlags::HasOcclusionMap;
+    if (m_emissiveMaskTexture)      flags |= MaterialFlags::HasEmissiveMap;
+    if (m_alphaMaskTexture)         flags |= MaterialFlags::HasAlphaMask;
+    if (m_doubleSided)              flags |= MaterialFlags::DoubleSided;
+    if (static_cast<ERenderMode>(m_renderMode) == ERenderMode::Masked)
+        flags |= MaterialFlags::AlphaTest;
+    return flags;
+}
+
+MaterialFlags DMaterial::GetFlags() const
+{
+    return ComputeFlags();
+}
 
 void DMaterial::FillMaterialCB(MaterialCB& outCB) const
 {
@@ -59,7 +86,7 @@ void DMaterial::FillMaterialCB(MaterialCB& outCB) const
     outCB.emissiveIntensity = m_emissiveIntensity;
     outCB.alphaCutoff       = m_alphaCutoff;
     outCB.emissiveColor     = m_emissiveColor;
-    outCB.flags             = m_flags;
+    outCB.flags             = static_cast<uint32_t>(ComputeFlags());
     outCB._pad[0]           = 0u;
     outCB._pad[1]           = 0u;
     outCB._pad[2]           = 0u;
