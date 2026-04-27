@@ -300,7 +300,7 @@ void EditorWindow_WorldOutliner::Render(bool& open)
         {
             ImGui::SetNextItemWidth(nameMaxW);
             const auto rr = m_inlineRename.Draw();
-            if (rr == EditorInlineRename::Committed && g_editorCore && entry->go)
+            if (rr == EditorInlineRename::Result::Committed && g_editorCore && entry->go)
             {
                 auto [assetId, objId] = g_editorCore->GetIdsForObject(entry->go);
                 if (!assetId.IsNull() && !objId.IsNull())
@@ -313,7 +313,7 @@ void EditorWindow_WorldOutliner::Render(bool& open)
                 }
                 m_renameObjectId = ObjectId::Null();
             }
-            else if (rr == EditorInlineRename::Cancelled)
+            else if (rr == EditorInlineRename::Result::Cancelled)
                 m_renameObjectId = ObjectId::Null();
         }
         else

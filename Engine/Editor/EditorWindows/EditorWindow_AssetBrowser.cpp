@@ -35,7 +35,7 @@ std::vector<std::filesystem::path> OpenImportFileDialog()
     ofn.lpstrFile    = fileBuffer;
     ofn.nMaxFile     = kBufSize;
     ofn.lpstrTitle   = L"Import Assets";
-    ofn.Flags        = OFN_ALLOWMULTISELECT | OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+    ofn.Flags = OFN_ALLOWMULTISELECT | OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
 
     std::vector<std::filesystem::path> result;
     if (!GetOpenFileNameW(&ofn))
@@ -207,8 +207,13 @@ void EditorWindow_AssetBrowser::RenderAssetLeaf(const AssetId& assetId, EditorAs
     if (isSelected)
         flags |= ImGuiTreeNodeFlags_Selected;
 
-    ImGui::TreeNodeEx(&assetId, flags, "##asset");
+    ImGui::TreeNodeEx(GetAssetDisplayName(assetPath).c_str(), flags);
     const bool treeHit = ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen();
+    if (treeHit)
+    {
+        if (assetDatabase->LoadAsset(assetId))
+            g_editorCore->GetSelectionState()->SetSelectedAsset(assetId);
+    }
 
     if (ImGui::BeginPopupContextItem())
     {
@@ -240,14 +245,13 @@ void EditorWindow_AssetBrowser::RenderAssetLeaf(const AssetId& assetId, EditorAs
         ImGui::EndPopup();
     }
 
-    ImGui::SameLine(0.f, 6.f);
-
     const bool renamingRow = m_inlineRename.IsActive() && assetId == m_renameAssetId;
     if (renamingRow)
     {
+        ImGui::SameLine(ImGui::GetCursorPosX());
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 8.f);
         const auto rr = m_inlineRename.Draw();
-        if (rr == EditorInlineRename::Committed)
+        if (rr == EditorInlineRename::Result::Committed)
         {
             EditorCommandContext ctx{ *g_editorCore };
             g_editorCore->GetCommandManager().Execute(
@@ -255,19 +259,8 @@ void EditorWindow_AssetBrowser::RenderAssetLeaf(const AssetId& assetId, EditorAs
                 ctx);
             m_renameAssetId = AssetId::Null();
         }
-        else if (rr == EditorInlineRename::Cancelled)
+        else if (rr == EditorInlineRename::Result::Cancelled)
             m_renameAssetId = AssetId::Null();
-    }
-    else
-        ImGui::TextUnformatted(GetAssetDisplayName(assetPath).c_str());
-
-    bool labelHit = false;
-    if (!renamingRow)
-        labelHit = ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen();
-    if (treeHit || labelHit)
-    {
-        if (assetDatabase->LoadAsset(assetId))
-            g_editorCore->GetSelectionState()->SetSelectedAsset(assetId);
     }
 
     ImGui::PopID();

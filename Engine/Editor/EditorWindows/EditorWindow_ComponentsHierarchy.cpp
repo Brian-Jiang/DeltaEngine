@@ -169,7 +169,9 @@ void EditorWindow_ComponentsHierarchy::Render(bool& open)
             if (obj)
             {
                 m_renameComponentId = cid;
-                m_inlineRename.Begin(obj->GetName());
+                auto component = dynamic_cast<DComponent*>(obj);
+                if (component)
+                    m_inlineRename.Begin(component->GetName());
             }
         }
     }
@@ -206,8 +208,25 @@ void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(SceneComponent* 
         ImGui::SetCursorScreenPos(ImVec2(cursorPos.x + kCompIconSz + 6.f, cursorPos.y));
     }
 
-    bool open = ImGui::TreeNodeEx(static_cast<const void*>(sceneComponent), flags, "##sc%p", (void*)sceneComponent);
-    const bool treeHit = ImGui::IsItemClicked();
+    char label[256];
+    std::snprintf(label, sizeof(label), "%s##%p", sceneComponent->GetName().c_str(), (void *)sceneComponent);
+    bool open = ImGui::TreeNodeEx(label, flags);
+
+    if (ImGui::IsItemClicked())
+    {
+        const ObjectId id = sceneComponent->GetObjectId();
+        if (ImGui::GetIO().KeyCtrl)
+        {
+            if (selectionState->IsComponentSelected(id))
+                selectionState->RemoveSelectedComponent(id);
+            else
+                selectionState->AddSelectedComponent(id);
+        }
+        else
+        {
+            selectionState->SetSelectedComponent(id);
+        }
+    }
 
     if (ImGui::BeginPopupContextItem())
     {
@@ -244,42 +263,20 @@ void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(SceneComponent* 
         ImGui::EndPopup();
     }
 
-    ImGui::SameLine(0.f, 6.f);
-
     const bool renamingRow = m_inlineRename.IsActive() &&
         sceneComponent->GetObjectId() == m_renameComponentId;
     if (renamingRow)
     {
+        ImGui::SameLine(ImGui::GetCursorPosX());
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 8.f);
         const auto rr = m_inlineRename.Draw();
-        if (rr == EditorInlineRename::Committed)
+        if (rr == EditorInlineRename::Result::Committed)
         {
             OnRenameCommitted(sceneComponent);
             m_renameComponentId = ObjectId::Null();
         }
-        else if (rr == EditorInlineRename::Cancelled)
+        else if (rr == EditorInlineRename::Result::Cancelled)
             m_renameComponentId = ObjectId::Null();
-    }
-    else
-        ImGui::TextUnformatted(sceneComponent->GetName().c_str());
-
-    bool labelHit = false;
-    if (!renamingRow)
-        labelHit = ImGui::IsItemClicked();
-    if (treeHit || labelHit)
-    {
-        const ObjectId id = sceneComponent->GetObjectId();
-        if (ImGui::GetIO().KeyCtrl)
-        {
-            if (selectionState->IsComponentSelected(id))
-                selectionState->RemoveSelectedComponent(id);
-            else
-                selectionState->AddSelectedComponent(id);
-        }
-        else
-        {
-            selectionState->SetSelectedComponent(id);
-        }
     }
 
     if (open)
@@ -363,12 +360,12 @@ void EditorWindow_ComponentsHierarchy::RenderRegularComponents(const std::vector
         {
             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 8.f);
             const auto rr = m_inlineRename.Draw();
-            if (rr == EditorInlineRename::Committed)
+            if (rr == EditorInlineRename::Result::Committed)
             {
                 OnRenameCommitted(component);
                 m_renameComponentId = ObjectId::Null();
             }
-            else if (rr == EditorInlineRename::Cancelled)
+            else if (rr == EditorInlineRename::Result::Cancelled)
                 m_renameComponentId = ObjectId::Null();
         }
         else
