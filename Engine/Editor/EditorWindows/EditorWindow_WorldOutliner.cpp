@@ -8,6 +8,7 @@
 
 #include "Editor/Commands/EditorCommand_CreateGameObject.h"
 #include "Editor/Commands/EditorCommand_DeleteGameObject.h"
+#include "Editor/Commands/EditorCommand_RenameObject.h"
 #include "Editor/Commands/EditorCommandContext.h"
 #include "Editor/Commands/EditorCommandManager.h"
 #include "Editor/EditorCore.h"
@@ -22,6 +23,8 @@
 #include "Runtime/Reflection/DClass.h"
 
 #include "imgui.h"
+
+#include <vector>
 
 using namespace DeltaEngine;
 
@@ -225,7 +228,19 @@ void EditorWindow_WorldOutliner::Render(bool& open)
 
         if (ImGui::BeginPopupContextItem())
         {
-            m_destroyGoMenu.Open({{"Destroy", [&]() {
+            std::vector<ContextMenuPopup::Item> items;
+            const bool canRename = sel && entry->go && sel->GetSelectedGameObjects().size() == 1 &&
+                sel->GetSelectedGameObjects()[0] == entry->go->GetObjectId();
+            if (canRename)
+            {
+                items.push_back({"Rename", [&]() {
+                    if (!entry->go || !g_editorCore)
+                        return;
+                    m_renameObjectId = entry->go->GetObjectId();
+                    m_inlineRename.Begin(entry->go->GetName());
+                }});
+            }
+            items.push_back({"Destroy", [&]() {
                 if (entry->go && g_editorCore)
                 {
                     auto [assetId, objId] = g_editorCore->GetIdsForObject(entry->go);
@@ -236,7 +251,8 @@ void EditorWindow_WorldOutliner::Render(bool& open)
                             std::make_unique<EditorCommand_DeleteGameObject>(assetId, objId), ctx);
                     }
                 }
-            }}});
+            }});
+            m_destroyGoMenu.Open(std::move(items));
             m_destroyGoMenu.Draw(c);
             ImGui::EndPopup();
         }
@@ -278,16 +294,60 @@ void EditorWindow_WorldOutliner::Render(bool& open)
         ImGui::PushClipRect(nameStart,
             ImVec2(nameStart.x + nameMaxW, rowMax.y), true);
 
-        ImFont* boldFont = theme->GetBoldFont();
-        if (isSelected && boldFont) ImGui::PushFont(boldFont);
-        ImGui::PushStyleColor(ImGuiCol_Text, isSelected ? c.TBright : c.TPrimary);
-        ImGui::TextUnformatted(entry->name.c_str());
-        ImGui::PopStyleColor();
-        if (isSelected && boldFont) ImGui::PopFont();
+        const bool renamingRow =
+            m_inlineRename.IsActive() && entry->go && entry->go->GetObjectId() == m_renameObjectId;
+        if (renamingRow)
+        {
+            ImGui::SetNextItemWidth(nameMaxW);
+            const auto rr = m_inlineRename.Draw();
+            if (rr == EditorInlineRename::Committed && g_editorCore && entry->go)
+            {
+                auto [assetId, objId] = g_editorCore->GetIdsForObject(entry->go);
+                if (!assetId.IsNull() && !objId.IsNull())
+                {
+                    EditorCommandContext ctx{ *g_editorCore };
+                    g_editorCore->GetCommandManager().Execute(
+                        std::make_unique<EditorCommand_RenameObject>(
+                            assetId, objId, std::string(m_inlineRename.GetBuffer())),
+                        ctx);
+                }
+                m_renameObjectId = ObjectId::Null();
+            }
+            else if (rr == EditorInlineRename::Cancelled)
+                m_renameObjectId = ObjectId::Null();
+        }
+        else
+        {
+            ImFont* boldFont = theme->GetBoldFont();
+            if (isSelected && boldFont) ImGui::PushFont(boldFont);
+            ImGui::PushStyleColor(ImGuiCol_Text, isSelected ? c.TBright : c.TPrimary);
+            ImGui::TextUnformatted(entry->name.c_str());
+            ImGui::PopStyleColor();
+            if (isSelected && boldFont) ImGui::PopFont();
+        }
 
         ImGui::PopClipRect();
 
         ImGui::PopID();
+    }
+
+    if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && !ImGui::GetIO().WantTextInput &&
+        ImGui::IsKeyPressed(ImGuiKey_F2))
+    {
+        EditorSelectionState* selF2 = g_editorCore->GetSelectionState();
+        if (selF2 && selF2->GetSelectedGameObjects().size() == 1)
+        {
+            const ObjectId id = selF2->GetSelectedGameObjects()[0];
+            for (const OutlinerEntry* e : m_filtered)
+            {
+                if (e->go && e->go->GetObjectId() == id)
+                {
+                    m_renameObjectId = id;
+                    m_inlineRename.Begin(e->go->GetName());
+                    break;
+                }
+            }
+        }
     }
 
     ImGui::EndChild();

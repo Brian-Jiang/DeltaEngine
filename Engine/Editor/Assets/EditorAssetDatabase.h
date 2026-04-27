@@ -55,6 +55,14 @@ public:
     AssetId DuplicateAsset(const AssetId& id);
     bool    DeleteAsset(const AssetId& id);
 
+    /// Renames the `.dasset.json` and bulk sidecars; resolves `desiredStem` to a unique filename
+    /// (`name`, `name_1`, …) in the asset directory. Returns false on failure.
+    bool RenameAssetToStem(const AssetId& id, const std::string& desiredStem, std::string* outFinalStem = nullptr);
+
+    /// Moves the asset file to `exactStem.dasset.json` in the same folder; fails if that path exists
+    /// (other than the asset's current path).
+    bool RenameAssetToExactStem(const AssetId& id, const std::string& exactStem);
+
     void CreateAsset(const std::filesystem::path& filePath, DPrimaryAsset* asset);
     void CreateAsset(const std::filesystem::path& filePath, DObject* object);
 
