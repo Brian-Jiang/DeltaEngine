@@ -32,7 +32,7 @@ std::vector<std::filesystem::path> OpenImportFileDialog()
     ofn.lpstrFile    = fileBuffer;
     ofn.nMaxFile     = kBufSize;
     ofn.lpstrTitle   = L"Import Assets";
-    ofn.Flags        = OFN_ALLOWMULTISELECT | OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+    ofn.Flags = OFN_ALLOWMULTISELECT | OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
 
     std::vector<std::filesystem::path> result;
     if (!GetOpenFileNameW(&ofn))

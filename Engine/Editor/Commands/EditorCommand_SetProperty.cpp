@@ -3,6 +3,7 @@
 #include "Editor/EditorCore.h"
 
 #include "Runtime/Reflection/DClass.h"
+#include "Runtime/Reflection/DProperty.h"
 #include "Runtime/Core/DObject.h"
 
 using namespace DeltaEngine;
@@ -50,7 +51,11 @@ bool EditorCommand_SetProperty::ApplyValue(EditorCommandContext& ctx, const nloh
         return false;
     }
 
-    if (!SetPropertyFromJson(obj, prop, value))
+    const bool ok = (prop->GetPropertyType() == EPropertyType::ObjectPtr)
+        ? SetPropertyFromJson(obj, prop, value, ctx.core)
+        : SetPropertyFromJson(obj, prop, value);
+
+    if (!ok)
     {
         DLOG(LogEditorCommand, ELogLevel::Error, "[Set Property] SetPropertyFromJson failed for '{}' on object {}", m_propertyName, m_objectId.ToString());
         return false;

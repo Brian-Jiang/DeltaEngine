@@ -69,6 +69,8 @@ private:
     ColorField     m_colorField;
     StringField    m_stringField;
     ReferenceField m_refField;
+
+    char m_pickerFilter[128] = {};
 };
 
 DELTA_ENGINE_NS_END

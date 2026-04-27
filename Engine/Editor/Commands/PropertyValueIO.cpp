@@ -1,7 +1,9 @@
 #include "Editor/Commands/PropertyValueIO.h"
 #include "Editor/Commands/EditorCommand.h"
+#include "Editor/EditorCore.h"
 
 #include "Runtime/Reflection/DProperty.h"
+#include "Runtime/Assets/DPrimaryAsset.h"
 #include "Runtime/Core/DObject.h"
 
 #include "SimpleMath.h"
@@ -121,4 +123,43 @@ bool DeltaEngine::SetPropertyFromJson(DObject* obj, const DProperty* prop, const
     obj->MarkDirty();
     obj->PostEditChangeProperty(prop);
     return true;
+}
+
+nlohmann::json DeltaEngine::PropertyToJson(const DObject* obj, const DProperty* prop, EditorCore& /*core*/)
+{
+    if (prop->GetPropertyType() == EPropertyType::ObjectPtr)
+    {
+        DObject* pointed = prop->GetObjectPointer(obj);
+        if (!pointed || !pointed->GetOwningAsset())
+            return nullptr;
+        return nlohmann::json{
+            {"assetId",  pointed->GetOwningAsset()->GetAssetId().ToString()},
+            {"objectId", pointed->GetObjectId().ToString()}
+        };
+    }
+    return PropertyToJson(obj, prop);
+}
+
+bool DeltaEngine::SetPropertyFromJson(DObject* obj, const DProperty* prop, const nlohmann::json& value, EditorCore& core)
+{
+    if (prop->GetPropertyType() == EPropertyType::ObjectPtr)
+    {
+        auto* ptrProp = const_cast<DObjectPtrPropertyBase*>(
+            static_cast<const DObjectPtrPropertyBase*>(prop));
+        if (value.is_null())
+        {
+            ptrProp->ResolvePointer(obj, nullptr);
+        }
+        else
+        {
+            AssetId  assetId  = AssetId::FromString(value["assetId"].get<std::string>());
+            ObjectId objectId = ObjectId::FromString(value["objectId"].get<std::string>());
+            DObject* target   = core.ResolveObject(assetId, objectId);
+            ptrProp->ResolvePointer(obj, target);
+        }
+        obj->MarkDirty();
+        obj->PostEditChangeProperty(prop);
+        return true;
+    }
+    return SetPropertyFromJson(obj, prop, value);
 }

@@ -15,8 +15,8 @@
       },
       "m_alphaCutoff": 0.5,
       "m_alphaMaskTexture": {
-        "assetId": "00000000-0000-0000-0000-000000000000",
-        "objectId": "00000000-0000-0000-0000-000000000000"
+        "assetId": "8428ac0f-7498-473a-9ece-776bda22848c",
+        "objectId": "c1074ea9-2191-4ff0-b74e-b13f356854f3"
       },
       "m_baseColor": [
         1.0,
@@ -24,7 +24,7 @@
         1.0,
         1.0
       ],
-      "m_doubleSided": false,
+      "m_doubleSided": true,
       "m_emissiveColor": [
         0.0,
         0.0,
@@ -49,7 +49,7 @@
         "assetId": "00000000-0000-0000-0000-000000000000",
         "objectId": "00000000-0000-0000-0000-000000000000"
       },
-      "m_renderMode": 0,
+      "m_renderMode": 1,
       "m_roughness": 0.5,
       "m_shader": {
         "assetId": "b86b6eb1-e3cf-4f2b-89da-0165f2b1bfca",

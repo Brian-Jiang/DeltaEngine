@@ -13,12 +13,14 @@
 #include "Runtime/Assets/DPrimaryAsset.h"
 #include "Runtime/Core/DObject.h"
 #include "Runtime/Core/DComponent.h"
+#include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Core/SceneComponent.h"
 #include "Runtime/Reflection/DBulkDataProperty.h"
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DFunction.h"
 #include "Runtime/Reflection/DProperty.h"
+#include "Runtime/Reflection/ReflectionRegistry.h"
 #include "Runtime/Utils/StringUtils.h"
 
 #include "SimpleMath.h"
@@ -86,6 +88,24 @@ std::string GetPropertyDisplayName(const std::string& propName)
 std::string GetAssetDisplayName(const std::filesystem::path& path)
 {
     return path.stem().stem().string();
+}
+
+std::string GetObjectDisplayName(DObject* obj)
+{
+    if (!obj)
+        return "(null)";
+    DClass* cls = obj->GetClass();
+    if (cls)
+    {
+        DProperty* nameProp = cls->FindPropertyByName("m_name");
+        if (nameProp && nameProp->GetPropertyType() == EPropertyType::String)
+        {
+            const auto& name = *static_cast<const std::string*>(nameProp->GetValue(obj));
+            if (!name.empty())
+                return name;
+        }
+    }
+    return cls ? cls->GetName() : "Unknown";
 }
 
 bool IsUndoablePropertyType(EPropertyType type)
@@ -864,32 +884,264 @@ WidgetEditEvent EditorWindow_Details::DrawFloat4x4Property(DObject* instance, DP
     return evt;
 }
 
-bool EditorWindow_Details::DrawObjectPtrProperty(DObject* instance, DProperty* prop, int depth)
+bool EditorWindow_Details::DrawObjectPtrProperty(DObject* instance, DProperty* prop, int /*depth*/)
 {
-    DObject* child = prop->GetObjectPointer(instance);
+    DObject* current = prop->GetObjectPointer(instance);
     const std::string displayName = GetPropertyDisplayName(prop->GetName());
     const char* label = displayName.c_str();
 
-    if (!child)
+    // Resolve the target class from the property type string (e.g. "DTexture*" -> "DTexture")
+    std::string typeStr = prop->GetType();
+    if (!typeStr.empty() && typeStr.back() == '*')
+        typeStr.pop_back();
+    const DClass* targetClass = GetReflectionRegistry().FindClassByName(typeStr);
+
+    const std::string currentName = GetObjectDisplayName(current);
+    const std::string popupId     = std::string("##ObjPick_") + prop->GetName();
+
+    EditorTheme* theme  = g_editor->GetEditorTheme();
+    const auto&  c      = theme->colors;
+    ImDrawList*  dl     = ImGui::GetWindowDrawList();
+    const float  fh     = ImGui::GetFrameHeight();
+    const float  fs     = ImGui::GetFontSize();
+
+    ImGui::PushID(prop->GetName().c_str());
+
+    // --- Row 1: clickable reference slot ---
+    float availW = BeginPropertyRow(label, c);
+    ImVec2 slotPos = ImGui::GetCursorScreenPos();
+
+    dl->AddRectFilled(slotPos, {slotPos.x + availW, slotPos.y + fh},
+        ImGui::ColorConvertFloat4ToU32(c.DInput), 3.f);
+    dl->AddRect(slotPos, {slotPos.x + availW, slotPos.y + fh},
+        ImGui::ColorConvertFloat4ToU32(c.BLight), 3.f);
+
+    ImGui::SetCursorScreenPos(slotPos);
+    const bool slotClicked = ImGui::InvisibleButton("##slot", {availW, fh});
+
+    if (ImGui::IsItemHovered())
+        dl->AddRectFilled(slotPos, {slotPos.x + availW, slotPos.y + fh},
+            IM_COL32(255, 255, 255, 20), 3.f);
+
+    dl->AddText({slotPos.x + 4.f, slotPos.y + (fh - fs) * 0.5f},
+        ImGui::ColorConvertFloat4ToU32(current ? c.TPrimary : c.TDim),
+        currentName.c_str());
+
+    if (slotClicked)
     {
-        m_refField.Draw(label, "(null)", true);
-        return false;
+        m_pickerFilter[0] = '\0';
+        ImGui::OpenPopup(popupId.c_str());
     }
 
-    constexpr int kMaxDepth = 8;
-    if (depth >= kMaxDepth)
+    EndPropertyRow();
+
+    // --- Row 2: Select + Clear buttons ---
+    availW = BeginPropertyRow("", c);
+    const float btnW = (availW - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
+
+    ImGui::BeginDisabled(current == nullptr);
+
+    if (ImGui::Button("Select", {btnW, 0.f}))
     {
-        ImGui::Text("%s: %s (max depth)", label, prop->GetType().c_str());
-        return false;
+        EditorSelectionState* sel = g_editorCore->GetSelectionState();
+        if (dynamic_cast<GameObject*>(current))
+            sel->SetSelectedGameObject(current->GetObjectId());
+        else if (dynamic_cast<DComponent*>(current))
+            sel->SetSelectedComponent(current->GetObjectId());
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Clear", {btnW, 0.f}))
+    {
+        auto [aId, oId] = g_editorCore->GetIdsForObject(instance);
+        if (!aId.IsNull())
+        {
+            nlohmann::json before = PropertyToJson(instance, prop, *g_editorCore);
+            auto cmd = std::make_unique<EditorCommand_SetProperty>(
+                aId, oId, prop->GetName(), std::move(before), nullptr);
+            EditorCommandContext ctx{ *g_editorCore };
+            g_editorCore->GetCommandManager().Execute(std::move(cmd), ctx);
+        }
     }
 
-    DClass* childClass = child->GetClass();
-    const char* typeName = childClass ? childClass->GetName().c_str() : "?";
-    if (ImGui::TreeNodeEx(label, ImGuiTreeNodeFlags_DefaultOpen, "%s (%s)", label, typeName))
+    ImGui::EndDisabled();
+    EndPropertyRow();
+
+    // --- Picker popup ---
+    ImGui::SetNextWindowSize({320.f, 420.f}, ImGuiCond_Appearing);
+    if (ImGui::BeginPopup(popupId.c_str()))
     {
-        DrawPropertyEditor(child, childClass, depth + 1);
-        ImGui::TreePop();
+        // Search box
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 30.f);
+        ImGui::InputText("##filter", m_pickerFilter, sizeof(m_pickerFilter));
+        ImGui::SameLine();
+        if (ImGui::Button("x", {24.f, 0.f}))
+            m_pickerFilter[0] = '\0';
+
+        ImGui::Separator();
+
+        // Build candidate groups
+        struct CandidateGroup
+        {
+            std::string          groupName;
+            DObject*             groupObject = nullptr; // non-null when group itself is selectable
+            std::vector<DObject*> items;
+        };
+        std::vector<CandidateGroup> groups;
+
+        // 1. Walk world game objects
+        if (DWorld* world = g_editorCore->GetWorld())
+        {
+            for (GameObject* go : world->GetGameObjects())
+            {
+                if (!go) continue;
+                DClass* goClass = go->GetClass();
+                CandidateGroup grp;
+                grp.groupName   = go->GetName().empty() ? "GameObject" : go->GetName();
+                grp.groupObject = (goClass && targetClass && goClass->IsChildOf(targetClass))
+                    ? go : nullptr;
+
+                for (SceneComponent* sc : go->GetSceneComponents())
+                {
+                    if (!sc) continue;
+                    DClass* scClass = sc->GetClass();
+                    if (scClass && targetClass && scClass->IsChildOf(targetClass))
+                        grp.items.push_back(sc);
+                }
+                for (DComponent* comp : go->GetComponents())
+                {
+                    if (!comp) continue;
+                    DClass* compClass = comp->GetClass();
+                    if (compClass && targetClass && compClass->IsChildOf(targetClass))
+                        grp.items.push_back(comp);
+                }
+
+                if (grp.groupObject || !grp.items.empty())
+                    groups.push_back(std::move(grp));
+            }
+        }
+
+        // 2. Walk asset database (load on demand, skip the active scene asset)
+        if (EditorAssetDatabase* db = g_editorCore->GetAssetDatabase())
+        {
+            DPrimaryAsset* sceneAsset = g_editorCore->GetActiveSceneAsset();
+            for (const auto& [assetId, entry] : db->GetAllAssets())
+            {
+                DPrimaryAsset* asset = db->LoadAsset(assetId);
+                if (!asset || asset == sceneAsset)
+                    continue;
+
+                CandidateGroup grp;
+                grp.groupName = entry.m_filePath.stem().stem().string();
+                if (grp.groupName.empty())
+                    grp.groupName = entry.m_header.m_className;
+
+                for (DObject* obj : asset->GetObjects())
+                {
+                    if (!obj) continue;
+                    DClass* objClass = obj->GetClass();
+                    if (objClass && targetClass && objClass->IsChildOf(targetClass))
+                        grp.items.push_back(obj);
+                }
+
+                if (!grp.items.empty())
+                    groups.push_back(std::move(grp));
+            }
+        }
+
+        // Filter helper (case-insensitive substring)
+        std::string filterLower = m_pickerFilter;
+        for (char& ch : filterLower)
+            ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+
+        auto matches = [&](const std::string& str) -> bool
+        {
+            if (filterLower.empty()) return true;
+            std::string s;
+            s.reserve(str.size());
+            for (unsigned char ch : str)
+                s += static_cast<char>(std::tolower(ch));
+            return s.find(filterLower) != std::string::npos;
+        };
+
+        // Commit-selection helper
+        auto commitSelection = [&](DObject* picked)
+        {
+            auto [aId, oId] = g_editorCore->GetIdsForObject(instance);
+            if (aId.IsNull()) return;
+            nlohmann::json before = PropertyToJson(instance, prop, *g_editorCore);
+            nlohmann::json after  = nullptr;
+            if (picked && picked->GetOwningAsset())
+            {
+                after = {
+                    {"assetId",  picked->GetOwningAsset()->GetAssetId().ToString()},
+                    {"objectId", picked->GetObjectId().ToString()}
+                };
+            }
+            auto cmd = std::make_unique<EditorCommand_SetProperty>(
+                aId, oId, prop->GetName(), std::move(before), std::move(after));
+            EditorCommandContext ctx{ *g_editorCore };
+            g_editorCore->GetCommandManager().Execute(std::move(cmd), ctx);
+            ImGui::CloseCurrentPopup();
+        };
+
+        // "(None)" entry
+        if (filterLower.empty() || matches("none"))
+        {
+            if (ImGui::Selectable("(None)", current == nullptr))
+                commitSelection(nullptr);
+        }
+
+        ImGui::Separator();
+
+        // Tree of groups
+        for (const CandidateGroup& grp : groups)
+        {
+            const bool grpNameMatches = matches(grp.groupName);
+
+            // Check if any item matches when the group name doesn't
+            bool anyItemMatch = grpNameMatches;
+            if (!anyItemMatch)
+            {
+                for (DObject* item : grp.items)
+                    if (matches(GetObjectDisplayName(item))) { anyItemMatch = true; break; }
+                if (!grp.groupObject && !anyItemMatch)
+                    continue; // nothing visible in this group
+                if (grp.groupObject && !anyItemMatch && !grpNameMatches)
+                    continue;
+            }
+
+            ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_DefaultOpen;
+            if (grp.groupObject && current == grp.groupObject)
+                nodeFlags |= ImGuiTreeNodeFlags_Selected;
+            if (grp.items.empty())
+                nodeFlags |= ImGuiTreeNodeFlags_Leaf;
+
+            const bool nodeOpen = ImGui::TreeNodeEx(grp.groupName.c_str(), nodeFlags);
+
+            if (grp.groupObject && ImGui::IsItemClicked())
+                commitSelection(grp.groupObject);
+
+            if (nodeOpen)
+            {
+                for (DObject* item : grp.items)
+                {
+                    const std::string itemName = GetObjectDisplayName(item);
+                    if (!grpNameMatches && !matches(itemName))
+                        continue;
+
+                    ImGui::PushID(item);
+                    if (ImGui::Selectable(itemName.c_str(), item == current))
+                        commitSelection(item);
+                    ImGui::PopID();
+                }
+                ImGui::TreePop();
+            }
+        }
+
+        ImGui::EndPopup();
     }
+
+    ImGui::PopID();
     return false;
 }
 

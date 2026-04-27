@@ -1,0 +1,26 @@
+{
+  "header": {
+    "assetId": "e895e700-a623-4bcc-9253-05762bcc8b02",
+    "bulkDataMap": {
+      "0": {
+        "file": "tex_Foliage_op_Bulk0.bin",
+        "size": 4194368
+      }
+    },
+    "className": "PA_Texture",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DTexture",
+      "_objectId": "b0eb7350-6a9f-45c6-bf32-96250e3f0812",
+      "m_bulkData": {
+        "_bulk": 0,
+        "size": 4194368
+      },
+      "m_sRGB": false,
+      "m_sourcePath": "D:\\Projects\\DeltaEngine\\Engine\\EngineSourceAssets\\home\\textures\\tex_Foliage_op.jpg"
+    }
+  ]
+}

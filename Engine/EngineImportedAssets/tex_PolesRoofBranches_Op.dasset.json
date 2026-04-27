@@ -1,0 +1,26 @@
+{
+  "header": {
+    "assetId": "8428ac0f-7498-473a-9ece-776bda22848c",
+    "bulkDataMap": {
+      "0": {
+        "file": "tex_PolesRoofBranches_Op_Bulk0.bin",
+        "size": 4194368
+      }
+    },
+    "className": "PA_Texture",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DTexture",
+      "_objectId": "c1074ea9-2191-4ff0-b74e-b13f356854f3",
+      "m_bulkData": {
+        "_bulk": 0,
+        "size": 4194368
+      },
+      "m_sRGB": false,
+      "m_sourcePath": "D:\\Projects\\DeltaEngine\\Engine\\EngineSourceAssets\\home\\textures\\tex_PolesRoofBranches_Op.jpg"
+    }
+  ]
+}
