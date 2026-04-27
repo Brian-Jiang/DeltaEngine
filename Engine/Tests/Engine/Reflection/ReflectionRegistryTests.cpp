@@ -71,6 +71,12 @@ TEST(ReflectionRegistryTests, HideInDetailsPropertyFlag)
     DProperty* hiddenProp = testClass->FindPropertyByName("m_hideInDetailsFloat");
     ASSERT_NE(hiddenProp, nullptr);
     EXPECT_TRUE(hiddenProp->IsHiddenInDetails());
+    EXPECT_FALSE(hiddenProp->IsEditorOnly());
+
+    DProperty* bothProp = testClass->FindPropertyByName("m_editorOnlyAndHiddenFloat");
+    ASSERT_NE(bothProp, nullptr);
+    EXPECT_TRUE(bothProp->IsEditorOnly());
+    EXPECT_TRUE(bothProp->IsHiddenInDetails());
 
     DProperty* regularProp = testClass->FindPropertyByName("m_testFloat");
     ASSERT_NE(regularProp, nullptr);

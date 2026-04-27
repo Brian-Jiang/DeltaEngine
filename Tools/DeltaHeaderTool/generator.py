@@ -45,9 +45,16 @@ from templates import (
 _OBJECT_PTR_PROP_RE = re.compile(r"^DObjectPtrProperty<(.+)>$")
 
 
+_PROP_FLAGS_SINGLE_ARG = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
 def _apply_property_flags(code: str, *, editor_only: bool, hide_in_details: bool) -> str:
-    """Splice property flags before the final semicolon on the last
-    cls->AddProperty(...) call in the given code chunk."""
+    """Set DProperty registration flags on the last cls->AddProperty(...) in chunk.
+
+    - Simple form cls->AddProperty(new T(...)) becomes a block with a temp DProperty*
+      so multiple flags compile (chained -> on temporaries is invalid in C++).
+    - Form cls->AddProperty(_prop) inserts assignments before that line (metadata path).
+    """
     if not editor_only and not hide_in_details:
         return code
     idx = code.rfind("cls->AddProperty(")
@@ -69,12 +76,29 @@ def _apply_property_flags(code: str, *, editor_only: bool, hide_in_details: bool
     semi = code.find(";", end)
     if semi < 0:
         return code
-    suffix = ""
+    line_start = code.rfind("\n", 0, idx) + 1
+    base_indent = code[line_start:idx]
+    start_args = idx + len("cls->AddProperty(")
+    args_inner = code[start_args:end - 1].strip()
+
+    if _PROP_FLAGS_SINGLE_ARG.fullmatch(args_inner):
+        var = args_inner
+        insert = ""
+        if editor_only:
+            insert += f"{base_indent}    {var}->bEditorOnly = true;\n"
+        if hide_in_details:
+            insert += f"{base_indent}    {var}->bHideInDetails = true;\n"
+        return code[:line_start] + insert + code[line_start:semi + 1] + code[semi + 1:]
+
+    lines = [f"{base_indent}{{", f"{base_indent}    DProperty* _reg_prop = {args_inner};"]
     if editor_only:
-        suffix += "->bEditorOnly = true"
+        lines.append(f"{base_indent}    _reg_prop->bEditorOnly = true;")
     if hide_in_details:
-        suffix += "->bHideInDetails = true"
-    return code[:end] + suffix + code[end:semi] + code[semi:]
+        lines.append(f"{base_indent}    _reg_prop->bHideInDetails = true;")
+    lines.append(f"{base_indent}    cls->AddProperty(_reg_prop);")
+    lines.append(f"{base_indent}}}")
+    block = "\n".join(lines)
+    return code[:line_start] + block + code[semi + 1:]
 
 EXTRA_PROPERTY_HEADERS = {
     "DBulkDataProperty": "Runtime/Reflection/DBulkDataProperty.h",

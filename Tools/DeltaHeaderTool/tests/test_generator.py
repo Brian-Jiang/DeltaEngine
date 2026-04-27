@@ -77,18 +77,18 @@ def test_generate_source_emits_hide_in_details_flags(fixtures_dir):
     cpp = generate_source_file(result.classes, path.stem, {})
     assert '"m_hidden"' in cpp
     h0 = cpp.find('"m_hidden"')
-    h1 = cpp.find(";", h0)
+    h1 = cpp.find("cls->AddProperty(_reg_prop);", h0)
     assert h1 > h0
     hidden_chunk = cpp[h0:h1]
-    assert "->bHideInDetails = true" in hidden_chunk
-    assert "->bEditorOnly = true" not in hidden_chunk
+    assert "_reg_prop->bHideInDetails = true;" in hidden_chunk
+    assert "bEditorOnly" not in hidden_chunk
     assert '"m_editorHidden"' in cpp
     e0 = cpp.find('"m_editorHidden"')
-    e1 = cpp.find(";", e0)
+    e1 = cpp.find("cls->AddProperty(_reg_prop);", e0)
     assert e1 > e0
     editor_hidden_chunk = cpp[e0:e1]
-    assert "->bEditorOnly = true" in editor_hidden_chunk
-    assert "->bHideInDetails = true" in editor_hidden_chunk
+    assert "_reg_prop->bEditorOnly = true;" in editor_hidden_chunk
+    assert "_reg_prop->bHideInDetails = true;" in editor_hidden_chunk
 
 
 @requires_libclang
