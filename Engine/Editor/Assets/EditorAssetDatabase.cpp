@@ -529,6 +529,155 @@ bool EditorAssetDatabase::DeleteAsset(const AssetId& id)
     return deletedAnything;
 }
 
+namespace
+{
+void CollectBulkPathsFromJsonFile(
+    const std::filesystem::path& assetJsonPath,
+    std::vector<std::filesystem::path>& outBulkAbsolute)
+{
+    outBulkAbsolute.clear();
+    if (!assetJsonPath.string().ends_with(".dasset.json") || !std::filesystem::exists(assetJsonPath))
+        return;
+    try
+    {
+        std::ifstream file(assetJsonPath);
+        if (!file.is_open())
+            return;
+        nlohmann::json root = nlohmann::json::parse(file);
+        if (!root.contains("header") || !root["header"].contains("bulkDataMap"))
+            return;
+        const auto parent = assetJsonPath.parent_path();
+        for (auto& [bulkId, bulkEntry] : root["header"]["bulkDataMap"].items())
+        {
+            if (!bulkEntry.is_object() || !bulkEntry.contains("file") || !bulkEntry["file"].is_string())
+                continue;
+            outBulkAbsolute.push_back(parent / bulkEntry["file"].get<std::string>());
+        }
+    }
+    catch (...)
+    {
+    }
+}
+} // namespace
+
+bool EditorAssetDatabase::RenameAssetToExactStem(const AssetId& id, const std::string& exactStem)
+{
+    if (exactStem.empty())
+        return false;
+
+    DPrimaryAsset* asset = LoadAsset(id);
+    if (!asset)
+        return false;
+
+    auto it = m_assets.find(id);
+    if (it == m_assets.end())
+        return false;
+
+    std::filesystem::path oldPath = it->second.m_filePath;
+    if (!oldPath.string().ends_with(".dasset.json"))
+        return false;
+
+    const std::string oldStem = oldPath.stem().stem().string();
+    if (exactStem == oldStem)
+        return true;
+
+    const std::filesystem::path parent  = oldPath.parent_path();
+    const std::filesystem::path newPath = parent / (exactStem + ".dasset.json");
+
+    if (std::filesystem::exists(newPath))
+    {
+        bool same = false;
+        try
+        {
+            same = std::filesystem::equivalent(newPath, oldPath);
+        }
+        catch (...)
+        {
+        }
+        if (!same)
+            return false;
+    }
+
+    std::vector<std::filesystem::path> oldBulkPaths;
+    CollectBulkPathsFromJsonFile(oldPath, oldBulkPaths);
+
+    m_assetPathMap.erase(oldPath);
+    it->second.m_filePath = newPath;
+    m_assetPathMap[newPath] = id;
+
+    asset->MarkDirty();
+    SaveAsset(id);
+
+    if (std::filesystem::exists(oldPath))
+    {
+        try
+        {
+            if (!std::filesystem::equivalent(oldPath, newPath))
+                std::filesystem::remove(oldPath);
+        }
+        catch (...)
+        {
+        }
+    }
+
+    for (const auto& bulkPath : oldBulkPaths)
+    {
+        if (std::filesystem::exists(bulkPath))
+        {
+            try
+            {
+                std::filesystem::remove(bulkPath);
+            }
+            catch (...)
+            {
+            }
+        }
+    }
+
+    return true;
+}
+
+bool EditorAssetDatabase::RenameAssetToStem(const AssetId& id, const std::string& desiredStem, std::string* outFinalStem)
+{
+    if (desiredStem.empty())
+        return false;
+
+    auto it = m_assets.find(id);
+    if (it == m_assets.end())
+        return false;
+
+    const std::filesystem::path oldPath = it->second.m_filePath;
+    if (!oldPath.string().ends_with(".dasset.json"))
+        return false;
+
+    const std::filesystem::path parent = oldPath.parent_path();
+
+    std::string candidate = desiredStem;
+    for (int n = 0;; ++n)
+    {
+        const std::filesystem::path testPath = parent / (candidate + ".dasset.json");
+        bool ok = !std::filesystem::exists(testPath);
+        if (!ok)
+        {
+            try
+            {
+                ok = std::filesystem::equivalent(testPath, oldPath);
+            }
+            catch (...)
+            {
+                ok = false;
+            }
+        }
+        if (ok)
+        {
+            if (outFinalStem)
+                *outFinalStem = candidate;
+            return RenameAssetToExactStem(id, candidate);
+        }
+        candidate = desiredStem + "_" + std::to_string(n + 1);
+    }
+}
+
 // todo handle existing asset at filePath?
 void EditorAssetDatabase::CreateAsset(const std::filesystem::path& filePath, DPrimaryAsset* asset)
 {

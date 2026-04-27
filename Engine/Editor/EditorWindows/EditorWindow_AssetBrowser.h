@@ -1,9 +1,12 @@
 #pragma once
 
 #include "UIComponents/ContextMenuPopup.h"
+#include "UIComponents/EditorInlineRename.h"
 
 #include "Assets/EditorAssetDatabase.h"
 #include "EditorWindows/EditorWindow.h"
+
+#include "Runtime/Core/UUID.h"
 
 #include <filesystem>
 #include <map>
@@ -37,7 +40,9 @@ private:
     void RenderAssetLeaf(const AssetId& assetId, EditorAssetDatabase* assetDatabase);
     void RenderImportButton(EditorAssetDatabase* assetDatabase);
 
-    ContextMenuPopup m_assetContextMenu;
+    ContextMenuPopup   m_assetContextMenu;
+    EditorInlineRename m_inlineRename;
+    AssetId            m_renameAssetId = AssetId::Null();
 };
 
 DELTA_ENGINE_NS_END

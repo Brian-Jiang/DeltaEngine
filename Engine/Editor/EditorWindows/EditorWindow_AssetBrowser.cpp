@@ -1,6 +1,9 @@
 #include "Editor/EditorWindows/EditorWindow_AssetBrowser.h"
 
 #include "Editor/Assets/EditorAssetDatabase.h"
+#include "Editor/Commands/EditorCommand_RenameAsset.h"
+#include "Editor/Commands/EditorCommandContext.h"
+#include "Editor/Commands/EditorCommandManager.h"
 #include "Editor/EditorCore.h"
 #include "Editor/EditorMain.h"
 #include "Editor/EditorSelectionState.h"
@@ -32,13 +35,12 @@ std::vector<std::filesystem::path> OpenImportFileDialog()
     ofn.lpstrFile    = fileBuffer;
     ofn.nMaxFile     = kBufSize;
     ofn.lpstrTitle   = L"Import Assets";
-    ofn.Flags = OFN_ALLOWMULTISELECT | OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
+    ofn.Flags        = OFN_ALLOWMULTISELECT | OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
 
     std::vector<std::filesystem::path> result;
     if (!GetOpenFileNameW(&ofn))
         return result;
 
-    // Multi-select format: directory\0file1\0file2\0\0 — single: full path only
     const wchar_t* ptr = fileBuffer;
     std::wstring first = ptr;
     ptr += first.size() + 1;
@@ -121,6 +123,22 @@ void EditorWindow_AssetBrowser::Render(bool& open)
     for (const AssetId& assetId : rootNode.m_assets)
         RenderAssetLeaf(assetId, assetDatabase);
 
+    if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && !ImGui::GetIO().WantTextInput &&
+        ImGui::IsKeyPressed(ImGuiKey_F2))
+    {
+        EditorSelectionState* sel = g_editorCore->GetSelectionState();
+        if (sel && sel->GetSelectedAssets().size() == 1)
+        {
+            const AssetId id = sel->GetSelectedAssets()[0];
+            const std::filesystem::path p = assetDatabase->GetAssetPath(id);
+            if (!p.empty())
+            {
+                m_renameAssetId = id;
+                m_inlineRename.Begin(GetAssetDisplayName(p));
+            }
+        }
+    }
+
     ImGui::End();
 }
 
@@ -189,32 +207,67 @@ void EditorWindow_AssetBrowser::RenderAssetLeaf(const AssetId& assetId, EditorAs
     if (isSelected)
         flags |= ImGuiTreeNodeFlags_Selected;
 
-    ImGui::TreeNodeEx(GetAssetDisplayName(assetPath).c_str(), flags);
-    if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
-    {
-        if (assetDatabase->LoadAsset(assetId))
-            g_editorCore->GetSelectionState()->SetSelectedAsset(assetId);
-    }
+    ImGui::TreeNodeEx(&assetId, flags, "##asset");
+    const bool treeHit = ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen();
 
     if (ImGui::BeginPopupContextItem())
     {
-        m_assetContextMenu.Open({
-            { "Duplicate", [&]()
-                {
-                    const AssetId duplicatedId = assetDatabase->DuplicateAsset(assetId);
-                    if (!duplicatedId.IsNull() && assetDatabase->LoadAsset(duplicatedId))
-                        g_editorCore->GetSelectionState()->SetSelectedAsset(duplicatedId);
-                } },
-            { "Delete", [&]()
-                {
-                    const bool wasSelected = g_editorCore->GetSelectionState()->IsAssetSelected(assetId);
-                    assetDatabase->DeleteAsset(assetId);
-                    if (wasSelected)
-                        g_editorCore->GetSelectionState()->ClearAssetSelection();
-                } },
-        });
+        std::vector<ContextMenuPopup::Item> items;
+        const bool canRename = sel && sel->GetSelectedAssets().size() == 1 &&
+            sel->GetSelectedAssets()[0] == assetId;
+        if (canRename)
+        {
+            items.push_back({"Rename", [&]() {
+                m_renameAssetId = assetId;
+                m_inlineRename.Begin(GetAssetDisplayName(assetPath));
+            }});
+        }
+        items.push_back({ "Duplicate", [&]()
+            {
+                const AssetId duplicatedId = assetDatabase->DuplicateAsset(assetId);
+                if (!duplicatedId.IsNull() && assetDatabase->LoadAsset(duplicatedId))
+                    g_editorCore->GetSelectionState()->SetSelectedAsset(duplicatedId);
+            } });
+        items.push_back({ "Delete", [&]()
+            {
+                const bool wasSelected = g_editorCore->GetSelectionState()->IsAssetSelected(assetId);
+                assetDatabase->DeleteAsset(assetId);
+                if (wasSelected)
+                    g_editorCore->GetSelectionState()->ClearAssetSelection();
+            } });
+        m_assetContextMenu.Open(std::move(items));
         m_assetContextMenu.Draw(g_editor->GetEditorTheme()->colors);
         ImGui::EndPopup();
+    }
+
+    ImGui::SameLine(0.f, 6.f);
+
+    const bool renamingRow = m_inlineRename.IsActive() && assetId == m_renameAssetId;
+    if (renamingRow)
+    {
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 8.f);
+        const auto rr = m_inlineRename.Draw();
+        if (rr == EditorInlineRename::Committed)
+        {
+            EditorCommandContext ctx{ *g_editorCore };
+            g_editorCore->GetCommandManager().Execute(
+                std::make_unique<EditorCommand_RenameAsset>(assetId, std::string(m_inlineRename.GetBuffer())),
+                ctx);
+            m_renameAssetId = AssetId::Null();
+        }
+        else if (rr == EditorInlineRename::Cancelled)
+            m_renameAssetId = AssetId::Null();
+    }
+    else
+        ImGui::TextUnformatted(GetAssetDisplayName(assetPath).c_str());
+
+    bool labelHit = false;
+    if (!renamingRow)
+        labelHit = ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen();
+    if (treeHit || labelHit)
+    {
+        if (assetDatabase->LoadAsset(assetId))
+            g_editorCore->GetSelectionState()->SetSelectedAsset(assetId);
     }
 
     ImGui::PopID();

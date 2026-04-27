@@ -2,6 +2,7 @@
 
 #include "UIComponents/ClassPickerPopup.h"
 #include "UIComponents/ContextMenuPopup.h"
+#include "UIComponents/EditorInlineRename.h"
 
 #include "EngineIncludes.h"
 
@@ -10,6 +11,8 @@
 
 #include "EditorWindows/EditorWindow.h"
 #include "UIComponents/TypeChip.h"
+
+#include "Runtime/Core/UUID.h"
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -45,6 +48,8 @@ private:
     TypeChip                          m_typeChip;
     ClassPickerPopup                  m_addGoPicker;
     ContextMenuPopup                  m_destroyGoMenu;
+    EditorInlineRename                m_inlineRename;
+    ObjectId                          m_renameObjectId = ObjectId::Null();
 };
 
 DELTA_ENGINE_NS_END

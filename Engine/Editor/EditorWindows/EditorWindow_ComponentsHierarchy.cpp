@@ -2,6 +2,7 @@
 
 #include "Editor/Commands/EditorCommand_CreateComponent.h"
 #include "Editor/Commands/EditorCommand_DeleteComponent.h"
+#include "Editor/Commands/EditorCommand_RenameObject.h"
 #include "Editor/Commands/EditorCommandContext.h"
 #include "Editor/Commands/EditorCommandManager.h"
 #include "Editor/EditorCore.h"
@@ -9,6 +10,7 @@
 #include "Editor/EditorSelectionState.h"
 #include "Editor/Style/EditorTheme.h"
 #include "Runtime/Assets/DPrimaryAsset.h"
+#include "Runtime/Core/DObject.h"
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Core/SceneComponent.h"
 #include "Runtime/Core/DComponent.h"
@@ -17,6 +19,8 @@
 
 #include "imgui.h"
 #include "imgui_internal.h"
+
+#include <vector>
 
 using namespace DeltaEngine;
 
@@ -30,6 +34,19 @@ EditorWindow_ComponentsHierarchy::EditorWindow_ComponentsHierarchy()
 
 EditorWindow_ComponentsHierarchy::~EditorWindow_ComponentsHierarchy()
 {
+}
+
+void EditorWindow_ComponentsHierarchy::OnRenameCommitted(DObject* obj)
+{
+    if (!obj || !g_editorCore)
+        return;
+    auto [assetId, objId] = g_editorCore->GetIdsForObject(obj);
+    if (assetId.IsNull() || objId.IsNull())
+        return;
+    EditorCommandContext ctx{ *g_editorCore };
+    g_editorCore->GetCommandManager().Execute(
+        std::make_unique<EditorCommand_RenameObject>(assetId, objId, std::string(m_inlineRename.GetBuffer())),
+        ctx);
 }
 
 void EditorWindow_ComponentsHierarchy::Render(bool& open)
@@ -140,6 +157,23 @@ void EditorWindow_ComponentsHierarchy::Render(bool& open)
         }
     }
 
+    if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && !ImGui::GetIO().WantTextInput &&
+        ImGui::IsKeyPressed(ImGuiKey_F2))
+    {
+        if (selectionState->GetSelectedComponents().size() == 1)
+        {
+            const ObjectId cid = selectionState->GetSelectedComponents()[0];
+            DObject* obj = nullptr;
+            if (DPrimaryAsset* sa = g_editorCore->GetActiveSceneAsset())
+                obj = sa->FindObject(cid);
+            if (obj)
+            {
+                m_renameComponentId = cid;
+                m_inlineRename.Begin(obj->GetName());
+            }
+        }
+    }
+
     ImGui::End();
 }
 
@@ -172,31 +206,24 @@ void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(SceneComponent* 
         ImGui::SetCursorScreenPos(ImVec2(cursorPos.x + kCompIconSz + 6.f, cursorPos.y));
     }
 
-    char label[256];
-    std::snprintf(label, sizeof(label), "%s##%p", sceneComponent->GetName().c_str(), (void*)sceneComponent);
-    bool open = ImGui::TreeNodeEx(label, flags);
-
-    if (ImGui::IsItemClicked())
-    {
-        const ObjectId id = sceneComponent->GetObjectId();
-        if (ImGui::GetIO().KeyCtrl)
-        {
-            if (selectionState->IsComponentSelected(id))
-                selectionState->RemoveSelectedComponent(id);
-            else
-                selectionState->AddSelectedComponent(id);
-        }
-        else
-        {
-            selectionState->SetSelectedComponent(id);
-        }
-    }
+    bool open = ImGui::TreeNodeEx(static_cast<const void*>(sceneComponent), flags, "##sc%p", (void*)sceneComponent);
+    const bool treeHit = ImGui::IsItemClicked();
 
     if (ImGui::BeginPopupContextItem())
     {
         bool isLastRoot = (sceneComponent == sceneComponent->GetGameObject()->GetRootSceneComponent()
             && sceneComponent->GetGameObject()->GetSceneComponents().size() <= 1);
-        m_destroyCompMenu.Open({{"Destroy", [&, isLastRoot]() {
+        std::vector<ContextMenuPopup::Item> items;
+        const bool canRename = selectionState->GetSelectedComponents().size() == 1 &&
+            selectionState->GetSelectedComponents()[0] == sceneComponent->GetObjectId();
+        if (canRename)
+        {
+            items.push_back({"Rename", [&]() {
+                m_renameComponentId = sceneComponent->GetObjectId();
+                m_inlineRename.Begin(sceneComponent->GetName());
+            }});
+        }
+        items.push_back({"Destroy", [&, isLastRoot]() {
             if (isLastRoot)
                 return;
             GameObject* owner = sceneComponent->GetGameObject();
@@ -211,9 +238,48 @@ void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(SceneComponent* 
                             assetId, owner->GetObjectId(), compId), ctx);
                 }
             }
-        }}});
+        }});
+        m_destroyCompMenu.Open(std::move(items));
         m_destroyCompMenu.Draw(c);
         ImGui::EndPopup();
+    }
+
+    ImGui::SameLine(0.f, 6.f);
+
+    const bool renamingRow = m_inlineRename.IsActive() &&
+        sceneComponent->GetObjectId() == m_renameComponentId;
+    if (renamingRow)
+    {
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 8.f);
+        const auto rr = m_inlineRename.Draw();
+        if (rr == EditorInlineRename::Committed)
+        {
+            OnRenameCommitted(sceneComponent);
+            m_renameComponentId = ObjectId::Null();
+        }
+        else if (rr == EditorInlineRename::Cancelled)
+            m_renameComponentId = ObjectId::Null();
+    }
+    else
+        ImGui::TextUnformatted(sceneComponent->GetName().c_str());
+
+    bool labelHit = false;
+    if (!renamingRow)
+        labelHit = ImGui::IsItemClicked();
+    if (treeHit || labelHit)
+    {
+        const ObjectId id = sceneComponent->GetObjectId();
+        if (ImGui::GetIO().KeyCtrl)
+        {
+            if (selectionState->IsComponentSelected(id))
+                selectionState->RemoveSelectedComponent(id);
+            else
+                selectionState->AddSelectedComponent(id);
+        }
+        else
+        {
+            selectionState->SetSelectedComponent(id);
+        }
     }
 
     if (open)
@@ -255,9 +321,63 @@ void EditorWindow_ComponentsHierarchy::RenderRegularComponents(const std::vector
             ImGui::SetCursorScreenPos(ImVec2(cursorPos.x + kCompIconSz + 6.f, cursorPos.y));
         }
 
-        bool open = ImGui::TreeNodeEx(component->GetName().c_str(), flags);
+        bool open = ImGui::TreeNodeEx(static_cast<const void*>(component), flags, "##dc%p", (void*)component);
+        const bool treeHit = ImGui::IsItemClicked();
 
-        if (ImGui::IsItemClicked())
+        if (ImGui::BeginPopupContextItem())
+        {
+            std::vector<ContextMenuPopup::Item> items;
+            const bool canRename = selectionState->GetSelectedComponents().size() == 1 &&
+                selectionState->GetSelectedComponents()[0] == component->GetObjectId();
+            if (canRename)
+            {
+                items.push_back({"Rename", [&]() {
+                    m_renameComponentId = component->GetObjectId();
+                    m_inlineRename.Begin(component->GetName());
+                }});
+            }
+            items.push_back({"Destroy", [&]() {
+                GameObject* owner = component->GetGameObject();
+                if (owner && g_editorCore)
+                {
+                    auto [assetId, compId] = g_editorCore->GetIdsForObject(component);
+                    if (!assetId.IsNull() && !compId.IsNull())
+                    {
+                        EditorCommandContext ctx{ *g_editorCore };
+                        g_editorCore->GetCommandManager().Execute(
+                            std::make_unique<EditorCommand_DeleteComponent>(
+                                assetId, owner->GetObjectId(), compId), ctx);
+                    }
+                }
+            }});
+            m_destroyCompMenu.Open(std::move(items));
+            m_destroyCompMenu.Draw(c);
+            ImGui::EndPopup();
+        }
+
+        ImGui::SameLine(0.f, 6.f);
+
+        const bool renamingRow = m_inlineRename.IsActive() &&
+            component->GetObjectId() == m_renameComponentId;
+        if (renamingRow)
+        {
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 8.f);
+            const auto rr = m_inlineRename.Draw();
+            if (rr == EditorInlineRename::Committed)
+            {
+                OnRenameCommitted(component);
+                m_renameComponentId = ObjectId::Null();
+            }
+            else if (rr == EditorInlineRename::Cancelled)
+                m_renameComponentId = ObjectId::Null();
+        }
+        else
+            ImGui::TextUnformatted(component->GetName().c_str());
+
+        bool labelHit = false;
+        if (!renamingRow)
+            labelHit = ImGui::IsItemClicked();
+        if (treeHit || labelHit)
         {
             const ObjectId id = component->GetObjectId();
             if (ImGui::GetIO().KeyCtrl)
@@ -271,26 +391,6 @@ void EditorWindow_ComponentsHierarchy::RenderRegularComponents(const std::vector
             {
                 selectionState->SetSelectedComponent(id);
             }
-        }
-
-        if (ImGui::BeginPopupContextItem())
-        {
-            m_destroyCompMenu.Open({{"Destroy", [&]() {
-                GameObject* owner = component->GetGameObject();
-                if (owner && g_editorCore)
-                {
-                    auto [assetId, compId] = g_editorCore->GetIdsForObject(component);
-                    if (!assetId.IsNull() && !compId.IsNull())
-                    {
-                        EditorCommandContext ctx{ *g_editorCore };
-                        g_editorCore->GetCommandManager().Execute(
-                            std::make_unique<EditorCommand_DeleteComponent>(
-                                assetId, owner->GetObjectId(), compId), ctx);
-                    }
-                }
-            }}});
-            m_destroyCompMenu.Draw(c);
-            ImGui::EndPopup();
         }
 
         if (open)
