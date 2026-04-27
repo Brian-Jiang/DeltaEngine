@@ -57,6 +57,12 @@ private:
 
     DPROPERTY(EditorOnly)
     float m_editorOnlyFloat = 0.0f;
+
+    DPROPERTY(HideInDetails)
+    float m_hideInDetailsFloat = 0.0f;
+
+    DPROPERTY(EditorOnly, HideInDetails)
+    float m_editorOnlyAndHiddenFloat = 0.0f;
 };
 
 DELTA_ENGINE_NS_END

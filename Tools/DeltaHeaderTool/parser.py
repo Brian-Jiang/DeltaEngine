@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import platform
 import re
 import sys
 from dataclasses import dataclass, field
@@ -39,6 +40,14 @@ TOOLS_DIR = TOOL_DIR.parent
 LIB_PATH = TOOLS_DIR / "Clang"
 
 _configured = False
+
+
+def libclang_library_path() -> Path:
+    """Path to the libclang shared library expected by this repo."""
+    if platform.system() == "Windows":
+        return LIB_PATH / "libclang.dll"
+    return LIB_PATH / "libclang.so"
+
 
 # Strip #include lines so clang never touches the filesystem for dependencies.
 _INCLUDE_RE = re.compile(r'^\s*#\s*include\s*[<"].*?[>"]', re.MULTILINE)
@@ -155,14 +164,11 @@ _PREAMBLE_LINE_COUNT = len(_PREAMBLE.splitlines())
 def _ensure_configured():
     global _configured
     if not _configured:
-        dll = LIB_PATH / "libclang.dll"
-        if not dll.exists():
-            print(
-                f"ERROR: libclang.dll not found at {dll}\n"
-                "Place the LLVM libclang.dll in Tools/Clang/.",
-                file=sys.stderr,
+        lib = libclang_library_path()
+        if not lib.exists():
+            raise RuntimeError(
+                f"libclang not found at {lib}; place the LLVM libclang binary in Tools/Clang/."
             )
-            sys.exit(1)
         ci.Config.set_library_path(str(LIB_PATH))
         _configured = True
 
@@ -187,6 +193,7 @@ class PropertyInfo:
     is_dstruct: bool = False
     dstruct_type_name: str = ""
     editor_only: bool = False
+    hide_in_details: bool = False
 
 
 @dataclass
@@ -695,6 +702,7 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
             dprop_args = _extract_macro_args(tu, child, "DPROPERTY") or ""
             prop_metadata = _parse_dproperty_meta(dprop_args)
             editor_only = bool(re.search(r'\bEditorOnly\b', dprop_args))
+            hide_in_details = bool(re.search(r'\bHideInDetails\b', dprop_args))
             info.properties.append(PropertyInfo(
                 name=child.spelling,
                 cpp_type=child.type.spelling,
@@ -711,6 +719,7 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
                 is_dstruct=is_dstruct_field,
                 dstruct_type_name=dstruct_type_name,
                 editor_only=editor_only,
+                hide_in_details=hide_in_details,
             ))
 
         elif child.kind == ci.CursorKind.FUNCTION_TEMPLATE:
@@ -791,6 +800,7 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
                 inner_is_obj_ptr = resolved[5] if len(resolved) >= 7 else False
                 inner_pointee = resolved[6] if len(resolved) >= 7 else ""
                 editor_only = bool(re.search(r'\bEditorOnly\b', args_str or ""))
+                hide_in_details = bool(re.search(r'\bHideInDetails\b', args_str or ""))
                 info.properties.append(PropertyInfo(
                     name=field_name,
                     cpp_type=type_str,
@@ -804,6 +814,7 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
                     inner_is_object_ptr=inner_is_obj_ptr,
                     inner_pointee_type=inner_pointee,
                     editor_only=editor_only,
+                    hide_in_details=hide_in_details,
                 ))
                 existing_names.add(field_name)
     except Exception:

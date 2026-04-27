@@ -59,7 +59,12 @@ def _is_up_to_date(source: Path, out_h: Path, out_cpp: Path) -> bool:
 def _pool_init():
     """Called once per worker process to eagerly load libclang."""
     from parser import _ensure_configured
-    _ensure_configured()
+
+    try:
+        _ensure_configured()
+    except RuntimeError as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 def _process_one(job):

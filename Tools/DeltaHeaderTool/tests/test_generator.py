@@ -1,7 +1,15 @@
 from pathlib import Path
 
+import pytest
+
+from tests.clang_util import require_libclang
 from generator import generate_header_file, generate_source_file
-from parser import parse_header
+from parser import libclang_library_path, parse_header
+
+requires_libclang = pytest.mark.skipif(
+    not libclang_library_path().is_file(),
+    reason=f"libclang not found at {libclang_library_path()}",
+)
 
 
 def _norm_newlines(s: str) -> str:
@@ -17,7 +25,9 @@ def _write_snapshot(path: Path, content: str) -> None:
     path.write_text(_norm_newlines(content), encoding="utf-8", newline="\n")
 
 
+@requires_libclang
 def test_generate_header_contains_expected_markers(fixtures_dir):
+    require_libclang()
     path = fixtures_dir / "simple_class.h"
     result = parse_header(path, fixtures_dir)
     h = generate_header_file(result.classes, result.source_includes, result.forward_decls)
@@ -27,7 +37,9 @@ def test_generate_header_contains_expected_markers(fixtures_dir):
     assert "SimpleReflectClass_DoSomething_Params" in h
 
 
+@requires_libclang
 def test_generate_source_contains_expected_markers(fixtures_dir):
+    require_libclang()
     path = fixtures_dir / "simple_class.h"
     result = parse_header(path, fixtures_dir)
     stem = path.stem
@@ -39,7 +51,9 @@ def test_generate_source_contains_expected_markers(fixtures_dir):
     assert "offsetof(SimpleReflectClass, myInt)" in cpp
 
 
+@requires_libclang
 def test_generate_source_emits_show_as_button_metadata(fixtures_dir):
+    require_libclang()
     path = fixtures_dir / "show_as_button.h"
     result = parse_header(path, fixtures_dir)
     cpp = generate_source_file(result.classes, path.stem, {})
@@ -55,7 +69,31 @@ def test_generate_source_emits_show_as_button_metadata(fixtures_dir):
     assert "SetMetadata" not in cpp[plain_idx:plain_add]
 
 
+@requires_libclang
+def test_generate_source_emits_hide_in_details_flags(fixtures_dir):
+    require_libclang()
+    path = fixtures_dir / "hide_in_details_property.h"
+    result = parse_header(path, fixtures_dir)
+    cpp = generate_source_file(result.classes, path.stem, {})
+    assert '"m_hidden"' in cpp
+    h0 = cpp.find('"m_hidden"')
+    h1 = cpp.find("cls->AddProperty(_reg_prop);", h0)
+    assert h1 > h0
+    hidden_chunk = cpp[h0:h1]
+    assert "_reg_prop->bHideInDetails = true;" in hidden_chunk
+    assert "bEditorOnly" not in hidden_chunk
+    assert '"m_editorHidden"' in cpp
+    e0 = cpp.find('"m_editorHidden"')
+    e1 = cpp.find("cls->AddProperty(_reg_prop);", e0)
+    assert e1 > e0
+    editor_hidden_chunk = cpp[e0:e1]
+    assert "_reg_prop->bEditorOnly = true;" in editor_hidden_chunk
+    assert "_reg_prop->bHideInDetails = true;" in editor_hidden_chunk
+
+
+@requires_libclang
 def test_snapshots_simple_class(fixtures_dir, snapshot_dir, snapshot_update):
+    require_libclang()
     path = fixtures_dir / "simple_class.h"
     result = parse_header(path, fixtures_dir)
     stem = path.stem

@@ -480,6 +480,9 @@ void EditorWindow_Details::DrawPropertyEditor(DObject* instance, DClass* dclass,
     {
         for (DProperty* prop = s->GetOwnProperties(); prop; prop = prop->GetNext())
         {
+            if (prop->IsHiddenInDetails())
+                continue;
+
             ImGui::PushID(prop->GetName().c_str());
 
             const bool undoable = IsUndoablePropertyType(prop->GetPropertyType());
