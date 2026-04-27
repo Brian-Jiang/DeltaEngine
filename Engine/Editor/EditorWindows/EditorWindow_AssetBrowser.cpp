@@ -8,7 +8,59 @@
 
 #include "imgui.h"
 
+#include <commdlg.h>
+
+#include <filesystem>
+#include <vector>
+
 using namespace DeltaEngine;
+
+namespace
+{
+
+std::vector<std::filesystem::path> OpenImportFileDialog()
+{
+    static constexpr DWORD kBufSize = 32768;
+    static wchar_t fileBuffer[kBufSize];
+    fileBuffer[0] = L'\0';
+
+    OPENFILENAMEW ofn = {};
+    ofn.lStructSize  = sizeof(ofn);
+    ofn.hwndOwner    = nullptr;
+    ofn.lpstrFilter  = L"Supported Assets\0*.png;*.jpg;*.jpeg;*.bmp;*.tga;*.dds;*.hdr;*.fbx;*.obj;*.slang\0All Files\0*.*\0";
+    ofn.nFilterIndex = 1;
+    ofn.lpstrFile    = fileBuffer;
+    ofn.nMaxFile     = kBufSize;
+    ofn.lpstrTitle   = L"Import Assets";
+    ofn.Flags        = OFN_ALLOWMULTISELECT | OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+
+    std::vector<std::filesystem::path> result;
+    if (!GetOpenFileNameW(&ofn))
+        return result;
+
+    // Multi-select format: directory\0file1\0file2\0\0 — single: full path only
+    const wchar_t* ptr = fileBuffer;
+    std::wstring first = ptr;
+    ptr += first.size() + 1;
+
+    if (*ptr == L'\0')
+    {
+        result.emplace_back(first);
+    }
+    else
+    {
+        while (*ptr != L'\0')
+        {
+            std::wstring name = ptr;
+            result.emplace_back(std::filesystem::path(first) / name);
+            ptr += name.size() + 1;
+        }
+    }
+
+    return result;
+}
+
+} // namespace
 
 namespace
 {
@@ -47,6 +99,9 @@ void EditorWindow_AssetBrowser::Render(bool& open)
         ImGui::End();
         return;
     }
+
+    RenderImportButton(assetDatabase);
+    ImGui::Separator();
 
     const auto assets = assetDatabase->GetAllAssets();
     if (assets.empty())
@@ -163,4 +218,21 @@ void EditorWindow_AssetBrowser::RenderAssetLeaf(const AssetId& assetId, EditorAs
     }
 
     ImGui::PopID();
+}
+
+void EditorWindow_AssetBrowser::RenderImportButton(EditorAssetDatabase* assetDatabase)
+{
+    if (!ImGui::Button("Import..."))
+        return;
+
+    const std::vector<std::filesystem::path> paths = OpenImportFileDialog();
+    if (paths.empty())
+        return;
+
+    const std::vector<AssetId> imported = assetDatabase->ImportAssets(paths);
+    if (!imported.empty())
+    {
+        if (assetDatabase->LoadAsset(imported.back()))
+            g_editorCore->GetSelectionState()->SetSelectedAsset(imported.back());
+    }
 }

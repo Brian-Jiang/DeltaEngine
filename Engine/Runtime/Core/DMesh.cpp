@@ -169,14 +169,13 @@ DMesh::DMesh() = default;
 
 DMesh::~DMesh() = default;
 
-void DMesh::ImportMesh()
+void DMesh::ImportMeshImpl(const std::wstring& absolutePath, bool loadTextures)
 {
     m_vertices.clear();
     m_indices.clear();
     m_textures.clear();
 
-    const std::wstring fullPath = IOManager::GetEngineSourceAssetFullPath(m_sourcePath);
-    const std::filesystem::path path(fullPath);
+    const std::filesystem::path path(absolutePath);
     Assimp::Importer importer;
     importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, true);
 
@@ -194,33 +193,33 @@ void DMesh::ImportMesh()
         aiProcess_PreTransformVertices |
         aiProcess_CalcTangentSpace;
 
-            //// aiProcess_RemoveComponent |
-            //// aiProcess_SplitLargeMeshes |
-            //// aiProcess_ValidateDataStructure |
-            //////aiProcess_ImproveCacheLocality | // handled by optimizePostTransform()
-            //// aiProcess_RemoveRedundantMaterials |
-            //aiProcess_SortByPType |
-            //// aiProcess_FindInvalidData |
-            //// aiProcess_GenUVCoords |
-            //// aiProcess_TransformUVCoords |
-            //// aiProcess_OptimizeMeshes |
-            //// aiProcess_OptimizeGraph;
+    //// aiProcess_RemoveComponent |
+    //// aiProcess_SplitLargeMeshes |
+    //// aiProcess_ValidateDataStructure |
+    //////aiProcess_ImproveCacheLocality | // handled by optimizePostTransform()
+    //// aiProcess_RemoveRedundantMaterials |
+    // aiProcess_SortByPType |
+    //// aiProcess_FindInvalidData |
+    //// aiProcess_GenUVCoords |
+    //// aiProcess_TransformUVCoords |
+    //// aiProcess_OptimizeMeshes |
+    //// aiProcess_OptimizeGraph;
 
-            //// aiProcess_RemoveComponent |
-            //aiProcess_GenBoundingBoxes |
-            //////aiProcess_SplitLargeMeshes |
-            //////aiProcess_ValidateDataStructure |
-            //aiProcess_FlipUVs | aiProcess_MakeLeftHanded |
-            //// aiProcess_ConvertToLeftHanded |
-            //aiProcess_ImproveCacheLocality | aiProcess_FlipWindingOrder |
-            //// aiProcess_RemoveRedundantMaterials | // remove redundant materials
-            //// aiProcess_FindDegenerates | // remove degenerated polygons from the import
-            //// aiProcess_FindInvalidData | // detect invalid model data, such as invalid normal vectors
-            //// aiProcess_GenUVCoords | // convert spherical, cylindrical, box and planar mapping to proper UVs
-            //aiProcess_TransformUVCoords | // preprocess UV transformations (scaling, translation ...)
-            //// aiProcess_OptimizeMeshes | // join small meshes, if possible;
-            //aiProcess_PreTransformVertices | //-- fixes the transformation issue.
-            //0;
+    //// aiProcess_RemoveComponent |
+    // aiProcess_GenBoundingBoxes |
+    //////aiProcess_SplitLargeMeshes |
+    //////aiProcess_ValidateDataStructure |
+    // aiProcess_FlipUVs | aiProcess_MakeLeftHanded |
+    //// aiProcess_ConvertToLeftHanded |
+    // aiProcess_ImproveCacheLocality | aiProcess_FlipWindingOrder |
+    //// aiProcess_RemoveRedundantMaterials | // remove redundant materials
+    //// aiProcess_FindDegenerates | // remove degenerated polygons from the import
+    //// aiProcess_FindInvalidData | // detect invalid model data, such as invalid normal vectors
+    //// aiProcess_GenUVCoords | // convert spherical, cylindrical, box and planar mapping to proper UVs
+    // aiProcess_TransformUVCoords | // preprocess UV transformations (scaling, translation ...)
+    //// aiProcess_OptimizeMeshes | // join small meshes, if possible;
+    // aiProcess_PreTransformVertices | //-- fixes the transformation issue.
+    // 0;
 
     const aiScene* scene = importer.ReadFile(path.string(), kImportFlags);
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
@@ -229,22 +228,28 @@ void DMesh::ImportMesh()
         return;
     }
 
-    ProcessNode(scene->mRootNode, scene, DirectX::XMMatrixIdentity());
+    ProcessNode(scene->mRootNode, scene, DirectX::XMMatrixIdentity(), path.string(), loadTextures);
 }
 
-void DMesh::ProcessNode(aiNode* node, const aiScene* scene, DirectX::XMMATRIX accTransform)
+void DMesh::ImportMesh()
+{
+    const std::wstring fullPath = IOManager::GetEngineSourceAssetFullPath(m_sourcePath);
+    ImportMeshImpl(fullPath, true);
+}
+
+void DMesh::ProcessNode(aiNode* node, const aiScene* scene, DirectX::XMMATRIX accTransform, const std::string& absolutePath, bool loadTextures)
 {
     const auto localTransformation = DirectX::XMMATRIX(&(node->mTransformation.a1));
     accTransform = DirectX::XMMatrixMultiply(accTransform, localTransformation);
 
     for (unsigned int meshIndex = 0; meshIndex < node->mNumMeshes; ++meshIndex)
-        ProcessMesh(scene->mMeshes[node->mMeshes[meshIndex]], scene);
+        ProcessMesh(scene->mMeshes[node->mMeshes[meshIndex]], scene, absolutePath, loadTextures);
 
     for (unsigned int childIndex = 0; childIndex < node->mNumChildren; ++childIndex)
-        ProcessNode(node->mChildren[childIndex], scene, accTransform);
+        ProcessNode(node->mChildren[childIndex], scene, accTransform, absolutePath, loadTextures);
 }
 
-void DMesh::ProcessMesh(aiMesh* mesh, const aiScene* scene)
+void DMesh::ProcessMesh(aiMesh* mesh, const aiScene* scene, const std::string& absolutePath, bool loadTextures)
 {
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
@@ -282,16 +287,14 @@ void DMesh::ProcessMesh(aiMesh* mesh, const aiScene* scene)
             indices.push_back(face.mIndices[index]);
     }
 
-    if (mesh->mMaterialIndex >= 0)
+    if (loadTextures && mesh->mMaterialIndex >= 0)
     {
-        const std::wstring fullPath = IOManager::GetEngineSourceAssetFullPath(m_sourcePath);
-        const std::filesystem::path path(fullPath);
         aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
 
-        std::vector<DTexture*> diffuseMaps = LoadMaterialTextures(scene, material, aiTextureType_DIFFUSE, "texture_diffuse", path.string());
+        std::vector<DTexture*> diffuseMaps = LoadMaterialTextures(scene, material, aiTextureType_DIFFUSE, "texture_diffuse", absolutePath);
         textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
 
-        std::vector<DTexture*> specularMaps = LoadMaterialTextures(scene, material, aiTextureType_SPECULAR, "texture_specular", path.string());
+        std::vector<DTexture*> specularMaps = LoadMaterialTextures(scene, material, aiTextureType_SPECULAR, "texture_specular", absolutePath);
         textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
     }
 
@@ -332,6 +335,12 @@ void DMesh::Initialize(std::wstring sourcePath)
 {
     m_sourcePath = std::move(sourcePath);
     ImportMesh();
+}
+
+void DMesh::ImportFromAbsolutePath(std::wstring absolutePath)
+{
+    m_sourcePath = std::move(absolutePath);
+    ImportMeshImpl(m_sourcePath, false);
 }
 
 void DMesh::SetMaterials(std::vector<DMaterial*>& materials)

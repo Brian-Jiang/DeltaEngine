@@ -11,7 +11,8 @@
       "Bash(Build/x64-Debug/bin/DeltaEngineTests.exe *)",
       "Bash(Tools/Scripts/build-x64-debug-engine-tests.bat --automatic)",
       "Bash(Tools/Scripts/rebuild-x64-debug.bat --automatic)",
-      "Bash(echo \"EXIT=$?\")"
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(echo \"EXIT_CODE: $?\")"
     ]
   }
 }

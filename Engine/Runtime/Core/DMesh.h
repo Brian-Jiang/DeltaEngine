@@ -36,6 +36,9 @@ public:
     /// Loads mesh data from the given source asset path.
     DELTAENGINE_API void Initialize(std::wstring sourcePath);
 
+    /// Imports geometry from an absolute file path (skips engine source asset prefix and texture loading).
+    DELTAENGINE_API void ImportFromAbsolutePath(std::wstring absolutePath);
+
     /// Replaces the material list for this mesh.
     DFUNCTION()
     DELTAENGINE_API void SetMaterials(std::vector<DMaterial*>& materials);
@@ -44,11 +47,13 @@ public:
     void ImportMesh();
 
     /// Processes an assimp node and its children.
-    void ProcessNode(aiNode* node, const aiScene* scene, DirectX::XMMATRIX accTransform);
+    void ProcessNode(aiNode* node, const aiScene* scene, DirectX::XMMATRIX accTransform, const std::string& absolutePath, bool loadTextures);
     /// Processes a single assimp mesh into runtime geometry buffers.
-    void ProcessMesh(aiMesh* mesh, const aiScene* scene);
+    void ProcessMesh(aiMesh* mesh, const aiScene* scene, const std::string& absolutePath, bool loadTextures);
     /// Loads textures for a material slot from the imported scene.
     std::vector<DTexture*> LoadMaterialTextures(const aiScene* scene, aiMaterial* mat, aiTextureType type, std::string typeName, const std::string& filePath);
+
+    void ImportMeshImpl(const std::wstring& absolutePath, bool loadTextures);
 
     /// Returns the material at the requested submesh index, or nullptr.
     DFUNCTION()

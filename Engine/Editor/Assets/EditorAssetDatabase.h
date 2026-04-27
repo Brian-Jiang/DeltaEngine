@@ -58,6 +58,9 @@ public:
     void CreateAsset(const std::filesystem::path& filePath, DPrimaryAsset* asset);
     void CreateAsset(const std::filesystem::path& filePath, DObject* object);
 
+    /** Imports source files and returns all created asset IDs. */
+    std::vector<AssetId> ImportAssets(const std::vector<std::filesystem::path>& sourcePaths);
+
     bool       IsLoaded(const AssetId& id) const override;
     AssetState GetState(const AssetId& id) const;
 

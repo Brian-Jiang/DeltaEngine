@@ -1,5 +1,7 @@
 #include "Editor/Assets/EditorAssetDatabase.h"
 
+#include "Editor/Assets/AssetImporter.h"
+
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DObjectReferenceTraversal.h"
 #include "Runtime/Core/DObject.h"
@@ -609,4 +611,15 @@ AssetId EditorAssetDatabase::FindAssetIdByPath(const std::filesystem::path& path
         return it->second;
 
     return AssetId::Null();
+}
+
+std::vector<AssetId> EditorAssetDatabase::ImportAssets(const std::vector<std::filesystem::path>& sourcePaths)
+{
+    std::vector<AssetId> allIds;
+    for (const auto& path : sourcePaths)
+    {
+        std::vector<AssetId> ids = AssetImporter::ImportFile(path, *this);
+        allIds.insert(allIds.end(), ids.begin(), ids.end());
+    }
+    return allIds;
 }

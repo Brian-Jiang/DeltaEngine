@@ -5,6 +5,7 @@
 #include "Assets/EditorAssetDatabase.h"
 #include "EditorWindows/EditorWindow.h"
 
+#include <filesystem>
 #include <map>
 #include <string>
 #include <vector>
@@ -34,6 +35,7 @@ private:
     void RenderFolderNode(const FolderNode& node, const std::string& folderName,
         const std::string& fullPath, EditorAssetDatabase* assetDatabase);
     void RenderAssetLeaf(const AssetId& assetId, EditorAssetDatabase* assetDatabase);
+    void RenderImportButton(EditorAssetDatabase* assetDatabase);
 
     ContextMenuPopup m_assetContextMenu;
 };
