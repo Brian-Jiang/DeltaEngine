@@ -42,7 +42,7 @@ public:
     DELTAENGINE_API const std::string& GetName() const;
 
 private:
-    DPROPERTY()
+    DPROPERTY(HideInDetails)
     GameObject* m_gameObject;
 
     DPROPERTY()

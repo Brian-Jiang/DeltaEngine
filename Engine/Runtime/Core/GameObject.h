@@ -119,13 +119,13 @@ private:
     DPROPERTY()
     std::string m_name;
 
-    DPROPERTY()
+    DPROPERTY(HideInDetails)
     SceneComponent* m_rootSceneComponent;
 
-    DPROPERTY()
+    DPROPERTY(HideInDetails)
     std::vector<SceneComponent*> m_sceneComponents;
 
-    DPROPERTY()
+    DPROPERTY(HideInDetails)
     std::vector<DComponent*> m_components;
 
     DWorld* m_currentWorld;

@@ -95,14 +95,16 @@ protected:
 
 private:
     void SyncEulerFromMatrix();
-    DPROPERTY()
+
+    DPROPERTY(HideInDetails)
     DirectX::XMMATRIX m_localTransform;
 
     DirectX::XMMATRIX m_worldTransform;
     SceneComponent* m_parent;
 
-    DPROPERTY()
+    DPROPERTY(HideInDetails)
     std::vector<SceneComponent*> m_children;
+
     DirectX::SimpleMath::Vector3 m_eulerRotationCache;
 
     void UpdateTransformHierarchy(DirectX::XMMATRIX worldTransform);
