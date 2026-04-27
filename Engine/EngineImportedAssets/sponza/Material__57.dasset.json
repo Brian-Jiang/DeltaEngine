@@ -1,0 +1,60 @@
+{
+  "header": {
+    "assetId": "931b38f7-a10c-4887-9cf2-3f34fe819fdf",
+    "className": "PA_Material",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DMaterial",
+      "_objectId": "0679f837-a5cd-400d-b650-673307796dfe",
+      "m_albedoTexture": {
+        "assetId": "70ca1da4-7dfb-4717-8f19-8e52a1639924",
+        "objectId": "40359cc5-d82c-49ea-b98b-c43682165532"
+      },
+      "m_alphaCutoff": 0.5,
+      "m_alphaMaskTexture": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "00000000-0000-0000-0000-000000000000"
+      },
+      "m_baseColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "m_doubleSided": false,
+      "m_emissiveColor": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "m_emissiveIntensity": 1.0,
+      "m_emissiveMaskTexture": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "00000000-0000-0000-0000-000000000000"
+      },
+      "m_metallic": 0.0,
+      "m_metallicRoughnessTexture": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "00000000-0000-0000-0000-000000000000"
+      },
+      "m_normalTexture": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "00000000-0000-0000-0000-000000000000"
+      },
+      "m_occlusionTexture": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "00000000-0000-0000-0000-000000000000"
+      },
+      "m_renderMode": 0,
+      "m_roughness": 0.5,
+      "m_shader": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "00000000-0000-0000-0000-000000000000"
+      }
+    }
+  ]
+}

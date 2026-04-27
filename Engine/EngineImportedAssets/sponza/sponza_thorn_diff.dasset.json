@@ -1,0 +1,26 @@
+{
+  "header": {
+    "assetId": "b68e06c0-56a3-4aaa-ba1c-b198c59e9654",
+    "bulkDataMap": {
+      "0": {
+        "file": "sponza_thorn_diff_Bulk0.bin",
+        "size": 262208
+      }
+    },
+    "className": "PA_Texture",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DTexture",
+      "_objectId": "d6436a50-b347-4c7f-bd9f-db1afc23a783",
+      "m_bulkData": {
+        "_bulk": 0,
+        "size": 262208
+      },
+      "m_sRGB": false,
+      "m_sourcePath": "D:\\Projects\\DeltaEngine\\Engine\\EngineSourceAssets\\sponza\\textures\\sponza_thorn_diff.png"
+    }
+  ]
+}

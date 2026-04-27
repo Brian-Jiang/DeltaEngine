@@ -1,0 +1,26 @@
+{
+  "header": {
+    "assetId": "3ae86d50-f612-4744-b21f-0621dcefd06c",
+    "bulkDataMap": {
+      "0": {
+        "file": "sponza_roof_diff_Bulk0.bin",
+        "size": 1048640
+      }
+    },
+    "className": "PA_Texture",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DTexture",
+      "_objectId": "9faedac1-be8c-42f0-bc72-4476876c4763",
+      "m_bulkData": {
+        "_bulk": 0,
+        "size": 1048640
+      },
+      "m_sRGB": false,
+      "m_sourcePath": "D:\\Projects\\DeltaEngine\\Engine\\EngineSourceAssets\\sponza\\textures\\sponza_roof_diff.png"
+    }
+  ]
+}

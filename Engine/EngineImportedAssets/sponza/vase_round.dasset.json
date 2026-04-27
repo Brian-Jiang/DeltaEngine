@@ -1,0 +1,26 @@
+{
+  "header": {
+    "assetId": "d869da13-52d8-4076-a2d7-634fdce57b3b",
+    "bulkDataMap": {
+      "0": {
+        "file": "vase_round_Bulk0.bin",
+        "size": 1048640
+      }
+    },
+    "className": "PA_Texture",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DTexture",
+      "_objectId": "6cfa5ca1-7ca2-4764-aa85-58239cc3dcc6",
+      "m_bulkData": {
+        "_bulk": 0,
+        "size": 1048640
+      },
+      "m_sRGB": false,
+      "m_sourcePath": "D:\\Projects\\DeltaEngine\\Engine\\EngineSourceAssets\\sponza\\textures\\vase_round.png"
+    }
+  ]
+}

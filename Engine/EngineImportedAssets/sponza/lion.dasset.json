@@ -1,0 +1,26 @@
+{
+  "header": {
+    "assetId": "3753d3da-1168-4a77-b6e9-b2425a1c6e6b",
+    "bulkDataMap": {
+      "0": {
+        "file": "lion_Bulk0.bin",
+        "size": 1048640
+      }
+    },
+    "className": "PA_Texture",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DTexture",
+      "_objectId": "53d2d071-1600-4ba7-8580-e335417e6fdd",
+      "m_bulkData": {
+        "_bulk": 0,
+        "size": 1048640
+      },
+      "m_sRGB": false,
+      "m_sourcePath": "D:\\Projects\\DeltaEngine\\Engine\\EngineSourceAssets\\sponza\\textures\\lion.png"
+    }
+  ]
+}

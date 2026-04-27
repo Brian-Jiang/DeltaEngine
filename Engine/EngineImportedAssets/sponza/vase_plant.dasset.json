@@ -1,0 +1,26 @@
+{
+  "header": {
+    "assetId": "70ca1da4-7dfb-4717-8f19-8e52a1639924",
+    "bulkDataMap": {
+      "0": {
+        "file": "vase_plant_Bulk0.bin",
+        "size": 1048640
+      }
+    },
+    "className": "PA_Texture",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DTexture",
+      "_objectId": "40359cc5-d82c-49ea-b98b-c43682165532",
+      "m_bulkData": {
+        "_bulk": 0,
+        "size": 1048640
+      },
+      "m_sRGB": false,
+      "m_sourcePath": "D:\\Projects\\DeltaEngine\\Engine\\EngineSourceAssets\\sponza\\textures\\vase_plant.png"
+    }
+  ]
+}

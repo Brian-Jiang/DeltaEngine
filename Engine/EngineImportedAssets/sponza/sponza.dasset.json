@@ -1,0 +1,140 @@
+{
+  "header": {
+    "assetId": "ff337d3c-3bf5-4d9d-bfa4-e0b8f1826ec1",
+    "bulkDataMap": {
+      "0": {
+        "file": "sponza_Bulk0.bin",
+        "size": 12608384
+      },
+      "1": {
+        "file": "sponza_Bulk1.bin",
+        "size": 3147308
+      }
+    },
+    "className": "PA_StaticMesh",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DMesh",
+      "_objectId": "f11ff3cb-b445-4368-90b1-7c460d136955",
+      "m_indexData": {
+        "_bulk": 1,
+        "size": 3147308
+      },
+      "m_materials": [
+        {
+          "assetId": "ad830d32-5f40-4264-925a-54e81439acc6",
+          "objectId": "3957ce23-f26e-4107-9fd8-a172e9ede42a"
+        },
+        {
+          "assetId": "9b31c129-5338-4324-86a5-af51b8dc6681",
+          "objectId": "c6dc4bb5-6fd6-4e00-8ddb-eb73dc763d46"
+        },
+        {
+          "assetId": "f5f31ad0-3427-47fc-ad49-9ebba8d4b705",
+          "objectId": "5ec9eee5-fcd6-40b5-9181-f1827ad7c4e7"
+        },
+        {
+          "assetId": "931b38f7-a10c-4887-9cf2-3f34fe819fdf",
+          "objectId": "0679f837-a5cd-400d-b650-673307796dfe"
+        },
+        {
+          "assetId": "30db4071-d848-4ce0-98c6-7d6065cf574a",
+          "objectId": "bc492a03-9f00-4772-b5ed-12529cd65381"
+        },
+        {
+          "assetId": "d15b23e8-037b-4537-8697-9c480a4f1281",
+          "objectId": "1e12575e-1e0f-4029-ae9f-937dd4003313"
+        },
+        {
+          "assetId": "4aad7a16-1f49-4a7a-b810-2757ba9bcb29",
+          "objectId": "599b0ee6-0065-4b8b-a396-a3c62c09fb31"
+        },
+        {
+          "assetId": "070f259c-b824-4a14-89cc-2ebb284e9de7",
+          "objectId": "ccf4044f-ae77-4745-99e9-91abedd49946"
+        },
+        {
+          "assetId": "69b534ed-8108-4804-b6ca-687320bc9836",
+          "objectId": "079f2d11-5ee7-49ed-acb3-7255d0f899b2"
+        },
+        {
+          "assetId": "c2eb7f23-5088-4734-a49f-233e1ed07694",
+          "objectId": "d3ce6f58-3608-4a09-beb7-4447585832b8"
+        },
+        {
+          "assetId": "efa3a126-375e-4292-8759-965db364a540",
+          "objectId": "ce4d9637-9a18-4ec6-a5db-adb47f93e74c"
+        },
+        {
+          "assetId": "dfdaf194-2fb9-40d4-9488-0ee14e30fb3e",
+          "objectId": "4bf46a96-65a6-4003-a392-5e6350d30767"
+        },
+        {
+          "assetId": "10442812-712d-4769-8c4e-3a6431f63da1",
+          "objectId": "218e73f1-6d19-4cc3-be31-ce018a618901"
+        },
+        {
+          "assetId": "b2801aa9-e3fc-4e38-88d5-47ba142652dc",
+          "objectId": "afe0e9ce-9c51-4fb7-840c-28d4d8bc79b6"
+        },
+        {
+          "assetId": "8d6ad33c-b5ab-4cc9-b21b-0f8c509d3198",
+          "objectId": "394b3e5f-d501-421b-82f1-e10b78ef3916"
+        },
+        {
+          "assetId": "8d357985-5771-4c76-b1c0-71444c1e2348",
+          "objectId": "fe819f86-7180-4477-a59b-4f5658f2d4e6"
+        },
+        {
+          "assetId": "7e99f11b-14cb-4d98-8ebb-46b636bd8de4",
+          "objectId": "4845e5e5-191b-4792-9807-c9dd6687c2bc"
+        },
+        {
+          "assetId": "cecd303b-1b5a-4733-8f5d-1a36bd66bc01",
+          "objectId": "75e2fd8c-9d90-4f1d-844e-30a0af13ae98"
+        },
+        {
+          "assetId": "3dd97483-1ae3-49c1-bfd4-a8f4cb2e6bca",
+          "objectId": "01365eb1-1585-4393-9fdc-fbaa57499296"
+        },
+        {
+          "assetId": "d7dd65d0-ef05-4f88-9114-422357a5ac1f",
+          "objectId": "c309f707-e5fd-4e1d-a76e-de1075db2394"
+        },
+        {
+          "assetId": "c082b395-3311-441a-ae72-48c80e864661",
+          "objectId": "5eb49b1f-3132-4774-ad56-a3a56dd24b00"
+        },
+        {
+          "assetId": "55ade9f3-97bf-41dd-bbe5-d9a344556c6e",
+          "objectId": "a47689ba-46ec-4ed8-bbe8-89c39b1f39e0"
+        },
+        {
+          "assetId": "a840c5fd-f557-43cb-86e7-9cb0e89e073e",
+          "objectId": "0dc5275b-2ee4-45c7-ae34-419698777851"
+        },
+        {
+          "assetId": "1e09b8a3-acd1-42d6-a4ca-46c833f46c99",
+          "objectId": "487e14b6-78b7-477f-8196-2214b5e1fd51"
+        },
+        {
+          "assetId": "e033aacc-1968-451c-9ba3-59167bc4b6f7",
+          "objectId": "ec0423bd-3977-402b-afb1-a72a2696a08b"
+        },
+        {
+          "assetId": "90cbbdae-74d7-44c7-801b-0702d5ef9dfb",
+          "objectId": "62e9bd22-15cf-4624-943b-8adac88d4b28"
+        }
+      ],
+      "m_sourcePath": "D:\\Projects\\DeltaEngine\\Engine\\EngineSourceAssets\\sponza\\sponza.obj",
+      "m_textures": [],
+      "m_vertexData": {
+        "_bulk": 0,
+        "size": 12608384
+      }
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "header": {
+    "assetId": "8a8d41cd-f87f-4c99-96b5-06e3427bf74b",
+    "bulkDataMap": {
+      "0": {
+        "file": "sponza_curtain_green_diff_Bulk0.bin",
+        "size": 4194368
+      }
+    },
+    "className": "PA_Texture",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DTexture",
+      "_objectId": "1ffb1582-1f6c-4fa2-8ed4-7671ae26ae3d",
+      "m_bulkData": {
+        "_bulk": 0,
+        "size": 4194368
+      },
+      "m_sRGB": false,
+      "m_sourcePath": "D:\\Projects\\DeltaEngine\\Engine\\EngineSourceAssets\\sponza\\textures\\sponza_curtain_green_diff.png"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "header": {
+    "assetId": "8e0fa200-34f3-451e-8a4d-48bfe6159f74",
+    "bulkDataMap": {
+      "0": {
+        "file": "vase_dif_Bulk0.bin",
+        "size": 1048640
+      }
+    },
+    "className": "PA_Texture",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DTexture",
+      "_objectId": "4f449716-f5d7-4c14-9335-f6e0afb378b8",
+      "m_bulkData": {
+        "_bulk": 0,
+        "size": 1048640
+      },
+      "m_sRGB": false,
+      "m_sourcePath": "D:\\Projects\\DeltaEngine\\Engine\\EngineSourceAssets\\sponza\\textures\\vase_dif.png"
+    }
+  ]
+}
