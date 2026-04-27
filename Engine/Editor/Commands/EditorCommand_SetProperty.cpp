@@ -51,7 +51,8 @@ bool EditorCommand_SetProperty::ApplyValue(EditorCommandContext& ctx, const nloh
         return false;
     }
 
-    const bool ok = (prop->GetPropertyType() == EPropertyType::ObjectPtr)
+    const bool ok = (prop->GetPropertyType() == EPropertyType::ObjectPtr ||
+                     prop->GetPropertyType() == EPropertyType::Vector)
         ? SetPropertyFromJson(obj, prop, value, ctx.core)
         : SetPropertyFromJson(obj, prop, value);
 

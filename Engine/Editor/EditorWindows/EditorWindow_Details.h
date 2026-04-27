@@ -11,6 +11,7 @@
 #include "UIComponents/PropertyWidgets/ScalarField.h"
 #include "UIComponents/PropertyWidgets/ColorField.h"
 #include "UIComponents/PropertyWidgets/StringField.h"
+#include "UIComponents/PropertyWidgets/ObjectPtrField.h"
 #include "UIComponents/PropertyWidgets/ReferenceField.h"
 #include "UIComponents/WidgetEditEvent.h"
 
@@ -40,7 +41,7 @@ private:
     void DrawPropertyEditor(DObject* instance, DClass* dclass, int depth = 0);
     void DrawFunctionButtons(DObject* instance, DClass* dclass);
     void DrawReadOnlyProperty(const std::string& label, const std::string& value) const;
-    void DrawVectorElements(const DVectorPropertyBase* vectorProp, void* instance, int depth);
+    void DrawVectorElements(const DVectorPropertyBase* vectorProp, void* vectorAddr, DObject* parentObject, int depth);
 
     WidgetEditEvent DrawIntProperty(DObject* instance, DProperty* prop);
     WidgetEditEvent DrawFloatProperty(DObject* instance, DProperty* prop);
@@ -69,8 +70,7 @@ private:
     ColorField     m_colorField;
     StringField    m_stringField;
     ReferenceField m_refField;
-
-    char m_pickerFilter[128] = {};
+    ObjectPtrField m_objPtrField;
 };
 
 DELTA_ENGINE_NS_END
