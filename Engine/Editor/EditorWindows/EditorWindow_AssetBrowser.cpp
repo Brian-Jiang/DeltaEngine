@@ -207,8 +207,12 @@ void EditorWindow_AssetBrowser::RenderAssetLeaf(const AssetId& assetId, EditorAs
     if (isSelected)
         flags |= ImGuiTreeNodeFlags_Selected;
 
+    const bool renamingRow = m_inlineRename.IsActive() && assetId == m_renameAssetId;
+    if (renamingRow)
+        flags |= ImGuiTreeNodeFlags_AllowOverlap;
+
     ImGui::TreeNodeEx(GetAssetDisplayName(assetPath).c_str(), flags);
-    const bool treeHit = ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen();
+    const bool treeHit = !renamingRow && ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen();
     if (treeHit)
     {
         if (assetDatabase->LoadAsset(assetId))
@@ -245,7 +249,6 @@ void EditorWindow_AssetBrowser::RenderAssetLeaf(const AssetId& assetId, EditorAs
         ImGui::EndPopup();
     }
 
-    const bool renamingRow = m_inlineRename.IsActive() && assetId == m_renameAssetId;
     if (renamingRow)
     {
         ImGui::SameLine(ImGui::GetCursorPosX());

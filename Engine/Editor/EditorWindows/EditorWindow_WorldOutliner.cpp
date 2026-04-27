@@ -199,16 +199,21 @@ void EditorWindow_WorldOutliner::Render(bool& open)
         EditorSelectionState* sel = g_editorCore->GetSelectionState();
         bool isSelected = sel && entry->go && sel->IsGameObjectSelected(entry->go->GetObjectId());
 
+        const bool renamingRow =
+            m_inlineRename.IsActive() && entry->go && entry->go->GetObjectId() == m_renameObjectId;
+
         ImGui::PushStyleColor(ImGuiCol_Header,        ImVec4(0.f, 0.f, 0.f, 0.f));
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, c.DHover);
         ImGui::PushStyleColor(ImGuiCol_HeaderActive,  c.DHover);
 
         char rowId[32];
         std::snprintf(rowId, sizeof(rowId), "##olrow%d", entry->index);
-        if (ImGui::Selectable(rowId, isSelected,
-                ImGuiSelectableFlags_SpanAllColumns, ImVec2(0.f, EditorTheme::RowH())))
+        ImGuiSelectableFlags selFlags = ImGuiSelectableFlags_SpanAllColumns;
+        if (renamingRow)
+            selFlags |= ImGuiSelectableFlags_AllowOverlap;
+        if (ImGui::Selectable(rowId, isSelected, selFlags, ImVec2(0.f, EditorTheme::RowH())))
         {
-            if (entry->go && sel)
+            if (!renamingRow && entry->go && sel)
             {
                 const ObjectId id = entry->go->GetObjectId();
                 if (ImGui::GetIO().KeyCtrl)
@@ -294,8 +299,6 @@ void EditorWindow_WorldOutliner::Render(bool& open)
         ImGui::PushClipRect(nameStart,
             ImVec2(nameStart.x + nameMaxW, rowMax.y), true);
 
-        const bool renamingRow =
-            m_inlineRename.IsActive() && entry->go && entry->go->GetObjectId() == m_renameObjectId;
         if (renamingRow)
         {
             ImGui::SetNextItemWidth(nameMaxW);

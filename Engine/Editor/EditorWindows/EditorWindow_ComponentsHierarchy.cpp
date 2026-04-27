@@ -197,6 +197,11 @@ void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(SceneComponent* 
     if (isSelected)
         flags |= ImGuiTreeNodeFlags_Selected | ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_OpenOnArrow;
 
+    const bool renamingRow = m_inlineRename.IsActive() &&
+        sceneComponent->GetObjectId() == m_renameComponentId;
+    if (renamingRow)
+        flags |= ImGuiTreeNodeFlags_AllowOverlap;
+
     {
         ImDrawList* dl = ImGui::GetWindowDrawList();
         ImVec2 cursorPos = ImGui::GetCursorScreenPos();
@@ -212,7 +217,7 @@ void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(SceneComponent* 
     std::snprintf(label, sizeof(label), "%s##%p", sceneComponent->GetName().c_str(), (void *)sceneComponent);
     bool open = ImGui::TreeNodeEx(label, flags);
 
-    if (ImGui::IsItemClicked())
+    if (ImGui::IsItemClicked() && !renamingRow)
     {
         const ObjectId id = sceneComponent->GetObjectId();
         if (ImGui::GetIO().KeyCtrl)
@@ -263,8 +268,6 @@ void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(SceneComponent* 
         ImGui::EndPopup();
     }
 
-    const bool renamingRow = m_inlineRename.IsActive() &&
-        sceneComponent->GetObjectId() == m_renameComponentId;
     if (renamingRow)
     {
         ImGui::SameLine(ImGui::GetCursorPosX());
@@ -307,6 +310,11 @@ void EditorWindow_ComponentsHierarchy::RenderRegularComponents(const std::vector
         if (isSelected)
             flags |= ImGuiTreeNodeFlags_Selected;
 
+        const bool renamingRow = m_inlineRename.IsActive() &&
+            component->GetObjectId() == m_renameComponentId;
+        if (renamingRow)
+            flags |= ImGuiTreeNodeFlags_AllowOverlap;
+
         {
             ImDrawList* dl = ImGui::GetWindowDrawList();
             ImVec2 cursorPos = ImGui::GetCursorScreenPos();
@@ -319,7 +327,7 @@ void EditorWindow_ComponentsHierarchy::RenderRegularComponents(const std::vector
         }
 
         bool open = ImGui::TreeNodeEx(static_cast<const void*>(component), flags, "##dc%p", (void*)component);
-        const bool treeHit = ImGui::IsItemClicked();
+        const bool treeHit = ImGui::IsItemClicked() && !renamingRow;
 
         if (ImGui::BeginPopupContextItem())
         {
@@ -354,8 +362,6 @@ void EditorWindow_ComponentsHierarchy::RenderRegularComponents(const std::vector
 
         ImGui::SameLine(0.f, 6.f);
 
-        const bool renamingRow = m_inlineRename.IsActive() &&
-            component->GetObjectId() == m_renameComponentId;
         if (renamingRow)
         {
             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 8.f);
