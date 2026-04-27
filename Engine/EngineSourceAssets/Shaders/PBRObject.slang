@@ -26,7 +26,7 @@ PBRPSInput VSMain(PBRVSInput input)
 }
 
 [shader("fragment")]
-float4 PSMain(PBRPSInput input) : SV_TARGET
+float4 PSMain(PBRPSInput input, bool isFrontFace : SV_IsFrontFace) : SV_TARGET
 {
     uint flags = MaterialCB.flags;
 
@@ -68,6 +68,9 @@ float4 PSMain(PBRPSInput input) : SV_TARGET
         float3 nMap  = g_matTextures[1].Sample(g_matSampler, input.uv).xyz * 2.0 - 1.0;
         N = normalize(mul(nMap, TBN));
     }
+
+    if (MatHasFlag(flags, MAT_DOUBLE_SIDED) && !isFrontFace)
+        N = -N;
 
     float ao = MatHasFlag(flags, MAT_HAS_OCCLUSION)
         ? g_matTextures[3].Sample(g_matSampler, input.uv).r
