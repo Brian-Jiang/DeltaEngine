@@ -8,12 +8,16 @@ _TOOL_ROOT = _TESTS_DIR.parent
 
 if str(_TOOL_ROOT) not in sys.path:
     sys.path.insert(0, str(_TOOL_ROOT))
+if str(_TESTS_DIR.parent) not in sys.path:
+    sys.path.insert(0, str(_TESTS_DIR.parent))
 
 
 @pytest.fixture(scope="session", autouse=True)
 def _configure_libclang():
-    from parser import _ensure_configured
+    from parser import _ensure_configured, libclang_library_path
 
+    if not libclang_library_path().is_file():
+        return
     _ensure_configured()
 
 

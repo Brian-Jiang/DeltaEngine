@@ -61,6 +61,22 @@ TEST(ReflectionRegistryTests, EditorOnlyPropertyFlag)
     EXPECT_FALSE(regularProp->IsEditorOnly());
 }
 
+TEST(ReflectionRegistryTests, HideInDetailsPropertyFlag)
+{
+    auto& registry = GetReflectionRegistry();
+
+    DClass* testClass = registry.FindClassByName("TestComponent");
+    ASSERT_NE(testClass, nullptr);
+
+    DProperty* hiddenProp = testClass->FindPropertyByName("m_hideInDetailsFloat");
+    ASSERT_NE(hiddenProp, nullptr);
+    EXPECT_TRUE(hiddenProp->IsHiddenInDetails());
+
+    DProperty* regularProp = testClass->FindPropertyByName("m_testFloat");
+    ASSERT_NE(regularProp, nullptr);
+    EXPECT_FALSE(regularProp->IsHiddenInDetails());
+}
+
 TEST(ReflectionRegistryTests, ExposesFunctionMetadataAndInvocation)
 {
     auto& registry = GetReflectionRegistry();

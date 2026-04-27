@@ -44,9 +44,12 @@ from templates import (
 
 _OBJECT_PTR_PROP_RE = re.compile(r"^DObjectPtrProperty<(.+)>$")
 
-def _apply_editor_only(code: str) -> str:
-    """Splice ->bEditorOnly = true before the final semicolon on the last
+
+def _apply_property_flags(code: str, *, editor_only: bool, hide_in_details: bool) -> str:
+    """Splice property flags before the final semicolon on the last
     cls->AddProperty(...) call in the given code chunk."""
+    if not editor_only and not hide_in_details:
+        return code
     idx = code.rfind("cls->AddProperty(")
     if idx < 0:
         return code
@@ -66,7 +69,12 @@ def _apply_editor_only(code: str) -> str:
     semi = code.find(";", end)
     if semi < 0:
         return code
-    return code[:end] + "->bEditorOnly = true" + code[end:semi] + code[semi:]
+    suffix = ""
+    if editor_only:
+        suffix += "->bEditorOnly = true"
+    if hide_in_details:
+        suffix += "->bHideInDetails = true"
+    return code[:end] + suffix + code[end:semi] + code[semi:]
 
 EXTRA_PROPERTY_HEADERS = {
     "DBulkDataProperty": "Runtime/Reflection/DBulkDataProperty.h",
@@ -556,8 +564,11 @@ def _generate_class_registration(cls: ClassInfo) -> str:
         if prop.is_vector:
             code = _generate_vector_prop_code(prop, cls.name)
             if code:
-                if prop.editor_only:
-                    code = _apply_editor_only(code)
+                code = _apply_property_flags(
+                    code,
+                    editor_only=prop.editor_only,
+                    hide_in_details=prop.hide_in_details,
+                )
                 parts.append(code)
             continue
         elif prop.is_dstruct:
@@ -585,8 +596,11 @@ def _generate_class_registration(cls: ClassInfo) -> str:
                 field_name=prop.name,
                 class_name=cls.name,
             )
-        if prop.editor_only:
-            code = _apply_editor_only(code)
+        code = _apply_property_flags(
+            code,
+            editor_only=prop.editor_only,
+            hide_in_details=prop.hide_in_details,
+        )
         parts.append(code)
 
     for fn in cls.functions:

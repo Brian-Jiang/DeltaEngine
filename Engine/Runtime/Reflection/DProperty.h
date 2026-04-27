@@ -86,7 +86,10 @@ public:
 
     bool IsEditorOnly() const { return bEditorOnly; }
 
+    bool IsHiddenInDetails() const { return bHideInDetails; }
+
     bool bEditorOnly = false;
+    bool bHideInDetails = false;
 
 protected:
     std::string m_name;

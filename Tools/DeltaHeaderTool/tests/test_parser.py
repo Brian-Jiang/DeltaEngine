@@ -1,43 +1,57 @@
 import pytest
 
-from parser import parse_header
+from tests.clang_util import require_libclang
+from parser import libclang_library_path, parse_header
+
+requires_libclang = pytest.mark.skipif(
+    not libclang_library_path().is_file(),
+    reason=f"libclang not found at {libclang_library_path()}",
+)
 
 
 @pytest.fixture
 def parse_simple_class(fixtures_dir):
+    require_libclang()
     return parse_header(fixtures_dir / "simple_class.h", fixtures_dir)
 
 
 @pytest.fixture
 def parse_simple_struct(fixtures_dir):
+    require_libclang()
     return parse_header(fixtures_dir / "simple_struct.h", fixtures_dir)
 
 
 @pytest.fixture
 def parse_ptr_properties(fixtures_dir):
+    require_libclang()
     return parse_header(fixtures_dir / "ptr_properties.h", fixtures_dir)
 
 
 @pytest.fixture
 def parse_vector_properties(fixtures_dir):
+    require_libclang()
     return parse_header(fixtures_dir / "vector_properties.h", fixtures_dir)
 
 
 @pytest.fixture
 def parse_multi_class(fixtures_dir):
+    require_libclang()
     return parse_header(fixtures_dir / "multi_class.h", fixtures_dir)
 
 
 @pytest.fixture
 def parse_no_annotation(fixtures_dir):
+    require_libclang()
     return parse_header(fixtures_dir / "no_annotation.h", fixtures_dir)
 
 
 @pytest.fixture
 def parse_api_macro_class(fixtures_dir):
+    require_libclang()
     return parse_header(fixtures_dir / "api_macro_class.h", fixtures_dir)
 
 
+@requires_libclang
 def test_simple_class_name_and_counts(parse_simple_class):
     r = parse_simple_class
     assert len(r.classes) == 1
@@ -48,6 +62,7 @@ def test_simple_class_name_and_counts(parse_simple_class):
     assert len(c.functions) == 1
 
 
+@requires_libclang
 def test_simple_class_properties(parse_simple_class):
     c = parse_simple_class.classes[0]
     by_name = {p.name: p for p in c.properties}
@@ -56,6 +71,7 @@ def test_simple_class_properties(parse_simple_class):
     assert by_name["myInt"].property_class == "DIntProperty"
 
 
+@requires_libclang
 def test_simple_class_function(parse_simple_class):
     fn = parse_simple_class.classes[0].functions[0]
     assert fn.name == "DoSomething"
@@ -65,6 +81,7 @@ def test_simple_class_function(parse_simple_class):
     assert fn.params[0].property_class == "DFloatProperty"
 
 
+@requires_libclang
 def test_simple_struct_is_struct(parse_simple_struct):
     assert len(parse_simple_struct.classes) == 1
     c = parse_simple_struct.classes[0]
@@ -73,6 +90,7 @@ def test_simple_struct_is_struct(parse_simple_struct):
     assert len(c.properties) == 2
 
 
+@requires_libclang
 def test_ptr_properties_kinds(parse_ptr_properties):
     c = parse_ptr_properties.classes[0]
     by_name = {p.name: p for p in c.properties}
@@ -82,6 +100,7 @@ def test_ptr_properties_kinds(parse_ptr_properties):
     assert raw.pointee_type == "DObject"
 
 
+@requires_libclang
 def test_vector_properties_depths(parse_vector_properties):
     c = parse_vector_properties.classes[0]
     by_name = {p.name: p for p in c.properties}
@@ -95,15 +114,18 @@ def test_vector_properties_depths(parse_vector_properties):
     assert nested.inner_cpp_type == "std::vector<float>"
 
 
+@requires_libclang
 def test_multi_class_two_results(parse_multi_class):
     names = {c.name for c in parse_multi_class.classes}
     assert names == {"MultiA", "MultiB"}
 
 
+@requires_libclang
 def test_no_annotation_empty(parse_no_annotation):
     assert parse_no_annotation.classes == []
 
 
+@requires_libclang
 def test_api_macro_class_base_names(parse_api_macro_class):
     by_name = {c.name: c for c in parse_api_macro_class.classes}
     assert by_name["ApiMacroBase"].base_name == "DObject"
@@ -112,9 +134,11 @@ def test_api_macro_class_base_names(parse_api_macro_class):
 
 @pytest.fixture
 def parse_show_as_button(fixtures_dir):
+    require_libclang()
     return parse_header(fixtures_dir / "show_as_button.h", fixtures_dir)
 
 
+@requires_libclang
 def test_show_as_button_metadata(parse_show_as_button):
     c = parse_show_as_button.classes[0]
     assert c.name == "ShowAsButtonClass"
@@ -125,11 +149,29 @@ def test_show_as_button_metadata(parse_show_as_button):
     assert by_name["PlainFn"].metadata == {}
 
 
+@requires_libclang
 def test_show_as_button_warns_on_nonzero_params(parse_show_as_button):
     diags = parse_show_as_button.diagnostics
     messages = [w.message for w in diags.warnings]
     assert any("ShowAsButton" in m and "BadlyAnnotated" in m for m in messages)
     assert not any("ShowAsButton" in m and "DoAction" in m for m in messages)
+
+
+@pytest.fixture
+def parse_hide_in_details(fixtures_dir):
+    require_libclang()
+    return parse_header(fixtures_dir / "hide_in_details_property.h", fixtures_dir)
+
+
+@requires_libclang
+def test_hide_in_details_property_flags(parse_hide_in_details):
+    c = parse_hide_in_details.classes[0]
+    assert c.name == "HideDetailsTestClass"
+    by_name = {p.name: p for p in c.properties}
+    assert by_name["m_visible"].hide_in_details is False
+    assert by_name["m_hidden"].hide_in_details is True
+    assert by_name["m_editorHidden"].hide_in_details is True
+    assert by_name["m_editorHidden"].editor_only is True
 
 
 def test_dfunction_meta_parser_bare_identifier():
