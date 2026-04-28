@@ -10,8 +10,8 @@
       "_class": "DMaterial",
       "_objectId": "c6dc4bb5-6fd6-4e00-8ddb-eb73dc763d46",
       "m_albedoTexture": {
-        "assetId": "b68e06c0-56a3-4aaa-ba1c-b198c59e9654",
-        "objectId": "d6436a50-b347-4c7f-bd9f-db1afc23a783"
+        "assetId": "8e0fa200-34f3-451e-8a4d-48bfe6159f74",
+        "objectId": "4f449716-f5d7-4c14-9335-f6e0afb378b8"
       },
       "m_alphaCutoff": 0.5,
       "m_alphaMaskTexture": {

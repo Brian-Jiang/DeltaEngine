@@ -45,12 +45,14 @@ bool EditorSelectionState::IsGameObjectSelected(ObjectId id) const
 
 void EditorSelectionState::SetSelectedComponent(ObjectId id)
 {
+    ClearAssetSelection();
     m_selectedComponents.clear();
     m_selectedComponents.push_back(id);
 }
 
 void EditorSelectionState::AddSelectedComponent(ObjectId id)
 {
+    ClearAssetSelection();
     if (std::find(m_selectedComponents.begin(), m_selectedComponents.end(), id) == m_selectedComponents.end())
         m_selectedComponents.push_back(id);
 }
@@ -77,6 +79,7 @@ bool EditorSelectionState::IsComponentSelected(ObjectId id) const
 void EditorSelectionState::SetSelectedAsset(AssetId id)
 {
     ClearGameObjectSelection();
+    ClearComponentSelection();
     m_selectedAssets.clear();
     m_selectedAssets.push_back(id);
 }
@@ -84,6 +87,7 @@ void EditorSelectionState::SetSelectedAsset(AssetId id)
 void EditorSelectionState::AddSelectedAsset(AssetId id)
 {
     ClearGameObjectSelection();
+    ClearComponentSelection();
     if (std::find(m_selectedAssets.begin(), m_selectedAssets.end(), id) == m_selectedAssets.end())
         m_selectedAssets.push_back(id);
 }

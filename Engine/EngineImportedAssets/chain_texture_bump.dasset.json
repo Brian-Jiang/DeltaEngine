@@ -1,0 +1,26 @@
+{
+  "header": {
+    "assetId": "8da32c44-b33a-4533-abf4-177a7a8459bb",
+    "bulkDataMap": {
+      "0": {
+        "file": "chain_texture_bump_Bulk0.bin",
+        "size": 262208
+      }
+    },
+    "className": "PA_Texture",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DTexture",
+      "_objectId": "0fe9b2e3-1cba-4243-bd27-daa26f6f29f0",
+      "m_bulkData": {
+        "_bulk": 0,
+        "size": 262208
+      },
+      "m_sRGB": false,
+      "m_sourcePath": "D:\\Projects\\DeltaEngine\\Engine\\EngineSourceAssets\\sponza\\textures\\chain_texture_bump.png"
+    }
+  ]
+}
