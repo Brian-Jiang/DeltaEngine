@@ -15,6 +15,7 @@ include(spdlog.cmake)
 include(asio.cmake)
 include(googletest.cmake)
 include(slang.cmake)
+include(pix.cmake)
 
 add_custom_target(CopyDxcBin ALL
                    COMMAND ${CMAKE_COMMAND} -E copy_directory

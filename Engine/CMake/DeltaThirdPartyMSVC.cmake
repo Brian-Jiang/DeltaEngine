@@ -12,6 +12,7 @@ function(delta_apply_third_party_msvc_external_includes target)
         "${_tp}/DirectXTex/DirectXTex"
         "${_tp}/googletest/googletest/include"
         "${_tp}/googletest/googlemock/include"
+        "${_tp}/pix/Include/WinPixEventRuntime"
     )
     foreach(_root IN LISTS _roots)
         target_compile_options(${target} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:SHELL:/external:I \"${_root}\">")
