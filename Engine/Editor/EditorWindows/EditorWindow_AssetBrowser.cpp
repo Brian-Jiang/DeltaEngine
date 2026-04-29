@@ -140,11 +140,38 @@ void EditorWindow_AssetBrowser::Render(bool& open)
     const std::filesystem::path assetRoot(IOManager::GetEngineImportedAssetsFolder());
     BuildTree(rootNode, assets, assetRoot);
 
-    for (const auto& [folderName, childNode] : rootNode.m_children)
-        RenderFolderNode(childNode, folderName, folderName, assetDatabase);
+    constexpr ImGuiTreeNodeFlags kRootFlags =
+        ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanFullWidth;
+    if (ImGui::TreeNodeEx("EngineImportedAssets", kRootFlags))
+    {
+        if (ImGui::BeginDragDropTarget())
+        {
+            if (ImGui::AcceptDragDropPayload("ASSET_MOVE"))
+                MoveSelectedAssets(assetDatabase, assetRoot);
+            ImGui::EndDragDropTarget();
+        }
 
-    for (const AssetId& assetId : rootNode.m_assets)
-        RenderAssetLeaf(assetId, assetDatabase);
+        for (const auto& [folderName, childNode] : rootNode.m_children)
+            RenderFolderNode(childNode, folderName, folderName, assetDatabase);
+
+        for (const AssetId& assetId : rootNode.m_assets)
+            RenderAssetLeaf(assetId, assetDatabase);
+
+        ImGui::TreePop();
+    }
+
+    if (ImGui::GetDragDropPayload() != nullptr)
+    {
+        constexpr float kScrollZone  = 30.f;
+        constexpr float kScrollSpeed = 5.f;
+        const float mouseY    = ImGui::GetMousePos().y;
+        const float winTop    = ImGui::GetWindowPos().y;
+        const float winBottom = winTop + ImGui::GetWindowHeight();
+        if (mouseY < winTop + kScrollZone)
+            ImGui::SetScrollY(ImGui::GetScrollY() - kScrollSpeed);
+        else if (mouseY > winBottom - kScrollZone)
+            ImGui::SetScrollY(ImGui::GetScrollY() + kScrollSpeed);
+    }
 
     if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && !ImGui::GetIO().WantTextInput &&
         ImGui::IsKeyPressed(ImGuiKey_F2))
@@ -227,7 +254,20 @@ void EditorWindow_AssetBrowser::RenderFolderNode(const FolderNode& node,
     if (renamingThis)
         nodeFlags |= ImGuiTreeNodeFlags_AllowOverlap;
 
-    if (ImGui::TreeNodeEx(folderName.c_str(), nodeFlags))
+    const bool folderOpen = ImGui::TreeNodeEx(folderName.c_str(), nodeFlags);
+
+    if (ImGui::BeginDragDropTarget())
+    {
+        if (ImGui::AcceptDragDropPayload("ASSET_MOVE"))
+        {
+            const std::filesystem::path absTarget =
+                std::filesystem::absolute(std::filesystem::path(IOManager::GetEngineImportedAssetsFolder()) / fullPath);
+            MoveSelectedAssets(assetDatabase, absTarget);
+        }
+        ImGui::EndDragDropTarget();
+    }
+
+    if (folderOpen)
     {
         if (renamingThis)
         {
@@ -285,6 +325,17 @@ void EditorWindow_AssetBrowser::RenderAssetLeaf(const AssetId& assetId, EditorAs
 
     ImGui::TreeNodeEx(GetAssetDisplayName(assetPath).c_str(), flags);
 
+    if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+    {
+        if (sel && !sel->IsAssetSelected(assetId))
+            sel->SetSelectedAsset(assetId);
+        const int dummy = 0;
+        ImGui::SetDragDropPayload("ASSET_MOVE", &dummy, sizeof(dummy));
+        const std::size_t count = sel ? sel->GetSelectedAssets().size() : 1;
+        ImGui::Text("Moving %zu asset(s)", count);
+        ImGui::EndDragDropSource();
+    }
+
     if (!m_scrollToAssetId.IsNull() && assetId == m_scrollToAssetId)
     {
         ImGui::SetScrollHereY();
@@ -294,8 +345,18 @@ void EditorWindow_AssetBrowser::RenderAssetLeaf(const AssetId& assetId, EditorAs
     const bool treeHit = !renamingRow && ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen();
     if (treeHit)
     {
-        if (assetDatabase->LoadAsset(assetId))
-            g_editorCore->GetSelectionState()->SetSelectedAsset(assetId);
+        assetDatabase->LoadAsset(assetId);
+        if (ImGui::GetIO().KeyCtrl)
+        {
+            if (sel->IsAssetSelected(assetId))
+                sel->RemoveSelectedAsset(assetId);
+            else
+                sel->AddSelectedAsset(assetId);
+        }
+        else
+        {
+            sel->SetSelectedAsset(assetId);
+        }
     }
 
     if (ImGui::BeginPopupContextItem())
@@ -363,6 +424,19 @@ void EditorWindow_AssetBrowser::RenderImportButton(EditorAssetDatabase* assetDat
         if (assetDatabase->LoadAsset(imported.back()))
             g_editorCore->GetSelectionState()->SetSelectedAsset(imported.back());
     }
+}
+
+void EditorWindow_AssetBrowser::MoveSelectedAssets(EditorAssetDatabase* assetDatabase,
+    const std::filesystem::path& targetFolder)
+{
+    if (!assetDatabase || !g_editorCore)
+        return;
+    EditorSelectionState* sel = g_editorCore->GetSelectionState();
+    if (!sel)
+        return;
+    const std::vector<AssetId> toMove = sel->GetSelectedAssets();
+    for (const AssetId& id : toMove)
+        assetDatabase->MoveAsset(id, targetFolder);
 }
 
 std::filesystem::path EditorWindow_AssetBrowser::GetTargetFolder(EditorAssetDatabase* assetDatabase) const

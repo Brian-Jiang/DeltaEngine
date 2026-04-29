@@ -560,6 +560,48 @@ void CollectBulkPathsFromJsonFile(
 }
 } // namespace
 
+bool EditorAssetDatabase::MoveAsset(const AssetId& id, const std::filesystem::path& targetFolder)
+{
+    auto it = m_assets.find(id);
+    if (it == m_assets.end())
+        return false;
+
+    const std::filesystem::path oldPath = it->second.m_filePath;
+    if (!oldPath.string().ends_with(".dasset.json"))
+        return false;
+
+    std::error_code ec;
+    const std::filesystem::path absTarget = std::filesystem::absolute(targetFolder, ec);
+    if (ec)
+        return false;
+
+    if (std::filesystem::equivalent(oldPath.parent_path(), absTarget, ec) && !ec)
+        return true;
+
+    const std::filesystem::path newPath = absTarget / oldPath.filename();
+    if (std::filesystem::exists(newPath))
+        return false;
+
+    std::vector<std::filesystem::path> bulkPaths;
+    CollectBulkPathsFromJsonFile(oldPath, bulkPaths);
+
+    std::filesystem::rename(oldPath, newPath, ec);
+    if (ec)
+        return false;
+
+    for (const auto& bulkPath : bulkPaths)
+    {
+        if (std::filesystem::exists(bulkPath))
+            std::filesystem::rename(bulkPath, absTarget / bulkPath.filename(), ec);
+    }
+
+    m_assetPathMap.erase(oldPath);
+    it->second.m_filePath = newPath;
+    m_assetPathMap[newPath] = id;
+
+    return true;
+}
+
 bool EditorAssetDatabase::RenameAssetToExactStem(const AssetId& id, const std::string& exactStem)
 {
     if (exactStem.empty())

@@ -41,6 +41,8 @@ private:
     void RenderImportButton(EditorAssetDatabase* assetDatabase);
     void RenderCreateButton(EditorAssetDatabase* assetDatabase);
 
+    void MoveSelectedAssets(EditorAssetDatabase* assetDatabase, const std::filesystem::path& targetFolder);
+
     std::filesystem::path GetTargetFolder(EditorAssetDatabase* assetDatabase) const;
 
     ContextMenuPopup   m_assetContextMenu;

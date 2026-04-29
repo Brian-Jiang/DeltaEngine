@@ -63,6 +63,10 @@ public:
     /// (other than the asset's current path).
     bool RenameAssetToExactStem(const AssetId& id, const std::string& exactStem);
 
+    /// Moves the asset's .dasset.json and all bulk sidecars into targetFolder.
+    /// Returns false if the asset is not found or the filesystem move fails.
+    bool MoveAsset(const AssetId& id, const std::filesystem::path& targetFolder);
+
     void CreateAsset(const std::filesystem::path& filePath, DPrimaryAsset* asset);
     void CreateAsset(const std::filesystem::path& filePath, DObject* object);
 
