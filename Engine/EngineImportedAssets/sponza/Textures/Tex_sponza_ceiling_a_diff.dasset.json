@@ -1,0 +1,26 @@
+{
+  "header": {
+    "assetId": "43cbe082-2dd0-4fc5-b679-efffd6af6a13",
+    "bulkDataMap": {
+      "0": {
+        "file": "Tex_sponza_ceiling_a_diff_Bulk0.bin",
+        "size": 1048640
+      }
+    },
+    "className": "PA_Texture",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DTexture",
+      "_objectId": "c97e0070-a5cc-41ba-92c6-dfda2184de93",
+      "m_bulkData": {
+        "_bulk": 0,
+        "size": 1048640
+      },
+      "m_sRGB": false,
+      "m_sourcePath": "D:\\Projects\\DeltaEngine\\Engine\\EngineSourceAssets\\sponza\\textures\\sponza_ceiling_a_diff.png"
+    }
+  ]
+}

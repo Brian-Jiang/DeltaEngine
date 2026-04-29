@@ -1,0 +1,26 @@
+{
+  "header": {
+    "assetId": "e5b395ea-845d-475c-8e0d-dfa7be883fa7",
+    "bulkDataMap": {
+      "0": {
+        "file": "Tex_chain_texture_mask_Bulk0.bin",
+        "size": 262208
+      }
+    },
+    "className": "PA_Texture",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DTexture",
+      "_objectId": "139a5a31-bd23-489d-a27f-da1983c7591c",
+      "m_bulkData": {
+        "_bulk": 0,
+        "size": 262208
+      },
+      "m_sRGB": false,
+      "m_sourcePath": "D:\\Projects\\DeltaEngine\\Engine\\EngineSourceAssets\\sponza\\textures\\chain_texture_mask.png"
+    }
+  ]
+}

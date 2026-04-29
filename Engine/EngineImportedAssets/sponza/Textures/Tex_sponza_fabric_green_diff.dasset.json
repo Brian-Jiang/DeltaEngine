@@ -1,0 +1,26 @@
+{
+  "header": {
+    "assetId": "2e34cb29-ff18-483c-89b8-6b28a1e921cf",
+    "bulkDataMap": {
+      "0": {
+        "file": "Tex_sponza_fabric_green_diff_Bulk0.bin",
+        "size": 1048640
+      }
+    },
+    "className": "PA_Texture",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DTexture",
+      "_objectId": "a6a24160-cfba-4e0d-b02f-4ea6efe2ca4a",
+      "m_bulkData": {
+        "_bulk": 0,
+        "size": 1048640
+      },
+      "m_sRGB": false,
+      "m_sourcePath": "D:\\Projects\\DeltaEngine\\Engine\\EngineSourceAssets\\sponza\\textures\\sponza_fabric_green_diff.png"
+    }
+  ]
+}

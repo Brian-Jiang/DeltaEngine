@@ -1,0 +1,26 @@
+{
+  "header": {
+    "assetId": "63c838cd-f640-4a44-95ca-d44b4bbc4132",
+    "bulkDataMap": {
+      "0": {
+        "file": "Tex_spnza_bricks_a_diff_Bulk0.bin",
+        "size": 1048640
+      }
+    },
+    "className": "PA_Texture",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DTexture",
+      "_objectId": "40da3717-e299-4a82-a494-f57d0d0d80cd",
+      "m_bulkData": {
+        "_bulk": 0,
+        "size": 1048640
+      },
+      "m_sRGB": false,
+      "m_sourcePath": "D:\\Projects\\DeltaEngine\\Engine\\EngineSourceAssets\\sponza\\textures\\spnza_bricks_a_diff.png"
+    }
+  ]
+}

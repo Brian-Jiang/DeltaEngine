@@ -1,0 +1,26 @@
+{
+  "header": {
+    "assetId": "acef04f5-1bfd-43d4-9759-745b1a379be5",
+    "bulkDataMap": {
+      "0": {
+        "file": "Tex_sponza_column_a_diff_Bulk0.bin",
+        "size": 1048640
+      }
+    },
+    "className": "PA_Texture",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DTexture",
+      "_objectId": "d7cfc4dd-68f5-4e30-93f4-18f203af7552",
+      "m_bulkData": {
+        "_bulk": 0,
+        "size": 1048640
+      },
+      "m_sRGB": false,
+      "m_sourcePath": "D:\\Projects\\DeltaEngine\\Engine\\EngineSourceAssets\\sponza\\textures\\sponza_column_a_diff.png"
+    }
+  ]
+}

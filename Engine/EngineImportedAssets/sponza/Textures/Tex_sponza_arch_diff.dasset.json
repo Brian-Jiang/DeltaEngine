@@ -1,0 +1,26 @@
+{
+  "header": {
+    "assetId": "e9f3cb25-c581-4c76-b727-7c2755ae341b",
+    "bulkDataMap": {
+      "0": {
+        "file": "Tex_sponza_arch_diff_Bulk0.bin",
+        "size": 1048640
+      }
+    },
+    "className": "PA_Texture",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DTexture",
+      "_objectId": "de116a03-f8d3-4c65-9cbb-9609eb712687",
+      "m_bulkData": {
+        "_bulk": 0,
+        "size": 1048640
+      },
+      "m_sRGB": false,
+      "m_sourcePath": "D:\\Projects\\DeltaEngine\\Engine\\EngineSourceAssets\\sponza\\textures\\sponza_arch_diff.png"
+    }
+  ]
+}

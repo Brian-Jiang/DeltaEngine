@@ -1,0 +1,26 @@
+{
+  "header": {
+    "assetId": "920decf1-87cd-4b9c-b081-63f4b1b16a16",
+    "bulkDataMap": {
+      "0": {
+        "file": "Tex_vase_plant_mask_Bulk0.bin",
+        "size": 1048640
+      }
+    },
+    "className": "PA_Texture",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DTexture",
+      "_objectId": "56419fd4-ccff-4b69-a972-60b7c85219a6",
+      "m_bulkData": {
+        "_bulk": 0,
+        "size": 1048640
+      },
+      "m_sRGB": false,
+      "m_sourcePath": "D:\\Projects\\DeltaEngine\\Engine\\EngineSourceAssets\\sponza\\textures\\vase_plant_mask.png"
+    }
+  ]
+}
