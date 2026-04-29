@@ -1,0 +1,26 @@
+{
+  "header": {
+    "assetId": "13b98ef7-615b-4ef4-9db5-76068d83d895",
+    "bulkDataMap": {
+      "0": {
+        "file": "Tex_sponza_thorn_mask_Bulk0.bin",
+        "size": 262208
+      }
+    },
+    "className": "PA_Texture",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DTexture",
+      "_objectId": "4fae841d-79e3-4db3-ad1c-c7502101aa14",
+      "m_bulkData": {
+        "_bulk": 0,
+        "size": 262208
+      },
+      "m_sRGB": false,
+      "m_sourcePath": "D:\\Projects\\DeltaEngine\\Engine\\EngineSourceAssets\\sponza\\textures\\sponza_thorn_mask.png"
+    }
+  ]
+}

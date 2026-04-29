@@ -1,0 +1,26 @@
+{
+  "header": {
+    "assetId": "2abb27a7-907b-4947-99bb-bf7e07aebca4",
+    "bulkDataMap": {
+      "0": {
+        "file": "Tex_sponza_thorn_spec_Bulk0.bin",
+        "size": 262208
+      }
+    },
+    "className": "PA_Texture",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DTexture",
+      "_objectId": "9a2de54c-251c-43d9-8590-b62bdb1cc33d",
+      "m_bulkData": {
+        "_bulk": 0,
+        "size": 262208
+      },
+      "m_sRGB": false,
+      "m_sourcePath": "D:\\Projects\\DeltaEngine\\Engine\\EngineSourceAssets\\sponza\\textures\\sponza_thorn_spec.png"
+    }
+  ]
+}
