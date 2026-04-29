@@ -34,6 +34,7 @@ public:
 
 private:
     void RenderAssetDetails(const AssetId& assetId);
+    void RenderFolderDetails(const std::string& folderRelPath);
     void RenderGameObjectDetails(GameObject* gameObject);
     void RenderComponentDetails(DComponent* component);
     void RenderSceneComponentTransform(SceneComponent* sceneComponent);

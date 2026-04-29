@@ -41,7 +41,9 @@ private:
     void RenderImportButton(EditorAssetDatabase* assetDatabase);
     void RenderCreateButton(EditorAssetDatabase* assetDatabase);
 
-    void MoveSelectedAssets(EditorAssetDatabase* assetDatabase, const std::filesystem::path& targetFolder);
+    void MoveSelectedItems(EditorAssetDatabase* assetDatabase, const std::filesystem::path& targetFolder);
+    void RenameFolder(EditorAssetDatabase* assetDatabase, const std::string& folderRelPath, const std::string& newName);
+    void DeleteFolder(EditorAssetDatabase* assetDatabase, const std::string& folderRelPath);
 
     std::filesystem::path GetTargetFolder(EditorAssetDatabase* assetDatabase) const;
 

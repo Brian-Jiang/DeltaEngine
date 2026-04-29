@@ -13,6 +13,7 @@ using namespace DeltaEngine;
 void EditorSelectionState::SetSelectedGameObject(ObjectId id)
 {
     ClearAssetSelection();
+    ClearFolderSelection();
     m_selectedGameObjects.clear();
     m_selectedGameObjects.push_back(id);
 }
@@ -20,6 +21,7 @@ void EditorSelectionState::SetSelectedGameObject(ObjectId id)
 void EditorSelectionState::AddSelectedGameObject(ObjectId id)
 {
     ClearAssetSelection();
+    ClearFolderSelection();
     if (std::find(m_selectedGameObjects.begin(), m_selectedGameObjects.end(), id) == m_selectedGameObjects.end())
         m_selectedGameObjects.push_back(id);
 }
@@ -46,6 +48,7 @@ bool EditorSelectionState::IsGameObjectSelected(ObjectId id) const
 void EditorSelectionState::SetSelectedComponent(ObjectId id)
 {
     ClearAssetSelection();
+    ClearFolderSelection();
     m_selectedComponents.clear();
     m_selectedComponents.push_back(id);
 }
@@ -53,6 +56,7 @@ void EditorSelectionState::SetSelectedComponent(ObjectId id)
 void EditorSelectionState::AddSelectedComponent(ObjectId id)
 {
     ClearAssetSelection();
+    ClearFolderSelection();
     if (std::find(m_selectedComponents.begin(), m_selectedComponents.end(), id) == m_selectedComponents.end())
         m_selectedComponents.push_back(id);
 }
@@ -80,6 +84,7 @@ void EditorSelectionState::SetSelectedAsset(AssetId id)
 {
     ClearGameObjectSelection();
     ClearComponentSelection();
+    ClearFolderSelection();
     m_selectedAssets.clear();
     m_selectedAssets.push_back(id);
 }
@@ -88,6 +93,7 @@ void EditorSelectionState::AddSelectedAsset(AssetId id)
 {
     ClearGameObjectSelection();
     ClearComponentSelection();
+    ClearFolderSelection();
     if (std::find(m_selectedAssets.begin(), m_selectedAssets.end(), id) == m_selectedAssets.end())
         m_selectedAssets.push_back(id);
 }
@@ -107,6 +113,26 @@ void EditorSelectionState::ClearAssetSelection()
 bool EditorSelectionState::IsAssetSelected(AssetId id) const
 {
     return std::find(m_selectedAssets.begin(), m_selectedAssets.end(), id) != m_selectedAssets.end();
+}
+
+// --- Folder selection ---
+
+void EditorSelectionState::SetSelectedFolder(const std::string& relativePath)
+{
+    ClearGameObjectSelection();
+    ClearComponentSelection();
+    ClearAssetSelection();
+    m_selectedFolder = relativePath;
+}
+
+void EditorSelectionState::ClearFolderSelection()
+{
+    m_selectedFolder.clear();
+}
+
+bool EditorSelectionState::IsFolderSelected(const std::string& relativePath) const
+{
+    return m_selectedFolder == relativePath;
 }
 
 // --- Helpers ---

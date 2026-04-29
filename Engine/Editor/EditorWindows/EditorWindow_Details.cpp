@@ -15,6 +15,7 @@
 #include "Runtime/Core/DComponent.h"
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Core/SceneComponent.h"
+#include "Runtime/IO/IOManager.h"
 #include "Runtime/Reflection/DBulkDataProperty.h"
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DFunction.h"
@@ -30,6 +31,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
+#include <filesystem>
 #include <optional>
 #include <string>
 #include <unordered_set>
@@ -157,19 +159,21 @@ void EditorWindow_Details::Render(bool& open)
 
     EditorSelectionState* selectionState = g_editorCore->GetSelectionState();
 
-    enum class Category { None, GameObject, Asset, Component };
+    enum class Category { None, GameObject, Asset, Folder, Component };
     Category category = Category::None;
 
     if (selectionState->HasComponentSelection())
         category = Category::Component;
     else if (selectionState->HasGameObjectSelection())
         category = Category::GameObject;
+    else if (selectionState->HasFolderSelection())
+        category = Category::Folder;
     else if (selectionState->HasAssetSelection())
         category = Category::Asset;
 
     if (category == Category::None)
     {
-        ImGui::TextDisabled("Select a GameObject, component, or asset");
+        ImGui::TextDisabled("Select a GameObject, component, folder, or asset");
         ImGui::End();
         return;
     }
@@ -218,6 +222,10 @@ void EditorWindow_Details::Render(bool& open)
         }
         RenderAssetDetails(ids[0]);
     }
+    else if (category == Category::Folder)
+    {
+        RenderFolderDetails(selectionState->GetSelectedFolder());
+    }
     else if (category == Category::Component)
     {
         const auto& ids = selectionState->GetSelectedComponents();
@@ -241,6 +249,54 @@ void EditorWindow_Details::Render(bool& open)
     }
 
     ImGui::End();
+}
+
+void EditorWindow_Details::RenderFolderDetails(const std::string& folderRelPath)
+{
+    if (!g_editor)
+    {
+        ImGui::TextDisabled("No editor");
+        return;
+    }
+
+    const std::filesystem::path folderPath =
+        std::filesystem::path(IOManager::GetEngineImportedAssetsFolder()) / folderRelPath;
+    if (!std::filesystem::exists(folderPath))
+    {
+        ImGui::TextDisabled("Folder does not exist");
+        return;
+    }
+
+    std::size_t folderCount = 0;
+    std::size_t assetCount  = 0;
+    std::error_code ec;
+    for (const auto& entry : std::filesystem::directory_iterator(folderPath, ec))
+    {
+        if (entry.is_directory())
+        {
+            ++folderCount;
+            continue;
+        }
+
+        const auto path = entry.path();
+        if (entry.is_regular_file() && path.extension() == ".json" && path.stem().extension() == ".dasset")
+            ++assetCount;
+    }
+
+    EditorTheme* theme = g_editor->GetEditorTheme();
+    const auto& c = theme->colors;
+    if (theme->GetBoldFont())
+        ImGui::PushFont(theme->GetBoldFont());
+    ImGui::PushStyleColor(ImGuiCol_Text, c.TBright);
+    ImGui::TextUnformatted(folderPath.filename().string().c_str());
+    ImGui::PopStyleColor();
+    if (theme->GetBoldFont())
+        ImGui::PopFont();
+
+    ImGui::Separator();
+    DrawReadOnlyProperty("Path", folderRelPath);
+    DrawReadOnlyProperty("Folders", std::to_string(folderCount));
+    DrawReadOnlyProperty("Assets", std::to_string(assetCount));
 }
 
 void EditorWindow_Details::RenderAssetDetails(const AssetId& assetId)

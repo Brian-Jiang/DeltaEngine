@@ -135,6 +135,45 @@ TEST(EditorSelectionStateTests, ClearAssetSelection)
     EXPECT_FALSE(state.HasAssetSelection());
 }
 
+// --- Folder selection ---
+
+TEST(EditorSelectionStateTests, SetSelectedFolderClearsAssets)
+{
+    EditorSelectionState state;
+    state.SetSelectedAsset(AssetId::Generate());
+    EXPECT_TRUE(state.HasAssetSelection());
+
+    state.SetSelectedFolder("Materials");
+
+    EXPECT_FALSE(state.HasAssetSelection());
+    EXPECT_TRUE(state.HasFolderSelection());
+    EXPECT_TRUE(state.IsFolderSelected("Materials"));
+}
+
+TEST(EditorSelectionStateTests, SetSelectedFolderClearsObjectsAndComponents)
+{
+    EditorSelectionState state;
+    state.SetSelectedGameObject(ObjectId::Generate());
+    state.SetSelectedComponent(ObjectId::Generate());
+
+    state.SetSelectedFolder("Materials");
+
+    EXPECT_FALSE(state.HasGameObjectSelection());
+    EXPECT_FALSE(state.HasComponentSelection());
+    EXPECT_TRUE(state.HasFolderSelection());
+}
+
+TEST(EditorSelectionStateTests, SetSelectedAssetClearsFolder)
+{
+    EditorSelectionState state;
+    state.SetSelectedFolder("Materials");
+
+    state.SetSelectedAsset(AssetId::Generate());
+
+    EXPECT_FALSE(state.HasFolderSelection());
+    EXPECT_TRUE(state.HasAssetSelection());
+}
+
 // --- Component selection (independent) ---
 
 TEST(EditorSelectionStateTests, ComponentSelectionDoesNotClearGameObjects)
