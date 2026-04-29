@@ -8,6 +8,7 @@
 #include "Graphics/DirectX/CommandList.h"
 #include "Graphics/DirectX/Device.h"
 #include "Graphics/DirectX/DirectX12Texture.h"
+#include "Graphics/DirectX/PipelineStateObject.h"
 #include "Graphics/DirectX/RootSignature.h"
 #include "Graphics/Structures/RootParameterType.h"
 #include "Core/DMaterial.h"
@@ -78,6 +79,7 @@ void SkyboxRenderProxy::BuildPipelineStateObject(std::shared_ptr<DXGraphicsConte
     stream.SampleDesc          = sample;
 
     m_pso = renderContext->device->CreatePipelineStateObject(stream);
+    m_pso->GetD3D12PipelineState()->SetName(L"PSO Skybox");
 }
 
 void SkyboxRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext> renderContext)

@@ -108,6 +108,7 @@ void IBLBaker::CompilePipelines(Device& device)
         CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rsDesc;
         rsDesc.Init_1_1(IBL_RP_Count, params, 1, &linearWrap);
         m_iblRootSig = device.CreateRootSignature(rsDesc.Desc_1_1);
+        m_iblRootSig->GetD3D12RootSignature()->SetName(L"RootSignature IBL");
     }
 
     {
@@ -121,6 +122,7 @@ void IBLBaker::CompilePipelines(Device& device)
         CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rsDesc;
         rsDesc.Init_1_1(BRDF_RP_Count, params, 0, nullptr);
         m_brdfLutRootSig = device.CreateRootSignature(rsDesc.Desc_1_1);
+        m_brdfLutRootSig->GetD3D12RootSignature()->SetName(L"RootSignature IBL BrdfLut");
     }
 
     struct ComputeStream
@@ -144,8 +146,11 @@ void IBLBaker::CompilePipelines(Device& device)
     };
 
     m_irradiancePSO = makeCs(L"Shaders/IBL_IrradianceConvolve.slang", m_iblRootSig);
+    if (m_irradiancePSO) m_irradiancePSO->GetD3D12PipelineState()->SetName(L"PSO IBL IrradianceConvolve");
     m_specularPSO   = makeCs(L"Shaders/IBL_SpecularPrefilter.slang", m_iblRootSig);
+    if (m_specularPSO) m_specularPSO->GetD3D12PipelineState()->SetName(L"PSO IBL SpecularPrefilter");
     m_brdfLutPSO    = makeCs(L"Shaders/IBL_BrdfLut.slang", m_brdfLutRootSig);
+    if (m_brdfLutPSO) m_brdfLutPSO->GetD3D12PipelineState()->SetName(L"PSO IBL BrdfLut");
 }
 
 static std::shared_ptr<DirectX12Texture> CreateCubeUavTexture(
@@ -179,6 +184,7 @@ void IBLBaker::BakeBrdfLut(Device& device)
 
     auto& queue = device.GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
     auto cl     = queue.GetCommandList();
+    cl->GetD3D12CommandList()->SetName(L"CommandList IBL BrdfLut");
 
     cl->TransitionBarrier(lut, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
@@ -217,6 +223,7 @@ void IBLBaker::BakeIrradiance(Device& device,
 
     auto& queue = device.GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
     auto cl     = queue.GetCommandList();
+    cl->GetD3D12CommandList()->SetName(L"CommandList IBL Irradiance");
 
     cl->TransitionBarrier(irradiance, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
     cl->TransitionBarrier(sourceCube,
@@ -269,6 +276,7 @@ void IBLBaker::BakeSpecular(Device& device,
 
     auto& queue = device.GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
     auto cl     = queue.GetCommandList();
+    cl->GetD3D12CommandList()->SetName(L"CommandList IBL Specular");
 
     cl->TransitionBarrier(specular, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
     cl->TransitionBarrier(sourceCube,

@@ -457,7 +457,7 @@ std::shared_ptr<DirectX12Texture> CommandList::LoadTexture(DTexture* texture)
             IID_PPV_ARGS(&textureResource)));
 
         dx12texture = m_Device.CreateTexture(textureResource);
-        dx12texture->SetName(fileName);
+        dx12texture->SetName(L"DTexture " + std::filesystem::path(fileName).stem().wstring());
 
         if (texture->IsCubemap())
             dx12texture->CreateCubemapSRV();

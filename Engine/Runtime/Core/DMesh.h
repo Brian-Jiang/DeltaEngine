@@ -43,6 +43,8 @@ public:
     DFUNCTION()
     DELTAENGINE_API void SetMaterials(std::vector<DMaterial*>& materials);
 
+    const std::wstring& GetSourcePath() const { return m_sourcePath; }
+
     /// Imports mesh geometry and textures from the source path.
     void ImportMesh();
 

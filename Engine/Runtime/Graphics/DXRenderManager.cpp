@@ -3,6 +3,7 @@
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
 #include <dxgidebug.h>
+#include <pix3.h>
 
 #include "Graphics/DXUtils.h"
 #include "IO/IOManager.h"
@@ -127,6 +128,7 @@ void DXRenderManager::LoadAssets()
         _countof(staticSamplers), staticSamplers, rootSignatureFlags);
 
     m_rootSignature = m_device->CreateRootSignature(rootSignatureDescription.Desc_1_1);
+    m_rootSignature->GetD3D12RootSignature()->SetName(L"RootSignature Scene");
 
     m_iblBaker.Initialize(*m_device);
 }
@@ -197,6 +199,7 @@ void DXRenderManager::PrepareFrame()
 
     CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
     auto commandList = directCommandQueue.GetCommandList();
+    commandList->GetD3D12CommandList()->SetName(L"CommandList Scene");
     m_currentCommandList = commandList;
     m_currentContext.reset();
 
@@ -343,6 +346,7 @@ void DXRenderManager::ExecutePostProcessStack(DXGraphicsContext& ctx, PostProces
     int writeIdx = 0;
 
     const int passCount = stack->GetPassCount();
+    PIXBeginEvent(cl.GetD3D12CommandList().Get(), PIX_COLOR_DEFAULT, L"PostProcess");
     for (int i = 0; i < passCount; ++i)
     {
         PostProcessPass* pass = stack->GetPass(i);
@@ -366,6 +370,7 @@ void DXRenderManager::ExecutePostProcessStack(DXGraphicsContext& ctx, PostProces
         readSRV = dst.srv;
         writeIdx = 1 - writeIdx;
     }
+    PIXEndEvent(cl.GetD3D12CommandList().Get());
 
     m_finalPostProcessSRV = readSRV;
     m_hasPostProcessedOutput = true;

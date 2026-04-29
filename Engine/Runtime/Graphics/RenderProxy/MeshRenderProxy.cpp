@@ -3,6 +3,8 @@
 #include <d3dx12.h>
 #include <dxcapi.h>
 
+#include <filesystem>
+
 #include "Graphics/DXGraphicsContext.h"
 #include "Graphics/DXRenderManager.h"
 #include "Graphics/DefaultTextures.h"
@@ -10,6 +12,7 @@
 #include "Graphics/DirectX/Device.h"
 #include "Graphics/DirectX/DirectX12Texture.h"
 #include "Graphics/DirectX/IndexBuffer.h"
+#include "Graphics/DirectX/PipelineStateObject.h"
 #include "Graphics/DirectX/RootSignature.h"
 #include "Graphics/DirectX/VertexBuffer.h"
 #include "Graphics/MaterialConstants.h"
@@ -119,6 +122,8 @@ void DeltaEngine::MeshRenderProxy::BuildPipelineStateObject(std::shared_ptr<DXGr
         pipelineStateStream.SampleDesc = sampleDesc;
 
         m_pipelineStateObjects.push_back(device->CreatePipelineStateObject(pipelineStateStream));
+        m_pipelineStateObjects.back()->GetD3D12PipelineState()->SetName(
+            (L"PSO MeshRenderProxy Sub" + std::to_wstring(i)).c_str());
 
         if (material)
         {
@@ -150,8 +155,11 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
         for (int i = 0; i < submeshCount; ++i)
         {
             std::shared_ptr<VertexBuffer> vertexBuffer = commandList->CopyVertexBuffer(m_mesh->GetVertices()[i]);
+            const std::wstring meshStem = std::filesystem::path(m_mesh->GetSourcePath()).stem().wstring();
+            vertexBuffer->SetName(L"DMesh " + meshStem + L" Sub" + std::to_wstring(i) + L" VB");
             m_VertexBuffers.push_back(vertexBuffer);
             std::shared_ptr<IndexBuffer> indexBuffer = commandList->CopyIndexBuffer(m_mesh->GetIndices()[i]);
+            indexBuffer->SetName(L"DMesh " + meshStem + L" Sub" + std::to_wstring(i) + L" IB");
             m_IndexBuffers.push_back(indexBuffer);
         }
 

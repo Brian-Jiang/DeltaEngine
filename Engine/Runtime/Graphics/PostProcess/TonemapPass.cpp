@@ -54,6 +54,7 @@ void TonemapPass::LazyInitialize(DXGraphicsContext& ctx)
     rsDesc.Init_1_1(_countof(rootParams), rootParams, 1, &linearSampler, flags);
 
     m_rootSignature = device.CreateRootSignature(rsDesc.Desc_1_1);
+    m_rootSignature->GetD3D12RootSignature()->SetName(L"RootSignature PostProcess Tonemap");
 
     struct PipelineStateStream
     {
@@ -99,6 +100,7 @@ void TonemapPass::LazyInitialize(DXGraphicsContext& ctx)
     pss.SampleDesc = sampleDesc;
 
     m_pso = device.CreatePipelineStateObject(pss);
+    m_pso->GetD3D12PipelineState()->SetName(L"PSO PostProcess Tonemap");
     m_initialized = true;
 }
 

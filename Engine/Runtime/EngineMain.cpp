@@ -24,6 +24,7 @@
 #include "Runtime/Logging/LoggingManager.h"
 
 #include <SDL3/SDL.h>
+#include <pix3.h>
 
 namespace
 {
@@ -98,11 +99,19 @@ void EngineMain::RecordSceneDraws(std::shared_ptr<DXGraphicsContext> context)
 {
     if (DWorld* world = GetWorld())
     {
+        auto* d3dCL = context->commandList->GetD3D12CommandList().Get();
+
+        PIXBeginEvent(d3dCL, PIX_COLOR_DEFAULT, L"PreGatherDrawCalls");
         world->PreGatherDrawCalls(context);
+        PIXEndEvent(d3dCL);
+
         if (context->cameraOverride.has_value())
             context->commandList->SetGraphicsDynamicConstantBuffer(0, *context->cameraOverride);
         context->ApplyLightBuffersToCommandList();
+
+        PIXBeginEvent(d3dCL, PIX_COLOR_DEFAULT, L"GatherDrawCalls");
         world->GatherDrawCalls(context);
+        PIXEndEvent(d3dCL);
 
         PostProcessStack* stack = context->camera ? context->camera->postProcessStack : nullptr;
         if (stack && stack->GetPassCount() > 0)
