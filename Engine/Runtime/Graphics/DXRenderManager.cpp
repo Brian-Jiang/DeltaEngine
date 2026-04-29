@@ -292,6 +292,8 @@ void DXRenderManager::RenderFrame()
 
 void DXRenderManager::Resize(UINT width, UINT height)
 {
+    m_device->Flush();
+
     m_width = std::max(1u, width);
     m_height = std::max(1u, height);
     m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
