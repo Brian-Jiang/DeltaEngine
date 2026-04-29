@@ -34,10 +34,10 @@ public:
 
     /// All GameObjects that belong to this scene.
     /// These are serialized as intra-asset object pointers.
-    DPROPERTY()
+    DPROPERTY(HideInDetails)
     std::vector<GameObject*> m_gameObjects;
 
-    DPROPERTY()
+    DPROPERTY(HideInDetails)
     std::vector<DComponent*> m_components;
 
     /// Optional skybox assigned to this scene. Serialized as an intra-asset pointer.
