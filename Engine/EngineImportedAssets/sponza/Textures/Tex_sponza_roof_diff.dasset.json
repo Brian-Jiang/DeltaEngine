@@ -1,9 +1,9 @@
 {
   "header": {
-    "assetId": "8e0fa200-34f3-451e-8a4d-48bfe6159f74",
+    "assetId": "3ae86d50-f612-4744-b21f-0621dcefd06c",
     "bulkDataMap": {
       "0": {
-        "file": "vase_dif_Bulk0.bin",
+        "file": "Tex_sponza_roof_diff_Bulk0.bin",
         "size": 1048640
       }
     },
@@ -14,13 +14,13 @@
   "objects": [
     {
       "_class": "DTexture",
-      "_objectId": "4f449716-f5d7-4c14-9335-f6e0afb378b8",
+      "_objectId": "9faedac1-be8c-42f0-bc72-4476876c4763",
       "m_bulkData": {
         "_bulk": 0,
         "size": 1048640
       },
       "m_sRGB": false,
-      "m_sourcePath": "D:\\Projects\\DeltaEngine\\Engine\\EngineSourceAssets\\sponza\\textures\\vase_dif.png"
+      "m_sourcePath": "D:\\Projects\\DeltaEngine\\Engine\\EngineSourceAssets\\sponza\\textures\\sponza_roof_diff.png"
     }
   ]
 }

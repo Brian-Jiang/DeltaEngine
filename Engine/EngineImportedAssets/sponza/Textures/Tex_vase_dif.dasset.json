@@ -1,9 +1,9 @@
 {
   "header": {
-    "assetId": "3753d3da-1168-4a77-b6e9-b2425a1c6e6b",
+    "assetId": "8e0fa200-34f3-451e-8a4d-48bfe6159f74",
     "bulkDataMap": {
       "0": {
-        "file": "lion_Bulk0.bin",
+        "file": "Tex_vase_dif_Bulk0.bin",
         "size": 1048640
       }
     },
@@ -14,13 +14,13 @@
   "objects": [
     {
       "_class": "DTexture",
-      "_objectId": "53d2d071-1600-4ba7-8580-e335417e6fdd",
+      "_objectId": "4f449716-f5d7-4c14-9335-f6e0afb378b8",
       "m_bulkData": {
         "_bulk": 0,
         "size": 1048640
       },
       "m_sRGB": false,
-      "m_sourcePath": "D:\\Projects\\DeltaEngine\\Engine\\EngineSourceAssets\\sponza\\textures\\lion.png"
+      "m_sourcePath": "D:\\Projects\\DeltaEngine\\Engine\\EngineSourceAssets\\sponza\\textures\\vase_dif.png"
     }
   ]
 }

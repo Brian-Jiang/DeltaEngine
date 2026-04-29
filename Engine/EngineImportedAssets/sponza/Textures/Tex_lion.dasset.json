@@ -1,9 +1,9 @@
 {
   "header": {
-    "assetId": "3ae86d50-f612-4744-b21f-0621dcefd06c",
+    "assetId": "3753d3da-1168-4a77-b6e9-b2425a1c6e6b",
     "bulkDataMap": {
       "0": {
-        "file": "sponza_roof_diff_Bulk0.bin",
+        "file": "Tex_lion_Bulk0.bin",
         "size": 1048640
       }
     },
@@ -14,13 +14,13 @@
   "objects": [
     {
       "_class": "DTexture",
-      "_objectId": "9faedac1-be8c-42f0-bc72-4476876c4763",
+      "_objectId": "53d2d071-1600-4ba7-8580-e335417e6fdd",
       "m_bulkData": {
         "_bulk": 0,
         "size": 1048640
       },
       "m_sRGB": false,
-      "m_sourcePath": "D:\\Projects\\DeltaEngine\\Engine\\EngineSourceAssets\\sponza\\textures\\sponza_roof_diff.png"
+      "m_sourcePath": "D:\\Projects\\DeltaEngine\\Engine\\EngineSourceAssets\\sponza\\textures\\lion.png"
     }
   ]
 }
