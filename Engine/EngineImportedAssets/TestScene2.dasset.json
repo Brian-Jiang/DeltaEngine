@@ -1,0 +1,21 @@
+{
+  "header": {
+    "assetId": "eb094a14-734a-4de3-9c3e-350a3b3080d0",
+    "className": "PA_DScene",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "objects": [
+    {
+      "_class": "DScene",
+      "_objectId": "28532ae5-7e07-4037-8ec4-87cd4655785b",
+      "m_components": [],
+      "m_gameObjects": [],
+      "m_name": "NewDScene",
+      "m_skybox": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "00000000-0000-0000-0000-000000000000"
+      }
+    }
+  ]
+}

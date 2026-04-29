@@ -39,10 +39,17 @@ private:
         const std::string& fullPath, EditorAssetDatabase* assetDatabase);
     void RenderAssetLeaf(const AssetId& assetId, EditorAssetDatabase* assetDatabase);
     void RenderImportButton(EditorAssetDatabase* assetDatabase);
+    void RenderCreateButton(EditorAssetDatabase* assetDatabase);
+
+    std::filesystem::path GetTargetFolder(EditorAssetDatabase* assetDatabase) const;
 
     ContextMenuPopup   m_assetContextMenu;
     EditorInlineRename m_inlineRename;
-    AssetId            m_renameAssetId = AssetId::Null();
+    AssetId            m_renameAssetId       = AssetId::Null();
+    std::string           m_renameFolderRelPath;
+    std::filesystem::path m_renameFolderAbsPath;
+    AssetId               m_scrollToAssetId  = AssetId::Null();
+    std::string           m_scrollToFolderRelPath;
 };
 
 DELTA_ENGINE_NS_END

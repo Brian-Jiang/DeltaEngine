@@ -7,6 +7,10 @@
 #include "Editor/EditorCore.h"
 #include "Editor/EditorMain.h"
 #include "Editor/EditorSelectionState.h"
+#include "Runtime/Assets/PA_CommonAssets.h"
+#include "Runtime/Assets/PA_DScene.h"
+#include "Runtime/Core/Skybox.h"
+#include "Runtime/Graphics/PostProcess/PA_PostProcessStack.h"
 #include "Runtime/IO/IOManager.h"
 
 #include "imgui.h"
@@ -70,6 +74,23 @@ std::string GetAssetDisplayName(const std::filesystem::path& path)
 {
     return path.stem().stem().string();
 }
+
+std::filesystem::path UniqueDir(const std::filesystem::path& parent, const std::string& base)
+{
+    auto candidate = parent / base;
+    for (int i = 1; std::filesystem::exists(candidate); ++i)
+        candidate = parent / (base + "_" + std::to_string(i));
+    return candidate;
+}
+
+std::filesystem::path UniqueAssetPath(const std::filesystem::path& folder, const std::string& base)
+{
+    auto tryPath = [&](const std::string& name) { return folder / (name + ".dasset.json"); };
+    auto candidate = tryPath(base);
+    for (int i = 1; std::filesystem::exists(candidate); ++i)
+        candidate = tryPath(base + "_" + std::to_string(i));
+    return candidate;
+}
 }
 
 EditorWindow_AssetBrowser::EditorWindow_AssetBrowser()
@@ -103,6 +124,8 @@ void EditorWindow_AssetBrowser::Render(bool& open)
     }
 
     RenderImportButton(assetDatabase);
+    ImGui::SameLine();
+    RenderCreateButton(assetDatabase);
     ImGui::Separator();
 
     const auto assets = assetDatabase->GetAllAssets();
@@ -146,6 +169,21 @@ void EditorWindow_AssetBrowser::BuildTree(FolderNode& root,
     const std::unordered_map<AssetId, EditorAssetDatabase::AssetEntry>& assets,
     const std::filesystem::path& assetRoot) const
 {
+    try
+    {
+        for (const auto& dirEntry : std::filesystem::recursive_directory_iterator(
+                 assetRoot, std::filesystem::directory_options::skip_permission_denied))
+        {
+            if (!dirEntry.is_directory())
+                continue;
+            const auto rel = std::filesystem::relative(dirEntry.path(), assetRoot);
+            FolderNode* cur = &root;
+            for (const auto& part : rel)
+                cur = &cur->m_children[part.string()];
+        }
+    }
+    catch (...) {}
+
     for (const auto& [assetId, entry] : assets)
     {
         if (!entry.m_filePath.string().ends_with(".dasset.json"))
@@ -175,9 +213,43 @@ void EditorWindow_AssetBrowser::RenderFolderNode(const FolderNode& node,
     const std::string& fullPath,
     EditorAssetDatabase* assetDatabase)
 {
-    ImGui::PushID(fullPath.c_str());
-    if (ImGui::TreeNodeEx(folderName.c_str(), ImGuiTreeNodeFlags_SpanFullWidth))
+    const bool renamingThis = m_inlineRename.IsActive() && fullPath == m_renameFolderRelPath;
+
+    if (!m_scrollToFolderRelPath.empty() && fullPath == m_scrollToFolderRelPath)
     {
+        ImGui::SetScrollHereY();
+        m_scrollToFolderRelPath.clear();
+    }
+
+    ImGui::PushID(fullPath.c_str());
+
+    ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_SpanFullWidth;
+    if (renamingThis)
+        nodeFlags |= ImGuiTreeNodeFlags_AllowOverlap;
+
+    if (ImGui::TreeNodeEx(folderName.c_str(), nodeFlags))
+    {
+        if (renamingThis)
+        {
+            ImGui::SameLine(ImGui::GetCursorPosX());
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 8.f);
+            const auto rr = m_inlineRename.Draw();
+            if (rr == EditorInlineRename::Result::Committed)
+            {
+                const std::filesystem::path newAbs =
+                    m_renameFolderAbsPath.parent_path() / m_inlineRename.GetBuffer();
+                std::error_code ec;
+                std::filesystem::rename(m_renameFolderAbsPath, newAbs, ec);
+                m_renameFolderRelPath.clear();
+                m_renameFolderAbsPath.clear();
+            }
+            else if (rr == EditorInlineRename::Result::Cancelled)
+            {
+                m_renameFolderRelPath.clear();
+                m_renameFolderAbsPath.clear();
+            }
+        }
+
         for (const auto& [childName, childNode] : node.m_children)
             RenderFolderNode(childNode, childName, fullPath + "/" + childName, assetDatabase);
 
@@ -212,6 +284,13 @@ void EditorWindow_AssetBrowser::RenderAssetLeaf(const AssetId& assetId, EditorAs
         flags |= ImGuiTreeNodeFlags_AllowOverlap;
 
     ImGui::TreeNodeEx(GetAssetDisplayName(assetPath).c_str(), flags);
+
+    if (!m_scrollToAssetId.IsNull() && assetId == m_scrollToAssetId)
+    {
+        ImGui::SetScrollHereY();
+        m_scrollToAssetId = AssetId::Null();
+    }
+
     const bool treeHit = !renamingRow && ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen();
     if (treeHit)
     {
@@ -284,4 +363,78 @@ void EditorWindow_AssetBrowser::RenderImportButton(EditorAssetDatabase* assetDat
         if (assetDatabase->LoadAsset(imported.back()))
             g_editorCore->GetSelectionState()->SetSelectedAsset(imported.back());
     }
+}
+
+std::filesystem::path EditorWindow_AssetBrowser::GetTargetFolder(EditorAssetDatabase* assetDatabase) const
+{
+    const std::filesystem::path root = IOManager::GetEngineImportedAssetsFolder();
+    EditorSelectionState* sel        = g_editorCore ? g_editorCore->GetSelectionState() : nullptr;
+    if (sel && !sel->GetSelectedAssets().empty())
+    {
+        const auto p = assetDatabase->GetAssetPath(sel->GetSelectedAssets()[0]);
+        if (!p.empty())
+            return p.parent_path();
+    }
+    return root;
+}
+
+void EditorWindow_AssetBrowser::RenderCreateButton(EditorAssetDatabase* assetDatabase)
+{
+    if (ImGui::Button("Create"))
+        ImGui::OpenPopup("##create_popup");
+
+    if (!ImGui::BeginPopup("##create_popup"))
+        return;
+
+    const std::filesystem::path assetRoot = IOManager::GetEngineImportedAssetsFolder();
+
+    if (ImGui::MenuItem("New Folder"))
+    {
+        const std::filesystem::path target = GetTargetFolder(assetDatabase);
+        const std::filesystem::path absPath = UniqueDir(std::filesystem::absolute(target), "NewFolder");
+        std::error_code ec;
+        std::filesystem::create_directory(absPath, ec);
+        if (!ec)
+        {
+            const auto relPath =
+                std::filesystem::relative(absPath, std::filesystem::absolute(assetRoot)).generic_string();
+            m_renameFolderRelPath    = relPath;
+            m_renameFolderAbsPath    = absPath;
+            m_scrollToFolderRelPath  = relPath;
+            m_inlineRename.Begin(absPath.filename().string());
+        }
+    }
+
+    ImGui::Separator();
+
+    auto createAsset = [&](const char* label, const char* defaultName, auto makeAsset)
+    {
+        if (!ImGui::MenuItem(label))
+            return;
+        const std::filesystem::path target   = GetTargetFolder(assetDatabase);
+        const std::filesystem::path filePath = UniqueAssetPath(target, defaultName);
+        auto* asset                          = makeAsset();
+        assetDatabase->CreateAsset(filePath, asset);
+        const AssetId newId = assetDatabase->FindAssetIdByPath(filePath);
+        if (!newId.IsNull())
+        {
+            assetDatabase->LoadAsset(newId);
+            g_editorCore->GetSelectionState()->SetSelectedAsset(newId);
+            m_renameAssetId   = newId;
+            m_scrollToAssetId = newId;
+            m_inlineRename.Begin(defaultName);
+        }
+    };
+
+    createAsset("New Scene", "NewDScene", []() -> DPrimaryAsset* {
+        return PA_DScene::Create("NewDScene");
+    });
+    createAsset("New Skybox", "NewSkybox", []() -> DPrimaryAsset* {
+        return PA_Skybox::Create(CreateDObject<Skybox>());
+    });
+    createAsset("New Post-Process Stack", "NewPostProcessStack", []() -> DPrimaryAsset* {
+        return PA_PostProcessStack::Create();
+    });
+
+    ImGui::EndPopup();
 }
