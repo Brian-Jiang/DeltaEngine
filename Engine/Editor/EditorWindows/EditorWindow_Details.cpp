@@ -19,6 +19,7 @@
 #include "Runtime/Reflection/DBulkDataProperty.h"
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DFunction.h"
+#include "Runtime/Reflection/DStruct.h"
 #include "Runtime/Reflection/DProperty.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
 #include "Runtime/Utils/StringUtils.h"
@@ -106,6 +107,7 @@ bool IsUndoablePropertyType(EPropertyType type)
     case EPropertyType::Quaternion:
     case EPropertyType::Float4:
     case EPropertyType::Float4x4:
+    case EPropertyType::Struct:
         return true;
     default:
         return false;
@@ -129,6 +131,9 @@ void LivePreviewWrite(DObject* obj, DProperty* prop)
         EditorCommandContext::ApplyReflectedWrite(obj, prop, &m);
         return;
     }
+    case EPropertyType::Struct:
+        EditorCommandContext::ApplyReflectedWrite(obj, prop, prop->GetValue(obj));
+        return;
     default:
         EditorCommandContext::ApplyReflectedWrite(obj, prop, addr);
     }
@@ -574,8 +579,7 @@ void EditorWindow_Details::DrawPropertyEditor(DObject* instance, DClass* dclass,
                 DrawVectorProperty(instance, prop, depth);
                 break;
             case EPropertyType::Struct:
-                DrawReadOnlyProperty(GetPropertyDisplayName(prop->GetName()),
-                    prop->ToString(prop->GetValue(instance)));
+                evt = DrawStructPropertyEditor(instance, static_cast<DStructProperty*>(prop));
                 break;
             default:
                 DrawReadOnlyProperty(GetPropertyDisplayName(prop->GetName()),
@@ -780,6 +784,153 @@ void EditorWindow_Details::DrawVectorElements(const DVectorPropertyBase* vectorP
 
         ImGui::PopID();
     }
+}
+
+WidgetEditEvent EditorWindow_Details::DrawStructPropertyEditor(DObject* instance, DStructProperty* dsp)
+{
+    WidgetEditEvent merged;
+    DStruct* schema = dsp->GetSchema();
+    if (!schema)
+    {
+        DrawReadOnlyProperty(GetPropertyDisplayName(dsp->GetName()),
+            dsp->ToString(dsp->GetValue(instance)));
+        return merged;
+    }
+
+    void* structBase = dsp->GetValue(instance);
+    const std::string displayName = GetPropertyDisplayName(dsp->GetName());
+
+    if (ImGui::TreeNodeEx(displayName.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        DrawStructSchemaFields(structBase, schema, merged);
+        ImGui::TreePop();
+    }
+
+    return merged;
+}
+
+void EditorWindow_Details::DrawStructSchemaFields(void* structBase, DStruct* ds, WidgetEditEvent& merged)
+{
+    if (!ds)
+        return;
+
+    if (DStruct* sup = ds->GetSuper())
+        DrawStructSchemaFields(structBase, sup, merged);
+
+    for (DProperty* p = ds->GetOwnProperties(); p; p = p->GetNext())
+    {
+        ImGui::PushID(p->GetName().c_str());
+
+        switch (p->GetPropertyType())
+        {
+        case EPropertyType::Int:
+            merged.Merge(DrawIntPropertyAt(structBase, p));
+            break;
+        case EPropertyType::Float:
+            merged.Merge(DrawFloatPropertyAt(structBase, p));
+            break;
+        case EPropertyType::Double:
+            merged.Merge(DrawDoublePropertyAt(structBase, p));
+            break;
+        case EPropertyType::Bool:
+            merged.Merge(DrawBoolPropertyAt(structBase, p));
+            break;
+        case EPropertyType::String:
+            merged.Merge(DrawStringPropertyAt(structBase, p));
+            break;
+        case EPropertyType::Struct:
+        {
+            auto* nested = static_cast<DStructProperty*>(p);
+            void* innerBase = nested->GetValue(structBase);
+            DStruct* nestedSchema = nested->GetSchema();
+            const std::string nestedLabel = GetPropertyDisplayName(p->GetName());
+            if (ImGui::TreeNodeEx(nestedLabel.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                DrawStructSchemaFields(innerBase, nestedSchema, merged);
+                ImGui::TreePop();
+            }
+            break;
+        }
+        default:
+            DrawReadOnlyProperty(GetPropertyDisplayName(p->GetName()),
+                p->ToString(p->GetValue(structBase)));
+            break;
+        }
+
+        ImGui::PopID();
+    }
+}
+
+WidgetEditEvent EditorWindow_Details::DrawIntPropertyAt(void* container, DProperty* prop)
+{
+    EditorTheme* theme = g_editor->GetEditorTheme();
+    const auto& c = theme->colors;
+
+    int* val = static_cast<int*>(prop->GetValue(container));
+
+    const float availW = BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
+    ImGui::SetNextItemWidth(availW);
+    const bool changed = ImGui::DragInt("##v", val);
+    auto evt = WidgetEditFromLastItem(changed);
+    EndPropertyRow();
+
+    return evt;
+}
+
+WidgetEditEvent EditorWindow_Details::DrawFloatPropertyAt(void* container, DProperty* prop)
+{
+    float* val = static_cast<float*>(prop->GetValue(container));
+    return m_scalarField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), val, 0.1f);
+}
+
+WidgetEditEvent EditorWindow_Details::DrawDoublePropertyAt(void* container, DProperty* prop)
+{
+    EditorTheme* theme = g_editor->GetEditorTheme();
+    const auto& c = theme->colors;
+
+    double* val = static_cast<double*>(prop->GetValue(container));
+
+    const float availW = BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
+    ImGui::SetNextItemWidth(availW);
+    const bool changed = ImGui::InputDouble("##v", val, 0.1, 1.0, "%.6f");
+    auto evt = WidgetEditFromLastItem(changed);
+    EndPropertyRow();
+
+    return evt;
+}
+
+WidgetEditEvent EditorWindow_Details::DrawBoolPropertyAt(void* container, DProperty* prop)
+{
+    EditorTheme* theme = g_editor->GetEditorTheme();
+    const auto& c = theme->colors;
+
+    bool* val = static_cast<bool*>(prop->GetValue(container));
+
+    BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
+    const bool changed = ImGui::Checkbox("##v", val);
+    auto evt = WidgetEditFromLastItem(changed);
+    EndPropertyRow();
+
+    return evt;
+}
+
+WidgetEditEvent EditorWindow_Details::DrawStringPropertyAt(void* container, DProperty* prop)
+{
+    const std::string& current = *static_cast<const std::string*>(prop->GetValue(container));
+    char buf[1024];
+    const size_t len = (std::min)(current.size(), sizeof(buf) - 1);
+    memcpy(buf, current.c_str(), len);
+    buf[len] = '\0';
+    buf[sizeof(buf) - 1] = '\0';
+
+    auto evt = m_stringField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), buf, sizeof(buf));
+    if (evt.valueChanged)
+    {
+        const std::string newVal(buf);
+        std::string* addr = static_cast<std::string*>(prop->GetValue(container));
+        *addr = newVal;
+    }
+    return evt;
 }
 
 WidgetEditEvent EditorWindow_Details::DrawIntProperty(DObject* instance, DProperty* prop)

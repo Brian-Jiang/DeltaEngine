@@ -27,6 +27,24 @@ public:
 
 protected:
     virtual void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) = 0;
+
+    DPROPERTY()
+    bool m_castShadow = true;
+
+    DPROPERTY()
+    float m_shadowBias = 0.005f;
+
+    DPROPERTY()
+    float m_shadowSlopeBias = 1.0f;
+
+    DPROPERTY()
+    float m_shadowNormalBias = 0.0f;
+
+    DPROPERTY()
+    float m_pcssLightSize = 0.05f;
+
+    DPROPERTY()
+    int m_shadowResolution = 1024;
 };
 
 DELTA_ENGINE_NS_END

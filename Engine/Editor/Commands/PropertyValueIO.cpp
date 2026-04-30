@@ -2,6 +2,7 @@
 #include "Editor/Commands/EditorCommand.h"
 #include "Editor/EditorCore.h"
 
+#include "Runtime/Reflection/DStruct.h"
 #include "Runtime/Reflection/DProperty.h"
 #include "Runtime/Reflection/DVectorProperty.h"
 #include "Runtime/Assets/DPrimaryAsset.h"
@@ -14,8 +15,120 @@ using namespace DeltaEngine;
 using namespace DirectX;
 using namespace DirectX::SimpleMath;
 
+namespace
+{
+nlohmann::json StructFieldsToJson(void* basePtr, DStruct* ds)
+{
+    nlohmann::json j = nlohmann::json::object();
+    if (!ds || !basePtr)
+        return j;
+
+    if (DStruct* sup = ds->GetSuper())
+    {
+        nlohmann::json superJ = StructFieldsToJson(basePtr, sup);
+        if (superJ.is_object())
+            j.update(std::move(superJ));
+    }
+
+    for (DProperty* prop = ds->GetOwnProperties(); prop; prop = prop->GetNext())
+    {
+        switch (prop->GetPropertyType())
+        {
+        case EPropertyType::Float:
+            j[prop->GetName()] = *static_cast<float*>(prop->GetValue(basePtr));
+            break;
+        case EPropertyType::Int:
+            j[prop->GetName()] = *static_cast<int*>(prop->GetValue(basePtr));
+            break;
+        case EPropertyType::Bool:
+            j[prop->GetName()] = *static_cast<bool*>(prop->GetValue(basePtr));
+            break;
+        case EPropertyType::Double:
+            j[prop->GetName()] = *static_cast<double*>(prop->GetValue(basePtr));
+            break;
+        case EPropertyType::String:
+            j[prop->GetName()] = *static_cast<std::string*>(prop->GetValue(basePtr));
+            break;
+        case EPropertyType::Struct:
+        {
+            auto* dsp = static_cast<DStructProperty*>(prop);
+            void* nestedBase = dsp->GetValue(basePtr);
+            DStruct* nestedSchema = dsp->GetSchema();
+            j[prop->GetName()] = StructFieldsToJson(nestedBase, nestedSchema);
+            break;
+        }
+        default:
+            break;
+        }
+    }
+
+    return j;
+}
+
+bool SetStructFieldsFromJson(void* basePtr, DStruct* ds, const nlohmann::json& value)
+{
+    if (!ds || !basePtr || !value.is_object())
+        return false;
+
+    bool ok = true;
+
+    if (DStruct* sup = ds->GetSuper())
+        ok = SetStructFieldsFromJson(basePtr, sup, value) && ok;
+
+    for (DProperty* prop = ds->GetOwnProperties(); prop; prop = prop->GetNext())
+    {
+        const auto it = value.find(prop->GetName());
+        if (it == value.end())
+            continue;
+
+        void* addr = prop->GetValue(basePtr);
+
+        switch (prop->GetPropertyType())
+        {
+        case EPropertyType::Float:
+            *static_cast<float*>(addr) = it->get<float>();
+            break;
+        case EPropertyType::Int:
+            *static_cast<int*>(addr) = it->get<int>();
+            break;
+        case EPropertyType::Bool:
+            *static_cast<bool*>(addr) = it->get<bool>();
+            break;
+        case EPropertyType::Double:
+            *static_cast<double*>(addr) = it->get<double>();
+            break;
+        case EPropertyType::String:
+            *static_cast<std::string*>(addr) = it->get<std::string>();
+            break;
+        case EPropertyType::Struct:
+        {
+            auto* dsp = static_cast<DStructProperty*>(prop);
+            void* nestedBase = dsp->GetValue(basePtr);
+            DStruct* nestedSchema = dsp->GetSchema();
+            if (!SetStructFieldsFromJson(nestedBase, nestedSchema, *it))
+                ok = false;
+            break;
+        }
+        default:
+            ok = false;
+            break;
+        }
+    }
+
+    return ok;
+}
+} // namespace
+
 nlohmann::json DeltaEngine::PropertyToJson(const DObject* obj, const DProperty* prop)
 {
+    if (prop->GetPropertyType() == EPropertyType::Struct)
+    {
+        auto* dsp = static_cast<const DStructProperty*>(prop);
+        DStruct* schema = dsp->GetSchema();
+        void* structBase = dsp->GetValue(const_cast<DObject*>(obj));
+        return StructFieldsToJson(structBase, schema);
+    }
+
     const void* addr = prop->GetValue(obj);
 
     switch (prop->GetPropertyType())
@@ -63,6 +176,18 @@ nlohmann::json DeltaEngine::PropertyToJson(const DObject* obj, const DProperty* 
 
 bool DeltaEngine::SetPropertyFromJson(DObject* obj, const DProperty* prop, const nlohmann::json& value)
 {
+    if (prop->GetPropertyType() == EPropertyType::Struct)
+    {
+        auto* dsp = static_cast<const DStructProperty*>(prop);
+        DStruct* schema = dsp->GetSchema();
+        void* structBase = dsp->GetValue(obj);
+        if (!SetStructFieldsFromJson(structBase, schema, value))
+            return false;
+        obj->MarkDirty();
+        obj->PostEditChangeProperty(prop);
+        return true;
+    }
+
     void* addr = reinterpret_cast<char*>(obj) + prop->GetOffset();
 
     switch (prop->GetPropertyType())

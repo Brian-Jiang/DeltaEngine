@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "Core/SceneComponent.h"
+#include "Graphics/Shadow/ShadowSettings.h"
 
 #include "Camera.generated.h"
 
@@ -55,6 +56,9 @@ private:
 
     DPROPERTY()
     PostProcessStack* m_postProcessStack = nullptr;
+
+    DPROPERTY()
+    ShadowSettings m_shadowSettings;
 
     std::shared_ptr<CameraRenderProxy> m_renderProxy;
 };

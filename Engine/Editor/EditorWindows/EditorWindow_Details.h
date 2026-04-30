@@ -22,6 +22,7 @@ DELTA_ENGINE_NS_BEGIN
 class GameObject;
 class SceneComponent;
 class DComponent;
+class DStruct;
 
 class EditorWindow_Details : public EditorWindow
 {
@@ -57,6 +58,15 @@ private:
     bool DrawObjectPtrProperty(DObject* instance, DProperty* prop, int depth);
     bool DrawBulkDataProperty(DObject* instance, DProperty* prop);
     bool DrawVectorProperty(DObject* instance, DProperty* prop, int depth);
+
+    WidgetEditEvent DrawStructPropertyEditor(DObject* instance, DStructProperty* dsp);
+    void DrawStructSchemaFields(void* structBase, DStruct* ds, WidgetEditEvent& merged);
+
+    WidgetEditEvent DrawIntPropertyAt(void* container, DProperty* prop);
+    WidgetEditEvent DrawFloatPropertyAt(void* container, DProperty* prop);
+    WidgetEditEvent DrawDoublePropertyAt(void* container, DProperty* prop);
+    WidgetEditEvent DrawBoolPropertyAt(void* container, DProperty* prop);
+    WidgetEditEvent DrawStringPropertyAt(void* container, DProperty* prop);
 
     const DProperty* m_activeEditProp   = nullptr;
     nlohmann::json   m_activeEditBefore = {};

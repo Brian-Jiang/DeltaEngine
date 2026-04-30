@@ -39,6 +39,12 @@ private:
     DirectX::XMVECTOR m_color;
     DPROPERTY()
     float m_intensity;
+
+    DPROPERTY()
+    float m_shadowMaxDistance = 100.0f;
+
+    DPROPERTY()
+    float m_shadowOrthoPadding = 5.0f;
 };
 
 DELTA_ENGINE_NS_END
