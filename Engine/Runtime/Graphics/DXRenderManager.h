@@ -20,6 +20,7 @@
 #include "Runtime/Graphics/DirectX/DirectX12Texture.h"
 #include "Runtime/Graphics/DirectX/RenderTarget.h"
 #include "Runtime/Graphics/IBL/IBLBaker.h"
+#include "Runtime/Graphics/Shadow/ShadowPassManager.h"
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -106,6 +107,7 @@ private:
     std::shared_ptr<DXGraphicsContext> m_currentContext;
 
     IBLBaker m_iblBaker;
+    ShadowPassManager m_shadowPass;
     IBLBaker::IBLResources m_iblResources;
     DTexture* m_lastSkyboxTexture = nullptr;
     bool m_iblFallbackReady = false;

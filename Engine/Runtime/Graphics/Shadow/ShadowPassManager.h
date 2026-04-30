@@ -1,0 +1,47 @@
+#pragma once
+
+#include "EngineIncludes.h"
+
+#include "Graphics/Shadow/ShadowAtlas.h"
+#include "Graphics/Shadow/ShadowCubeArray.h"
+#include "Graphics/Shadow/ShadowMapAllocator.h"
+
+#include <memory>
+#include <vector>
+
+DELTA_ENGINE_NS_BEGIN
+
+class Device;
+class DirectX12Texture;
+class DWorld;
+struct DXGraphicsContext;
+
+class ShadowPassManager
+{
+public:
+    DELTAENGINE_API void Initialize(Device& device);
+    DELTAENGINE_API void Shutdown();
+    DELTAENGINE_API void Render(std::shared_ptr<DXGraphicsContext> ctx, DWorld& world);
+
+    DELTAENGINE_API bool ShadowResourcesReady() const;
+    DELTAENGINE_API std::shared_ptr<DirectX12Texture> GetDirectionalAtlasTexture() const;
+    DELTAENGINE_API std::shared_ptr<DirectX12Texture> GetSpotAtlasTexture() const;
+    DELTAENGINE_API std::shared_ptr<DirectX12Texture> GetPointCubeArrayTexture() const;
+
+private:
+    static constexpr uint32_t kAtlasSize = 4096;
+    static constexpr uint32_t kDirectionalTileSize = 2048;
+    static constexpr uint32_t kSpotTileSize = 1024;
+    static constexpr uint32_t kPointFaceSize = 512;
+    static constexpr uint32_t kPointCubeCount = 8;
+    static constexpr uint32_t kDefaultShadowMapEdge = 1024;
+
+    ShadowAtlas m_directionalAtlas;
+    ShadowAtlas m_spotAtlas;
+    ShadowCubeArray m_pointCubes;
+    ShadowMapAllocator m_directionalAllocator;
+    ShadowMapAllocator m_spotAllocator;
+    PointSliceAllocator m_pointAllocator;
+};
+
+DELTA_ENGINE_NS_END

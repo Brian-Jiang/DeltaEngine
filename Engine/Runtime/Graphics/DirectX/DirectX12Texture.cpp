@@ -101,7 +101,7 @@ void DirectX12Texture::CreateViews()
             m_RenderTargetView = m_Device.AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
             d3d12Device->CreateRenderTargetView(m_d3d12Resource.Get(), nullptr, m_RenderTargetView.GetDescriptorHandle());
         }
-        if (shadowDepthTypeless && CheckDSVSupport() && CheckSRVSupport()) {
+        if (shadowDepthTypeless) {
             m_DepthStencilView = m_Device.AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
             D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
             dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;

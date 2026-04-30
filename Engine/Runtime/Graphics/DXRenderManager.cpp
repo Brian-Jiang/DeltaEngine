@@ -153,6 +153,7 @@ void DXRenderManager::LoadAssets()
     m_rootSignature->GetD3D12RootSignature()->SetName(L"RootSignature Scene");
 
     m_iblBaker.Initialize(*m_device);
+    m_shadowPass.Initialize(*m_device);
 }
 
 void DXRenderManager::InitWorldRenderers(DWorld& world)
@@ -224,6 +225,11 @@ void DXRenderManager::PrepareFrame()
     commandList->GetD3D12CommandList()->SetName(L"CommandList Scene");
     m_currentCommandList = commandList;
     m_currentContext.reset();
+    {
+        auto ctx = GetGraphicsContext();
+        if (m_currentWorld)
+            m_shadowPass.Render(ctx, *m_currentWorld);
+    }
 
     const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
     commandList->ClearTexture(m_renderTarget->GetTexture(AttachmentPoint::Color0), clearColor);
@@ -303,14 +309,26 @@ void DXRenderManager::StageIBLDescriptors(CommandList& commandList)
 
 void DXRenderManager::StageShadowDescriptors(CommandList& commandList)
 {
-    auto map2D  = DefaultTextures::GetShadowMap2DFallback();
-    auto cubeAr = DefaultTextures::GetShadowCubeArrayFallback();
-    if (!map2D || !cubeAr)
-        return;
+    const bool shadowsOk = m_shadowPass.ShadowResourcesReady();
+    auto mapDir = shadowsOk ? m_shadowPass.GetDirectionalAtlasTexture() : nullptr;
+    auto mapSpot = shadowsOk ? m_shadowPass.GetSpotAtlasTexture() : nullptr;
+    auto cubeAr = shadowsOk ? m_shadowPass.GetPointCubeArrayTexture() : nullptr;
+
+    if (!mapDir || !mapSpot || !cubeAr)
+    {
+        auto fb2d = DefaultTextures::GetShadowMap2DFallback();
+        auto fbCube = DefaultTextures::GetShadowCubeArrayFallback();
+        if (!fb2d || !fbCube)
+            return;
+
+        mapDir = fb2d;
+        mapSpot = fb2d;
+        cubeAr = fbCube;
+    }
 
     const int32_t rp = static_cast<int32_t>(RootParameterType::ShadowMaps);
-    commandList.SetShaderResourceView(rp, 0, map2D, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    commandList.SetShaderResourceView(rp, 1, map2D, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    commandList.SetShaderResourceView(rp, 0, mapDir, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    commandList.SetShaderResourceView(rp, 1, mapSpot, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     commandList.SetShaderResourceView(rp, 2, cubeAr, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
     commandList.SetGraphicsDynamicConstantBuffer(static_cast<UINT>(RootParameterType::ShadowCB),
@@ -451,6 +469,7 @@ void DXRenderManager::OnDestroy()
 
     m_iblResources = {};
     m_iblBaker.Shutdown();
+    m_shadowPass.Shutdown();
 
     DefaultTextures::Shutdown();
 }
