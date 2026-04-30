@@ -5,6 +5,7 @@ set(DELTA_ENGINE_TEST_SOURCES
     Graphics/GraphicsStructureTests.cpp
     Graphics/PostProcessTests_DataModel.cpp
     Graphics/RenderCoreTests.cpp
+    Graphics/ShadowMapAllocatorTests.cpp
     Reflection/ReflectionRegistryTests.cpp
     Serialization/Core/UuidTests.cpp
     Serialization/Core/ScriptPointerTests.cpp

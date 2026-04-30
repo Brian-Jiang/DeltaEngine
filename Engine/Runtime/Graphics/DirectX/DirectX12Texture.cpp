@@ -93,15 +93,55 @@ void DirectX12Texture::CreateViews()
         auto d3d12Device = m_Device.GetD3D12Device();
         CD3DX12_RESOURCE_DESC desc(m_d3d12Resource->GetDesc());
 
+        const bool shadowDepthTypeless = desc.Format == DXGI_FORMAT_R32_TYPELESS
+            && (desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) != 0
+            && (desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) == 0;
+
         if ((desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) != 0 && CheckRTVSupport()) {
             m_RenderTargetView = m_Device.AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
             d3d12Device->CreateRenderTargetView(m_d3d12Resource.Get(), nullptr, m_RenderTargetView.GetDescriptorHandle());
         }
-        if ((desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) != 0 && CheckDSVSupport()) {
+        if (shadowDepthTypeless && CheckDSVSupport() && CheckSRVSupport()) {
+            m_DepthStencilView = m_Device.AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+            D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+            dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+            dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
+            if (desc.DepthOrArraySize <= 1u) {
+                dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+                dsvDesc.Texture2D.MipSlice = 0;
+            } else {
+                dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
+                dsvDesc.Texture2DArray.MipSlice = 0;
+                dsvDesc.Texture2DArray.FirstArraySlice = 0;
+                dsvDesc.Texture2DArray.ArraySize = desc.DepthOrArraySize;
+            }
+            d3d12Device->CreateDepthStencilView(m_d3d12Resource.Get(), &dsvDesc, m_DepthStencilView.GetDescriptorHandle());
+
+            m_ShaderResourceView = m_Device.AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+            srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+            srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+            if (desc.DepthOrArraySize <= 1u) {
+                srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+                srvDesc.Texture2D.MipLevels = desc.MipLevels;
+                srvDesc.Texture2D.MostDetailedMip = 0;
+                srvDesc.Texture2D.PlaneSlice = 0;
+                srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+            } else {
+                srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+                srvDesc.Texture2DArray.MostDetailedMip = 0;
+                srvDesc.Texture2DArray.MipLevels = desc.MipLevels;
+                srvDesc.Texture2DArray.FirstArraySlice = 0;
+                srvDesc.Texture2DArray.ArraySize = desc.DepthOrArraySize;
+                srvDesc.Texture2DArray.PlaneSlice = 0;
+                srvDesc.Texture2DArray.ResourceMinLODClamp = 0.0f;
+            }
+            d3d12Device->CreateShaderResourceView(m_d3d12Resource.Get(), &srvDesc, m_ShaderResourceView.GetDescriptorHandle());
+        } else if ((desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) != 0 && CheckDSVSupport()) {
             m_DepthStencilView = m_Device.AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
             d3d12Device->CreateDepthStencilView(m_d3d12Resource.Get(), nullptr, m_DepthStencilView.GetDescriptorHandle());
         }
-        if ((desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) == 0 && CheckSRVSupport()) {
+        if (!shadowDepthTypeless && (desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) == 0 && CheckSRVSupport()) {
             m_ShaderResourceView = m_Device.AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
             d3d12Device->CreateShaderResourceView(m_d3d12Resource.Get(), nullptr, m_ShaderResourceView.GetDescriptorHandle());
         }
@@ -150,7 +190,8 @@ void DirectX12Texture::CreateTextureCubeArraySRV()
         throw std::exception("CreateTextureCubeArraySRV requires DepthOrArraySize multiple of 6.");
 
     D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-    srvDesc.Format                     = desc.Format;
+    srvDesc.Format                     =
+        desc.Format == DXGI_FORMAT_R32_TYPELESS ? DXGI_FORMAT_R32_FLOAT : desc.Format;
     srvDesc.Shader4ComponentMapping    = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
     srvDesc.ViewDimension              = D3D12_SRV_DIMENSION_TEXTURECUBEARRAY;
     srvDesc.TextureCubeArray.MostDetailedMip     = 0;
