@@ -2,6 +2,8 @@
 
 #include "EngineIncludes.h"
 
+#include "Runtime/Graphics/RenderProxy/RenderProxy.h"
+
 #include <d3d12.h>
 #include <DirectXMath.h>
 #include <memory>
@@ -11,19 +13,18 @@
 DELTA_ENGINE_NS_BEGIN
 
 class PipelineStateObject;
-struct DXGraphicsContext;
 class DMesh;
 struct MeshRendererSettings;
 class IndexBuffer;
 class VertexBuffer;
 class DirectX12Texture;
 
-class MeshRenderProxy
+class MeshRenderProxy : public RenderProxy
 {
 public:
     MeshRenderProxy();
     MeshRenderProxy(DMesh* mesh, std::shared_ptr<MeshRendererSettings> settings);
-    ~MeshRenderProxy();
+    ~MeshRenderProxy() override;
 
     /// Replaces the mesh used by the render proxy.
     void SetMesh(DMesh* mesh);
@@ -32,10 +33,10 @@ public:
     void UpdateWorldTransform(DirectX::XMMATRIX worldMatrix);
 
     /// Builds pipeline state objects and uploads textures for the current mesh.
-    void BuildPipelineStateObject(std::shared_ptr<DXGraphicsContext> renderContext);
+    void Initialize(std::shared_ptr<DXGraphicsContext> renderContext) override;
 
     /// Records draw calls for the current mesh into the active command list.
-    void GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext);
+    void GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext) override;
 
     /// Returns the number of indices in the first index buffer.
     size_t GetIndexCount() const;

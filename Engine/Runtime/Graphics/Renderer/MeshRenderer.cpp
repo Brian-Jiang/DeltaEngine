@@ -25,7 +25,7 @@ void MeshRenderer::InitGraphicState(std::shared_ptr<DXGraphicsContext> context)
     if (!m_meshRenderProxy)
         return;
 
-    m_meshRenderProxy->BuildPipelineStateObject(context);
+    m_meshRenderProxy->Initialize(context);
     m_meshRenderProxy->UpdateWorldTransform(GetWorldTransform());
 }
 

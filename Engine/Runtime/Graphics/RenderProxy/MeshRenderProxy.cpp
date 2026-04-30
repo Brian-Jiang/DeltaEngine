@@ -60,7 +60,7 @@ void DeltaEngine::MeshRenderProxy::UpdateWorldTransform(DirectX::XMMATRIX worldM
     m_worldMatrix = worldMatrix;
 }
 
-void DeltaEngine::MeshRenderProxy::BuildPipelineStateObject(std::shared_ptr<DXGraphicsContext> renderContext)
+void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext> renderContext)
 {
     if (!m_mesh)
         return;
@@ -164,7 +164,7 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
         }
 
         if (m_pipelineStateObjects.empty())
-            BuildPipelineStateObject(renderContext);
+            Initialize(renderContext);
 
         m_meshDirty = false;
     }

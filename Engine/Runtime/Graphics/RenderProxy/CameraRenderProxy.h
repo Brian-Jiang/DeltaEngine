@@ -2,15 +2,16 @@
 
 #include "EngineIncludes.h"
 
+#include "Runtime/Graphics/RenderProxy/RenderProxy.h"
+
 #include <DirectXMath.h>
 #include <memory>
 
 DELTA_ENGINE_NS_BEGIN
 
-struct DXGraphicsContext;
 class PostProcessStack;
 
-class CameraRenderProxy
+class CameraRenderProxy : public RenderProxy
 {
 public:
     CameraRenderProxy(float fov, float aspectRatio, float nearPlane, float farPlane);
@@ -27,7 +28,7 @@ public:
     void UpdateParameters(float fov, float aspectRatio, float nearPlane, float farPlane);
 
     /// Uploads the camera constant buffer for the current frame.
-    void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext);
+    void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext) override;
 
 private:
     void RecalculateViewProjectionMatrix();

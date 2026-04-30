@@ -23,8 +23,13 @@ SkyboxRenderProxy::SkyboxRenderProxy(DTexture* cubemapTexture, DMaterial* materi
 {
 }
 
-void SkyboxRenderProxy::BuildPipelineStateObject(std::shared_ptr<DXGraphicsContext> renderContext)
+void SkyboxRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext> renderContext)
 {
+    if (m_initialized)
+        return;
+    if (!m_cubemapTexture || !m_material || !m_material->GetShader())
+        return;
+
     // Upload cubemap; LoadTexture calls CreateCubemapSRV() because IsCubemap() is true.
     m_gpuCubemap = renderContext->commandList->LoadTexture(m_cubemapTexture);
 
@@ -80,16 +85,7 @@ void SkyboxRenderProxy::BuildPipelineStateObject(std::shared_ptr<DXGraphicsConte
 
     m_pso = renderContext->device->CreatePipelineStateObject(stream);
     m_pso->GetD3D12PipelineState()->SetName(L"PSO Skybox");
-}
 
-void SkyboxRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext> renderContext)
-{
-    if (m_initialized)
-        return;
-    if (!m_cubemapTexture || !m_material || !m_material->GetShader())
-        return;
-
-    BuildPipelineStateObject(renderContext);
     m_initialized = true;
 }
 

@@ -2,20 +2,20 @@
 
 #include "EngineIncludes.h"
 
+#include "Runtime/Graphics/RenderProxy/RenderProxy.h"
+
 #include <memory>
 #include <DirectXMath.h>
 
 DELTA_ENGINE_NS_BEGIN
 
-struct DXGraphicsContext;
-
-class SpotLightRenderProxy
+class SpotLightRenderProxy : public RenderProxy
 {
 public:
     void UpdateParameters(DirectX::XMVECTOR position, DirectX::XMVECTOR direction,
         DirectX::XMVECTOR color, float intensity, float range,
         float innerConeAngle, float outerConeAngle);
-    void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext);
+    void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext) override;
 
 private:
     DirectX::XMVECTOR m_position;
