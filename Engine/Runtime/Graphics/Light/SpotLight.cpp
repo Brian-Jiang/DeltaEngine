@@ -41,6 +41,7 @@ void SpotLight::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context)
     DirectX::XMVECTOR direction = DirectX::XMVector4Normalize(DirectX::XMVectorSetW(GetForward(), 0.0f));
 
     m_renderProxy->UpdateParameters(position, direction, m_color, m_intensity, m_range,
-        m_innerConeAngle, m_outerConeAngle);
+        m_innerConeAngle, m_outerConeAngle, m_castShadow, m_shadowBias, m_pcssLightSize);
     m_renderProxy->PreGatherDrawCalls(context);
+    m_renderProxy->SetSpotLightBufferIndex(static_cast<uint32_t>(context->spotLights.size() - 1));
 }

@@ -32,6 +32,7 @@ class DWorld;
 class DTexture;
 class PostProcessStack;
 class PostProcessPass;
+class ShadowDepthPSO;
 
 struct PostProcessTarget
 {
@@ -73,6 +74,8 @@ public:
     inline std::shared_ptr<Device> GetDevice() const { return m_device; }
     inline std::shared_ptr<RenderTarget> GetRenderTarget() const { return m_renderTarget; }
     inline std::shared_ptr<CommandList> GetCurrentCommandList() const { return m_currentCommandList; }
+
+    DELTAENGINE_API const ShadowDepthPSO* GetShadowDepthPSO() const;
 
     DELTAENGINE_API D3D12_CPU_DESCRIPTOR_HANDLE GetFinalSceneSRV() const { return m_finalPostProcessSRV; }
     DELTAENGINE_API bool HasPostProcessedOutput() const { return m_hasPostProcessedOutput; }

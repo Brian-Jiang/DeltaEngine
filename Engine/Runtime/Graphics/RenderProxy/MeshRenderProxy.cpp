@@ -17,12 +17,15 @@
 #include "Graphics/DirectX/VertexBuffer.h"
 #include "Graphics/MaterialConstants.h"
 #include "Graphics/Structures/RootParameterType.h"
+#include "Graphics/Shadow/ShadowDepthPSO.h"
+#include "Graphics/Shadow/ShadowView.h"
 #include "Core/DMaterial.h"
 #include "Core/DMesh.h"
 #include "Core/DShader.h"
 #include "Core/DTexture.h"
 
 using namespace DeltaEngine;
+using namespace DirectX;
 
 MeshRenderProxy::MeshRenderProxy()
     : m_mesh(nullptr)
@@ -238,8 +241,75 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
     }
 }
 
-void MeshRenderProxy::GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext>, const ShadowView&)
+void MeshRenderProxy::GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext, const ShadowView& view)
 {
+    if (view.type != LightType::Spot || !m_mesh || !renderContext || !renderContext->renderManager || !renderContext->commandList)
+        return;
+
+    const ShadowDepthPSO* shadowPso = renderContext->renderManager->GetShadowDepthPSO();
+    if (!shadowPso)
+        return;
+
+    std::shared_ptr<CommandList> commandList = renderContext->commandList;
+
+    if (m_meshDirty)
+    {
+        m_VertexBuffers.clear();
+        m_IndexBuffers.clear();
+
+        const int submeshCount = m_mesh->GetSubMeshCount();
+        for (int i = 0; i < submeshCount; ++i)
+        {
+            std::shared_ptr<VertexBuffer> vertexBuffer = commandList->CopyVertexBuffer(m_mesh->GetVertices()[i]);
+            const std::wstring meshStem = std::filesystem::path(m_mesh->GetSourcePath()).stem().wstring();
+            vertexBuffer->SetName(L"DMesh " + meshStem + L" Sub" + std::to_wstring(i) + L" VB Shadow");
+            m_VertexBuffers.push_back(vertexBuffer);
+            std::shared_ptr<IndexBuffer> indexBuffer = commandList->CopyIndexBuffer(m_mesh->GetIndices()[i]);
+            indexBuffer->SetName(L"DMesh " + meshStem + L" Sub" + std::to_wstring(i) + L" IB Shadow");
+            m_IndexBuffers.push_back(indexBuffer);
+        }
+
+        if (m_pipelineStateObjects.empty())
+            Initialize(renderContext);
+
+        m_meshDirty = false;
+    }
+
+    const XMMATRIX viewProjCb = view.viewProj;
+    const XMMATRIX worldCb = XMMatrixTranspose(m_worldMatrix);
+
+    commandList->SetGraphicsRootSignature(shadowPso->GetRootSignature());
+    commandList->SetPipelineState(shadowPso->GetPSO2D());
+    commandList->SetPrimitiveTopology(m_PrimitiveTopology);
+
+    const int submeshCount = m_mesh->GetSubMeshCount();
+    for (int i = 0; i < submeshCount; ++i)
+    {
+        DMaterial* material = m_mesh->GetMaterial(i);
+        if (material && HasAny(material->GetFlags(), MaterialFlags::AlphaBlend))
+            continue;
+
+        if (i >= static_cast<int>(m_VertexBuffers.size()) || i >= static_cast<int>(m_IndexBuffers.size()))
+            continue;
+
+        commandList->SetGraphicsDynamicConstantBuffer(ShadowDepthRS::ViewProjCB, viewProjCb);
+        commandList->SetGraphicsDynamicConstantBuffer(ShadowDepthRS::WorldMatrixCB, worldCb);
+
+        commandList->SetVertexBuffer(0, m_VertexBuffers[static_cast<size_t>(i)]);
+
+        const auto indexCount = m_IndexBuffers[static_cast<size_t>(i)]->GetNumIndices();
+        const auto vertexCount = m_VertexBuffers[static_cast<size_t>(i)]->GetNumVertices();
+
+        if (indexCount > 0)
+        {
+            commandList->SetIndexBuffer(m_IndexBuffers[static_cast<size_t>(i)]);
+            commandList->DrawIndexed(static_cast<uint32_t>(indexCount), 1u, 0u, 0u, 0u);
+        }
+        else if (vertexCount > 0)
+        {
+            commandList->Draw(static_cast<uint32_t>(vertexCount), 1u, 0u, 0u);
+        }
+    }
 }
 
 size_t DeltaEngine::MeshRenderProxy::GetIndexCount() const

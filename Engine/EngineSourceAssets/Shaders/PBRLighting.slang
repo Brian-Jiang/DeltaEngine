@@ -1,6 +1,7 @@
 module PBRLighting;
 
 import StandardConstantStructs;
+import ShadowSampling;
 
 static const float PBR_PI = 3.14159265358979f;
 
@@ -95,5 +96,10 @@ public float3 EvaluateSpotPBR(
     float  dr         = distance / light.range;
     float  distFall   = saturate(1.0 - dr * dr);
     float  attenuate  = spotFactor * distFall * light.intensity;
-    return EvaluateDirectLight(N, V, L, light.color.rgb, attenuate, baseColor, metallic, roughness);
+
+    float vis = 1.0;
+    if (light.shadowEnabled != 0)
+        vis = PCSS_Spot(P, light);
+
+    return EvaluateDirectLight(N, V, L, light.color.rgb, attenuate, baseColor, metallic, roughness) * vis;
 }

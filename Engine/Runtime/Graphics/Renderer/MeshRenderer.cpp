@@ -1,6 +1,7 @@
 #include "MeshRenderer.h"
 
 #include "Runtime/Graphics/RenderProxy/MeshRenderProxy.h"
+#include "Runtime/Graphics/Shadow/ShadowView.h"
 
 using namespace DeltaEngine;
 
@@ -48,8 +49,9 @@ void DeltaEngine::MeshRenderer::GatherDrawCalls(std::shared_ptr<DXGraphicsContex
 
 void MeshRenderer::GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> context, const ShadowView& view)
 {
-    if (m_meshRenderProxy)
-        m_meshRenderProxy->GatherShadowDrawCalls(context, view);
+    if (!m_castShadow || view.type != LightType::Spot || !m_meshRenderProxy)
+        return;
+    m_meshRenderProxy->GatherShadowDrawCalls(context, view);
 }
 
 void DeltaEngine::MeshRenderer::OnTransformChanged()

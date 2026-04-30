@@ -4,10 +4,10 @@
 
 #include "Graphics/Shadow/ShadowAtlas.h"
 #include "Graphics/Shadow/ShadowCubeArray.h"
+#include "Graphics/Shadow/ShadowDepthPSO.h"
 #include "Graphics/Shadow/ShadowMapAllocator.h"
 
 #include <memory>
-#include <vector>
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -28,6 +28,8 @@ public:
     DELTAENGINE_API std::shared_ptr<DirectX12Texture> GetSpotAtlasTexture() const;
     DELTAENGINE_API std::shared_ptr<DirectX12Texture> GetPointCubeArrayTexture() const;
 
+    DELTAENGINE_API const ShadowDepthPSO* GetShadowDepthPSO() const { return m_shadowDepthPso.get(); }
+
 private:
     static constexpr uint32_t kAtlasSize = 4096;
     static constexpr uint32_t kDirectionalTileSize = 2048;
@@ -42,6 +44,7 @@ private:
     ShadowMapAllocator m_directionalAllocator;
     ShadowMapAllocator m_spotAllocator;
     PointSliceAllocator m_pointAllocator;
+    std::unique_ptr<ShadowDepthPSO> m_shadowDepthPso;
 };
 
 DELTA_ENGINE_NS_END

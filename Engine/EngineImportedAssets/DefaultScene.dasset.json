@@ -69,6 +69,7 @@
     {
       "_class": "MeshRenderer",
       "_objectId": "c401324f-d0b6-4311-ba23-4f4bb562b12a",
+      "m_castShadow": true,
       "m_children": [],
       "m_gameObject": {
         "assetId": "097992b4-c850-4c69-a612-ec83528b0c30",
@@ -118,6 +119,7 @@
     {
       "_class": "MeshRenderer",
       "_objectId": "1f406490-21bc-45b7-8122-7c086c917735",
+      "m_castShadow": true,
       "m_children": [],
       "m_gameObject": {
         "assetId": "097992b4-c850-4c69-a612-ec83528b0c30",
@@ -203,7 +205,8 @@
       "m_postProcessStack": {
         "assetId": "a521c98a-6402-46d4-b0d6-a61e1c232971",
         "objectId": "bd61905b-dc6c-49ac-9186-51f7cf4e5f24"
-      }
+      },
+      "m_shadowSettings": 16
     },
     {
       "_class": "GameObject",
@@ -224,6 +227,7 @@
     {
       "_class": "DirectionalLight",
       "_objectId": "1d722eaf-6734-4ac8-aa26-a595a395c3a2",
+      "m_castShadow": true,
       "m_children": [],
       "m_color": [
         1.0,
@@ -260,7 +264,14 @@
         0.0,
         1.0
       ],
-      "m_name": "Sun Light"
+      "m_name": "Sun Light",
+      "m_pcssLightSize": 0.05000000074505806,
+      "m_shadowBias": 0.004999999888241291,
+      "m_shadowMaxDistance": 100.0,
+      "m_shadowNormalBias": 0.0,
+      "m_shadowOrthoPadding": 5.0,
+      "m_shadowResolution": 1024,
+      "m_shadowSlopeBias": 1.0
     },
     {
       "_class": "GameObject",
@@ -281,6 +292,7 @@
     {
       "_class": "PointLight",
       "_objectId": "bcf50e0f-50d9-44cd-9244-dc28531c8104",
+      "m_castShadow": true,
       "m_children": [],
       "m_color": [
         1.0,
@@ -312,7 +324,12 @@
         1.0
       ],
       "m_name": "Warm Point Light",
-      "m_range": 25.899999618530273
+      "m_pcssLightSize": 0.05000000074505806,
+      "m_range": 25.899999618530273,
+      "m_shadowBias": 0.004999999888241291,
+      "m_shadowNormalBias": 0.0,
+      "m_shadowResolution": 1024,
+      "m_shadowSlopeBias": 1.0
     },
     {
       "_class": "GameObject",
@@ -333,6 +350,7 @@
     {
       "_class": "SpotLight",
       "_objectId": "44bdcd45-dcbb-4eff-8268-e18e0e27118b",
+      "m_castShadow": true,
       "m_children": [],
       "m_color": [
         0.20000000298023224,
@@ -345,28 +363,33 @@
         "objectId": "2315bf5d-b686-48f0-8360-77d6e020d0b3"
       },
       "m_innerConeAngle": 0.5235987901687622,
-      "m_intensity": 1.2000000476837158,
+      "m_intensity": 47.20000076293945,
       "m_localTransform": [
         1.0,
         0.0,
         0.0,
         0.0,
         0.0,
-        1.0,
+        7.152452212721983e-07,
+        0.9999852776527405,
         0.0,
         0.0,
+        -0.9999852776527405,
+        7.152452212721983e-07,
         0.0,
-        0.0,
-        1.0,
-        0.0,
-        -84.94178771972656,
-        90.35895538330078,
-        -71.05730438232422,
+        -442.8999938964844,
+        75.30000305175781,
+        -179.10000610351563,
         1.0
       ],
       "m_name": "Cool Spot Light",
       "m_outerConeAngle": 1.0471975803375244,
-      "m_range": 37.099998474121094
+      "m_pcssLightSize": 0.05000000074505806,
+      "m_range": 291.6000061035156,
+      "m_shadowBias": 0.004999999888241291,
+      "m_shadowNormalBias": 0.0,
+      "m_shadowResolution": 1024,
+      "m_shadowSlopeBias": 1.0
     },
     {
       "_class": "TestComponent",
@@ -419,6 +442,7 @@
     {
       "_class": "MeshRenderer",
       "_objectId": "94d64da4-b3cb-41f0-b621-7d8d906f5a67",
+      "m_castShadow": true,
       "m_children": [],
       "m_gameObject": {
         "assetId": "097992b4-c850-4c69-a612-ec83528b0c30",
@@ -437,7 +461,7 @@
         0.0,
         1.0,
         0.0,
-        -319.0,
+        -440.6000061035156,
         85.19999694824219,
         0.0,
         1.0
@@ -468,6 +492,7 @@
     {
       "_class": "MeshRenderer",
       "_objectId": "e6a36343-b743-4c4e-9922-6b1f78e494d6",
+      "m_castShadow": true,
       "m_children": [],
       "m_gameObject": {
         "assetId": "097992b4-c850-4c69-a612-ec83528b0c30",

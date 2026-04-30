@@ -25,6 +25,7 @@
 #include "Runtime/Core/Skybox.h"
 #include "Runtime/Core/DTexture.h"
 #include "Runtime/Graphics/Shadow/ShadowConstants.h"
+#include "Runtime/Graphics/Shadow/ShadowDepthPSO.h"
 
 using namespace Microsoft::WRL;
 using namespace DeltaEngine;
@@ -225,10 +226,14 @@ void DXRenderManager::PrepareFrame()
     commandList->GetD3D12CommandList()->SetName(L"CommandList Scene");
     m_currentCommandList = commandList;
     m_currentContext.reset();
+    commandList->SetGraphicsRootSignature(m_rootSignature);
     {
         auto ctx = GetGraphicsContext();
         if (m_currentWorld)
+        {
+            m_currentWorld->PreGatherDrawCalls(ctx);
             m_shadowPass.Render(ctx, *m_currentWorld);
+        }
     }
 
     const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
@@ -242,6 +247,11 @@ void DXRenderManager::PrepareFrame()
 
     StageIBLDescriptors(*commandList);
     StageShadowDescriptors(*commandList);
+}
+
+const ShadowDepthPSO* DXRenderManager::GetShadowDepthPSO() const
+{
+    return m_shadowPass.GetShadowDepthPSO();
 }
 
 void DXRenderManager::EnsureIBLFallback()

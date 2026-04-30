@@ -176,6 +176,8 @@ public:
     DELTAENGINE_API void ClearDepthStencilTexture(const std::shared_ptr<DirectX12Texture>& texture, D3D12_CLEAR_FLAGS clearFlags,
         float depth = 1.0f, uint8_t stencil = 0);
 
+    DELTAENGINE_API void SetDepthOnlyRenderTarget(const std::shared_ptr<DirectX12Texture>& depthTexture);
+
     /**
      * Generate mips for the texture.
      * The first subresource is used to generate the mip chain.

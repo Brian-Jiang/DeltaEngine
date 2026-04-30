@@ -42,6 +42,9 @@ public:
 
 private:
     DPROPERTY()
+    bool m_castShadow = true;
+
+    DPROPERTY()
     DMesh* m_mesh;
 
     std::shared_ptr<MeshRenderProxy> m_meshRenderProxy;

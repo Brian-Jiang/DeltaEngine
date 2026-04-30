@@ -12,6 +12,7 @@
 #include "Runtime/Core/GameObject.h"
 #include "Assets/DPrimaryAsset.h"
 #include "Graphics/Renderer/Renderer.h"
+#include "Graphics/DXGraphicsContext.h"
 #include "Graphics/Light/LightComponent.h"
 #include "Graphics/RenderProxy/RenderProxy.h"
 #include "Reflection/ReflectionRegistry.h"
@@ -101,6 +102,10 @@ void DeltaEngine::DWorld::InitRenderers(std::shared_ptr<DXGraphicsContext> conte
 
 void DWorld::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const
 {
+    context->directionalLights.clear();
+    context->pointLights.clear();
+    context->spotLights.clear();
+
     std::stack<SceneComponent*> stack;
     stack.push(m_rootSceneComponent);
     bool hasCamera = false;

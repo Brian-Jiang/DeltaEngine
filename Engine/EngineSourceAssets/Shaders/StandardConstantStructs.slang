@@ -148,9 +148,9 @@ public struct ShadowGpuParams
 
 public ConstantBuffer<ShadowGpuParams> ShadowCB : register(b4);
 
-public Texture2D g_shadowDirectionalAtlas : register(t0, space3);
-public Texture2D g_shadowSpotAtlas : register(t1, space3);
-public TextureCubeArray g_shadowPointCubeArray : register(t2, space3);
+public Texture2D<float> g_shadowDirectionalAtlas : register(t0, space3);
+public Texture2D<float> g_shadowSpotAtlas : register(t1, space3);
+public TextureCubeArray<float> g_shadowPointCubeArray : register(t2, space3);
 
 public SamplerComparisonState g_shadowCmpSampler : register(s3);
 

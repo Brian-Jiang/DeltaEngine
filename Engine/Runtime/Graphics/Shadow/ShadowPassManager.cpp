@@ -5,10 +5,12 @@
 #include "Runtime/Graphics/DirectX/CommandList.h"
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/DirectX/DirectX12Texture.h"
+#include "Runtime/Graphics/RenderProxy/RenderProxy.h"
+#include "Runtime/Graphics/Shadow/ShadowDepthPSO.h"
 #include "Runtime/Graphics/Shadow/ShadowView.h"
 
 #include <pix3.h>
-#include <unordered_map>
+#include <vector>
 
 using namespace DeltaEngine;
 
@@ -18,10 +20,12 @@ void ShadowPassManager::Initialize(Device& device)
     m_directionalAtlas.Initialize(device, kAtlasSize, L"ShadowAtlas Directional");
     m_spotAtlas.Initialize(device, kAtlasSize, L"ShadowAtlas Spot");
     m_pointCubes.Initialize(device, kPointFaceSize, kPointCubeCount, L"ShadowCubeArray Point");
+    m_shadowDepthPso = std::make_unique<ShadowDepthPSO>(device);
 }
 
 void ShadowPassManager::Shutdown()
 {
+    m_shadowDepthPso.reset();
     m_pointCubes.Shutdown();
     m_spotAtlas.Shutdown();
     m_directionalAtlas.Shutdown();
@@ -29,7 +33,7 @@ void ShadowPassManager::Shutdown()
 
 bool ShadowPassManager::ShadowResourcesReady() const
 {
-    return m_directionalAtlas.GetTexture() && m_spotAtlas.GetTexture() && m_pointCubes.GetTexture();
+    return m_directionalAtlas.GetTexture() && m_spotAtlas.GetTexture() && m_pointCubes.GetTexture() && m_shadowDepthPso;
 }
 
 std::shared_ptr<DirectX12Texture> ShadowPassManager::GetDirectionalAtlasTexture() const
@@ -63,34 +67,69 @@ void ShadowPassManager::Render(std::shared_ptr<DXGraphicsContext> ctx, DWorld& w
     std::vector<ShadowView> views;
     world.GatherShadowViews(ctx, views);
 
-    std::unordered_map<uint32_t, int32_t> pointLightCube;
+    struct SpotJob
+    {
+        ShadowView view;
+        ShadowMapTileRegion region;
+    };
+    std::vector<SpotJob> spotJobs;
+    spotJobs.reserve(views.size());
 
     for (const ShadowView& view : views)
     {
+        if (view.type != LightType::Spot)
+            continue;
         ShadowMapTileRegion region {};
-        switch (view.type)
-        {
-        case LightType::Directional:
-            m_directionalAllocator.Allocate(kDefaultShadowMapEdge, region);
-            break;
-        case LightType::Spot:
-            m_spotAllocator.Allocate(kDefaultShadowMapEdge, region);
-            break;
-        case LightType::Point:
-            if (pointLightCube.contains(view.lightIndex))
-                break;
-            {
-                const int32_t cubeIdx = m_pointAllocator.Allocate();
-                if (cubeIdx >= 0)
-                    pointLightCube[view.lightIndex] = cubeIdx;
-            }
-            break;
-        }
+        if (m_spotAllocator.Allocate(kDefaultShadowMapEdge, region) < 0)
+            continue;
+        spotJobs.push_back({ view, region });
     }
 
     commandList.ClearDepthStencilTexture(m_directionalAtlas.GetTexture(), D3D12_CLEAR_FLAG_DEPTH);
     commandList.ClearDepthStencilTexture(m_spotAtlas.GetTexture(), D3D12_CLEAR_FLAG_DEPTH);
     commandList.ClearDepthStencilTexture(m_pointCubes.GetTexture(), D3D12_CLEAR_FLAG_DEPTH);
+
+    if (!spotJobs.empty())
+    {
+        for (const SpotJob& job : spotJobs)
+        {
+            const ShadowMapTileRegion& r = job.region;
+            D3D12_VIEWPORT viewport = {};
+            viewport.TopLeftX = static_cast<float>(r.x);
+            viewport.TopLeftY = static_cast<float>(r.y);
+            viewport.Width = static_cast<float>(r.width);
+            viewport.Height = static_cast<float>(r.height);
+            viewport.MinDepth = 0.0f;
+            viewport.MaxDepth = 1.0f;
+
+            const D3D12_RECT scissor = { static_cast<LONG>(r.x), static_cast<LONG>(r.y),
+                static_cast<LONG>(r.x + r.width), static_cast<LONG>(r.y + r.height) };
+
+            commandList.SetViewport(viewport);
+            commandList.SetScissorRect(scissor);
+            commandList.SetDepthOnlyRenderTarget(m_spotAtlas.GetTexture());
+            commandList.SetGraphicsRootSignature(m_shadowDepthPso->GetRootSignature());
+            commandList.SetPipelineState(m_shadowDepthPso->GetPSO2D());
+            commandList.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+            world.GatherShadowDrawCalls(ctx, job.view);
+        }
+    }
+
+    commandList.TransitionBarrier(m_directionalAtlas.GetTexture(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+        D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, true);
+    commandList.TransitionBarrier(m_spotAtlas.GetTexture(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+        D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, true);
+    commandList.TransitionBarrier(m_pointCubes.GetTexture(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+        D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, true);
+    commandList.FlushResourceBarriers();
+
+    for (const SpotJob& job : spotJobs)
+    {
+        ShadowAllocation alloc {};
+        ShadowMapAllocator::FillAtlasUVRect(kAtlasSize, kAtlasSize, job.region, alloc);
+        if (job.view.shadowParamsWriter)
+            job.view.shadowParamsWriter->WriteShadowParams(ctx, alloc);
+    }
 
     PIXEndEvent(d3dCL);
 }

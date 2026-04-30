@@ -101,10 +101,6 @@ void EngineMain::RecordSceneDraws(std::shared_ptr<DXGraphicsContext> context)
     {
         auto* d3dCL = context->commandList->GetD3D12CommandList().Get();
 
-        PIXBeginEvent(d3dCL, PIX_COLOR_DEFAULT, L"PreGatherDrawCalls");
-        world->PreGatherDrawCalls(context);
-        PIXEndEvent(d3dCL);
-
         if (context->cameraOverride.has_value())
             context->commandList->SetGraphicsDynamicConstantBuffer(0, *context->cameraOverride);
         context->ApplyLightBuffersToCommandList();

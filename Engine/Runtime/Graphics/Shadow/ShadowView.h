@@ -7,6 +7,8 @@
 
 DELTA_ENGINE_NS_BEGIN
 
+class RenderProxy;
+
 enum class LightType : uint32_t
 {
     Directional,
@@ -34,6 +36,7 @@ struct ShadowView
     LightType type = LightType::Directional;
     uint32_t lightIndex = 0;
     uint32_t cubeFace = 0;
+    RenderProxy* shadowParamsWriter = nullptr;
 };
 
 DELTA_ENGINE_NS_END
