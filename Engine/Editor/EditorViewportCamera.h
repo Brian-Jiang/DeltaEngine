@@ -22,6 +22,7 @@ struct EditorViewportCamera
     float GetAspectRatio(float w, float h) const { return (h > 0.f) ? w / h : 1.f; }
 
     CameraCB BuildCameraCB(float w, float h) const;
+    ActiveRenderCamera BuildActiveRenderCamera(float w, float h) const;
 };
 
 /// Persists all viewport camera states to Intermediate/EditorState/viewport_cameras.json.

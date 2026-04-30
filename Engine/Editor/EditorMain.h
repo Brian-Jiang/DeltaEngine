@@ -100,10 +100,9 @@ public:
     /// Returns the current scene render target size.
     DELTAEDITOR_API void GetSceneRenderSize(UINT& width, UINT& height) const;
 
-    /// Sets a preview camera override that replaces the scene camera for the next frame.
-    DELTAEDITOR_API void SetPreviewCameraOverride(const CameraCB& cb);
-    /// Clears the preview camera override so the scene camera is used again.
-    DELTAEDITOR_API void ClearPreviewCameraOverride();
+    /// Sets the preview / viewport camera for the next frame (shadow pass + scene draws).
+    DELTAEDITOR_API void SetActiveRenderCamera(const ActiveRenderCamera& camera);
+    DELTAEDITOR_API void ClearActiveRenderCamera();
     /// Returns the active editor theme.
     DELTAEDITOR_API EditorTheme* GetEditorTheme() { return m_editorTheme.get(); }
     /// Returns the list of all open editor windows and their visibility state.

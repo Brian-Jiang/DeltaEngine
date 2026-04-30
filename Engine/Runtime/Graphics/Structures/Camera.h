@@ -19,4 +19,15 @@ struct alignas(16) CameraCB
     DirectX::XMVECTOR position;
 };
 
+/// Per-frame active camera for rendering and shadow frustum fitting (editor preview or game camera).
+struct alignas(16) ActiveRenderCamera
+{
+    CameraCB cb{};
+    float nearPlane = 0.1f;
+    float farPlane = 1000.0f;
+    float aspectRatio = 1.0f;
+    /// Vertical field of view in radians (see XMMatrixPerspectiveFovLH).
+    float fovY = DirectX::XM_PIDIV4;
+};
+
 DELTA_ENGINE_NS_END

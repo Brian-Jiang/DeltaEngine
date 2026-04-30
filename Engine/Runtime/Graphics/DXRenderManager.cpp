@@ -212,6 +212,11 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
     m_currentContext.reset();
 }
 
+void DXRenderManager::SetPendingActiveRenderCamera(std::optional<ActiveRenderCamera> camera)
+{
+    m_pendingActiveRenderCamera = std::move(camera);
+}
+
 void DXRenderManager::PrepareFrame()
 {
     m_device->ReleaseStaleDescriptors();
@@ -229,6 +234,8 @@ void DXRenderManager::PrepareFrame()
     commandList->SetGraphicsRootSignature(m_rootSignature);
     {
         auto ctx = GetGraphicsContext();
+        ctx->activeRenderCamera = m_pendingActiveRenderCamera;
+        m_pendingActiveRenderCamera.reset();
         if (m_currentWorld)
         {
             m_currentWorld->PreGatherDrawCalls(ctx);

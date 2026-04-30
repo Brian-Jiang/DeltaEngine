@@ -54,25 +54,45 @@ void DirectionalLightRenderProxy::PreGatherDrawCalls(std::shared_ptr<DXGraphicsC
 
 void DirectionalLightRenderProxy::GatherShadowViews(std::shared_ptr<DXGraphicsContext> ctx, std::vector<ShadowView>& outViews)
 {
-    if (!m_castShadow || !ctx || !ctx->camera)
+    if (!m_castShadow || !ctx)
         return;
 
-    const CameraRenderProxy* cam = ctx->camera;
-    //if (ctx->cameraOverride.has_value())
+    float nearZ = 0.0f;
+    float farEnd = 0.0f;
+    float tanHalfFov = 0.0f;
+    float aspect = 1.0f;
+    XMMATRIX V_row = XMMatrixIdentity();
 
-    const float farClip = (std::min)(cam->GetFarPlane(), m_shadowMaxDistance);
-    const float nearZ = cam->GetNearPlane();
+    if (ctx->activeRenderCamera.has_value())
+    {
+        const ActiveRenderCamera& arc = *ctx->activeRenderCamera;
+        nearZ = arc.nearPlane;
+        farEnd = arc.farPlane;
+        tanHalfFov = std::tan(arc.fovY * 0.5f);
+        aspect = arc.aspectRatio;
+        V_row = XMMatrixTranspose(arc.cb.viewMatrix);
+    }
+    else if (ctx->camera)
+    {
+        const CameraRenderProxy* cam = ctx->camera;
+        nearZ = cam->GetNearPlane();
+        farEnd = cam->GetFarPlane();
+        tanHalfFov = std::tan(cam->GetFov() * 0.5f);
+        aspect = cam->GetAspectRatio();
+        V_row = cam->GetViewMatrix();
+    }
+    else
+        return;
+
+    const float farClip = (std::min)(farEnd, m_shadowMaxDistance);
     if (farClip <= nearZ)
         return;
 
-    const XMMATRIX V = cam->GetViewMatrix();
     XMVECTOR detV{};
-    const XMMATRIX invV = XMMatrixInverse(&detV, V);
+    const XMMATRIX invV = XMMatrixInverse(&detV, V_row);
     if (std::fabs(XMVectorGetX(detV)) < 1e-12f)
         return;
 
-    const float tanHalfFov = std::tan(cam->GetFov() * 0.5f);
-    const float aspect = cam->GetAspectRatio();
     const float halfHNear = nearZ * tanHalfFov;
     const float halfWNear = halfHNear * aspect;
     const float halfHFar = farClip * tanHalfFov;

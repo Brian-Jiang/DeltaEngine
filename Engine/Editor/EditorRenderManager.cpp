@@ -185,11 +185,10 @@ void EditorRenderManager::RenderFrame(EngineMain* engine)
 
     m_statusBar->Draw();
 
+    m_sceneRenderer->SetPendingActiveRenderCamera(m_activeRenderCamera);
     m_sceneRenderer->PrepareFrame();
     {
         auto ctx = m_sceneRenderer->GetGraphicsContext();
-        if (m_previewCameraOverride.has_value())
-            ctx->cameraOverride = m_previewCameraOverride;
         engine->RecordSceneDraws(ctx);
     }
     m_sceneRenderer->RenderFrame();

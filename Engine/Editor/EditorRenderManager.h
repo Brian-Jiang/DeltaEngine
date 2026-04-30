@@ -58,10 +58,9 @@ public:
     /// Renders the scene, editor UI, and presents the frame.
     void RenderFrame(class EngineMain* engine);
 
-    /// Sets a preview camera override that replaces the scene camera for the next frame.
-    void SetPreviewCameraOverride(const CameraCB& cb) { m_previewCameraOverride = cb; }
-    /// Clears the preview camera override so the scene camera is used again.
-    void ClearPreviewCameraOverride() { m_previewCameraOverride.reset(); }
+    /// Sets the preview / viewport camera for the next frame (shadow pass + scene draws).
+    void SetActiveRenderCamera(const ActiveRenderCamera& camera) { m_activeRenderCamera = camera; }
+    void ClearActiveRenderCamera() { m_activeRenderCamera.reset(); }
 
     /// Returns the swap-chain width in pixels.
     UINT GetWidth() const { return m_width; }
@@ -93,7 +92,7 @@ private:
     ImGuiSrvDescriptorAllocator m_imGuiSrvAllocator;
 
     std::shared_ptr<DirectX12Texture> m_viewportDisplayTexture;
-    std::optional<CameraCB> m_previewCameraOverride;
+    std::optional<ActiveRenderCamera> m_activeRenderCamera;
 
     D3D12_CPU_DESCRIPTOR_HANDLE m_imguiSrvCpuHandle;
     D3D12_GPU_DESCRIPTOR_HANDLE m_imguiSrvGpuHandle;

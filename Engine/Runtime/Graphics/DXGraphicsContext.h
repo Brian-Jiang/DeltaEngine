@@ -46,9 +46,9 @@ struct DXGraphicsContext
     /// Uploads the gathered light buffers to the command list.
     void ApplyLightBuffersToCommandList();
 
-    /// When set, overrides the scene camera matrices for this frame.
-    /// Applied after PreGatherDrawCalls, before GatherDrawCalls.
-    std::optional<CameraCB> cameraOverride;
+    /// When set, full active camera (GPU CB + lens) for this frame—editor viewport or override path.
+    /// Filled before PrepareFrame shadow pass when pending; used for scene draws and directional shadow frustum.
+    std::optional<ActiveRenderCamera> activeRenderCamera;
 
     /// Non-owning pointer to the active camera's render proxy for the frame.
     CameraRenderProxy* camera = nullptr;

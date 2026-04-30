@@ -4,6 +4,7 @@
 
 #include <chrono>
 #include <memory>
+#include <optional>
 #include <unordered_set>
 #include <dxgi1_6.h>
 #include <d3d12.h>
@@ -60,6 +61,8 @@ public:
     DELTAENGINE_API void PrepareFrame();
     DELTAENGINE_API void RenderFrame();
 
+    DELTAENGINE_API void SetPendingActiveRenderCamera(std::optional<ActiveRenderCamera> camera);
+
 	DELTAENGINE_API void Resize(UINT width, UINT height);
     DELTAENGINE_API void OnDestroy();
 
@@ -108,6 +111,8 @@ private:
     std::shared_ptr<DirectX12Texture> m_finalPostProcessTexture;
 
     std::shared_ptr<DXGraphicsContext> m_currentContext;
+
+    std::optional<ActiveRenderCamera> m_pendingActiveRenderCamera;
 
     IBLBaker m_iblBaker;
     ShadowPassManager m_shadowPass;

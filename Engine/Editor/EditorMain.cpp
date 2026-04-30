@@ -249,16 +249,16 @@ void EditorMain::GetSceneRenderSize(UINT& width, UINT& height) const
     m_renderManager->GetSceneRenderSize(width, height);
 }
 
-void EditorMain::SetPreviewCameraOverride(const CameraCB& cb)
+void EditorMain::SetActiveRenderCamera(const ActiveRenderCamera& camera)
 {
     if (m_renderManager)
-        m_renderManager->SetPreviewCameraOverride(cb);
+        m_renderManager->SetActiveRenderCamera(camera);
 }
 
-void EditorMain::ClearPreviewCameraOverride()
+void EditorMain::ClearActiveRenderCamera()
 {
     if (m_renderManager)
-        m_renderManager->ClearPreviewCameraOverride();
+        m_renderManager->ClearActiveRenderCamera();
 }
 
 void EditorMain::ProcessEvents()

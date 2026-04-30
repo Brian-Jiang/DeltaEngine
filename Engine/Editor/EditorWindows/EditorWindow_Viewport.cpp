@@ -179,7 +179,7 @@ void EditorWindow_Viewport::Render(bool& open)
 {
     if (!ImGui::Begin(GetImGuiTitle(), &open))
     {
-        g_editor->ClearPreviewCameraOverride();
+        g_editor->ClearActiveRenderCamera();
         ImGui::End();
         return;
     }
@@ -269,8 +269,8 @@ void EditorWindow_Viewport::Render(bool& open)
     // --- Push preview camera override for the next frame ---
     if (texW > 0 && texH > 0)
     {
-        CameraCB cb = m_previewCamera.BuildCameraCB(texW, texH);
-        g_editor->SetPreviewCameraOverride(cb);
+        ActiveRenderCamera arc = m_previewCamera.BuildActiveRenderCamera(texW, texH);
+        g_editor->SetActiveRenderCamera(arc);
     }
 
     // --- Zoom ---

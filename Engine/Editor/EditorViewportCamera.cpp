@@ -30,6 +30,17 @@ CameraCB EditorViewportCamera::BuildCameraCB(float w, float h) const
     return cb;
 }
 
+ActiveRenderCamera EditorViewportCamera::BuildActiveRenderCamera(float w, float h) const
+{
+    ActiveRenderCamera arc{};
+    arc.cb = BuildCameraCB(w, h);
+    arc.nearPlane = nearPlane;
+    arc.farPlane = farPlane;
+    arc.aspectRatio = GetAspectRatio(w, h);
+    arc.fovY = XMConvertToRadians(fov);
+    return arc;
+}
+
 static std::filesystem::path GetCameraStatePath()
 {
     return std::filesystem::path(IOManager::GetIntermediateFolder()) / "EditorState" / "viewport_cameras.json";
