@@ -243,7 +243,8 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
 
 void MeshRenderProxy::GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext, const ShadowView& view)
 {
-    if (view.type != LightType::Spot || !m_mesh || !renderContext || !renderContext->renderManager || !renderContext->commandList)
+    if ((!m_mesh || !renderContext || !renderContext->renderManager || !renderContext->commandList) ||
+        (view.type != LightType::Spot && view.type != LightType::Directional))
         return;
 
     const ShadowDepthPSO* shadowPso = renderContext->renderManager->GetShadowDepthPSO();

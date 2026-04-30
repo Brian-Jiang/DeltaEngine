@@ -30,6 +30,13 @@ public:
     /// Uploads the camera constant buffer for the current frame.
     void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext) override;
 
+    const DirectX::XMMATRIX& GetViewMatrix() const { return m_viewMatrix; }
+    const DirectX::XMMATRIX& GetProjectionMatrix() const { return m_projectionMatrix; }
+    float GetNearPlane() const { return m_near; }
+    float GetFarPlane() const { return m_far; }
+    float GetFov() const { return m_fov; }
+    float GetAspectRatio() const { return m_aspectRatio; }
+
 private:
     void RecalculateViewProjectionMatrix();
 

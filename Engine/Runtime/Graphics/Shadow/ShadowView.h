@@ -36,6 +36,7 @@ struct ShadowView
     LightType type = LightType::Directional;
     uint32_t lightIndex = 0;
     uint32_t cubeFace = 0;
+    uint32_t shadowMapEdgePx = 0;
     RenderProxy* shadowParamsWriter = nullptr;
 };
 

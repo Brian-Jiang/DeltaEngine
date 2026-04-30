@@ -51,13 +51,18 @@ public float3 EvaluateDirectLight(
 
 public float3 EvaluateDirectionalPBR(
     DirectionalLight light,
-    float3 N, float3 V,
+    float3 P, float3 N, float3 V,
     float3 baseColor, float metallic, float roughness)
 {
     float3 L           = normalize(-light.direction.xyz);
     float3 lightColor  = light.color.rgb;
     float  attenuation = light.intensity;
-    return EvaluateDirectLight(N, V, L, lightColor, attenuation, baseColor, metallic, roughness);
+
+    float vis = 1.0;
+    if (light.shadowEnabled != 0)
+        vis = PCSS_Directional(P, light);
+
+    return EvaluateDirectLight(N, V, L, lightColor, attenuation, baseColor, metallic, roughness) * vis;
 }
 
 public float3 EvaluatePointPBR(

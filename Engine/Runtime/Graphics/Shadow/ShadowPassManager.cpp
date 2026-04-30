@@ -5,6 +5,7 @@
 #include "Runtime/Graphics/DirectX/CommandList.h"
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/DirectX/DirectX12Texture.h"
+#include "Runtime/Graphics/RenderProxy/DirectionalLightRenderProxy.h"
 #include "Runtime/Graphics/RenderProxy/RenderProxy.h"
 #include "Runtime/Graphics/Shadow/ShadowDepthPSO.h"
 #include "Runtime/Graphics/Shadow/ShadowView.h"
@@ -67,16 +68,30 @@ void ShadowPassManager::Render(std::shared_ptr<DXGraphicsContext> ctx, DWorld& w
     std::vector<ShadowView> views;
     world.GatherShadowViews(ctx, views);
 
+    struct DirJob
+    {
+        ShadowView view;
+        ShadowMapTileRegion region;
+    };
     struct SpotJob
     {
         ShadowView view;
         ShadowMapTileRegion region;
     };
+    std::vector<DirJob> dirJobs;
+    dirJobs.reserve(views.size());
     std::vector<SpotJob> spotJobs;
     spotJobs.reserve(views.size());
 
     for (const ShadowView& view : views)
     {
+        if (view.type == LightType::Directional && view.shadowMapEdgePx > 0)
+        {
+            ShadowMapTileRegion region {};
+            if (m_directionalAllocator.Allocate(view.shadowMapEdgePx, region) >= 0)
+                dirJobs.push_back({ view, region });
+            continue;
+        }
         if (view.type != LightType::Spot)
             continue;
         ShadowMapTileRegion region {};
@@ -88,6 +103,35 @@ void ShadowPassManager::Render(std::shared_ptr<DXGraphicsContext> ctx, DWorld& w
     commandList.ClearDepthStencilTexture(m_directionalAtlas.GetTexture(), D3D12_CLEAR_FLAG_DEPTH);
     commandList.ClearDepthStencilTexture(m_spotAtlas.GetTexture(), D3D12_CLEAR_FLAG_DEPTH);
     commandList.ClearDepthStencilTexture(m_pointCubes.GetTexture(), D3D12_CLEAR_FLAG_DEPTH);
+
+    if (!dirJobs.empty())
+    {
+        for (DirJob& job : dirJobs)
+        {
+            if (auto* proxy = dynamic_cast<DirectionalLightRenderProxy*>(job.view.shadowParamsWriter))
+                proxy->FinishShadowViewProj(job.region.width, job.region.height, job.view);
+
+            const ShadowMapTileRegion& r = job.region;
+            D3D12_VIEWPORT viewport = {};
+            viewport.TopLeftX = static_cast<float>(r.x);
+            viewport.TopLeftY = static_cast<float>(r.y);
+            viewport.Width = static_cast<float>(r.width);
+            viewport.Height = static_cast<float>(r.height);
+            viewport.MinDepth = 0.0f;
+            viewport.MaxDepth = 1.0f;
+
+            const D3D12_RECT scissor = { static_cast<LONG>(r.x), static_cast<LONG>(r.y),
+                static_cast<LONG>(r.x + r.width), static_cast<LONG>(r.y + r.height) };
+
+            commandList.SetViewport(viewport);
+            commandList.SetScissorRect(scissor);
+            commandList.SetDepthOnlyRenderTarget(m_directionalAtlas.GetTexture());
+            commandList.SetGraphicsRootSignature(m_shadowDepthPso->GetRootSignature());
+            commandList.SetPipelineState(m_shadowDepthPso->GetPSO2D());
+            commandList.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+            world.GatherShadowDrawCalls(ctx, job.view);
+        }
+    }
 
     if (!spotJobs.empty())
     {
@@ -122,6 +166,14 @@ void ShadowPassManager::Render(std::shared_ptr<DXGraphicsContext> ctx, DWorld& w
     commandList.TransitionBarrier(m_pointCubes.GetTexture(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
         D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, true);
     commandList.FlushResourceBarriers();
+
+    for (const DirJob& job : dirJobs)
+    {
+        ShadowAllocation alloc {};
+        ShadowMapAllocator::FillAtlasUVRect(kAtlasSize, kAtlasSize, job.region, alloc);
+        if (job.view.shadowParamsWriter)
+            job.view.shadowParamsWriter->WriteShadowParams(ctx, alloc);
+    }
 
     for (const SpotJob& job : spotJobs)
     {

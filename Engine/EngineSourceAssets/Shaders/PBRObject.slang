@@ -90,7 +90,7 @@ float4 PSMain(PBRPSInput input, bool isFrontFace : SV_IsFrontFace) : SV_TARGET
 
     for (uint i = 0; i < LightCB.numDirectionalLights; ++i)
     {
-        Lo += EvaluateDirectionalPBR(DirectionalLights[i], N, V, baseColor, metallic, roughness);
+        Lo += EvaluateDirectionalPBR(DirectionalLights[i], P, N, V, baseColor, metallic, roughness);
     }
 
     for (uint j = 0; j < LightCB.numPointLights; ++j)
