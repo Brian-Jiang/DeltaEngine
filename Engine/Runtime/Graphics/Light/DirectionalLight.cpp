@@ -17,6 +17,11 @@ DirectionalLight::~DirectionalLight()
 {
 }
 
+RenderProxy* DirectionalLight::GetRenderProxy()
+{
+    return m_renderProxy.get();
+}
+
 void DirectionalLight::UpdateParameters(DirectX::XMVECTOR direction, DirectX::XMVECTOR color, float intensity)
 {
     m_direction = direction;

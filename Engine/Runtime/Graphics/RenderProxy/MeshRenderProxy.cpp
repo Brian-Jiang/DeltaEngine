@@ -238,6 +238,10 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
     }
 }
 
+void MeshRenderProxy::GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext>, const ShadowView&)
+{
+}
+
 size_t DeltaEngine::MeshRenderProxy::GetIndexCount() const
 {
     size_t indexCount = 0;

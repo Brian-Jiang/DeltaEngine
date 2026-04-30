@@ -2,13 +2,16 @@
 
 #include "EngineIncludes.h"
 
+#include "Runtime/Graphics/Shadow/ShadowView.h"
+
 #include <memory>
+#include <vector>
 
 DELTA_ENGINE_NS_BEGIN
 
 struct DXGraphicsContext;
 
-/** Base class for GPU-facing shadow objects that record per-frame draw work for a scene entity. */
+/** Base class for GPU-facing render objects that record per-frame draw work for a scene entity. */
 class RenderProxy
 {
 public:
@@ -22,6 +25,12 @@ public:
 
     /** Per-frame work that records draw calls into the active command list. Default no-op. */
     virtual void GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext) {}
+
+    virtual void GatherShadowViews(std::shared_ptr<DXGraphicsContext> ctx, std::vector<ShadowView>& outViews) {}
+
+    virtual void WriteShadowParams(std::shared_ptr<DXGraphicsContext> ctx, const ShadowAllocation& alloc) {}
+
+    virtual void GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> ctx, const ShadowView& view) {}
 };
 
 DELTA_ENGINE_NS_END

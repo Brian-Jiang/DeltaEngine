@@ -13,6 +13,7 @@
 #include "Assets/DPrimaryAsset.h"
 #include "Graphics/Renderer/Renderer.h"
 #include "Graphics/Light/LightComponent.h"
+#include "Graphics/RenderProxy/RenderProxy.h"
 #include "Reflection/ReflectionRegistry.h"
 #include "Reflection/DClass.h"
 #include "Core/UUID.h"
@@ -158,6 +159,53 @@ void DWorld::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const
     // Skybox draws last: LESS_EQUAL depth test lets it fill pixels the scene didn't touch.
     if (m_skybox)
         m_skybox->GatherDrawCalls(context);
+}
+
+void DWorld::GatherShadowViews(std::shared_ptr<DXGraphicsContext> context, std::vector<ShadowView>& outViews) const
+{
+    std::stack<SceneComponent*> stack;
+    stack.push(m_rootSceneComponent);
+
+    while (!stack.empty())
+    {
+        SceneComponent* current = stack.top();
+        stack.pop();
+
+        if (LightComponent* light = dynamic_cast<LightComponent*>(current))
+        {
+            if (RenderProxy* proxy = light->GetRenderProxy())
+                proxy->GatherShadowViews(context, outViews);
+        }
+
+        size_t childCount = current->m_children.size();
+        for (int i = static_cast<int>(childCount) - 1; i >= 0; --i)
+        {
+            SceneComponent* child = current->m_children[i];
+            stack.push(child);
+        }
+    }
+}
+
+void DWorld::GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> context, const ShadowView& view) const
+{
+    std::stack<SceneComponent*> stack;
+    stack.push(m_rootSceneComponent);
+
+    while (!stack.empty())
+    {
+        SceneComponent* current = stack.top();
+        stack.pop();
+
+        if (Renderer* renderer = dynamic_cast<Renderer*>(current))
+            renderer->GatherShadowDrawCalls(context, view);
+
+        size_t childCount = current->m_children.size();
+        for (int i = static_cast<int>(childCount) - 1; i >= 0; --i)
+        {
+            SceneComponent* child = current->m_children[i];
+            stack.push(child);
+        }
+    }
 }
 
 void DeltaEngine::DWorld::PreTick(float deltaTime)

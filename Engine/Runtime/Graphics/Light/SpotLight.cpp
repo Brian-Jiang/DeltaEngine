@@ -19,6 +19,11 @@ SpotLight::~SpotLight()
 {
 }
 
+RenderProxy* SpotLight::GetRenderProxy()
+{
+    return m_renderProxy.get();
+}
+
 void SpotLight::UpdateParameters(DirectX::XMVECTOR color, float intensity, float range,
     float innerConeAngle, float outerConeAngle)
 {

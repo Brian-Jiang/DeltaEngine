@@ -33,6 +33,7 @@ public:
 protected:
     void InitGraphicState(std::shared_ptr<DXGraphicsContext> context) override;
     void GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) override;
+    void GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> context, const ShadowView& view) override;
     void OnTransformChanged() override;
 
 public:

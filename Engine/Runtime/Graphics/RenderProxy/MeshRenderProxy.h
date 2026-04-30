@@ -38,6 +38,8 @@ public:
     /// Records draw calls for the current mesh into the active command list.
     void GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext) override;
 
+    void GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext, const ShadowView& view) override;
+
     /// Returns the number of indices in the first index buffer.
     size_t GetIndexCount() const;
 

@@ -21,6 +21,8 @@ public:
     DirectionalLight();
     ~DirectionalLight();
 
+    RenderProxy* GetRenderProxy() override;
+
     DFUNCTION()
     /// Updates the light parameters used for draw submission.
     void UpdateParameters(DirectX::XMVECTOR direction, DirectX::XMVECTOR color, float intensity);

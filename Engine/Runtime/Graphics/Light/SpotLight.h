@@ -22,6 +22,8 @@ public:
     SpotLight();
     ~SpotLight();
 
+    RenderProxy* GetRenderProxy() override;
+
     DFUNCTION()
     /// Updates the light parameters used for draw submission.
     void UpdateParameters(DirectX::XMVECTOR color, float intensity, float range,

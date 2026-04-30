@@ -8,6 +8,8 @@
 
 #include "Core/DObject.h"
 
+#include "Runtime/Graphics/Shadow/ShadowView.h"
+
 #include "DWorld.generated.h"
 
 DELTA_ENGINE_NS_BEGIN
@@ -41,6 +43,10 @@ public:
 
     /// Walk the scene tree and call GatherDrawCalls on every Renderer.
     DELTAENGINE_API void GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const;
+
+    DELTAENGINE_API void GatherShadowViews(std::shared_ptr<DXGraphicsContext> context, std::vector<ShadowView>& outViews) const;
+
+    DELTAENGINE_API void GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> context, const ShadowView& view) const;
 
     DFUNCTION()
     DELTAENGINE_API void PreTick(float deltaTime);

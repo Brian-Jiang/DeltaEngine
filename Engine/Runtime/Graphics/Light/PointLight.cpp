@@ -17,6 +17,11 @@ PointLight::~PointLight()
 {
 }
 
+RenderProxy* PointLight::GetRenderProxy()
+{
+    return m_renderProxy.get();
+}
+
 void PointLight::UpdateParameters(DirectX::XMVECTOR color, float intensity, float range)
 {
     m_color = color;

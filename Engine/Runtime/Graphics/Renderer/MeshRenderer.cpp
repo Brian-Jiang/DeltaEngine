@@ -46,6 +46,12 @@ void DeltaEngine::MeshRenderer::GatherDrawCalls(std::shared_ptr<DXGraphicsContex
         m_meshRenderProxy->GatherDrawCalls(context);
 }
 
+void MeshRenderer::GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> context, const ShadowView& view)
+{
+    if (m_meshRenderProxy)
+        m_meshRenderProxy->GatherShadowDrawCalls(context, view);
+}
+
 void DeltaEngine::MeshRenderer::OnTransformChanged()
 {
     if (m_meshRenderProxy)

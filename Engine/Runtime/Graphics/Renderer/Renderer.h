@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "Runtime/Core/SceneComponent.h"
+#include "Runtime/Graphics/Shadow/ShadowView.h"
 
 #include "Renderer.generated.h"
 
@@ -28,6 +29,7 @@ public:
 protected:
     virtual void InitGraphicState(std::shared_ptr<DXGraphicsContext> context) = 0;
     virtual void GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) = 0;
+    virtual void GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> context, const ShadowView& view) {}
 };
 
 DELTA_ENGINE_NS_END
