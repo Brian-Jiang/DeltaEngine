@@ -137,6 +137,34 @@ void DirectX12Texture::CreateCubemapSRV()
         m_ShaderResourceView.GetDescriptorHandle());
 }
 
+void DirectX12Texture::CreateTextureCubeArraySRV()
+{
+    if (!m_d3d12Resource)
+        return;
+
+    auto d3d12Device = m_Device.GetD3D12Device();
+    CD3DX12_RESOURCE_DESC desc(m_d3d12Resource->GetDesc());
+
+    const UINT arraySlices = desc.DepthOrArraySize;
+    if (arraySlices == 0u || (arraySlices % 6u) != 0u)
+        throw std::exception("CreateTextureCubeArraySRV requires DepthOrArraySize multiple of 6.");
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+    srvDesc.Format                     = desc.Format;
+    srvDesc.Shader4ComponentMapping    = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    srvDesc.ViewDimension              = D3D12_SRV_DIMENSION_TEXTURECUBEARRAY;
+    srvDesc.TextureCubeArray.MostDetailedMip     = 0;
+    srvDesc.TextureCubeArray.MipLevels           = desc.MipLevels;
+    srvDesc.TextureCubeArray.First2DArrayFace    = 0;
+    srvDesc.TextureCubeArray.NumCubes            = arraySlices / 6u;
+    srvDesc.TextureCubeArray.ResourceMinLODClamp = 0.0f;
+
+    m_ShaderResourceView = m_Device.AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    d3d12Device->CreateShaderResourceView(
+        m_d3d12Resource.Get(), &srvDesc,
+        m_ShaderResourceView.GetDescriptorHandle());
+}
+
 D3D12_CPU_DESCRIPTOR_HANDLE DirectX12Texture::GetRenderTargetView() const { return m_RenderTargetView.GetDescriptorHandle(); }
 D3D12_CPU_DESCRIPTOR_HANDLE DirectX12Texture::GetDepthStencilView() const { return m_DepthStencilView.GetDescriptorHandle(); }
 D3D12_CPU_DESCRIPTOR_HANDLE DirectX12Texture::GetShaderResourceView() const { return m_ShaderResourceView.GetDescriptorHandle(); }

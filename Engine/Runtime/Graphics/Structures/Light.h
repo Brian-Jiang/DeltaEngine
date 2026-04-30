@@ -29,6 +29,13 @@ struct alignas(16) DirectionalLightBuffer
 
     /// Light intensity multiplier.
     float intensity;
+
+    DirectX::XMMATRIX lightViewProj;
+    DirectX::XMFLOAT4 atlasUVRect;
+    float shadowBias;
+    float pcssLightSize;
+    int shadowEnabled;
+    int _pad;
 };
 
 struct alignas(16) PointLightBuffer
@@ -44,6 +51,13 @@ struct alignas(16) PointLightBuffer
 
     /// Maximum light range.
     float range;
+
+    int cubeArrayIndex;
+    float shadowBias;
+    float pcssLightSize;
+    int shadowEnabled;
+    int _pad0;
+    int _pad1;
 };
 
 struct alignas(16) SpotLightBuffer
@@ -68,6 +82,13 @@ struct alignas(16) SpotLightBuffer
 
     /// Outer cone angle in radians.
     float outerConeAngle;
+
+    DirectX::XMMATRIX lightViewProj;
+    DirectX::XMFLOAT4 atlasUVRect;
+    float shadowBias;
+    float pcssLightSize;
+    int shadowEnabled;
+    int _pad;
 };
 
 struct alignas(16) Light

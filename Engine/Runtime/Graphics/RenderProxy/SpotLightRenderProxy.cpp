@@ -3,7 +3,10 @@
 #include "Graphics/DXGraphicsContext.h"
 #include "Graphics/Structures/Light.h"
 
+#include <DirectXMath.h>
+
 using namespace DeltaEngine;
+using namespace DirectX;
 
 void SpotLightRenderProxy::UpdateParameters(DirectX::XMVECTOR position, DirectX::XMVECTOR direction,
     DirectX::XMVECTOR color, float intensity, float range,
@@ -28,6 +31,9 @@ void SpotLightRenderProxy::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext>
     lightData.range = m_range;
     lightData.innerConeAngle = m_innerConeAngle;
     lightData.outerConeAngle = m_outerConeAngle;
+    lightData.lightViewProj = XMMatrixIdentity();
+    lightData.atlasUVRect = { 0.0f, 0.0f, 1.0f, 1.0f };
+    lightData.shadowEnabled = 0;
 
     renderContext->spotLights.push_back(lightData);
 }

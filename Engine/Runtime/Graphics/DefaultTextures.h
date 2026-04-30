@@ -36,6 +36,14 @@ public:
     DELTAENGINE_API static std::shared_ptr<DirectX12Texture> GetBlackRGTexture();
     DELTAENGINE_API static D3D12_CPU_DESCRIPTOR_HANDLE GetBlackRGSRV();
 
+    /// 1x1 R32_FLOAT 2D depth-style fallback (texels = 1.0).
+    DELTAENGINE_API static std::shared_ptr<DirectX12Texture> GetShadowMap2DFallback();
+    DELTAENGINE_API static D3D12_CPU_DESCRIPTOR_HANDLE GetShadowMap2DFallbackSRV();
+
+    /// 1x1x6 R32_FLOAT single-cube fallback as TextureCubeArray SRV (texels = 1.0).
+    DELTAENGINE_API static std::shared_ptr<DirectX12Texture> GetShadowCubeArrayFallback();
+    DELTAENGINE_API static D3D12_CPU_DESCRIPTOR_HANDLE GetShadowCubeArrayFallbackSRV();
+
     /// Releases any cached textures. Call during renderer shutdown.
     DELTAENGINE_API static void Shutdown();
 };

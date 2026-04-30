@@ -20,6 +20,8 @@ void PointLightRenderProxy::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext
     lightData.color = m_color;
     lightData.intensity = m_intensity;
     lightData.range = m_range;
+    lightData.cubeArrayIndex = -1;
+    lightData.shadowEnabled = 0;
 
     renderContext->pointLights.push_back(lightData);
 }

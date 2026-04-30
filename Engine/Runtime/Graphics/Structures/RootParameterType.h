@@ -33,6 +33,12 @@ enum class RootParameterType
     /// IBL descriptor table: t0..t2, space2 (irradiance cube, specular cube, BRDF LUT).
     IBLTextures,
 
+    /// Shadow maps: t0..t2, space3 (directional 2D, spot 2D, point cube array).
+    ShadowMaps,
+
+    /// Global shadow settings (PCSS counts, quality). b4
+    ShadowCB,
+
     /// Total number of root parameters.
     NumRootParameterTypes
 };

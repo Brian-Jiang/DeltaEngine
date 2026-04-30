@@ -40,6 +40,12 @@ public struct PointLight
     public float4 color;
     public float intensity;
     public float range;
+    public int cubeArrayIndex;
+    public float shadowBias;
+    public float pcssLightSize;
+    public int shadowEnabled;
+    public int _pad0;
+    public int _pad1;
 };
 
 public StructuredBuffer<PointLight> PointLights : register(t0);
@@ -53,6 +59,12 @@ public struct SpotLight
     public float range;
     public float innerConeAngle;
     public float outerConeAngle;
+    public float4x4 lightViewProj;
+    public float4 atlasUVRect;
+    public float shadowBias;
+    public float pcssLightSize;
+    public int shadowEnabled;
+    public int _pad;
 };
 
 public StructuredBuffer<SpotLight> SpotLights : register(t1);
@@ -62,6 +74,13 @@ public struct DirectionalLight
     public float4 direction;
     public float4 color;
     public float intensity;
+    public float3 _padBeforeMatrix;
+    public float4x4 lightViewProj;
+    public float4 atlasUVRect;
+    public float shadowBias;
+    public float pcssLightSize;
+    public int shadowEnabled;
+    public int _pad;
 };
 
 public StructuredBuffer<DirectionalLight> DirectionalLights : register(t2);
@@ -118,5 +137,21 @@ public TextureCube  g_specularMap   : register(t1, space2);
 public Texture2D    g_brdfLut       : register(t2, space2);
 
 public SamplerState g_iblSampler : register(s2);
+
+public struct ShadowGpuParams
+{
+    public int m_pcssBlockerSamples;
+    public int m_pcssPCFSamples;
+    public float m_qualityScalar;
+    public float _pad;
+};
+
+public ConstantBuffer<ShadowGpuParams> ShadowCB : register(b4);
+
+public Texture2D g_shadowDirectionalAtlas : register(t0, space3);
+public Texture2D g_shadowSpotAtlas : register(t1, space3);
+public TextureCubeArray g_shadowPointCubeArray : register(t2, space3);
+
+public SamplerComparisonState g_shadowCmpSampler : register(s3);
 
 public static const float IBL_SPECULAR_MAX_MIP = 6.0;

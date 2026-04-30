@@ -86,6 +86,7 @@ private:
     void UpdateIBL(DTexture* skyboxCubemap);
     void EnsureIBLFallback();
     void StageIBLDescriptors(CommandList& commandList);
+    void StageShadowDescriptors(CommandList& commandList);
 
 	D3D12_RECT m_scissorRect;
 	CD3DX12_VIEWPORT m_viewport;

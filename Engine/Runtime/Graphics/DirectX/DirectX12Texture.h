@@ -57,6 +57,9 @@ public:
     /// Recreates the SRV descriptor as TextureCube. Call after LoadTexture when IsCubemap() is true.
     DELTAENGINE_API void CreateCubemapSRV();
 
+    /// Recreates the SRV as a TextureCubeArray (DepthOrArraySize must be a multiple of 6).
+    DELTAENGINE_API void CreateTextureCubeArraySRV();
+
 private:
     DescriptorAllocation m_RenderTargetView;
     DescriptorAllocation m_DepthStencilView;

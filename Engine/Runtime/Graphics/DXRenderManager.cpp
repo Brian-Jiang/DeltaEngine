@@ -24,6 +24,7 @@
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/Skybox.h"
 #include "Runtime/Core/DTexture.h"
+#include "Runtime/Graphics/Shadow/ShadowConstants.h"
 
 using namespace Microsoft::WRL;
 using namespace DeltaEngine;
@@ -78,7 +79,7 @@ void DXRenderManager::LoadAssets()
     rootParameters[static_cast<UINT>(RootParameterType::DirectionalLights)].InitAsShaderResourceView(2);
 
     // Material textures (t0..t4, space1)
-    CD3DX12_DESCRIPTOR_RANGE1 ranges[2] {};
+    CD3DX12_DESCRIPTOR_RANGE1 ranges[3] {};
     ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, static_cast<UINT>(MaterialTextureSlot::Count), 0, 1,
         D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
     rootParameters[static_cast<UINT>(RootParameterType::Texture)].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
@@ -88,10 +89,18 @@ void DXRenderManager::LoadAssets()
         D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
     rootParameters[static_cast<UINT>(RootParameterType::IBLTextures)].InitAsDescriptorTable(1, &ranges[1], D3D12_SHADER_VISIBILITY_PIXEL);
 
+    // Shadow maps (t0..t2, space3)
+    ranges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3u, 0, 3,
+        D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+    rootParameters[static_cast<UINT>(RootParameterType::ShadowMaps)].InitAsDescriptorTable(1, &ranges[2], D3D12_SHADER_VISIBILITY_PIXEL);
+
+    rootParameters[static_cast<UINT>(RootParameterType::ShadowCB)].InitAsConstantBufferView(4, 0,
+        D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
+
 
     // ==== Sampler (s) ====
     // Anisotropic sampler (s0) — scene samplers
-    CD3DX12_STATIC_SAMPLER_DESC staticSamplers[3] {};
+    CD3DX12_STATIC_SAMPLER_DESC staticSamplers[4] {};
     staticSamplers[0] = CD3DX12_STATIC_SAMPLER_DESC(0, D3D12_FILTER_ANISOTROPIC);
     // Anisotropic wrap sampler (s1) — material textures
     staticSamplers[1] = CD3DX12_STATIC_SAMPLER_DESC(
@@ -118,6 +127,19 @@ void DXRenderManager::LoadAssets()
         0u,
         D3D12_COMPARISON_FUNC_LESS_EQUAL,
         D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK,
+        0.0f,
+        D3D12_FLOAT32_MAX,
+        D3D12_SHADER_VISIBILITY_PIXEL);
+    staticSamplers[3] = CD3DX12_STATIC_SAMPLER_DESC(
+        3,
+        D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT,
+        D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+        D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+        D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+        0.0f,
+        0u,
+        D3D12_COMPARISON_FUNC_LESS,
+        D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
         0.0f,
         D3D12_FLOAT32_MAX,
         D3D12_SHADER_VISIBILITY_PIXEL);
@@ -213,6 +235,7 @@ void DXRenderManager::PrepareFrame()
     commandList->SetGraphicsRootSignature(m_rootSignature);
 
     StageIBLDescriptors(*commandList);
+    StageShadowDescriptors(*commandList);
 }
 
 void DXRenderManager::EnsureIBLFallback()
@@ -276,6 +299,22 @@ void DXRenderManager::StageIBLDescriptors(CommandList& commandList)
         D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     commandList.SetShaderResourceView(rp, 2, m_iblResources.brdfLut,
         D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+}
+
+void DXRenderManager::StageShadowDescriptors(CommandList& commandList)
+{
+    auto map2D  = DefaultTextures::GetShadowMap2DFallback();
+    auto cubeAr = DefaultTextures::GetShadowCubeArrayFallback();
+    if (!map2D || !cubeAr)
+        return;
+
+    const int32_t rp = static_cast<int32_t>(RootParameterType::ShadowMaps);
+    commandList.SetShaderResourceView(rp, 0, map2D, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    commandList.SetShaderResourceView(rp, 1, map2D, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    commandList.SetShaderResourceView(rp, 2, cubeAr, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+    commandList.SetGraphicsDynamicConstantBuffer(static_cast<UINT>(RootParameterType::ShadowCB),
+        ShadowCBGPU { 16, 16, 1.0f, 0.0f });
 }
 
 void DXRenderManager::RenderFrame()

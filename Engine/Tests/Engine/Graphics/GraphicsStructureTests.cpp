@@ -44,7 +44,9 @@ TEST(GraphicsStructureTests, RootParameterOrderMatchesShaderSlots)
     EXPECT_EQ(static_cast<int>(RootParameterType::DirectionalLights), 6);
     EXPECT_EQ(static_cast<int>(RootParameterType::MaterialCB), 7);
     EXPECT_EQ(static_cast<int>(RootParameterType::IBLTextures), 8);
-    EXPECT_EQ(static_cast<int>(RootParameterType::NumRootParameterTypes), 9);
+    EXPECT_EQ(static_cast<int>(RootParameterType::ShadowMaps), 9);
+    EXPECT_EQ(static_cast<int>(RootParameterType::ShadowCB), 10);
+    EXPECT_EQ(static_cast<int>(RootParameterType::NumRootParameterTypes), 11);
 }
 
 TEST(GraphicsStructureTests, VertexLayoutMatchesInputLayoutExpectations)
