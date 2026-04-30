@@ -145,7 +145,7 @@ void DirectionalLightRenderProxy::GatherShadowViews(std::shared_ptr<DXGraphicsCo
     m_dirMaxX = maxX + pad;
     m_dirMinY = minY - pad;
     m_dirMaxY = maxY + pad;
-    m_dirMinZ = minZ - 1.0f;
+    m_dirMinZ = 0.0f;
     m_dirMaxZ = maxZ + 1.0f;
     m_dirLightView = lightView;
 
