@@ -56,7 +56,7 @@ struct alignas(16) PointLightBuffer
     float shadowBias;
     float pcssLightSize;
     int shadowEnabled;
-    int _pad0;
+    float shadowNearZ;
     int _pad1;
 };
 

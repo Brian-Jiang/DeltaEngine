@@ -33,6 +33,8 @@ void PointLight::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context)
 {
     auto pos = GetWorldPosition();
     DirectX::XMVECTOR position = DirectX::XMVectorSet(pos.x, pos.y, pos.z, 1.0f);
-    m_renderProxy->UpdateParameters(position, m_color, m_intensity, m_range);
+    m_renderProxy->UpdateParameters(position, m_color, m_intensity, m_range,
+        m_castShadow, m_shadowBias, m_pcssLightSize);
     m_renderProxy->PreGatherDrawCalls(context);
+    m_renderProxy->SetPointLightBufferIndex(static_cast<uint32_t>(context->pointLights.size() - 1));
 }

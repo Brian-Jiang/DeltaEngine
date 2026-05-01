@@ -11,6 +11,7 @@
 #include "Runtime/Graphics/Shadow/ShadowView.h"
 
 #include <pix3.h>
+#include <unordered_map>
 #include <vector>
 
 using namespace DeltaEngine;
@@ -78,10 +79,19 @@ void ShadowPassManager::Render(std::shared_ptr<DXGraphicsContext> ctx, DWorld& w
         ShadowView view;
         ShadowMapTileRegion region;
     };
+    struct PointJob
+    {
+        ShadowView view;
+        int32_t cubeIndex;
+    };
     std::vector<DirJob> dirJobs;
     dirJobs.reserve(views.size());
     std::vector<SpotJob> spotJobs;
     spotJobs.reserve(views.size());
+    std::vector<PointJob> pointJobs;
+    pointJobs.reserve(views.size());
+
+    std::unordered_map<uint32_t, int32_t> pointCubeForLight;
 
     for (const ShadowView& view : views)
     {
@@ -92,12 +102,32 @@ void ShadowPassManager::Render(std::shared_ptr<DXGraphicsContext> ctx, DWorld& w
                 dirJobs.push_back({ view, region });
             continue;
         }
-        if (view.type != LightType::Spot)
+        if (view.type == LightType::Spot)
+        {
+            ShadowMapTileRegion region {};
+            if (m_spotAllocator.Allocate(kDefaultShadowMapEdge, region) < 0)
+                continue;
+            spotJobs.push_back({ view, region });
             continue;
-        ShadowMapTileRegion region {};
-        if (m_spotAllocator.Allocate(kDefaultShadowMapEdge, region) < 0)
+        }
+        if (view.type == LightType::Point)
+        {
+            int32_t cubeIndex = -1;
+            auto it = pointCubeForLight.find(view.lightIndex);
+            if (it != pointCubeForLight.end())
+            {
+                cubeIndex = it->second;
+            }
+            else
+            {
+                cubeIndex = m_pointAllocator.Allocate();
+                pointCubeForLight.emplace(view.lightIndex, cubeIndex);
+            }
+            if (cubeIndex < 0)
+                continue;
+            pointJobs.push_back({ view, cubeIndex });
             continue;
-        spotJobs.push_back({ view, region });
+        }
     }
 
     commandList.ClearDepthStencilTexture(m_directionalAtlas.GetTexture(), D3D12_CLEAR_FLAG_DEPTH);
@@ -159,6 +189,32 @@ void ShadowPassManager::Render(std::shared_ptr<DXGraphicsContext> ctx, DWorld& w
         }
     }
 
+    if (!pointJobs.empty())
+    {
+        D3D12_VIEWPORT viewport = {};
+        viewport.TopLeftX = 0.0f;
+        viewport.TopLeftY = 0.0f;
+        viewport.Width = static_cast<float>(kPointFaceSize);
+        viewport.Height = static_cast<float>(kPointFaceSize);
+        viewport.MinDepth = 0.0f;
+        viewport.MaxDepth = 1.0f;
+
+        const D3D12_RECT scissor = { 0, 0,
+            static_cast<LONG>(kPointFaceSize), static_cast<LONG>(kPointFaceSize) };
+
+        for (const PointJob& job : pointJobs)
+        {
+            commandList.SetViewport(viewport);
+            commandList.SetScissorRect(scissor);
+            commandList.SetDepthOnlyRenderTarget(m_pointCubes.GetTexture(),
+                m_pointCubes.GetDSVForFace(static_cast<uint32_t>(job.cubeIndex), job.view.cubeFace));
+            commandList.SetGraphicsRootSignature(m_shadowDepthPso->GetRootSignature());
+            commandList.SetPipelineState(m_shadowDepthPso->GetPSOCube());
+            commandList.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+            world.GatherShadowDrawCalls(ctx, job.view);
+        }
+    }
+
     commandList.TransitionBarrier(m_directionalAtlas.GetTexture(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
         D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, true);
     commandList.TransitionBarrier(m_spotAtlas.GetTexture(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
@@ -179,6 +235,16 @@ void ShadowPassManager::Render(std::shared_ptr<DXGraphicsContext> ctx, DWorld& w
     {
         ShadowAllocation alloc {};
         ShadowMapAllocator::FillAtlasUVRect(kAtlasSize, kAtlasSize, job.region, alloc);
+        if (job.view.shadowParamsWriter)
+            job.view.shadowParamsWriter->WriteShadowParams(ctx, alloc);
+    }
+
+    for (const PointJob& job : pointJobs)
+    {
+        if (job.view.cubeFace != 0)
+            continue;
+        ShadowAllocation alloc {};
+        alloc.cubeArrayIndex = job.cubeIndex;
         if (job.view.shadowParamsWriter)
             job.view.shadowParamsWriter->WriteShadowParams(ctx, alloc);
     }

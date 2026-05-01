@@ -26,6 +26,27 @@ public float PCSS_Directional(float3 worldPos, DirectionalLight light)
         light.pcssLightSize, light.atlasUVRect.zw);
 }
 
+public float PCSS_Point(float3 worldPos, PointLight light)
+{
+    if (light.cubeArrayIndex < 0)
+        return 1.0;
+
+    float3 toFrag = worldPos - light.position.xyz;
+    float dist = length(toFrag);
+    if (dist >= light.range)
+        return 1.0;
+
+    float3 dir = toFrag / max(dist, 1e-5);
+
+    float nearZ = light.shadowNearZ;
+    float farZ = light.range;
+    float zReceiver = farZ / (farZ - nearZ) - (farZ * nearZ) / ((farZ - nearZ) * dist);
+    zReceiver -= light.shadowBias;
+
+    float4 sampleCoord = float4(dir, (float)light.cubeArrayIndex);
+    return g_shadowPointCubeArray.SampleCmpLevelZero(g_shadowCmpSampler, sampleCoord, zReceiver);
+}
+
 public float PCSS_Spot(float3 worldPos, SpotLight light)
 {
     float4 clipPos = mul(light.lightViewProj, float4(worldPos, 1.0));

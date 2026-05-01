@@ -178,6 +178,10 @@ public:
 
     DELTAENGINE_API void SetDepthOnlyRenderTarget(const std::shared_ptr<DirectX12Texture>& depthTexture);
 
+    /** Bind a depth-only render target using an explicit DSV (e.g. one face of a cube array). */
+    DELTAENGINE_API void SetDepthOnlyRenderTarget(const std::shared_ptr<DirectX12Texture>& depthTexture,
+        D3D12_CPU_DESCRIPTOR_HANDLE explicitDsv);
+
     /**
      * Generate mips for the texture.
      * The first subresource is used to generate the mip chain.

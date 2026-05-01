@@ -79,7 +79,12 @@ public float3 EvaluatePointPBR(
     float  dr        = distance / light.range;
     float  falloff   = saturate(1.0 - dr * dr);
     float  attenuate = falloff * light.intensity;
-    return EvaluateDirectLight(N, V, L, light.color.rgb, attenuate, baseColor, metallic, roughness);
+
+    float vis = 1.0;
+    if (light.shadowEnabled != 0)
+        vis = PCSS_Point(P, light);
+
+    return EvaluateDirectLight(N, V, L, light.color.rgb, attenuate, baseColor, metallic, roughness) * vis;
 }
 
 public float3 EvaluateSpotPBR(

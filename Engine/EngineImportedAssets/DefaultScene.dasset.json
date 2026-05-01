@@ -267,11 +267,11 @@
       "m_name": "Sun Light",
       "m_pcssLightSize": 0.05000000074505806,
       "m_shadowBias": 0.004999999888241291,
-      "m_shadowMaxDistance": 100.0,
+      "m_shadowMaxDistance": 1000.0,
       "m_shadowNormalBias": 0.0,
       "m_shadowOrthoPadding": 5.0,
       "m_shadowResolution": 1024,
-      "m_shadowSlopeBias": 1.0
+      "m_shadowSlopeBias": 0.0
     },
     {
       "_class": "GameObject",
@@ -304,7 +304,7 @@
         "assetId": "097992b4-c850-4c69-a612-ec83528b0c30",
         "objectId": "016370bb-0455-4ef4-9fc1-7d3f974e23a3"
       },
-      "m_intensity": 2.0,
+      "m_intensity": 4.900000095367432,
       "m_localTransform": [
         1.0,
         0.0,
@@ -318,14 +318,14 @@
         0.0,
         1.0,
         0.0,
-        -30.28248405456543,
-        59.629520416259766,
-        -23.423954010009766,
+        -934.2000122070313,
+        133.1999969482422,
+        -42.42399978637695,
         1.0
       ],
       "m_name": "Warm Point Light",
       "m_pcssLightSize": 0.05000000074505806,
-      "m_range": 25.899999618530273,
+      "m_range": 500.0,
       "m_shadowBias": 0.004999999888241291,
       "m_shadowNormalBias": 0.0,
       "m_shadowResolution": 1024,

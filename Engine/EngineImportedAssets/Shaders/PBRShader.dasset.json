@@ -4,7 +4,7 @@
     "bulkDataMap": {
       "0": {
         "file": "PBRShader_Bulk0.bin",
-        "size": 25364
+        "size": 25900
       },
       "1": {
         "file": "PBRShader_Bulk1.bin",
@@ -27,7 +27,7 @@
       },
       "m_serializedShaderBlobs": {
         "_bulk": 0,
-        "size": 25364
+        "size": 25900
       },
       "m_sourcePath": "Shaders/PBRObject.slang",
       "m_vertexShaderEntryPoint": "VSMain",

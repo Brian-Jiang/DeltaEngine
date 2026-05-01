@@ -44,7 +44,7 @@ public struct PointLight
     public float shadowBias;
     public float pcssLightSize;
     public int shadowEnabled;
-    public int _pad0;
+    public float shadowNearZ;
     public int _pad1;
 };
 

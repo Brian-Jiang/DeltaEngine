@@ -824,6 +824,16 @@ void CommandList::SetDepthOnlyRenderTarget(const std::shared_ptr<DirectX12Textur
     TrackResource(depthTexture);
 }
 
+void CommandList::SetDepthOnlyRenderTarget(const std::shared_ptr<DirectX12Texture>& depthTexture,
+    D3D12_CPU_DESCRIPTOR_HANDLE explicitDsv)
+{
+    assert(depthTexture);
+
+    TransitionBarrier(depthTexture, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, true);
+    m_d3d12CommandList->OMSetRenderTargets(0u, nullptr, FALSE, &explicitDsv);
+    TrackResource(depthTexture);
+}
+
 void CommandList::CopyTextureSubresource(const std::shared_ptr<DirectX12Texture>& texture, uint32_t firstSubresource,
     uint32_t numSubresources, D3D12_SUBRESOURCE_DATA* subresourceData)
 {

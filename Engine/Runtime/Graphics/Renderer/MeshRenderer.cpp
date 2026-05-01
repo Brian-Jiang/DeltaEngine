@@ -49,7 +49,7 @@ void DeltaEngine::MeshRenderer::GatherDrawCalls(std::shared_ptr<DXGraphicsContex
 
 void MeshRenderer::GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> context, const ShadowView& view)
 {
-    if (!m_castShadow || (view.type != LightType::Spot && view.type != LightType::Directional) || !m_meshRenderProxy)
+    if (!m_castShadow || !m_meshRenderProxy)
         return;
     m_meshRenderProxy->GatherShadowDrawCalls(context, view);
 }

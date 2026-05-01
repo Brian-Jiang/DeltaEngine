@@ -3,14 +3,28 @@
 #include "Graphics/DXGraphicsContext.h"
 #include "Graphics/Structures/Light.h"
 
-using namespace DeltaEngine;
+#include <DirectXMath.h>
+#include <algorithm>
 
-void PointLightRenderProxy::UpdateParameters(DirectX::XMVECTOR position, DirectX::XMVECTOR color, float intensity, float range)
+using namespace DeltaEngine;
+using namespace DirectX;
+
+void PointLightRenderProxy::UpdateParameters(XMVECTOR position, XMVECTOR color,
+    float intensity, float range,
+    bool castShadow, float shadowBias, float pcssLightSize)
 {
     m_position = position;
     m_color = color;
     m_intensity = intensity;
     m_range = range;
+    m_castShadow = castShadow;
+    m_shadowBias = shadowBias;
+    m_pcssLightSize = pcssLightSize;
+}
+
+void PointLightRenderProxy::SetPointLightBufferIndex(uint32_t index)
+{
+    m_pointLightBufferIndex = index;
 }
 
 void PointLightRenderProxy::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext)
@@ -21,7 +35,64 @@ void PointLightRenderProxy::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext
     lightData.intensity = m_intensity;
     lightData.range = m_range;
     lightData.cubeArrayIndex = -1;
+    lightData.shadowBias = m_shadowBias;
+    lightData.pcssLightSize = m_pcssLightSize;
     lightData.shadowEnabled = 0;
+    lightData.shadowNearZ = m_shadowNearZ;
 
     renderContext->pointLights.push_back(lightData);
+}
+
+void PointLightRenderProxy::GatherShadowViews(std::shared_ptr<DXGraphicsContext>, std::vector<ShadowView>& outViews)
+{
+    if (!m_castShadow || m_range <= 0.0f)
+        return;
+
+    // Cube face axes (LH, +X, -X, +Y, -Y, +Z, -Z) — D3D cube face order.
+    static const XMVECTORF32 kForward[6] = {
+        {  1.0f,  0.0f,  0.0f, 0.0f },
+        { -1.0f,  0.0f,  0.0f, 0.0f },
+        {  0.0f,  1.0f,  0.0f, 0.0f },
+        {  0.0f, -1.0f,  0.0f, 0.0f },
+        {  0.0f,  0.0f,  1.0f, 0.0f },
+        {  0.0f,  0.0f, -1.0f, 0.0f },
+    };
+    static const XMVECTORF32 kUp[6] = {
+        { 0.0f, 1.0f,  0.0f, 0.0f },
+        { 0.0f, 1.0f,  0.0f, 0.0f },
+        { 0.0f, 0.0f, -1.0f, 0.0f },
+        { 0.0f, 0.0f,  1.0f, 0.0f },
+        { 0.0f, 1.0f,  0.0f, 0.0f },
+        { 0.0f, 1.0f,  0.0f, 0.0f },
+    };
+
+    m_shadowNearZ = std::max(0.01f, std::min(m_range * 0.02f, 1.0f));
+    const XMMATRIX proj = XMMatrixPerspectiveFovLH(XM_PIDIV2, 1.0f, m_shadowNearZ, m_range);
+
+    for (uint32_t face = 0; face < 6; ++face)
+    {
+        const XMMATRIX view = XMMatrixLookToLH(m_position, kForward[face], kUp[face]);
+        const XMMATRIX viewProj = view * proj;
+
+        ShadowView sv{};
+        sv.viewProj = XMMatrixTranspose(viewProj);
+        sv.type = LightType::Point;
+        sv.lightIndex = m_pointLightBufferIndex;
+        sv.cubeFace = face;
+        sv.shadowParamsWriter = this;
+        outViews.push_back(sv);
+    }
+}
+
+void PointLightRenderProxy::WriteShadowParams(std::shared_ptr<DXGraphicsContext> ctx, const ShadowAllocation& alloc)
+{
+    if (!ctx || m_pointLightBufferIndex >= ctx->pointLights.size())
+        return;
+
+    PointLightBuffer& L = ctx->pointLights[m_pointLightBufferIndex];
+    L.cubeArrayIndex = alloc.cubeArrayIndex;
+    L.shadowBias = m_shadowBias;
+    L.pcssLightSize = m_pcssLightSize;
+    L.shadowEnabled = m_castShadow ? 1 : 0;
+    L.shadowNearZ = m_shadowNearZ;
 }
