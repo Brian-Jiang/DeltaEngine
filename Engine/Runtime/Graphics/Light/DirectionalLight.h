@@ -45,6 +45,10 @@ private:
 
     DPROPERTY(meta=(Category="Shadows"))
     float m_shadowOrthoPadding = 5.0f;
+
+    /** Distance of caster space ahead of the frustum bounding sphere, along -lightDir (world units). */
+    DPROPERTY(meta=(Category="Shadows"))
+    float m_shadowCasterDistance = 5000.0f;
 };
 
 DELTA_ENGINE_NS_END

@@ -20,7 +20,7 @@ namespace
 void DirectionalLightRenderProxy::UpdateParameters(XMVECTOR direction, XMVECTOR color, float intensity,
     bool castShadow, float shadowBias, float pcssLightSize, float shadowMaxDistance,
     float shadowOrthoPadding, int shadowResolution,
-    float shadowNormalBias, float shadowSlopeBias)
+    float shadowNormalBias, float shadowSlopeBias, float shadowCasterDistance)
 {
     m_direction = direction;
     m_color = color;
@@ -33,6 +33,7 @@ void DirectionalLightRenderProxy::UpdateParameters(XMVECTOR direction, XMVECTOR 
     m_shadowResolution = shadowResolution;
     m_shadowNormalBias = shadowNormalBias;
     m_shadowSlopeBias = shadowSlopeBias;
+    m_shadowCasterDistance = shadowCasterDistance;
 }
 
 void DirectionalLightRenderProxy::SetDirectionalLightBufferIndex(uint32_t index)
@@ -103,55 +104,66 @@ void DirectionalLightRenderProxy::GatherShadowViews(std::shared_ptr<DXGraphicsCo
     const float halfHFar = farClip * tanHalfFov;
     const float halfWFar = halfHFar * aspect;
 
+    XMVECTOR cornersCS[8];
     XMVECTOR cornersWS[8];
-    XMVECTOR sum = XMVectorZero();
+    XMVECTOR sumWS = XMVectorZero();
     for (int i = 0; i < 4; ++i)
     {
         const float sx = (i & 1) ? 1.0f : -1.0f;
         const float sy = (i & 2) ? 1.0f : -1.0f;
-        const XMVECTOR nearCorner = XMVectorSet(sx * halfWNear, sy * halfHNear, nearZ, 1.0f);
-        const XMVECTOR farCorner = XMVectorSet(sx * halfWFar, sy * halfHFar, farClip, 1.0f);
-        cornersWS[i] = XMVector3TransformCoord(nearCorner, invV);
-        cornersWS[i + 4] = XMVector3TransformCoord(farCorner, invV);
-        sum = XMVectorAdd(sum, cornersWS[i]);
-        sum = XMVectorAdd(sum, cornersWS[i + 4]);
+        cornersCS[i] = XMVectorSet(sx * halfWNear, sy * halfHNear, nearZ, 1.0f);
+        cornersCS[i + 4] = XMVectorSet(sx * halfWFar, sy * halfHFar, farClip, 1.0f);
+        cornersWS[i] = XMVector3TransformCoord(cornersCS[i], invV);
+        cornersWS[i + 4] = XMVector3TransformCoord(cornersCS[i + 4], invV);
+        sumWS = XMVectorAdd(sumWS, cornersWS[i]);
+        sumWS = XMVectorAdd(sumWS, cornersWS[i + 4]);
     }
 
-    const XMVECTOR center = XMVectorScale(sum, 1.0f / 8.0f);
+    if (nearZ != m_cachedNearZ || farClip != m_cachedFarClip ||
+        tanHalfFov != m_cachedTanHalfFov || aspect != m_cachedAspect)
+    {
+        float maxDistSq = 0.0f;
+        for (int i = 0; i < 8; ++i)
+        {
+            for (int j = i + 1; j < 8; ++j)
+            {
+                const XMVECTOR d = XMVectorSubtract(cornersCS[i], cornersCS[j]);
+                const float dSq = XMVectorGetX(XMVector3LengthSq(d));
+                if (dSq > maxDistSq)
+                    maxDistSq = dSq;
+            }
+        }
+        m_cachedFrustumRadius = 0.5f * std::sqrt(maxDistSq);
+        m_cachedNearZ = nearZ;
+        m_cachedFarClip = farClip;
+        m_cachedTanHalfFov = tanHalfFov;
+        m_cachedAspect = aspect;
+    }
+    const float radius = m_cachedFrustumRadius;
+
+    const XMVECTOR centerWS = XMVectorScale(sumWS, 1.0f / 8.0f);
     const XMVECTOR lightDir = XMVector3Normalize(m_direction);
 
     XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
     if (std::fabs(XMVectorGetX(XMVector3Dot(lightDir, up))) > 0.99f)
         up = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
 
-    const XMVECTOR eye = XMVectorSubtract(center, XMVectorScale(lightDir, 500.0f));
+    const float eyeDistance = radius + m_shadowCasterDistance;
+    const XMVECTOR eye = XMVectorSubtract(centerWS, XMVectorScale(lightDir, eyeDistance));
     const XMMATRIX lightView = XMMatrixLookToLH(eye, lightDir, up);
 
-    float minX = 1e30f, maxX = -1e30f;
-    float minY = 1e30f, maxY = -1e30f;
-    float minZ = 1e30f, maxZ = -1e30f;
-
-    for (int i = 0; i < 8; ++i)
-    {
-        const XMVECTOR ls = XMVector3TransformCoord(cornersWS[i], lightView);
-        const float lx = XMVectorGetX(ls);
-        const float ly = XMVectorGetY(ls);
-        const float lz = XMVectorGetZ(ls);
-        minX = (std::min)(minX, lx);
-        maxX = (std::max)(maxX, lx);
-        minY = (std::min)(minY, ly);
-        maxY = (std::max)(maxY, ly);
-        minZ = (std::min)(minZ, lz);
-        maxZ = (std::max)(maxZ, lz);
-    }
+    const XMVECTOR centerLS = XMVector3TransformCoord(centerWS, lightView);
+    const float cx = XMVectorGetX(centerLS);
+    const float cy = XMVectorGetY(centerLS);
+    const float cz = XMVectorGetZ(centerLS);
 
     const float pad = m_shadowOrthoPadding;
-    m_dirMinX = minX - pad;
-    m_dirMaxX = maxX + pad;
-    m_dirMinY = minY - pad;
-    m_dirMaxY = maxY + pad;
+    m_dirMinX = cx - radius - pad;
+    m_dirMaxX = cx + radius + pad;
+    m_dirMinY = cy - radius - pad;
+    m_dirMaxY = cy + radius + pad;
     m_dirMinZ = 0.0f;
-    m_dirMaxZ = maxZ + 1.0f;
+    m_dirMaxZ = cz + radius;
     m_dirLightView = lightView;
 
     ShadowView sv{};

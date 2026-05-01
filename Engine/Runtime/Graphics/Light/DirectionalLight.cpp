@@ -34,7 +34,7 @@ void DirectionalLight::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> con
     DirectX::XMVECTOR direction = DirectX::XMVector4Normalize(DirectX::XMVectorSetW(GetForward(), 0.0f));
     m_renderProxy->UpdateParameters(direction, m_color, m_intensity, m_castShadow, m_shadowBias, m_pcssLightSize,
         m_shadowMaxDistance, m_shadowOrthoPadding, m_shadowResolution,
-        m_shadowNormalBias, m_shadowSlopeBias);
+        m_shadowNormalBias, m_shadowSlopeBias, m_shadowCasterDistance);
     m_renderProxy->PreGatherDrawCalls(context);
     m_renderProxy->SetDirectionalLightBufferIndex(static_cast<uint32_t>(context->directionalLights.size() - 1u));
 }

@@ -18,7 +18,7 @@ public:
     void UpdateParameters(DirectX::XMVECTOR direction, DirectX::XMVECTOR color, float intensity,
         bool castShadow, float shadowBias, float pcssLightSize, float shadowMaxDistance,
         float shadowOrthoPadding, int shadowResolution,
-        float shadowNormalBias, float shadowSlopeBias);
+        float shadowNormalBias, float shadowSlopeBias, float shadowCasterDistance);
 
     void SetDirectionalLightBufferIndex(uint32_t index);
 
@@ -40,7 +40,14 @@ private:
     float m_shadowSlopeBias = 1.0f;
     float m_shadowMaxDistance = 100.0f;
     float m_shadowOrthoPadding = 5.0f;
+    float m_shadowCasterDistance = 5000.0f;
     int m_shadowResolution = 1024;
+
+    float m_cachedFrustumRadius = 0.0f;
+    float m_cachedNearZ = -1.0f;
+    float m_cachedFarClip = -1.0f;
+    float m_cachedTanHalfFov = -1.0f;
+    float m_cachedAspect = -1.0f;
 
     uint32_t m_directionalLightBufferIndex = 0;
     DirectX::XMMATRIX m_shadowViewProjRow = DirectX::XMMatrixIdentity();
