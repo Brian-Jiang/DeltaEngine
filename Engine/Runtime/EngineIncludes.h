@@ -11,6 +11,7 @@
 
 #include "Macros.h"
 #include "Runtime/Logging/LogChannels.h"
+#include "Runtime/Assert/Assert.h"
 
 DELTA_ENGINE_NS_BEGIN
 
