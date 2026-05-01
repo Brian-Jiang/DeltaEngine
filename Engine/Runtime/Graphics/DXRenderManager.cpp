@@ -484,6 +484,8 @@ void DXRenderManager::CreatePingPongTargets(UINT width, UINT height)
 
 void DXRenderManager::OnDestroy()
 {
+    if (m_device)
+        m_device->Flush();
     for (PostProcessPass* pass : m_trackedPasses)
     {
         if (pass)
