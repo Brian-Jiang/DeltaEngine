@@ -28,22 +28,22 @@ public:
 protected:
     virtual void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) = 0;
 
-    DPROPERTY()
+    DPROPERTY(meta=(Category="Shadows"))
     bool m_castShadow = true;
 
-    DPROPERTY()
+    DPROPERTY(meta=(Category="Shadows"))
     float m_shadowBias = 0.005f;
 
-    DPROPERTY()
+    DPROPERTY(meta=(Category="Shadows"))
     float m_shadowSlopeBias = 1.0f;
 
-    DPROPERTY()
+    DPROPERTY(meta=(Category="Shadows"))
     float m_shadowNormalBias = 0.0f;
 
-    DPROPERTY()
+    DPROPERTY(meta=(Category="Shadows"))
     float m_pcssLightSize = 0.05f;
 
-    DPROPERTY()
+    DPROPERTY(meta=(Category="Shadows"))
     int m_shadowResolution = 1024;
 };
 

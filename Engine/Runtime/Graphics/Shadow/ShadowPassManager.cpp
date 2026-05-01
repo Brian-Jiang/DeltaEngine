@@ -9,6 +9,7 @@
 #include "Runtime/Graphics/RenderProxy/RenderProxy.h"
 #include "Runtime/Graphics/Shadow/ShadowDepthPSO.h"
 #include "Runtime/Graphics/Shadow/ShadowView.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <pix3.h>
 #include <unordered_map>
@@ -66,6 +67,10 @@ void ShadowPassManager::Render(std::shared_ptr<DXGraphicsContext> ctx, DWorld& w
     m_spotAllocator.Reset(kAtlasSize, kAtlasSize, kSpotTileSize);
     m_pointAllocator.Reset(kPointCubeCount);
 
+    m_warnedDirectional.clear();
+    m_warnedSpot.clear();
+    m_warnedPoint.clear();
+
     ctx->shadowQualityScalar = m_settings.m_qualityScalar;
 
     std::vector<ShadowView> views;
@@ -101,14 +106,32 @@ void ShadowPassManager::Render(std::shared_ptr<DXGraphicsContext> ctx, DWorld& w
         {
             ShadowMapTileRegion region {};
             if (m_directionalAllocator.Allocate(view.shadowMapEdgePx, region) >= 0)
+            {
                 dirJobs.push_back({ view, region });
+            }
+            else if (m_warnedDirectional.insert(view.lightIndex).second)
+            {
+                DLOG(LogShadow, ELogLevel::Warning,
+                    "Directional shadow allocation failed (lightIndex={}, edgePx={}, atlas {}x{})",
+                    view.lightIndex, view.shadowMapEdgePx,
+                    m_directionalAtlas.GetSize(), m_directionalAtlas.GetSize());
+            }
             continue;
         }
         if (view.type == LightType::Spot)
         {
             ShadowMapTileRegion region {};
             if (m_spotAllocator.Allocate(kDefaultShadowMapEdge, region) < 0)
+            {
+                if (m_warnedSpot.insert(view.lightIndex).second)
+                {
+                    DLOG(LogShadow, ELogLevel::Warning,
+                        "Spot shadow allocation failed (lightIndex={}, edgePx={}, atlas {}x{})",
+                        view.lightIndex, kDefaultShadowMapEdge,
+                        m_spotAtlas.GetSize(), m_spotAtlas.GetSize());
+                }
                 continue;
+            }
             spotJobs.push_back({ view, region });
             continue;
         }
@@ -126,7 +149,15 @@ void ShadowPassManager::Render(std::shared_ptr<DXGraphicsContext> ctx, DWorld& w
                 pointCubeForLight.emplace(view.lightIndex, cubeIndex);
             }
             if (cubeIndex < 0)
+            {
+                if (m_warnedPoint.insert(view.lightIndex).second)
+                {
+                    DLOG(LogShadow, ELogLevel::Warning,
+                        "Point shadow allocation failed (lightIndex={}, cube slots={})",
+                        view.lightIndex, kPointCubeCount);
+                }
                 continue;
+            }
             pointJobs.push_back({ view, cubeIndex });
             continue;
         }

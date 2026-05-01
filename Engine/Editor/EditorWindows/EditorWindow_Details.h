@@ -41,6 +41,7 @@ private:
     void RenderSceneComponentTransform(SceneComponent* sceneComponent);
 
     void DrawPropertyEditor(DObject* instance, DClass* dclass, int depth = 0);
+    void RenderSingleProperty(DObject* instance, DProperty* prop, int depth);
     void DrawFunctionButtons(DObject* instance, DClass* dclass);
     void DrawReadOnlyProperty(const std::string& label, const std::string& value) const;
     void DrawVectorElements(const DVectorPropertyBase* vectorProp, void* vectorAddr, DObject* parentObject, int depth);

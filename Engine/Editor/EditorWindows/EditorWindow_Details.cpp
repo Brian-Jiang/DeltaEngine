@@ -520,6 +520,17 @@ void EditorWindow_Details::DrawPropertyEditor(DObject* instance, DClass* dclass,
         m_activeEditObject = nullptr;
     }
 
+    std::vector<std::pair<std::string, std::vector<DProperty*>>> buckets;
+    auto findOrAddBucket = [&buckets](const std::string& category) -> std::vector<DProperty*>& {
+        for (auto& [name, props] : buckets)
+        {
+            if (name == category)
+                return props;
+        }
+        buckets.emplace_back(category, std::vector<DProperty*>{});
+        return buckets.back().second;
+    };
+
     for (DStruct* s = dclass; s; s = s->GetSuper())
     {
         for (DProperty* prop = s->GetOwnProperties(); prop; prop = prop->GetNext())
@@ -527,104 +538,130 @@ void EditorWindow_Details::DrawPropertyEditor(DObject* instance, DClass* dclass,
             if (prop->IsHiddenInDetails())
                 continue;
 
-            ImGui::PushID(prop->GetName().c_str());
+            const std::string category = prop->GetMeta("Category");
+            findOrAddBucket(category).push_back(prop);
+        }
+    }
 
-            const bool undoable = IsUndoablePropertyType(prop->GetPropertyType());
-
-            nlohmann::json preSnapshot;
-            if (undoable && !m_activeEditProp)
-                preSnapshot = PropertyToJson(instance, prop);
-
-            WidgetEditEvent evt;
-
-            switch (prop->GetPropertyType())
+    for (auto& [category, props] : buckets)
+    {
+        if (category.empty())
+        {
+            for (DProperty* prop : props)
+                RenderSingleProperty(instance, prop, depth);
+        }
+        else
+        {
+            ImGui::PushID(category.c_str());
+            const bool open = ImGui::CollapsingHeader(category.c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+            if (open)
             {
-            case EPropertyType::Int:
-                evt = DrawIntProperty(instance, prop);
-                break;
-            case EPropertyType::Float:
-                evt = DrawFloatProperty(instance, prop);
-                break;
-            case EPropertyType::Double:
-                evt = DrawDoubleProperty(instance, prop);
-                break;
-            case EPropertyType::Bool:
-                evt = DrawBoolProperty(instance, prop);
-                break;
-            case EPropertyType::String:
-                evt = DrawStringProperty(instance, prop);
-                break;
-            case EPropertyType::WString:
-                DrawWStringProperty(instance, prop);
-                break;
-            case EPropertyType::Vector3:
-                evt = DrawVector3Property(instance, prop);
-                break;
-            case EPropertyType::Quaternion:
-                evt = DrawQuaternionProperty(instance, prop);
-                break;
-            case EPropertyType::Float4:
-                evt = DrawFloat4Property(instance, prop);
-                break;
-            case EPropertyType::Float4x4:
-                evt = DrawFloat4x4Property(instance, prop);
-                break;
-            case EPropertyType::ObjectPtr:
-                DrawObjectPtrProperty(instance, prop, depth);
-                break;
-            case EPropertyType::BulkData:
-                DrawBulkDataProperty(instance, prop);
-                break;
-            case EPropertyType::Vector:
-                DrawVectorProperty(instance, prop, depth);
-                break;
-            case EPropertyType::Struct:
-                evt = DrawStructPropertyEditor(instance, static_cast<DStructProperty*>(prop));
-                break;
-            default:
-                DrawReadOnlyProperty(GetPropertyDisplayName(prop->GetName()),
-                    prop->ToString(prop->GetValue(instance)));
-                break;
+                for (DProperty* prop : props)
+                    RenderSingleProperty(instance, prop, depth);
             }
-
-            if (undoable)
-            {
-                if (evt.editBegan && !m_activeEditProp)
-                {
-                    m_activeEditProp   = prop;
-                    m_activeEditObject = instance;
-                    m_activeEditBefore = std::move(preSnapshot);
-                }
-
-                if (evt.valueChanged)
-                    LivePreviewWrite(instance, prop);
-
-                if (evt.editEnded && m_activeEditProp == prop)
-                {
-                    nlohmann::json valueAfter = PropertyToJson(instance, prop);
-                    if (m_activeEditBefore != valueAfter)
-                    {
-                        auto [assetId, objectId] = g_editorCore->GetIdsForObject(instance);
-                        auto cmd = std::make_unique<EditorCommand_SetProperty>(
-                            assetId, objectId,
-                            std::string(prop->GetName()),
-                            std::move(m_activeEditBefore),
-                            std::move(valueAfter));
-                        EditorCommandContext ctx{ *g_editorCore };
-                        g_editorCore->GetCommandManager().Execute(std::move(cmd), ctx);
-                    }
-                    m_activeEditProp   = nullptr;
-                    m_activeEditBefore = {};
-                    m_activeEditObject = nullptr;
-                }
-            }
-
             ImGui::PopID();
         }
     }
 
     if (depth == 0)
         DrawFunctionButtons(instance, dclass);
+}
+
+void EditorWindow_Details::RenderSingleProperty(DObject* instance, DProperty* prop, int depth)
+{
+    ImGui::PushID(prop->GetName().c_str());
+
+    const bool undoable = IsUndoablePropertyType(prop->GetPropertyType());
+
+    nlohmann::json preSnapshot;
+    if (undoable && !m_activeEditProp)
+        preSnapshot = PropertyToJson(instance, prop);
+
+    WidgetEditEvent evt;
+
+    switch (prop->GetPropertyType())
+    {
+    case EPropertyType::Int:
+        evt = DrawIntProperty(instance, prop);
+        break;
+    case EPropertyType::Float:
+        evt = DrawFloatProperty(instance, prop);
+        break;
+    case EPropertyType::Double:
+        evt = DrawDoubleProperty(instance, prop);
+        break;
+    case EPropertyType::Bool:
+        evt = DrawBoolProperty(instance, prop);
+        break;
+    case EPropertyType::String:
+        evt = DrawStringProperty(instance, prop);
+        break;
+    case EPropertyType::WString:
+        DrawWStringProperty(instance, prop);
+        break;
+    case EPropertyType::Vector3:
+        evt = DrawVector3Property(instance, prop);
+        break;
+    case EPropertyType::Quaternion:
+        evt = DrawQuaternionProperty(instance, prop);
+        break;
+    case EPropertyType::Float4:
+        evt = DrawFloat4Property(instance, prop);
+        break;
+    case EPropertyType::Float4x4:
+        evt = DrawFloat4x4Property(instance, prop);
+        break;
+    case EPropertyType::ObjectPtr:
+        DrawObjectPtrProperty(instance, prop, depth);
+        break;
+    case EPropertyType::BulkData:
+        DrawBulkDataProperty(instance, prop);
+        break;
+    case EPropertyType::Vector:
+        DrawVectorProperty(instance, prop, depth);
+        break;
+    case EPropertyType::Struct:
+        evt = DrawStructPropertyEditor(instance, static_cast<DStructProperty*>(prop));
+        break;
+    default:
+        DrawReadOnlyProperty(GetPropertyDisplayName(prop->GetName()),
+            prop->ToString(prop->GetValue(instance)));
+        break;
+    }
+
+    if (undoable)
+    {
+        if (evt.editBegan && !m_activeEditProp)
+        {
+            m_activeEditProp   = prop;
+            m_activeEditObject = instance;
+            m_activeEditBefore = std::move(preSnapshot);
+        }
+
+        if (evt.valueChanged)
+            LivePreviewWrite(instance, prop);
+
+        if (evt.editEnded && m_activeEditProp == prop)
+        {
+            nlohmann::json valueAfter = PropertyToJson(instance, prop);
+            if (m_activeEditBefore != valueAfter)
+            {
+                auto [assetId, objectId] = g_editorCore->GetIdsForObject(instance);
+                auto cmd = std::make_unique<EditorCommand_SetProperty>(
+                    assetId, objectId,
+                    std::string(prop->GetName()),
+                    std::move(m_activeEditBefore),
+                    std::move(valueAfter));
+                EditorCommandContext ctx{ *g_editorCore };
+                g_editorCore->GetCommandManager().Execute(std::move(cmd), ctx);
+            }
+            m_activeEditProp   = nullptr;
+            m_activeEditBefore = {};
+            m_activeEditObject = nullptr;
+        }
+    }
+
+    ImGui::PopID();
 }
 
 void EditorWindow_Details::DrawFunctionButtons(DObject* instance, DClass* dclass)

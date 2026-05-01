@@ -40,10 +40,10 @@ private:
     DPROPERTY()
     float m_intensity;
 
-    DPROPERTY()
+    DPROPERTY(meta=(Category="Shadows"))
     float m_shadowMaxDistance = 100.0f;
 
-    DPROPERTY()
+    DPROPERTY(meta=(Category="Shadows"))
     float m_shadowOrthoPadding = 5.0f;
 };
 

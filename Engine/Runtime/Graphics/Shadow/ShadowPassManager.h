@@ -10,6 +10,7 @@
 #include "Graphics/Shadow/ShadowMapAllocator.h"
 
 #include <memory>
+#include <unordered_set>
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -51,6 +52,10 @@ private:
     PointSliceAllocator m_pointAllocator;
     std::unique_ptr<ShadowDepthPSO> m_shadowDepthPso;
     ShadowSettings m_settings;
+
+    std::unordered_set<uint32_t> m_warnedDirectional;
+    std::unordered_set<uint32_t> m_warnedSpot;
+    std::unordered_set<uint32_t> m_warnedPoint;
 };
 
 DELTA_ENGINE_NS_END
