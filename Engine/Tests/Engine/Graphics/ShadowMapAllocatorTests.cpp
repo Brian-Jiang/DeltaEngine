@@ -1,6 +1,7 @@
 #include "Runtime/Graphics/Shadow/ShadowMapAllocator.h"
 
 #include <gtest/gtest.h>
+#include <tuple>
 
 using namespace DeltaEngine;
 
@@ -48,6 +49,68 @@ TEST(ShadowMapAllocatorTests, FillAtlasUVRect)
     EXPECT_FLOAT_EQ(alloc.atlasUVRect.y, 512.f / 4096.f);
     EXPECT_FLOAT_EQ(alloc.atlasUVRect.z, 2048.f / 4096.f);
     EXPECT_FLOAT_EQ(alloc.atlasUVRect.w, 1024.f / 4096.f);
+}
+
+TEST(ShadowMapAllocatorTests, FreeReusesHoleAfterFragmentation)
+{
+    ShadowMapAllocator a;
+    a.Reset(2048, 2048, 512);
+    ShadowMapTileRegion r0 {}, r1 {}, r2 {}, r3 {};
+    const int32_t id0 = a.Allocate(1024, r0);
+    const int32_t id1 = a.Allocate(1024, r1);
+    const int32_t id2 = a.Allocate(1024, r2);
+    const int32_t id3 = a.Allocate(1024, r3);
+    ASSERT_GE(id0, 0);
+    ASSERT_GE(id1, 0);
+    ASSERT_GE(id2, 0);
+    ASSERT_GE(id3, 0);
+    EXPECT_EQ(a.Allocate(1024, r0), -1);
+
+    const uint32_t freedX = r1.x;
+    const uint32_t freedY = r1.y;
+    a.Free(id1);
+    ShadowMapTileRegion rReuse {};
+    const int32_t id4 = a.Allocate(1024, rReuse);
+    ASSERT_GE(id4, 0);
+    EXPECT_EQ(rReuse.x, freedX);
+    EXPECT_EQ(rReuse.y, freedY);
+    EXPECT_EQ(rReuse.width, 1024u);
+    EXPECT_EQ(rReuse.height, 1024u);
+    EXPECT_GT(id4, id3);
+}
+
+TEST(ShadowMapAllocatorTests, RepeatedSequenceIsDeterministicWithMonotonicSlotIds)
+{
+    auto run = [] {
+        ShadowMapAllocator a;
+        a.Reset(4096, 4096, 1024);
+        ShadowMapTileRegion ra {}, rb {}, rc {};
+        const int32_t id0 = a.Allocate(2048, ra);
+        const int32_t id1 = a.Allocate(2048, rb);
+        EXPECT_EQ(id0, 0);
+        EXPECT_EQ(id1, 1);
+        a.Free(id0);
+        const int32_t id2 = a.Allocate(2048, rc);
+        EXPECT_EQ(id2, 2);
+        return std::tuple { ra, rb, rc, id0, id1, id2 };
+    };
+    const auto t0 = run();
+    const auto t1 = run();
+    EXPECT_EQ(std::get<0>(t0).x, std::get<0>(t1).x);
+    EXPECT_EQ(std::get<1>(t0).x, std::get<1>(t1).x);
+    EXPECT_EQ(std::get<2>(t0).x, std::get<2>(t1).x);
+    EXPECT_EQ(std::get<2>(t0).y, std::get<2>(t1).y);
+}
+
+TEST(ShadowMapAllocatorTests, AllocatesExpectedNumberOfMinimalTiles)
+{
+    ShadowMapAllocator a;
+    a.Reset(1024, 1024, 512);
+    int count = 0;
+    ShadowMapTileRegion r {};
+    while (a.Allocate(512, r) >= 0)
+        ++count;
+    EXPECT_EQ(count, 4);
 }
 
 TEST(PointSliceAllocatorTests, AllocateUntilFull)

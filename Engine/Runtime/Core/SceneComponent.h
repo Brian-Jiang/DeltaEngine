@@ -85,10 +85,10 @@ public:
     /// Reparents this component while preventing cycles.
     DFUNCTION()
     DELTAENGINE_API void SetParent(SceneComponent* parent);
-    void PostEditChangeProperty(const DProperty* prop) override;
-    void PostRestore() override;
+    DELTAENGINE_API void PostEditChangeProperty(const DProperty* prop) override;
+    DELTAENGINE_API void PostRestore() override;
 
-    void OnAfterDeserialize() override;
+    DELTAENGINE_API void OnAfterDeserialize() override;
 
 protected:
     virtual void OnTransformChanged() {}

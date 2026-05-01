@@ -241,6 +241,11 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
     }
 }
 
+bool MeshRenderProxy::SubmeshContributesToShadowMap(const DMaterial* material)
+{
+    return !(material && HasAny(material->GetFlags(), MaterialFlags::AlphaBlend));
+}
+
 void MeshRenderProxy::GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext, const ShadowView& view)
 {
     if ((!m_mesh || !renderContext || !renderContext->renderManager || !renderContext->commandList))
@@ -286,7 +291,7 @@ void MeshRenderProxy::GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> r
     for (int i = 0; i < submeshCount; ++i)
     {
         DMaterial* material = m_mesh->GetMaterial(i);
-        if (material && HasAny(material->GetFlags(), MaterialFlags::AlphaBlend))
+        if (!SubmeshContributesToShadowMap(material))
             continue;
 
         if (i >= static_cast<int>(m_VertexBuffers.size()) || i >= static_cast<int>(m_IndexBuffers.size()))

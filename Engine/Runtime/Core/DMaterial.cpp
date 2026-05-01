@@ -70,6 +70,9 @@ MaterialFlags DMaterial::ComputeFlags() const
     if (m_doubleSided)              flags |= MaterialFlags::DoubleSided;
     if (static_cast<ERenderMode>(m_renderMode) == ERenderMode::Masked)
         flags |= MaterialFlags::AlphaTest;
+    const CD3DX12_BLEND_DESC& blend = m_blendDesc;
+    if (blend.RenderTarget[0].BlendEnable)
+        flags |= MaterialFlags::AlphaBlend;
     return flags;
 }
 

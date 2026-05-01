@@ -18,6 +18,7 @@ struct MeshRendererSettings;
 class IndexBuffer;
 class VertexBuffer;
 class DirectX12Texture;
+class DMaterial;
 
 class MeshRenderProxy : public RenderProxy
 {
@@ -39,6 +40,8 @@ public:
     void GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext) override;
 
     void GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext, const ShadowView& view) override;
+
+    DELTAENGINE_API static bool SubmeshContributesToShadowMap(const DMaterial* material);
 
     /// Returns the number of indices in the first index buffer.
     size_t GetIndexCount() const;

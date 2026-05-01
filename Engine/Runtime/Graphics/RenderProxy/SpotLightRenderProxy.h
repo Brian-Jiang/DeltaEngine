@@ -9,7 +9,7 @@
 
 DELTA_ENGINE_NS_BEGIN
 
-class SpotLightRenderProxy : public RenderProxy
+class DELTAENGINE_API SpotLightRenderProxy : public RenderProxy
 {
 public:
     void UpdateParameters(DirectX::XMVECTOR position, DirectX::XMVECTOR direction,

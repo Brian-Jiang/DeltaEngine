@@ -9,7 +9,7 @@
 
 DELTA_ENGINE_NS_BEGIN
 
-class PointLightRenderProxy : public RenderProxy
+class DELTAENGINE_API PointLightRenderProxy : public RenderProxy
 {
 public:
     void UpdateParameters(DirectX::XMVECTOR position, DirectX::XMVECTOR color,

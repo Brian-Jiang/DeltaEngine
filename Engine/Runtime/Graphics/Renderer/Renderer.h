@@ -15,7 +15,7 @@ class DWorld;
 struct DXGraphicsContext;
 
 DCLASS()
-class Renderer : public SceneComponent
+class DELTAENGINE_API Renderer : public SceneComponent
 {
     DGENERATED_BODY(Renderer)
     friend class DWorld;

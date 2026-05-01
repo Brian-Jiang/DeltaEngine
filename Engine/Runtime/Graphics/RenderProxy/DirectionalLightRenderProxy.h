@@ -12,7 +12,7 @@ DELTA_ENGINE_NS_BEGIN
 
 struct ShadowView;
 
-class DirectionalLightRenderProxy : public RenderProxy
+class DELTAENGINE_API DirectionalLightRenderProxy : public RenderProxy
 {
 public:
     void UpdateParameters(DirectX::XMVECTOR direction, DirectX::XMVECTOR color, float intensity,

@@ -18,7 +18,7 @@ struct MeshRendererSettings
 };
 
 DCLASS()
-class MeshRenderer : public Renderer
+class DELTAENGINE_API MeshRenderer : public Renderer
 {
     DGENERATED_BODY(MeshRenderer)
 
