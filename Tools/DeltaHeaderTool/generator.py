@@ -15,6 +15,7 @@ from templates import (
     DCLASS_REGISTRATION_BEGIN,
     DCLASS_REGISTRATION_BEGIN_ABSTRACT,
     DCLASS_REGISTRATION_END,
+    DCLASS_SET_METADATA,
     DSTRUCT_REGISTRATION_BEGIN,
     DSTRUCT_REGISTRATION_END,
     DPROPERTY,
@@ -582,6 +583,11 @@ def _generate_class_registration(cls: ClassInfo) -> str:
         parts.append(DCLASS_REGISTRATION_BEGIN.substitute(
             class_name=cls.name,
             super_name=super_name,
+        ))
+
+    if cls.metadata:
+        parts.append(DCLASS_SET_METADATA.substitute(
+            meta_init=_format_meta_init(cls.metadata),
         ))
 
     for prop in cls.properties:

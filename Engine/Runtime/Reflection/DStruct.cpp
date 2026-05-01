@@ -83,3 +83,9 @@ void DStruct::Serialize(AssetArchive& ar, DObject& obj)
 {
     SerializeFields(ar, &obj);
 }
+
+std::string DStruct::GetMeta(const std::string& key, const std::string& defaultVal) const
+{
+    auto it = m_metadata.find(key);
+    return (it != m_metadata.end()) ? it->second : defaultVal;
+}

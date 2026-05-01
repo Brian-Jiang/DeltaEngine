@@ -184,3 +184,44 @@ def test_dfunction_meta_parser_bare_identifier():
         "Category": "Debug",
     }
     assert _parse_dfunction_meta('meta=(UIType="Color")') == {"UIType": "Color"}
+
+
+def test_parse_meta_kv_basic():
+    from parser import _parse_meta_kv
+    assert _parse_meta_kv("") == {}
+    assert _parse_meta_kv("abstract") == {}
+    assert _parse_meta_kv('meta=(Category="Foo")') == {"Category": "Foo"}
+    assert _parse_meta_kv(
+        'meta=(Category="Foo", Tooltip="Bar")'
+    ) == {"Category": "Foo", "Tooltip": "Bar"}
+    assert _parse_meta_kv(
+        'abstract, meta=(Category="Foo")'
+    ) == {"Category": "Foo"}
+
+
+def test_parse_meta_kv_rejects_non_alnum_keys():
+    from parser import _parse_meta_kv
+    # Underscored keys must not be captured (spec: letters and digits only).
+    assert _parse_meta_kv('meta=(under_score="x", Good1="y")') == {"Good1": "y"}
+
+
+@pytest.fixture
+def parse_class_with_meta(fixtures_dir):
+    require_libclang()
+    return parse_header(fixtures_dir / "class_with_meta.h", fixtures_dir)
+
+
+@requires_libclang
+def test_class_with_meta_dclass_metadata(parse_class_with_meta):
+    by_name = {c.name: c for c in parse_class_with_meta.classes}
+    cls = by_name["MetaTaggedClass"]
+    assert cls.metadata == {"Category": "Gameplay", "Tooltip": "A reflected thing"}
+    assert cls.properties[0].metadata == {"UIType": "Color"}
+
+
+@requires_libclang
+def test_class_with_meta_dstruct_metadata(parse_class_with_meta):
+    by_name = {c.name: c for c in parse_class_with_meta.classes}
+    s = by_name["MetaTaggedStruct"]
+    assert s.is_struct is True
+    assert s.metadata == {"Category": "Math"}

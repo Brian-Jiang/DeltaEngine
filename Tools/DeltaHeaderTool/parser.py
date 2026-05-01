@@ -237,6 +237,7 @@ class ClassInfo:
     functions: list[FunctionInfo] = field(default_factory=list)
     is_struct: bool = False
     is_abstract: bool = False
+    metadata: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -466,9 +467,10 @@ def _extract_macro_args(tu, cursor, macro_name) -> str | None:
     return None
 
 
-def _parse_dproperty_meta(args_str: str) -> dict[str, str]:
-    """Extract key=value pairs from meta=(...) in a DPROPERTY argument string.
-    e.g. 'meta=(UIType="Color")' -> {'UIType': 'Color'}
+def _parse_meta_kv(args_str: str) -> dict[str, str]:
+    """Extract key=value pairs from meta=(...) in any DCLASS/DSTRUCT/DPROPERTY/DFUNCTION
+    argument string. Keys must consist of letters and digits only.
+    e.g. 'meta=(UIType="Color", Category="Shadows")' -> {'UIType': 'Color', 'Category': 'Shadows'}
     """
     if not args_str:
         return {}
@@ -477,9 +479,13 @@ def _parse_dproperty_meta(args_str: str) -> dict[str, str]:
         return {}
     content = m.group(1)
     result = {}
-    for kv in re.finditer(r'(\w+)\s*=\s*"([^"]*)"', content):
+    for kv in re.finditer(r'(?<!\w)([A-Za-z0-9]+)\s*=\s*"([^"]*)"', content):
         result[kv.group(1)] = kv.group(2)
     return result
+
+
+# Backwards-compatible alias.
+_parse_dproperty_meta = _parse_meta_kv
 
 
 def _collect_dfunction_lines(tu, class_cursor) -> list[tuple[int, str]]:
@@ -540,7 +546,7 @@ def _parse_dfunction_meta(args_str: str) -> dict[str, str]:
     meta_match = re.search(r'meta\s*=\s*\(([^)]*)\)', remainder)
     if meta_match:
         inner = meta_match.group(1)
-        for kv in re.finditer(r'(\w+)\s*=\s*"([^"]*)"', inner):
+        for kv in re.finditer(r'(?<!\w)([A-Za-z0-9]+)\s*=\s*"([^"]*)"', inner):
             result[kv.group(1)] = kv.group(2)
         remainder = remainder[:meta_match.start()] + remainder[meta_match.end():]
 
@@ -549,7 +555,7 @@ def _parse_dfunction_meta(args_str: str) -> dict[str, str]:
         part = part.strip()
         if not part:
             continue
-        kv = re.match(r'(\w+)\s*=\s*"([^"]*)"\s*$', part)
+        kv = re.match(r'(?<!\w)([A-Za-z0-9]+)\s*=\s*"([^"]*)"\s*$', part)
         if kv:
             result[kv.group(1)] = kv.group(2)
             continue
@@ -634,7 +640,7 @@ def _parse_function(tu, method_cursor, class_name, diag=None, source_file=""):
 
 
 def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
-                  is_struct=False, is_abstract=False, diag=None):
+                  is_struct=False, is_abstract=False, metadata=None, diag=None):
     class_name = class_cursor.spelling
     file_name = str(source_file)
     info = ClassInfo(
@@ -643,6 +649,7 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
         include_path=include_path,
         is_struct=is_struct,
         is_abstract=is_abstract,
+        metadata=metadata or {},
     )
 
     # Pre-collect DFUNCTION macro line numbers for scope-correct matching
@@ -898,17 +905,23 @@ def parse_header(
             continue
 
         is_abstract = False
+        macro_args = ""
         if is_dclass:
-            macro_args = _extract_macro_args(tu, cursor, "DCLASS")
+            macro_args = _extract_macro_args(tu, cursor, "DCLASS") or ""
             if macro_args and "abstract" in macro_args:
                 is_abstract = True
             if not is_abstract:
                 is_abstract = cursor.is_abstract_record()
+        elif is_dstruct:
+            macro_args = _extract_macro_args(tu, cursor, "DSTRUCT") or ""
+
+        class_metadata = _parse_meta_kv(macro_args)
 
         results.append(_parse_class(
             tu, cursor, file_path, include_path, stripped_source,
             is_struct=is_dstruct,
             is_abstract=is_abstract,
+            metadata=class_metadata,
             diag=diag,
         ))
 

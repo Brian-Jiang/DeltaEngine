@@ -92,6 +92,30 @@ def test_generate_source_emits_hide_in_details_flags(fixtures_dir):
 
 
 @requires_libclang
+def test_generate_source_emits_class_metadata(fixtures_dir):
+    require_libclang()
+    path = fixtures_dir / "class_with_meta.h"
+    result = parse_header(path, fixtures_dir)
+    cpp = generate_source_file(result.classes, path.stem, {})
+    # DCLASS metadata appears immediately after `new DClass("MetaTaggedClass"`
+    cls_idx = cpp.find('new DClass("MetaTaggedClass"')
+    assert cls_idx >= 0
+    next_section = cpp.find("cls->AddProperty", cls_idx)
+    assert next_section > cls_idx
+    cls_chunk = cpp[cls_idx:next_section]
+    assert 'cls->SetMetadata({' in cls_chunk
+    assert '{"Category", "Gameplay"}' in cls_chunk
+    assert '{"Tooltip", "A reflected thing"}' in cls_chunk
+
+    # DSTRUCT metadata
+    s_idx = cpp.find('new DStruct("MetaTaggedStruct"')
+    assert s_idx >= 0
+    s_end = cpp.find("RegisterDStruct", s_idx)
+    s_chunk = cpp[s_idx:s_end]
+    assert 'cls->SetMetadata({{"Category", "Math"}})' in s_chunk
+
+
+@requires_libclang
 def test_snapshots_simple_class(fixtures_dir, snapshot_dir, snapshot_update):
     require_libclang()
     path = fixtures_dir / "simple_class.h"

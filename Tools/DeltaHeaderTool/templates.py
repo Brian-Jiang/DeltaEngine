@@ -123,6 +123,10 @@ DCLASS_REGISTRATION_END = """\
 }
 """
 
+DCLASS_SET_METADATA = Template("""\
+    cls->SetMetadata(${meta_init});
+""")
+
 # ============================================================
 # DSTRUCT REGISTRATION
 # ============================================================

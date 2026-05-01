@@ -3,6 +3,7 @@
 #include "EngineIncludes.h"
 
 #include <string>
+#include <unordered_map>
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -47,6 +48,18 @@ public:
     /// Serializes a reflected object instance through this type schema.
     DELTAENGINE_API void Serialize(AssetArchive& ar, DObject& obj);
 
+    void SetMetadata(std::unordered_map<std::string, std::string> metadata)
+    {
+        m_metadata = std::move(metadata);
+    }
+
+    bool HasMeta(const std::string& key) const
+    {
+        return m_metadata.count(key) > 0;
+    }
+
+    DELTAENGINE_API std::string GetMeta(const std::string& key, const std::string& defaultVal = "") const;
+
 protected:
     std::string m_name;
     std::string m_superName;
@@ -55,6 +68,7 @@ protected:
     DProperty* m_ownProperties = nullptr;
     size_t m_structSize;
     size_t m_minAlignment;
+    std::unordered_map<std::string, std::string> m_metadata;
 };
 
 DELTA_ENGINE_NS_END
