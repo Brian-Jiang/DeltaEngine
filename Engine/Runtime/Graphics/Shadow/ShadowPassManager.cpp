@@ -66,6 +66,8 @@ void ShadowPassManager::Render(std::shared_ptr<DXGraphicsContext> ctx, DWorld& w
     m_spotAllocator.Reset(kAtlasSize, kAtlasSize, kSpotTileSize);
     m_pointAllocator.Reset(kPointCubeCount);
 
+    ctx->shadowQualityScalar = m_settings.m_qualityScalar;
+
     std::vector<ShadowView> views;
     world.GatherShadowViews(ctx, views);
 

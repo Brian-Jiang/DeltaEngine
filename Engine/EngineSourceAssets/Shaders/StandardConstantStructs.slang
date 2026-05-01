@@ -45,7 +45,11 @@ public struct PointLight
     public float pcssLightSize;
     public int shadowEnabled;
     public float shadowNearZ;
-    public int _pad1;
+    public float shadowNormalBias;
+    public float shadowSlopeBias;
+    public float _pad1;
+    public float _pad2;
+    public float _pad3;
 };
 
 public StructuredBuffer<PointLight> PointLights : register(t0);
@@ -64,7 +68,11 @@ public struct SpotLight
     public float shadowBias;
     public float pcssLightSize;
     public int shadowEnabled;
-    public int _pad;
+    public float shadowNormalBias;
+    public float shadowSlopeBias;
+    public float _pad0;
+    public float _pad1;
+    public float _pad2;
 };
 
 public StructuredBuffer<SpotLight> SpotLights : register(t1);
@@ -80,7 +88,11 @@ public struct DirectionalLight
     public float shadowBias;
     public float pcssLightSize;
     public int shadowEnabled;
-    public int _pad;
+    public float shadowNormalBias;
+    public float shadowSlopeBias;
+    public float _pad0;
+    public float _pad1;
+    public float _pad2;
 };
 
 public StructuredBuffer<DirectionalLight> DirectionalLights : register(t2);

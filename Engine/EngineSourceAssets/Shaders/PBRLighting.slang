@@ -60,7 +60,7 @@ public float3 EvaluateDirectionalPBR(
 
     float vis = 1.0;
     if (light.shadowEnabled != 0)
-        vis = PCSS_Directional(P, light);
+        vis = PCSS_Directional(P, N, light);
 
     return EvaluateDirectLight(N, V, L, lightColor, attenuation, baseColor, metallic, roughness) * vis;
 }
@@ -82,7 +82,7 @@ public float3 EvaluatePointPBR(
 
     float vis = 1.0;
     if (light.shadowEnabled != 0)
-        vis = PCSS_Point(P, light);
+        vis = PCSS_Point(P, N, light);
 
     return EvaluateDirectLight(N, V, L, light.color.rgb, attenuate, baseColor, metallic, roughness) * vis;
 }
@@ -109,7 +109,7 @@ public float3 EvaluateSpotPBR(
 
     float vis = 1.0;
     if (light.shadowEnabled != 0)
-        vis = PCSS_Spot(P, light);
+        vis = PCSS_Spot(P, N, light);
 
     return EvaluateDirectLight(N, V, L, light.color.rgb, attenuate, baseColor, metallic, roughness) * vis;
 }

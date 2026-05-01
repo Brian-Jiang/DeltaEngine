@@ -12,7 +12,8 @@ using namespace DirectX;
 void SpotLightRenderProxy::UpdateParameters(XMVECTOR position, XMVECTOR direction,
     XMVECTOR color, float intensity, float range,
     float innerConeAngle, float outerConeAngle,
-    bool castShadow, float shadowBias, float pcssLightSize)
+    bool castShadow, float shadowBias, float pcssLightSize,
+    float shadowNormalBias, float shadowSlopeBias)
 {
     m_position = position;
     m_direction = direction;
@@ -24,6 +25,8 @@ void SpotLightRenderProxy::UpdateParameters(XMVECTOR position, XMVECTOR directio
     m_castShadow = castShadow;
     m_shadowBias = shadowBias;
     m_pcssLightSize = pcssLightSize;
+    m_shadowNormalBias = shadowNormalBias;
+    m_shadowSlopeBias = shadowSlopeBias;
 }
 
 void SpotLightRenderProxy::SetSpotLightBufferIndex(uint32_t index)
@@ -46,6 +49,8 @@ void SpotLightRenderProxy::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext>
     lightData.shadowBias = m_shadowBias;
     lightData.pcssLightSize = m_pcssLightSize;
     lightData.shadowEnabled = 0;
+    lightData.shadowNormalBias = m_shadowNormalBias;
+    lightData.shadowSlopeBias = m_shadowSlopeBias;
 
     renderContext->spotLights.push_back(lightData);
 }
@@ -85,4 +90,6 @@ void SpotLightRenderProxy::WriteShadowParams(std::shared_ptr<DXGraphicsContext> 
     L.shadowBias = m_shadowBias;
     L.pcssLightSize = m_pcssLightSize;
     L.shadowEnabled = m_castShadow ? 1 : 0;
+    L.shadowNormalBias = m_shadowNormalBias;
+    L.shadowSlopeBias = m_shadowSlopeBias;
 }

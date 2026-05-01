@@ -11,7 +11,8 @@ using namespace DirectX;
 
 void PointLightRenderProxy::UpdateParameters(XMVECTOR position, XMVECTOR color,
     float intensity, float range,
-    bool castShadow, float shadowBias, float pcssLightSize)
+    bool castShadow, float shadowBias, float pcssLightSize,
+    float shadowNormalBias, float shadowSlopeBias)
 {
     m_position = position;
     m_color = color;
@@ -20,6 +21,8 @@ void PointLightRenderProxy::UpdateParameters(XMVECTOR position, XMVECTOR color,
     m_castShadow = castShadow;
     m_shadowBias = shadowBias;
     m_pcssLightSize = pcssLightSize;
+    m_shadowNormalBias = shadowNormalBias;
+    m_shadowSlopeBias = shadowSlopeBias;
 }
 
 void PointLightRenderProxy::SetPointLightBufferIndex(uint32_t index)
@@ -39,6 +42,8 @@ void PointLightRenderProxy::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext
     lightData.pcssLightSize = m_pcssLightSize;
     lightData.shadowEnabled = 0;
     lightData.shadowNearZ = m_shadowNearZ;
+    lightData.shadowNormalBias = m_shadowNormalBias;
+    lightData.shadowSlopeBias = m_shadowSlopeBias;
 
     renderContext->pointLights.push_back(lightData);
 }
@@ -95,4 +100,6 @@ void PointLightRenderProxy::WriteShadowParams(std::shared_ptr<DXGraphicsContext>
     L.pcssLightSize = m_pcssLightSize;
     L.shadowEnabled = m_castShadow ? 1 : 0;
     L.shadowNearZ = m_shadowNearZ;
+    L.shadowNormalBias = m_shadowNormalBias;
+    L.shadowSlopeBias = m_shadowSlopeBias;
 }

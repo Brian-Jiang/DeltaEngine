@@ -19,7 +19,8 @@ namespace
 
 void DirectionalLightRenderProxy::UpdateParameters(XMVECTOR direction, XMVECTOR color, float intensity,
     bool castShadow, float shadowBias, float pcssLightSize, float shadowMaxDistance,
-    float shadowOrthoPadding, int shadowResolution)
+    float shadowOrthoPadding, int shadowResolution,
+    float shadowNormalBias, float shadowSlopeBias)
 {
     m_direction = direction;
     m_color = color;
@@ -30,6 +31,8 @@ void DirectionalLightRenderProxy::UpdateParameters(XMVECTOR direction, XMVECTOR 
     m_shadowMaxDistance = shadowMaxDistance;
     m_shadowOrthoPadding = shadowOrthoPadding;
     m_shadowResolution = shadowResolution;
+    m_shadowNormalBias = shadowNormalBias;
+    m_shadowSlopeBias = shadowSlopeBias;
 }
 
 void DirectionalLightRenderProxy::SetDirectionalLightBufferIndex(uint32_t index)
@@ -48,6 +51,8 @@ void DirectionalLightRenderProxy::PreGatherDrawCalls(std::shared_ptr<DXGraphicsC
     lightData.shadowBias = m_shadowBias;
     lightData.pcssLightSize = m_pcssLightSize;
     lightData.shadowEnabled = 0;
+    lightData.shadowNormalBias = m_shadowNormalBias;
+    lightData.shadowSlopeBias = m_shadowSlopeBias;
 
     renderContext->directionalLights.push_back(lightData);
 }
@@ -154,7 +159,9 @@ void DirectionalLightRenderProxy::GatherShadowViews(std::shared_ptr<DXGraphicsCo
     sv.lightIndex = m_directionalLightBufferIndex;
     sv.shadowParamsWriter = this;
     sv.viewProj = XMMatrixIdentity();
-    const uint32_t edge = (std::clamp)(static_cast<uint32_t>(m_shadowResolution), 32u, kMaxDirShadowEdge);
+    const float q = (std::max)(0.05f, ctx->shadowQualityScalar);
+    const uint32_t scaled = static_cast<uint32_t>(std::lround(static_cast<float>(m_shadowResolution) * q));
+    const uint32_t edge = (std::clamp)(scaled, 32u, kMaxDirShadowEdge);
     sv.shadowMapEdgePx = edge;
 
     outViews.push_back(sv);
@@ -194,4 +201,6 @@ void DirectionalLightRenderProxy::WriteShadowParams(std::shared_ptr<DXGraphicsCo
     L.shadowBias = m_shadowBias;
     L.pcssLightSize = m_pcssLightSize;
     L.shadowEnabled = m_castShadow ? 1 : 0;
+    L.shadowNormalBias = m_shadowNormalBias;
+    L.shadowSlopeBias = m_shadowSlopeBias;
 }

@@ -52,6 +52,9 @@ struct DXGraphicsContext
 
     /// Non-owning pointer to the active camera's render proxy for the frame.
     CameraRenderProxy* camera = nullptr;
+
+    /// Global shadow quality multiplier sourced from ShadowPassManager settings.
+    float shadowQualityScalar = 1.0f;
 };
 
 DELTA_ENGINE_NS_END

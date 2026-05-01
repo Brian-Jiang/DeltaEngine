@@ -35,7 +35,11 @@ struct alignas(16) DirectionalLightBuffer
     float shadowBias;
     float pcssLightSize;
     int shadowEnabled;
-    int _pad;
+    float shadowNormalBias;
+    float shadowSlopeBias;
+    float _pad0;
+    float _pad1;
+    float _pad2;
 };
 
 struct alignas(16) PointLightBuffer
@@ -57,7 +61,11 @@ struct alignas(16) PointLightBuffer
     float pcssLightSize;
     int shadowEnabled;
     float shadowNearZ;
-    int _pad1;
+    float shadowNormalBias;
+    float shadowSlopeBias;
+    float _pad1;
+    float _pad2;
+    float _pad3;
 };
 
 struct alignas(16) SpotLightBuffer
@@ -88,7 +96,11 @@ struct alignas(16) SpotLightBuffer
     float shadowBias;
     float pcssLightSize;
     int shadowEnabled;
-    int _pad;
+    float shadowNormalBias;
+    float shadowSlopeBias;
+    float _pad0;
+    float _pad1;
+    float _pad2;
 };
 
 struct alignas(16) Light

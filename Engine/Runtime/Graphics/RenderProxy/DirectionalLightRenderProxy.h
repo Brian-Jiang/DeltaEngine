@@ -17,7 +17,8 @@ class DirectionalLightRenderProxy : public RenderProxy
 public:
     void UpdateParameters(DirectX::XMVECTOR direction, DirectX::XMVECTOR color, float intensity,
         bool castShadow, float shadowBias, float pcssLightSize, float shadowMaxDistance,
-        float shadowOrthoPadding, int shadowResolution);
+        float shadowOrthoPadding, int shadowResolution,
+        float shadowNormalBias, float shadowSlopeBias);
 
     void SetDirectionalLightBufferIndex(uint32_t index);
 
@@ -35,6 +36,8 @@ private:
     bool m_castShadow = true;
     float m_shadowBias = 0.005f;
     float m_pcssLightSize = 0.05f;
+    float m_shadowNormalBias = 0.0f;
+    float m_shadowSlopeBias = 1.0f;
     float m_shadowMaxDistance = 100.0f;
     float m_shadowOrthoPadding = 5.0f;
     int m_shadowResolution = 1024;

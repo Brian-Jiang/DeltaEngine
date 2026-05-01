@@ -26,6 +26,9 @@
 #include "Runtime/Core/DTexture.h"
 #include "Runtime/Graphics/Shadow/ShadowConstants.h"
 #include "Runtime/Graphics/Shadow/ShadowDepthPSO.h"
+#include "Runtime/Graphics/Shadow/ShadowSettings.h"
+
+#include <algorithm>
 
 using namespace Microsoft::WRL;
 using namespace DeltaEngine;
@@ -348,8 +351,12 @@ void DXRenderManager::StageShadowDescriptors(CommandList& commandList)
     commandList.SetShaderResourceView(rp, 1, mapSpot, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     commandList.SetShaderResourceView(rp, 2, cubeAr, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
-    commandList.SetGraphicsDynamicConstantBuffer(static_cast<UINT>(RootParameterType::ShadowCB),
-        ShadowCBGPU { 16, 16, 1.0f, 0.0f });
+    const ShadowSettings& settings = m_shadowPass.GetSettings();
+    ShadowCBGPU shadowCb {};
+    shadowCb.m_pcssBlockerSamples = (std::clamp)(settings.m_pcssBlockerSamples, 1, 32);
+    shadowCb.m_pcssPCFSamples = (std::clamp)(settings.m_pcssPCFSamples, 1, 32);
+    shadowCb.m_qualityScalar = (std::max)(0.05f, settings.m_qualityScalar);
+    commandList.SetGraphicsDynamicConstantBuffer(static_cast<UINT>(RootParameterType::ShadowCB), shadowCb);
 }
 
 void DXRenderManager::RenderFrame()

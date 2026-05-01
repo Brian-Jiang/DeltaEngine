@@ -3,7 +3,9 @@
 #include "EngineIncludes.h"
 
 #include "Graphics/Shadow/ShadowAtlas.h"
+#include "Graphics/Shadow/ShadowConstants.h"
 #include "Graphics/Shadow/ShadowCubeArray.h"
+#include "Graphics/Shadow/ShadowSettings.h"
 #include "Graphics/Shadow/ShadowDepthPSO.h"
 #include "Graphics/Shadow/ShadowMapAllocator.h"
 
@@ -30,6 +32,9 @@ public:
 
     DELTAENGINE_API const ShadowDepthPSO* GetShadowDepthPSO() const { return m_shadowDepthPso.get(); }
 
+    DELTAENGINE_API const ShadowSettings& GetSettings() const { return m_settings; }
+    DELTAENGINE_API ShadowSettings& GetSettings() { return m_settings; }
+
 private:
     static constexpr uint32_t kAtlasSize = 4096;
     static constexpr uint32_t kDirectionalTileSize = 2048;
@@ -45,6 +50,7 @@ private:
     ShadowMapAllocator m_spotAllocator;
     PointSliceAllocator m_pointAllocator;
     std::unique_ptr<ShadowDepthPSO> m_shadowDepthPso;
+    ShadowSettings m_settings;
 };
 
 DELTA_ENGINE_NS_END
