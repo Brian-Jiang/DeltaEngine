@@ -1,9 +1,10 @@
 #pragma once
 
 #include "EngineIncludes.h"
-#include "Core/DHandle.h"
-#include "Core/UUID.h"
-#include "Reflection/ReflectionRegistry.h"
+
+#include "Runtime/Core/DHandle.h"
+#include "Runtime/Core/UUID.h"
+#include "Runtime/Reflection/ReflectionRegistry.h"
 
 #include "DObject.generated.h"
 

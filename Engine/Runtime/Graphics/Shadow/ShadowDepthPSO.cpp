@@ -93,7 +93,7 @@ ShadowDepthPSO::ShadowDepthPSO(Device& device)
     m_rootSignature = device.CreateRootSignature(rootSigDesc.Desc_1_1);
 
     Slang::ComPtr<ISlangBlob> vsBlob =
-        CompileSlangStage(L"Shaders/ShadowDepth.slang", L"VSMain", L"vs_6_6", "ShadowDepthPSO");
+        CompileSlangStage("Shaders/ShadowDepth.slang", "VSMain", "vs_6_6", "ShadowDepthPSO");
     if (!vsBlob || vsBlob->getBufferSize() == 0)
         throw std::runtime_error("ShadowDepthPSO: failed to compile ShadowDepth.slang VSMain");
 

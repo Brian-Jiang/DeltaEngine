@@ -1,9 +1,13 @@
 #include "Runtime/Core/Skybox.h"
 
-#include "Core/DMaterial.h"
-#include "Core/DShader.h"
-#include "Reflection/ReflectionRegistry.h"
+#include "Runtime/Core/DMaterial.h"
+#include "Runtime/Core/DShader.h"
 #include "Runtime/Graphics/RenderProxy/SkyboxRenderProxy.h"
+#include "Runtime/Reflection/ReflectionRegistry.h"
+
+#include <filesystem>
+#include <memory>
+#include <string>
 
 using namespace DeltaEngine;
 
@@ -29,9 +33,11 @@ void Skybox::Initialize(std::shared_ptr<DXGraphicsContext> context)
     {
         DShader* shader = CreateDObject<DShader>();
         shader->Initialize(
-            L"Skybox.slang",
-            L"VSMain", L"PSMain",
-            L"vs_6_6", L"ps_6_6");
+            std::filesystem::path("Skybox.slang"),
+            "VSMain",
+            "PSMain",
+            "vs_6_6",
+            "ps_6_6");
 
         m_material = CreateDObject<DMaterial>();
         m_material->Initialize(shader);

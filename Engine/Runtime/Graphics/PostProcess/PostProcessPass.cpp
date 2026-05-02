@@ -1,7 +1,7 @@
-#include "Graphics/PostProcess/PostProcessPass.h"
+#include "Runtime/Graphics/PostProcess/PostProcessPass.h"
 
-#include "Core/DShader.h"
-#include "Reflection/ReflectionRegistry.h"
+#include "Runtime/Core/DShader.h"
+#include "Runtime/Reflection/ReflectionRegistry.h"
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -10,11 +10,11 @@ PostProcessPass::~PostProcessPass()
     ReleaseFallbackShader();
 }
 
-DShader* PostProcessPass::ResolveShader(const std::wstring& fallbackPath,
-                                        const std::wstring& vsEntry,
-                                        const std::wstring& psEntry,
-                                        const std::wstring& vsProfile,
-                                        const std::wstring& psProfile)
+DShader* PostProcessPass::ResolveShader(const std::filesystem::path& fallbackPath,
+                                        const std::string& vsEntry,
+                                        const std::string& psEntry,
+                                        const std::string& vsProfile,
+                                        const std::string& psProfile)
 {
     if (m_shader)
         return m_shader;

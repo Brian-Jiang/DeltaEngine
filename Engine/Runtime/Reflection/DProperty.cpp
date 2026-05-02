@@ -9,6 +9,7 @@
 #include "SimpleMath.h"
 #include <DirectXMath.h>
 #include <cstring>
+#include <filesystem>
 #include <vector>
 
 using namespace DeltaEngine;
@@ -393,6 +394,95 @@ void DWStringProperty::Serialize(AssetArchive& ar, void* objectPtr)
 void DWStringProperty::SerializeElement(AssetArchive& ar, void* elementAddr)
 {
     ar.SerializeElement(*static_cast<std::wstring*>(elementAddr));
+}
+
+// ---------------------------------------------------------------------------
+// DFilesystemPathProperty
+// ---------------------------------------------------------------------------
+
+namespace
+{
+std::string PathToUtf8(const std::filesystem::path& p)
+{
+    const std::u8string u8 = p.u8string();
+    return std::string(reinterpret_cast<const char*>(u8.data()), u8.size());
+}
+
+std::filesystem::path Utf8ToPath(const std::string& utf8)
+{
+    return std::filesystem::path(std::u8string(reinterpret_cast<const char8_t*>(utf8.data()), utf8.size()));
+}
+} // namespace
+
+DFilesystemPathProperty::DFilesystemPathProperty(std::string name, uint32_t offset)
+    : DProperty(std::move(name), "std::filesystem::path", offset, sizeof(std::filesystem::path))
+{
+}
+
+void DFilesystemPathProperty::InitializeValue(void* address) const
+{
+    new (address) std::filesystem::path();
+}
+
+void DFilesystemPathProperty::DestroyValue(void* address) const
+{
+    static_cast<std::filesystem::path*>(address)->~path();
+}
+
+void DFilesystemPathProperty::SetValue(void* instance, const void* field_value) const
+{
+    void* addr = static_cast<uint8_t*>(instance) + m_offset;
+    *static_cast<std::filesystem::path*>(addr) = field_value
+        ? *static_cast<const std::filesystem::path*>(field_value)
+        : std::filesystem::path{};
+    static_cast<DObject*>(instance)->MarkDirty();
+}
+
+void* DFilesystemPathProperty::GetValue(const void* instance) const
+{
+    return static_cast<uint8_t*>(const_cast<void*>(instance)) + m_offset;
+}
+
+void DFilesystemPathProperty::CopyValue(void* dest, const void* src) const
+{
+    new (dest) std::filesystem::path(*static_cast<const std::filesystem::path*>(src));
+}
+
+bool DFilesystemPathProperty::Identical(const void* a, const void* b) const
+{
+    return *static_cast<const std::filesystem::path*>(a) == *static_cast<const std::filesystem::path*>(b);
+}
+
+std::string DFilesystemPathProperty::ToString(const void* address) const
+{
+    return PathToUtf8(*static_cast<const std::filesystem::path*>(address));
+}
+
+EPropertyType DFilesystemPathProperty::GetPropertyType() const
+{
+    return EPropertyType::FilesystemPath;
+}
+
+void DFilesystemPathProperty::Serialize(AssetArchive& ar, void* objectPtr)
+{
+    auto* p = static_cast<std::filesystem::path*>(GetValue(objectPtr));
+    std::string utf8;
+    if (ar.IsSaving())
+        utf8 = PathToUtf8(*p);
+    ar.Serialize(GetName(), utf8);
+    if (ar.IsLoading())
+        *p = Utf8ToPath(utf8);
+}
+
+void DFilesystemPathProperty::SerializeElement(AssetArchive& ar, void* elementAddr)
+{
+    auto* p = static_cast<std::filesystem::path*>(elementAddr);
+    std::string utf8;
+    if (ar.IsSaving())
+        utf8 = PathToUtf8(*p);
+    ar.SerializeElement(utf8);
+    if (ar.IsLoading())
+        *p = Utf8ToPath(utf8);
 }
 
 // ---------------------------------------------------------------------------

@@ -20,6 +20,7 @@ TYPE_MAP = {
     "std::basic_string<wchar_t>":         "DWStringProperty",
     "std::basic_string<wchar_t, std::char_traits<wchar_t>>": "DWStringProperty",
     "std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t>>": "DWStringProperty",
+    "std::filesystem::path":              "DFilesystemPathProperty",
     "DirectX::SimpleMath::Vector3":       "DVector3Property",
     "DirectX::SimpleMath::Quaternion":    "DQuaternionProperty",
     "DirectX::XMMATRIX":                  "DFloat4x4Property",
@@ -32,7 +33,7 @@ TYPE_MAP = {
 
 VECTOR_ELEMENT_PROPERTY_CLASSES = {
     "DFloatProperty", "DIntProperty", "DBoolProperty", "DDoubleProperty",
-    "DStringProperty", "DWStringProperty",
+    "DStringProperty", "DWStringProperty", "DFilesystemPathProperty",
     "DVector3Property", "DQuaternionProperty",
     "DFloat4Property", "DFloat4x4Property",
 }
@@ -44,6 +45,7 @@ INNER_TYPE_TO_CPP = {
     "DDoubleProperty":     "double",
     "DStringProperty":     "std::string",
     "DWStringProperty":    "std::wstring",
+    "DFilesystemPathProperty": "std::filesystem::path",
     "DVector3Property":    "DirectX::SimpleMath::Vector3",
     "DQuaternionProperty": "DirectX::SimpleMath::Quaternion",
     "DFloat4Property":     "DirectX::XMFLOAT4",
@@ -111,6 +113,8 @@ def _resolve_vector_inner(inner_type: str) -> tuple | None:
         return ("DStringProperty", "std::string", False, "")
     if _WSTRING_RE.match(s):
         return ("DWStringProperty", "std::wstring", False, "")
+    if s == "std::filesystem::path":
+        return ("DFilesystemPathProperty", "std::filesystem::path", False, "")
 
     if s.endswith("*"):
         pointee_raw = s[:-1].strip()

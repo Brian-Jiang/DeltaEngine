@@ -2,12 +2,13 @@
 
 #include "EngineIncludes.h"
 
-#include <DirectXMath.h>
-#include <vector>
-
-#include "SimpleMath.h"
 #include "Runtime/Core/DComponent.h"
 #include "Runtime/Serialization/ISerializationCallbackReceiver.h"
+
+#include <DirectXMath.h>
+#include <SimpleMath.h>
+
+#include <vector>
 
 #include "SceneComponent.generated.h"
 

@@ -1,25 +1,22 @@
-#include "DShader.h"
+#include "Runtime/Core/DShader.h"
 
-#include "Assets/AssetDatabaseLocator.h"
-#include "Assets/DPrimaryAsset.h"
-#include "Assets/IAssetDatabase.h"
-#include "Graphics/DXUtils.h"
-#include "Graphics/ShaderCompile.h"
-#include "IO/IOManager.h"
+#include "Runtime/Assets/AssetDatabaseLocator.h"
+#include "Runtime/Assets/DPrimaryAsset.h"
+#include "Runtime/Assets/IAssetDatabase.h"
+#include "Runtime/Graphics/DXUtils.h"
+#include "Runtime/Graphics/ShaderCompile.h"
+#include "Runtime/IO/IOManager.h"
 
-#include <cstring>
 #include <cstddef>
+#include <cstring>
+#include <filesystem>
 
 namespace
 {
-std::string WideToUtf8(const std::wstring& wide)
+std::string PathLog(const std::filesystem::path& p)
 {
-    if (wide.empty())
-        return {};
-    const int size = ::WideCharToMultiByte(CP_UTF8, 0, wide.data(), static_cast<int>(wide.size()), nullptr, 0, nullptr, nullptr);
-    std::string out(static_cast<size_t>(size), '\0');
-    ::WideCharToMultiByte(CP_UTF8, 0, wide.data(), static_cast<int>(wide.size()), out.data(), size, nullptr, nullptr);
-    return out;
+    const std::u8string u = p.u8string();
+    return { reinterpret_cast<const char*>(u.data()), u.size() };
 }
 
 bool BlobLooksValid(const Slang::ComPtr<ISlangBlob>& blob)
@@ -268,22 +265,17 @@ using namespace Microsoft::WRL;
 DShader::DShader()
     : m_vertexShaderBlob(nullptr)
     , m_pixelShaderBlob(nullptr)
-    , m_sourcePath(L"")
-    , m_vertexShaderEntryPoint(L"")
-    , m_pixelShaderEntryPoint(L"")
-    , m_vertexShaderTargetProfile(L"")
-    , m_pixelShaderTargetProfile(L"")
 {
 }
 
 DShader::~DShader() = default;
 
 void DShader::Initialize(
-    const std::wstring& sourcePath,
-    const std::wstring& vertexShaderEntryPoint,
-    const std::wstring& pixelShaderEntryPoint,
-    const std::wstring& vertexShaderTargetProfile,
-    const std::wstring& pixelShaderTargetProfile)
+    const std::filesystem::path& sourcePath,
+    const std::string& vertexShaderEntryPoint,
+    const std::string& pixelShaderEntryPoint,
+    const std::string& vertexShaderTargetProfile,
+    const std::string& pixelShaderTargetProfile)
 {
     m_sourcePath = sourcePath;
     m_vertexShaderEntryPoint = vertexShaderEntryPoint;
@@ -293,31 +285,31 @@ void DShader::Initialize(
     CompileShader();
 }
 
-void DShader::SetSourcePath(const std::wstring& sourcePath)
+void DShader::SetSourcePath(const std::filesystem::path& sourcePath)
 {
     m_sourcePath = sourcePath;
     CompileShader();
 }
 
-void DShader::SetVertexShaderEntryPoint(const std::wstring& entryPoint)
+void DShader::SetVertexShaderEntryPoint(const std::string& entryPoint)
 {
     m_vertexShaderEntryPoint = entryPoint;
     CompileShader();
 }
 
-void DShader::SetPixelShaderEntryPoint(const std::wstring& entryPoint)
+void DShader::SetPixelShaderEntryPoint(const std::string& entryPoint)
 {
     m_pixelShaderEntryPoint = entryPoint;
     CompileShader();
 }
 
-void DShader::SetVertexShaderTargetProfile(const std::wstring& targetProfile)
+void DShader::SetVertexShaderTargetProfile(const std::string& targetProfile)
 {
     m_vertexShaderTargetProfile = targetProfile;
     CompileShader();
 }
 
-void DShader::SetPixelShaderTargetProfile(const std::wstring& targetProfile)
+void DShader::SetPixelShaderTargetProfile(const std::string& targetProfile)
 {
     m_pixelShaderTargetProfile = targetProfile;
     CompileShader();
@@ -358,16 +350,16 @@ void DShader::CompileShader()
     if (!BlobLooksValid(m_vertexShaderBlob))
         DLOG(LogShader, ELogLevel::Error,
             "CompileShader: vertex stage empty path='{}' entry='{}' profile='{}'",
-            WideToUtf8(m_sourcePath),
-            WideToUtf8(m_vertexShaderEntryPoint),
-            WideToUtf8(m_vertexShaderTargetProfile));
+            PathLog(m_sourcePath),
+            m_vertexShaderEntryPoint,
+            m_vertexShaderTargetProfile);
 
     if (!BlobLooksValid(m_pixelShaderBlob))
         DLOG(LogShader, ELogLevel::Error,
             "CompileShader: pixel stage empty path='{}' entry='{}' profile='{}'",
-            WideToUtf8(m_sourcePath),
-            WideToUtf8(m_pixelShaderEntryPoint),
-            WideToUtf8(m_pixelShaderTargetProfile));
+            PathLog(m_sourcePath),
+            m_pixelShaderEntryPoint,
+            m_pixelShaderTargetProfile);
 }
 
 void DShader::OnBeforeSerialize()
@@ -376,7 +368,7 @@ void DShader::OnBeforeSerialize()
     {
         DLOG(LogShader, ELogLevel::Warning,
             "DShader::OnBeforeSerialize: missing VS/PS blobs for '{}' — omitting serialized bytecode",
-            WideToUtf8(m_sourcePath));
+            PathLog(m_sourcePath));
         m_serializedShaderBlobs = {};
     }
     else
@@ -391,7 +383,7 @@ void DShader::OnAfterDeserialize()
     {
         DLOG(LogShader, ELogLevel::Warning,
             "DShader::OnAfterDeserialize: invalid serialized shader blobs for '{}' bulkBytes={}",
-            WideToUtf8(m_sourcePath),
+            PathLog(m_sourcePath),
             m_serializedShaderBlobs.m_size);
         m_vertexShaderBlob = nullptr;
         m_pixelShaderBlob = nullptr;
@@ -401,7 +393,7 @@ void DShader::OnAfterDeserialize()
     {
         DLOG(LogShader, ELogLevel::Warning,
             "DShader::OnAfterDeserialize: invalid serialized input layout for '{}' bulkBytes={}",
-            WideToUtf8(m_sourcePath),
+            PathLog(m_sourcePath),
             m_serializedInputLayout.m_size);
         m_inputLayout.clear();
         m_inputLayoutSemanticNames.clear();

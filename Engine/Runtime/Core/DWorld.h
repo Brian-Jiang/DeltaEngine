@@ -2,13 +2,12 @@
 
 #include "EngineIncludes.h"
 
+#include "Runtime/Core/DObject.h"
+#include "Runtime/Graphics/Shadow/ShadowView.h"
+
 #include <memory>
 #include <string>
 #include <vector>
-
-#include "Core/DObject.h"
-
-#include "Runtime/Graphics/Shadow/ShadowView.h"
 
 #include "DWorld.generated.h"
 

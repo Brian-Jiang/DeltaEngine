@@ -61,7 +61,7 @@ std::filesystem::path AssetImporter::ResolveDestPath(const std::filesystem::path
 AssetId AssetImporter::ImportTexture(const std::filesystem::path& sourcePath, const std::filesystem::path& destDir, EditorAssetDatabase& db)
 {
     DTexture* texture = CreateDObject<DTexture>();
-    texture->Initialize(sourcePath.wstring());
+    texture->Initialize(sourcePath);
 
     PA_Texture* pa = PA_Texture::Create(texture);
     const std::filesystem::path dest = ResolveDestPath(destDir, sourcePath.stem().string(), db);
@@ -72,7 +72,7 @@ AssetId AssetImporter::ImportTexture(const std::filesystem::path& sourcePath, co
 AssetId AssetImporter::ImportShader(const std::filesystem::path& sourcePath, const std::filesystem::path& destDir, EditorAssetDatabase& db)
 {
     DShader* shader = CreateDObject<DShader>();
-    shader->Initialize(sourcePath.wstring(), L"VSMain", L"PSMain", L"vs_6_6", L"ps_6_6");
+    shader->Initialize(sourcePath, "VSMain", "PSMain", "vs_6_6", "ps_6_6");
 
     PA_Shader* pa = PA_Shader::Create(shader);
     const std::filesystem::path dest = ResolveDestPath(destDir, sourcePath.stem().string(), db);
@@ -146,7 +146,7 @@ std::vector<AssetId> AssetImporter::ImportFbx(const std::filesystem::path& sourc
 
                 const std::filesystem::path texSrc(fullTexPath);
                 DTexture* texture = CreateDObject<DTexture>();
-                texture->Initialize(texSrc.wstring());
+                texture->Initialize(texSrc);
 
                 PA_Texture* pa = PA_Texture::Create(texture);
                 const std::filesystem::path dest = ResolveDestPath(subDir, texSrc.stem().string(), db);
@@ -207,7 +207,7 @@ std::vector<AssetId> AssetImporter::ImportFbx(const std::filesystem::path& sourc
     // Pass 4: create PA_StaticMesh (geometry only, materials wired up)
     // -----------------------------------------------------------------------
     DMesh* mesh = CreateDObject<DMesh>();
-    mesh->ImportFromAbsolutePath(sourcePath.wstring());
+    mesh->ImportFromAbsolutePath(sourcePath);
     mesh->SetMaterials(importedMaterials);
 
     PA_StaticMesh* pa = PA_StaticMesh::Create(mesh);

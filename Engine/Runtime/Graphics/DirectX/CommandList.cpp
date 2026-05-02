@@ -409,7 +409,7 @@ std::shared_ptr<DirectX12Texture> CommandList::LoadTexture(DTexture* texture)
 {
     std::shared_ptr<DirectX12Texture> dx12texture;
 
-    auto fileName = texture->GetSourcePath();
+    auto fileName = texture->GetSourcePath().wstring();
     std::lock_guard<std::mutex> lock(ms_TextureCacheMutex);
     auto iter = ms_TextureCache.find(fileName);
     if (iter != ms_TextureCache.end())

@@ -51,6 +51,7 @@ private:
     WidgetEditEvent DrawDoubleProperty(DObject* instance, DProperty* prop);
     WidgetEditEvent DrawBoolProperty(DObject* instance, DProperty* prop);
     WidgetEditEvent DrawStringProperty(DObject* instance, DProperty* prop);
+    WidgetEditEvent DrawFilesystemPathProperty(DObject* instance, DProperty* prop);
     bool DrawWStringProperty(DObject* instance, DProperty* prop);
     WidgetEditEvent DrawVector3Property(DObject* instance, DProperty* prop);
     WidgetEditEvent DrawQuaternionProperty(DObject* instance, DProperty* prop);
@@ -68,6 +69,7 @@ private:
     WidgetEditEvent DrawDoublePropertyAt(void* container, DProperty* prop);
     WidgetEditEvent DrawBoolPropertyAt(void* container, DProperty* prop);
     WidgetEditEvent DrawStringPropertyAt(void* container, DProperty* prop);
+    WidgetEditEvent DrawFilesystemPathPropertyAt(void* container, DProperty* prop);
 
     const DProperty* m_activeEditProp   = nullptr;
     nlohmann::json   m_activeEditBefore = {};

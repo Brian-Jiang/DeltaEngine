@@ -1,10 +1,11 @@
-#include "Runtime/Core/DShader.h"
-#include "Runtime/Core/DMesh.h"
 #include "Runtime/Core/DMaterial.h"
+#include "Runtime/Core/DMesh.h"
+#include "Runtime/Core/DShader.h"
 #include "Runtime/Core/DTexture.h"
 #include "Runtime/Graphics/MaterialConstants.h"
 
 #include <gtest/gtest.h>
+#include <filesystem>
 #include <stdexcept>
 
 using namespace DeltaEngine;
@@ -13,11 +14,11 @@ TEST(CoreAssetData, DShader_Initialize_InvalidSource_YieldsEmptyBlobs)
 {
     DShader shader;
     shader.Initialize(
-        L"ThisPathDoesNotExistDeltaEngine_missing_xyz.slang",
-        L"VSMain",
-        L"PSMain",
-        L"vs_6_6",
-        L"ps_6_6");
+        std::filesystem::path("ThisPathDoesNotExistDeltaEngine_missing_xyz.slang"),
+        "VSMain",
+        "PSMain",
+        "vs_6_6",
+        "ps_6_6");
 
     EXPECT_EQ(shader.GetVertexShaderBlob(), nullptr);
     EXPECT_EQ(shader.GetPixelShaderBlob(), nullptr);
@@ -26,7 +27,7 @@ TEST(CoreAssetData, DShader_Initialize_InvalidSource_YieldsEmptyBlobs)
 TEST(CoreAssetData, DMesh_ImportFromAbsolutePath_MissingFile_KeepsZeroSubmeshes)
 {
     DMesh mesh;
-    mesh.ImportFromAbsolutePath(L"C:\\DoesNotExistDeltaEngine\\missing_mesh_xyz.obj");
+    mesh.ImportFromAbsolutePath(std::filesystem::path("C:\\DoesNotExistDeltaEngine\\missing_mesh_xyz.obj"));
 
     EXPECT_EQ(mesh.GetSubMeshCount(), 0);
 }
@@ -34,7 +35,7 @@ TEST(CoreAssetData, DMesh_ImportFromAbsolutePath_MissingFile_KeepsZeroSubmeshes)
 TEST(CoreAssetData, DTexture_Initialize_MissingFile_ThrowsRuntimeError)
 {
     DTexture tex;
-    EXPECT_THROW(tex.Initialize(L"C:\\DoesNotExistDeltaEngine\\missing_tex_xyz.dds"), std::runtime_error);
+    EXPECT_THROW(tex.Initialize(std::filesystem::path("C:\\DoesNotExistDeltaEngine\\missing_tex_xyz.dds")), std::runtime_error);
 }
 
 TEST(CoreAssetData, DMaterial_GetTexture_InvalidSlot_ReturnsNull)

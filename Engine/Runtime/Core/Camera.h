@@ -2,10 +2,10 @@
 
 #include "EngineIncludes.h"
 
-#include <memory>
+#include "Runtime/Core/SceneComponent.h"
+#include "Runtime/Graphics/Shadow/ShadowSettings.h"
 
-#include "Core/SceneComponent.h"
-#include "Graphics/Shadow/ShadowSettings.h"
+#include <memory>
 
 #include "Camera.generated.h"
 

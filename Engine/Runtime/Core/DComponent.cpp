@@ -1,6 +1,6 @@
-#include "Core/DComponent.h"
+#include "Runtime/Core/DComponent.h"
 
-#include "Assets/DPrimaryAsset.h"
+#include "Runtime/Assets/DPrimaryAsset.h"
 
 using namespace DeltaEngine;
 

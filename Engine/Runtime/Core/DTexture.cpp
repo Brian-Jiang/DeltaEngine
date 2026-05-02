@@ -1,4 +1,4 @@
-#include "Core/DTexture.h"
+#include "Runtime/Core/DTexture.h"
 
 #include "Runtime/Graphics/DXUtils.h"
 
@@ -10,12 +10,10 @@
 
 namespace
 {
-std::string NarrowGenericPath(const std::wstring& widePath)
+std::string PathLog(const std::filesystem::path& p)
 {
-    if (widePath.empty())
-        return {};
-    std::filesystem::path p(widePath);
-    return p.generic_string();
+    const std::u8string u = p.u8string();
+    return { reinterpret_cast<const char*>(u.data()), u.size() };
 }
 
 DeltaEngine::TBulkData SerializeTexture(
@@ -150,8 +148,7 @@ using namespace DeltaEngine;
 using namespace DirectX;
 
 DTexture::DTexture()
-    : m_sourcePath(L"")
-    , m_sRGB(false)
+    : m_sRGB(false)
 {
     m_metadata = std::make_shared<TexMetadata>();
     m_scratchImage = std::make_shared<ScratchImage>();
@@ -162,7 +159,7 @@ DTexture::~DTexture()
     m_scratchImage.reset();
 }
 
-void DTexture::Initialize(const std::wstring& filePath, bool sRGB)
+void DTexture::Initialize(const std::filesystem::path& filePath, bool sRGB)
 {
     m_sourcePath = filePath;
     m_sRGB = sRGB;
@@ -179,24 +176,23 @@ DXGI_FORMAT DTexture::GetFormat() const { return m_metadata->format; }
 
 void DTexture::LoadTexture()
 {
-    const std::filesystem::path filePath(m_sourcePath);
-    if (!std::filesystem::exists(filePath))
+    if (!std::filesystem::exists(m_sourcePath))
     {
         DLOG(LogAsset, ELogLevel::Error,
             "LoadTexture: file not found (resolved generic path '{}')",
-            NarrowGenericPath(m_sourcePath));
+            PathLog(m_sourcePath));
         throw std::runtime_error("Texture file not found.");
     }
 
-    if (filePath.extension() == ".dds")
+    if (m_sourcePath.extension() == ".dds")
     {
         ThrowIfFailed(LoadFromDDSFile(m_sourcePath.c_str(), DDS_FLAGS_FORCE_RGB, m_metadata.get(), *m_scratchImage));
     }
-    else if (filePath.extension() == ".hdr")
+    else if (m_sourcePath.extension() == ".hdr")
     {
         ThrowIfFailed(LoadFromHDRFile(m_sourcePath.c_str(), m_metadata.get(), *m_scratchImage));
     }
-    else if (filePath.extension() == ".tga")
+    else if (m_sourcePath.extension() == ".tga")
     {
         ThrowIfFailed(LoadFromTGAFile(m_sourcePath.c_str(), m_metadata.get(), *m_scratchImage));
     }
@@ -212,7 +208,7 @@ void DTexture::LoadTexture()
     }
 }
 
-std::wstring DTexture::GetSourcePath() const
+std::filesystem::path DTexture::GetSourcePath() const
 {
     return m_sourcePath;
 }
@@ -222,7 +218,7 @@ bool DTexture::IsCubemap() const
     return m_metadata && m_metadata->IsCubemap();
 }
 
-DTexture* DTexture::LoadFromFile(const std::wstring& filePath, bool sRGB)
+DTexture* DTexture::LoadFromFile(const std::filesystem::path& filePath, bool sRGB)
 {
     DTexture* texture = CreateDObject<DTexture>();
     texture->Initialize(filePath, sRGB);
@@ -243,7 +239,7 @@ void DTexture::OnAfterDeserialize()
         DLOG(LogAsset, ELogLevel::Warning,
             "DTexture::OnAfterDeserialize: bulk restore failed bulkBytes={} source='{}' — resetting to empty image",
             m_bulkData.m_size,
-            NarrowGenericPath(m_sourcePath));
+            PathLog(m_sourcePath));
         m_metadata = std::make_shared<TexMetadata>();
         m_scratchImage = std::make_shared<ScratchImage>();
         return;

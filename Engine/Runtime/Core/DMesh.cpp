@@ -1,14 +1,15 @@
-#include "Core/DMesh.h"
+#include "Runtime/Core/DMesh.h"
 
-#include "Core/DTexture.h"
-#include "IO/IOManager.h"
+#include "Runtime/Core/DTexture.h"
+#include "Runtime/IO/IOManager.h"
+#include "Runtime/Utils/StringUtils.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 
-#include <cstring>
 #include <cstddef>
+#include <cstring>
 #include <exception>
 #include <filesystem>
 #include <utility>
@@ -17,33 +18,40 @@ namespace
 {
 constexpr uint32_t kMaxMeshSubmeshes = 4096u;
 
-std::string GetParentDirectory(const std::string& filePath, int levelsUp)
+std::filesystem::path ParentPathLevelsUp(const std::filesystem::path& path, int levelsUp)
 {
-    std::filesystem::path path(filePath);
+    std::filesystem::path p = path;
     for (int level = 0; level < levelsUp; ++level)
-        path = path.parent_path();
-
-    return path.string();
+        p = p.parent_path();
+    return p;
 }
 
-std::string FindTextureFile(const std::string& directory, const std::string& fileName)
+std::string PathLog(const std::filesystem::path& p)
+{
+    const std::u8string u = p.u8string();
+    return { reinterpret_cast<const char*>(u.data()), u.size() };
+}
+
+std::filesystem::path FindTextureFile(const std::filesystem::path& directory, const std::string& fileName)
 {
     try
     {
         if (directory.empty() || !std::filesystem::exists(directory))
             return {};
 
+        const std::filesystem::path wantName(fileName);
+
         for (const auto& entry : std::filesystem::recursive_directory_iterator(directory))
         {
-            if (entry.is_regular_file() && entry.path().filename() == fileName)
-                return entry.path().string();
+            if (entry.is_regular_file() && entry.path().filename() == wantName)
+                return entry.path();
         }
     }
     catch (const std::filesystem::filesystem_error& ex)
     {
         DLOG(LogAsset, ELogLevel::Warning,
             "FindTextureFile: filesystem scan failed directory='{}' fileName='{}' — {}",
-            directory, fileName, ex.what());
+            PathLog(directory), fileName, ex.what());
     }
 
     return {};
@@ -252,13 +260,12 @@ DMesh::DMesh() = default;
 
 DMesh::~DMesh() = default;
 
-void DMesh::ImportMeshImpl(const std::wstring& absolutePath, bool loadTextures)
+void DMesh::ImportMeshImpl(const std::filesystem::path& absolutePath, bool loadTextures)
 {
     m_vertices.clear();
     m_indices.clear();
     m_textures.clear();
 
-    const std::filesystem::path path(absolutePath);
     Assimp::Importer importer;
     importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, true);
 
@@ -304,12 +311,14 @@ void DMesh::ImportMeshImpl(const std::wstring& absolutePath, bool loadTextures)
     // aiProcess_PreTransformVertices | //-- fixes the transformation issue.
     // 0;
 
-    const aiScene* scene = importer.ReadFile(path.string(), kImportFlags);
+    const std::u8string pu8 = absolutePath.u8string();
+    const std::string pathUtf8(reinterpret_cast<const char*>(pu8.data()), pu8.size());
+    const aiScene* scene = importer.ReadFile(pathUtf8.c_str(), kImportFlags);
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
     {
         DLOG(LogAsset, ELogLevel::Error,
             "DMesh ImportMeshImpl: Assimp load failed path='{}' sceneValid={} incompleteFlag={:#x} rootNodeValid={} error='{}'",
-            path.string(),
+            pathUtf8,
             static_cast<bool>(scene),
             scene ? scene->mFlags : 0u,
             static_cast<bool>(scene && scene->mRootNode),
@@ -317,16 +326,19 @@ void DMesh::ImportMeshImpl(const std::wstring& absolutePath, bool loadTextures)
         return;
     }
 
-    ProcessNode(scene->mRootNode, scene, DirectX::XMMatrixIdentity(), path.string(), loadTextures);
+    ProcessNode(scene->mRootNode, scene, DirectX::XMMatrixIdentity(), absolutePath, loadTextures);
 }
 
 void DMesh::ImportMesh()
 {
-    const std::wstring fullPath = IOManager::GetEngineSourceAssetFullPath(m_sourcePath);
-    ImportMeshImpl(fullPath, true);
+    const std::u8string su8 = m_sourcePath.u8string();
+    const std::string relUtf8(reinterpret_cast<const char*>(su8.data()), su8.size());
+    const std::wstring relWide = StringUtils::Utf8ToWString(relUtf8);
+    const std::wstring fullPathW = IOManager::GetEngineSourceAssetFullPath(relWide);
+    ImportMeshImpl(std::filesystem::path(fullPathW), true);
 }
 
-void DMesh::ProcessNode(aiNode* node, const aiScene* scene, DirectX::XMMATRIX accTransform, const std::string& absolutePath, bool loadTextures)
+void DMesh::ProcessNode(aiNode* node, const aiScene* scene, DirectX::XMMATRIX accTransform, const std::filesystem::path& absolutePath, bool loadTextures)
 {
     if (!node || !scene)
     {
@@ -346,7 +358,7 @@ void DMesh::ProcessNode(aiNode* node, const aiScene* scene, DirectX::XMMATRIX ac
         ProcessNode(node->mChildren[childIndex], scene, accTransform, absolutePath, loadTextures);
 }
 
-void DMesh::ProcessMesh(aiMesh* mesh, const aiScene* scene, const std::string& absolutePath, bool loadTextures)
+void DMesh::ProcessMesh(aiMesh* mesh, const aiScene* scene, const std::filesystem::path& absolutePath, bool loadTextures)
 {
     if (!mesh || !scene)
     {
@@ -425,7 +437,7 @@ void DMesh::ProcessMesh(aiMesh* mesh, const aiScene* scene, const std::string& a
     m_textures.insert(m_textures.end(), textures.begin(), textures.end());
 }
 
-std::vector<DTexture*> DMesh::LoadMaterialTextures(const aiScene* scene, aiMaterial* mat, aiTextureType type, std::string typeName, const std::string& filePath)
+std::vector<DTexture*> DMesh::LoadMaterialTextures(const aiScene* scene, aiMaterial* mat, aiTextureType type, std::string typeName, const std::filesystem::path& filePath)
 {
     (void)scene;
 
@@ -438,7 +450,7 @@ std::vector<DTexture*> DMesh::LoadMaterialTextures(const aiScene* scene, aiMater
         return textures;
     }
 
-    const auto folderPath = GetParentDirectory(filePath, 2);
+    const std::filesystem::path folderPath = ParentPathLevelsUp(filePath, 2);
     for (unsigned int textureIndex = 0; textureIndex < mat->GetTextureCount(type); ++textureIndex)
     {
         aiString str;
@@ -454,40 +466,40 @@ std::vector<DTexture*> DMesh::LoadMaterialTextures(const aiScene* scene, aiMater
         }
 
         const auto fileName = importedPath.substr(importedPath.find_last_of("\\/") + 1);
-        const auto texturePath = FindTextureFile(folderPath, fileName);
+        const std::filesystem::path texturePath = FindTextureFile(folderPath, fileName);
         if (texturePath.empty() || !std::filesystem::exists(texturePath))
         {
             DLOG(LogAsset, ELogLevel::Warning,
                 "LoadMaterialTextures: texture '{}' not resolved under '{}' (meshFolder={}, type={}, tag='{}')",
-                fileName, folderPath, filePath, static_cast<int>(type), typeName);
+                fileName, PathLog(folderPath), PathLog(filePath), static_cast<int>(type), typeName);
             continue;
         }
 
         try
         {
-            DTexture* texture = DTexture::LoadFromFile(std::wstring(texturePath.begin(), texturePath.end()), true);
+            DTexture* texture = DTexture::LoadFromFile(texturePath, true);
             textures.push_back(texture);
         }
         catch (const std::exception& ex)
         {
             DLOG(LogAsset, ELogLevel::Warning,
                 "LoadMaterialTextures: exception loading '{}' — {}",
-                texturePath, ex.what());
+                PathLog(texturePath), ex.what());
         }
     }
 
     return textures;
 }
 
-void DMesh::Initialize(std::wstring sourcePath)
+void DMesh::Initialize(const std::filesystem::path& sourcePath)
 {
-    m_sourcePath = std::move(sourcePath);
+    m_sourcePath = sourcePath;
     ImportMesh();
 }
 
-void DMesh::ImportFromAbsolutePath(std::wstring absolutePath)
+void DMesh::ImportFromAbsolutePath(const std::filesystem::path& absolutePath)
 {
-    m_sourcePath = std::move(absolutePath);
+    m_sourcePath = absolutePath;
     ImportMeshImpl(m_sourcePath, false);
 }
 

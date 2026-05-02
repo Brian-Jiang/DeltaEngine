@@ -1,5 +1,6 @@
 #include "Runtime/Core/DObject.h"
-#include "Assets/DPrimaryAsset.h"
+
+#include "Runtime/Assets/DPrimaryAsset.h"
 
 using namespace DeltaEngine;
 

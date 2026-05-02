@@ -2,16 +2,18 @@
 
 #include "EngineIncludes.h"
 
-#include <d3d12.h>
 #include "Runtime/Core/DObject.h"
 #include "Runtime/Serialization/ISerializationCallbackReceiver.h"
 #include "Runtime/Serialization/TBulkData.h"
 
+#include <d3d12.h>
 #include <slang.h>
 #include <slang-com-ptr.h>
+#include <wrl/client.h>
+
+#include <filesystem>
 #include <string>
 #include <vector>
-#include <wrl/client.h>
 
 #include "DShader.generated.h"
 
@@ -26,45 +28,31 @@ public:
     DELTAENGINE_API DShader();
     DELTAENGINE_API ~DShader();
 
-    /// Sets all shader source and entry-point metadata, then compiles.
-    DELTAENGINE_API void Initialize(const std::wstring& sourcePath, const std::wstring& vertexShaderEntryPoint,
-        const std::wstring& pixelShaderEntryPoint, const std::wstring& vertexShaderTargetProfile,
-        const std::wstring& pixelShaderTargetProfile);
+    DELTAENGINE_API void Initialize(const std::filesystem::path& sourcePath, const std::string& vertexShaderEntryPoint,
+        const std::string& pixelShaderEntryPoint, const std::string& vertexShaderTargetProfile,
+        const std::string& pixelShaderTargetProfile);
 
-    /// Updates the shader source path and recompiles.
     DFUNCTION()
-    DELTAENGINE_API void SetSourcePath(const std::wstring& sourcePath);
-    /// Updates the vertex shader entry point and recompiles.
+    DELTAENGINE_API void SetSourcePath(const std::filesystem::path& sourcePath);
     DFUNCTION()
-    DELTAENGINE_API void SetVertexShaderEntryPoint(const std::wstring& entryPoint);
-    /// Updates the pixel shader entry point and recompiles.
+    DELTAENGINE_API void SetVertexShaderEntryPoint(const std::string& entryPoint);
     DFUNCTION()
-    DELTAENGINE_API void SetPixelShaderEntryPoint(const std::wstring& entryPoint);
-    /// Updates the vertex shader target profile and recompiles.
+    DELTAENGINE_API void SetPixelShaderEntryPoint(const std::string& entryPoint);
     DFUNCTION()
-    DELTAENGINE_API void SetVertexShaderTargetProfile(const std::wstring& targetProfile);
-    /// Updates the pixel shader target profile and recompiles.
+    DELTAENGINE_API void SetVertexShaderTargetProfile(const std::string& targetProfile);
     DFUNCTION()
-    DELTAENGINE_API void SetPixelShaderTargetProfile(const std::wstring& targetProfile);
+    DELTAENGINE_API void SetPixelShaderTargetProfile(const std::string& targetProfile);
 
-    /// Recompiles the shader from m_sourcePath and replaces the serialized bulk data.
     DFUNCTION(ShowAsButton)
     DELTAENGINE_API void Reimport();
 
-    
-    /// Copies the input layout and keeps semantic-name storage alive.
     DELTAENGINE_API void SetInputLayout(const std::vector<D3D12_INPUT_ELEMENT_DESC>& inputLayout);
 
-    /// Packs compiled shader blobs for serialization.
     void OnBeforeSerialize() override;
-    /// Restores compiled shader blobs after deserialization.
     void OnAfterDeserialize() override;
 
-    /// Returns the compiled vertex shader blob.
     inline ISlangBlob* GetVertexShaderBlob() const { return m_vertexShaderBlob.get(); }
-    /// Returns the compiled pixel shader blob.
     inline ISlangBlob* GetPixelShaderBlob() const { return m_pixelShaderBlob.get(); }
-    /// Returns the current input layout descriptors.
     inline const std::vector<D3D12_INPUT_ELEMENT_DESC>& GetInputLayout() const { return m_inputLayout; }
 
 private:
@@ -77,15 +65,15 @@ private:
     std::vector<std::string> m_inputLayoutSemanticNames;
 
     DPROPERTY()
-    std::wstring m_sourcePath;
+    std::filesystem::path m_sourcePath;
     DPROPERTY()
-    std::wstring m_vertexShaderEntryPoint;
+    std::string m_vertexShaderEntryPoint;
     DPROPERTY()
-    std::wstring m_pixelShaderEntryPoint;
+    std::string m_pixelShaderEntryPoint;
     DPROPERTY()
-    std::wstring m_vertexShaderTargetProfile;
+    std::string m_vertexShaderTargetProfile;
     DPROPERTY()
-    std::wstring m_pixelShaderTargetProfile;
+    std::string m_pixelShaderTargetProfile;
     DPROPERTY()
     TBulkData m_serializedShaderBlobs;
     DPROPERTY()

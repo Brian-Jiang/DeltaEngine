@@ -2,14 +2,14 @@
 
 #include "EngineIncludes.h"
 
+#include "Runtime/Core/DObject.h"
+#include "Runtime/Core/DComponent.h"
+#include "Runtime/Core/SceneComponent.h"
+#include "Runtime/Core/DWorld.h"
+#include "Runtime/Assets/DPrimaryAsset.h"
+
 #include <string>
 #include <vector>
-
-#include "Core/DObject.h"
-#include "Core/DComponent.h"
-#include "Core/SceneComponent.h"
-#include "Core/DWorld.h"
-#include "Runtime/Assets/DPrimaryAsset.h"
 
 #include "GameObject.generated.h"
 

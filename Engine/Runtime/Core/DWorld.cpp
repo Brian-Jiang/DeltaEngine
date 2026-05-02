@@ -1,23 +1,23 @@
-#include "Core/DWorld.h"
+#include "Runtime/Core/DWorld.h"
+
+#include "Runtime/Core/Camera.h"
+#include "Runtime/Core/DScene.h"
+#include "Runtime/Core/GameObject.h"
+#include "Runtime/Core/SceneComponent.h"
+#include "Runtime/Core/Skybox.h"
+#include "Runtime/Core/UUID.h"
+#include "Runtime/Assets/DPrimaryAsset.h"
+#include "Runtime/Graphics/DXGraphicsContext.h"
+#include "Runtime/Graphics/Light/LightComponent.h"
+#include "Runtime/Graphics/RenderProxy/RenderProxy.h"
+#include "Runtime/Graphics/Renderer/Renderer.h"
+#include "Runtime/Reflection/DClass.h"
+#include "Runtime/Reflection/ReflectionRegistry.h"
 
 #include <algorithm>
 #include <format>
 #include <functional>
 #include <stack>
-
-#include "Core/SceneComponent.h"
-#include "Core/Camera.h"
-#include "Core/DScene.h"
-#include "Core/Skybox.h"
-#include "Runtime/Core/GameObject.h"
-#include "Assets/DPrimaryAsset.h"
-#include "Graphics/Renderer/Renderer.h"
-#include "Graphics/DXGraphicsContext.h"
-#include "Graphics/Light/LightComponent.h"
-#include "Graphics/RenderProxy/RenderProxy.h"
-#include "Reflection/ReflectionRegistry.h"
-#include "Reflection/DClass.h"
-#include "Core/UUID.h"
 
 using namespace DeltaEngine;
 

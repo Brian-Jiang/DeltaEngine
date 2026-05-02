@@ -1,8 +1,8 @@
-#include "Core/DScene.h"
+#include "Runtime/Core/DScene.h"
+
+#include "Runtime/Core/GameObject.h"
 
 #include <algorithm>
-
-#include "Core/GameObject.h"
 
 using namespace DeltaEngine;
 

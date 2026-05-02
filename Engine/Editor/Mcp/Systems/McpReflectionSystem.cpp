@@ -20,6 +20,7 @@ static const char* PropertyTypeName(EPropertyType t)
     case EPropertyType::Double:     return "double";
     case EPropertyType::String:     return "string";
     case EPropertyType::WString:    return "wstring";
+    case EPropertyType::FilesystemPath: return "path";
     case EPropertyType::Vector3:    return "Vector3";
     case EPropertyType::Quaternion: return "Quaternion";
     case EPropertyType::Float4:     return "Float4";

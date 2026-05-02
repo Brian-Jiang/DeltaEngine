@@ -2,15 +2,16 @@
 
 #include "EngineIncludes.h"
 
-#include <string>
-#include <vector>
+#include "Runtime/Graphics/Structures/Vertex.h"
+#include "Runtime/Core/DObject.h"
+#include "Runtime/Serialization/ISerializationCallbackReceiver.h"
+#include "Runtime/Serialization/TBulkData.h"
 
 #include <assimp/material.h>
 
-#include "Graphics/Structures/Vertex.h"
-#include "Runtime/Core/DObject.h"
-#include "Serialization/ISerializationCallbackReceiver.h"
-#include "Serialization/TBulkData.h"
+#include <filesystem>
+#include <string>
+#include <vector>
 
 #include "DMesh.generated.h"
 
@@ -33,29 +34,22 @@ public:
     DELTAENGINE_API DMesh();
     DELTAENGINE_API ~DMesh();
 
-    /// Loads mesh data from the given source asset path.
-    DELTAENGINE_API void Initialize(std::wstring sourcePath);
+    DELTAENGINE_API void Initialize(const std::filesystem::path& sourcePath);
 
-    /// Imports geometry from an absolute file path (skips engine source asset prefix and texture loading).
-    DELTAENGINE_API void ImportFromAbsolutePath(std::wstring absolutePath);
+    DELTAENGINE_API void ImportFromAbsolutePath(const std::filesystem::path& absolutePath);
 
-    /// Replaces the material list for this mesh.
     DFUNCTION()
     DELTAENGINE_API void SetMaterials(std::vector<DMaterial*>& materials);
 
-    const std::wstring& GetSourcePath() const { return m_sourcePath; }
+    const std::filesystem::path& GetSourcePath() const { return m_sourcePath; }
 
-    /// Imports mesh geometry and textures from the source path.
     void ImportMesh();
 
-    /// Processes an assimp node and its children.
-    void ProcessNode(aiNode* node, const aiScene* scene, DirectX::XMMATRIX accTransform, const std::string& absolutePath, bool loadTextures);
-    /// Processes a single assimp mesh into runtime geometry buffers.
-    void ProcessMesh(aiMesh* mesh, const aiScene* scene, const std::string& absolutePath, bool loadTextures);
-    /// Loads textures for a material slot from the imported scene.
-    std::vector<DTexture*> LoadMaterialTextures(const aiScene* scene, aiMaterial* mat, aiTextureType type, std::string typeName, const std::string& filePath);
+    void ProcessNode(aiNode* node, const aiScene* scene, DirectX::XMMATRIX accTransform, const std::filesystem::path& absolutePath, bool loadTextures);
+    void ProcessMesh(aiMesh* mesh, const aiScene* scene, const std::filesystem::path& absolutePath, bool loadTextures);
+    std::vector<DTexture*> LoadMaterialTextures(const aiScene* scene, aiMaterial* mat, aiTextureType type, std::string typeName, const std::filesystem::path& filePath);
 
-    void ImportMeshImpl(const std::wstring& absolutePath, bool loadTextures);
+    void ImportMeshImpl(const std::filesystem::path& absolutePath, bool loadTextures);
 
     /// Returns the material at the requested submesh index, or nullptr.
     DFUNCTION()
@@ -99,7 +93,7 @@ private:
     std::vector<DTexture*> m_textures;
 
     DPROPERTY()
-    std::wstring m_sourcePath;
+    std::filesystem::path m_sourcePath;
 };
 
 DELTA_ENGINE_NS_END

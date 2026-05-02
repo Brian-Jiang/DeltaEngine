@@ -25,7 +25,7 @@ void PassthroughPass::LazyInitialize(DXGraphicsContext& ctx)
 {
     Device& device = *ctx.device;
 
-    DShader* shader = ResolveShader(L"Shaders/PostProcess_Passthrough.slang", L"VSMain", L"PSMain", L"vs_6_6", L"ps_6_6");
+    DShader* shader = ResolveShader("Shaders/PostProcess_Passthrough.slang", "VSMain", "PSMain", "vs_6_6", "ps_6_6");
     ISlangBlob* vsBlob = shader->GetVertexShaderBlob();
     ISlangBlob* psBlob = shader->GetPixelShaderBlob();
 

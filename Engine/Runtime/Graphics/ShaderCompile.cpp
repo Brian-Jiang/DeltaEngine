@@ -2,6 +2,7 @@
 
 #include "Graphics/DXUtils.h"
 #include "IO/IOManager.h"
+#include "Runtime/Utils/StringUtils.h"
 
 #include <slang.h>
 #include <slang-com-ptr.h>
@@ -71,9 +72,9 @@ void LogSlangDiagnostics(ISlangBlob* diagnostics, const char* debugLabel)
 }
 
 /// Accepts "sm_6_6", "vs_6_6", "ps_6_6" etc. Strips the stage prefix if present.
-std::string NormalizeSlangProfile(const std::wstring& targetProfile)
+std::string NormalizeSlangProfile(const std::string& targetProfile)
 {
-    std::string profile = WideToUtf8(targetProfile);
+    std::string profile = targetProfile;
     if (profile.size() > 3 && profile[2] == '_')
     {
         const char c0 = profile[0];
@@ -146,9 +147,9 @@ ComPtr<IDxcBlob> CompileHLSLStage(
 }
 
 Slang::ComPtr<ISlangBlob> CompileSlangStage(
-    const std::wstring& engineRelativePath,
-    const std::wstring& entryPoint,
-    const std::wstring& targetProfile,
+    const std::filesystem::path& engineRelativePath,
+    const std::string& entryPoint,
+    const std::string& targetProfile,
     const char* debugLabel)
 {
     slang::IGlobalSession* globalSession = GetSlangGlobalSession().get();
@@ -158,11 +159,15 @@ Slang::ComPtr<ISlangBlob> CompileSlangStage(
         return {};
     }
 
-    const std::wstring fullPath = IOManager::GetEngineSourceAssetFullPath(engineRelativePath);
+    const std::u8string relU8 = engineRelativePath.u8string();
+    const std::string relUtf8(reinterpret_cast<const char*>(relU8.data()), relU8.size());
+    const std::wstring relWide = StringUtils::Utf8ToWString(relUtf8);
+    const std::wstring fullPath = IOManager::GetEngineSourceAssetFullPath(relWide);
     const std::filesystem::path fsPath(fullPath);
-    const std::string searchPath = WideToUtf8(fsPath.parent_path().wstring());
-    const std::string moduleName = WideToUtf8(fsPath.stem().wstring());
-    const std::string entryPointUtf8 = WideToUtf8(entryPoint);
+    const std::u8string parentU8 = fsPath.parent_path().u8string();
+    const std::string searchPath(reinterpret_cast<const char*>(parentU8.data()), parentU8.size());
+    const std::u8string stemU8 = fsPath.stem().u8string();
+    const std::string moduleName(reinterpret_cast<const char*>(stemU8.data()), stemU8.size());
 
     slang::TargetDesc target {};
     target.format = SLANG_DXIL;
@@ -191,9 +196,9 @@ Slang::ComPtr<ISlangBlob> CompileSlangStage(
         return {};
 
     Slang::ComPtr<slang::IEntryPoint> entryPointObj;
-    if (SLANG_FAILED(module->findEntryPointByName(entryPointUtf8.c_str(), entryPointObj.writeRef())) || !entryPointObj)
+    if (SLANG_FAILED(module->findEntryPointByName(entryPoint.c_str(), entryPointObj.writeRef())) || !entryPointObj)
     {
-        std::cerr << (debugLabel ? debugLabel : "") << " slang: entry point '" << entryPointUtf8 << "' not found" << std::endl;
+        std::cerr << (debugLabel ? debugLabel : "") << " slang: entry point '" << entryPoint << "' not found" << std::endl;
         return {};
     }
 

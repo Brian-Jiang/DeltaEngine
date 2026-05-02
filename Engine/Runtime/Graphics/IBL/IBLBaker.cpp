@@ -5,6 +5,7 @@
 #include <wrl/client.h>
 #include <algorithm>
 #include <cstdint>
+#include <filesystem>
 
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/DirectX/CommandQueue.h"
@@ -131,10 +132,10 @@ void IBLBaker::CompilePipelines(Device& device)
         CD3DX12_PIPELINE_STATE_STREAM_CS CS;
     };
 
-    auto makeCs = [&](const std::wstring& file, const std::shared_ptr<RootSignature>& rs)
+    auto makeCs = [&](const std::filesystem::path& file, const std::shared_ptr<RootSignature>& rs)
         -> std::shared_ptr<PipelineStateObject>
     {
-        Slang::ComPtr<ISlangBlob> blob = CompileSlangStage(file, L"CSMain", L"cs_6_6", "IBL");
+        Slang::ComPtr<ISlangBlob> blob = CompileSlangStage(file, "CSMain", "cs_6_6", "IBL");
         if (!blob)
             return nullptr;
 
@@ -145,11 +146,11 @@ void IBLBaker::CompilePipelines(Device& device)
         return device.CreatePipelineStateObject(stream);
     };
 
-    m_irradiancePSO = makeCs(L"Shaders/IBL_IrradianceConvolve.slang", m_iblRootSig);
+    m_irradiancePSO = makeCs("Shaders/IBL_IrradianceConvolve.slang", m_iblRootSig);
     if (m_irradiancePSO) m_irradiancePSO->GetD3D12PipelineState()->SetName(L"PSO IBL IrradianceConvolve");
-    m_specularPSO   = makeCs(L"Shaders/IBL_SpecularPrefilter.slang", m_iblRootSig);
+    m_specularPSO   = makeCs("Shaders/IBL_SpecularPrefilter.slang", m_iblRootSig);
     if (m_specularPSO) m_specularPSO->GetD3D12PipelineState()->SetName(L"PSO IBL SpecularPrefilter");
-    m_brdfLutPSO    = makeCs(L"Shaders/IBL_BrdfLut.slang", m_brdfLutRootSig);
+    m_brdfLutPSO    = makeCs("Shaders/IBL_BrdfLut.slang", m_brdfLutRootSig);
     if (m_brdfLutPSO) m_brdfLutPSO->GetD3D12PipelineState()->SetName(L"PSO IBL BrdfLut");
 }
 

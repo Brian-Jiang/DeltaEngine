@@ -1,8 +1,8 @@
-#include "Core/Camera.h"
+#include "Runtime/Core/Camera.h"
 
-#include "Graphics/DXGraphicsContext.h"
-#include "Graphics/PostProcess/PostProcessStack.h"
-#include "Graphics/RenderProxy/CameraRenderProxy.h"
+#include "Runtime/Graphics/DXGraphicsContext.h"
+#include "Runtime/Graphics/PostProcess/PostProcessStack.h"
+#include "Runtime/Graphics/RenderProxy/CameraRenderProxy.h"
 
 using namespace DirectX;
 using namespace DeltaEngine;

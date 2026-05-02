@@ -109,6 +109,9 @@ template<typename T> class shared_ptr { T* p; };
 template<typename T> class weak_ptr { T* p; };
 template<typename T, typename A = void> class vector {};
 template<typename T> class enable_shared_from_this {};
+namespace filesystem {
+class path {};
+}
 }
 
 // --- DeltaEngine forward declarations ---

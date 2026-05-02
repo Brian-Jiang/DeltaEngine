@@ -11,6 +11,8 @@
 #include "SimpleMath.h"
 #include <DirectXMath.h>
 
+#include <filesystem>
+
 using namespace DeltaEngine;
 using namespace DirectX;
 using namespace DirectX::SimpleMath;
@@ -48,6 +50,9 @@ nlohmann::json StructFieldsToJson(void* basePtr, DStruct* ds)
             break;
         case EPropertyType::String:
             j[prop->GetName()] = *static_cast<std::string*>(prop->GetValue(basePtr));
+            break;
+        case EPropertyType::FilesystemPath:
+            j[prop->GetName()] = prop->ToString(prop->GetValue(basePtr));
             break;
         case EPropertyType::Struct:
         {
@@ -100,6 +105,13 @@ bool SetStructFieldsFromJson(void* basePtr, DStruct* ds, const nlohmann::json& v
         case EPropertyType::String:
             *static_cast<std::string*>(addr) = it->get<std::string>();
             break;
+        case EPropertyType::FilesystemPath:
+        {
+            const std::string s = it->get<std::string>();
+            *static_cast<std::filesystem::path*>(addr) =
+                std::filesystem::path(std::u8string(reinterpret_cast<const char8_t*>(s.data()), s.size()));
+            break;
+        }
         case EPropertyType::Struct:
         {
             auto* dsp = static_cast<DStructProperty*>(prop);
@@ -143,6 +155,8 @@ nlohmann::json DeltaEngine::PropertyToJson(const DObject* obj, const DProperty* 
         return *static_cast<const double*>(addr);
     case EPropertyType::String:
         return *static_cast<const std::string*>(addr);
+    case EPropertyType::FilesystemPath:
+        return prop->ToString(addr);
     case EPropertyType::Vector3:
     {
         const auto& v = *static_cast<const Vector3*>(addr);
@@ -207,6 +221,13 @@ bool DeltaEngine::SetPropertyFromJson(DObject* obj, const DProperty* prop, const
     case EPropertyType::String:
         *static_cast<std::string*>(addr) = value.get<std::string>();
         break;
+    case EPropertyType::FilesystemPath:
+    {
+        const std::string s = value.get<std::string>();
+        *static_cast<std::filesystem::path*>(addr) =
+            std::filesystem::path(std::u8string(reinterpret_cast<const char8_t*>(s.data()), s.size()));
+        break;
+    }
     case EPropertyType::Vector3:
     {
         auto& v = *static_cast<Vector3*>(addr);

@@ -103,6 +103,7 @@ bool IsUndoablePropertyType(EPropertyType type)
     case EPropertyType::Bool:
     case EPropertyType::Double:
     case EPropertyType::String:
+    case EPropertyType::FilesystemPath:
     case EPropertyType::Vector3:
     case EPropertyType::Quaternion:
     case EPropertyType::Float4:
@@ -596,6 +597,9 @@ void EditorWindow_Details::RenderSingleProperty(DObject* instance, DProperty* pr
     case EPropertyType::String:
         evt = DrawStringProperty(instance, prop);
         break;
+    case EPropertyType::FilesystemPath:
+        evt = DrawFilesystemPathProperty(instance, prop);
+        break;
     case EPropertyType::WString:
         DrawWStringProperty(instance, prop);
         break;
@@ -875,6 +879,9 @@ void EditorWindow_Details::DrawStructSchemaFields(void* structBase, DStruct* ds,
         case EPropertyType::String:
             merged.Merge(DrawStringPropertyAt(structBase, p));
             break;
+        case EPropertyType::FilesystemPath:
+            merged.Merge(DrawFilesystemPathPropertyAt(structBase, p));
+            break;
         case EPropertyType::Struct:
         {
             auto* nested = static_cast<DStructProperty*>(p);
@@ -1040,6 +1047,30 @@ WidgetEditEvent EditorWindow_Details::DrawStringProperty(DObject* instance, DPro
         *addr = newVal;
     }
     return evt;
+}
+
+WidgetEditEvent EditorWindow_Details::DrawFilesystemPathPropertyAt(void* container, DProperty* prop)
+{
+    const std::string current = prop->ToString(prop->GetValue(container));
+    char buf[1024];
+    const size_t len = (std::min)(current.size(), sizeof(buf) - 1);
+    memcpy(buf, current.c_str(), len);
+    buf[len] = '\0';
+    buf[sizeof(buf) - 1] = '\0';
+
+    auto evt = m_stringField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), buf, sizeof(buf));
+    if (evt.valueChanged)
+    {
+        const std::string newVal(buf);
+        auto* addr = static_cast<std::filesystem::path*>(prop->GetValue(container));
+        *addr = std::filesystem::path(std::u8string(reinterpret_cast<const char8_t*>(newVal.data()), newVal.size()));
+    }
+    return evt;
+}
+
+WidgetEditEvent EditorWindow_Details::DrawFilesystemPathProperty(DObject* instance, DProperty* prop)
+{
+    return DrawFilesystemPathPropertyAt(instance, prop);
 }
 
 bool EditorWindow_Details::DrawWStringProperty(DObject* instance, DProperty* prop)

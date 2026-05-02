@@ -1,12 +1,12 @@
-#include "Core/GameObject.h"
+#include "Runtime/Core/GameObject.h"
+
+#include "Runtime/Assets/DPrimaryAsset.h"
+#include "Runtime/Reflection/DClass.h"
+#include "Runtime/Reflection/ReflectionRegistry.h"
 
 #include <algorithm>
 #include <format>
 #include <queue>
-
-#include "Assets/DPrimaryAsset.h"
-#include "Reflection/DClass.h"
-#include "Reflection/ReflectionRegistry.h"
 
 using namespace DeltaEngine;
 

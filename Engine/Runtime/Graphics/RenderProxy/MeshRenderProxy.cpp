@@ -158,7 +158,7 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
         for (int i = 0; i < submeshCount; ++i)
         {
             std::shared_ptr<VertexBuffer> vertexBuffer = commandList->CopyVertexBuffer(m_mesh->GetVertices()[i]);
-            const std::wstring meshStem = std::filesystem::path(m_mesh->GetSourcePath()).stem().wstring();
+            const std::wstring meshStem = m_mesh->GetSourcePath().stem().wstring();
             vertexBuffer->SetName(L"DMesh " + meshStem + L" Sub" + std::to_wstring(i) + L" VB");
             m_VertexBuffers.push_back(vertexBuffer);
             std::shared_ptr<IndexBuffer> indexBuffer = commandList->CopyIndexBuffer(m_mesh->GetIndices()[i]);
@@ -266,7 +266,7 @@ void MeshRenderProxy::GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> r
         for (int i = 0; i < submeshCount; ++i)
         {
             std::shared_ptr<VertexBuffer> vertexBuffer = commandList->CopyVertexBuffer(m_mesh->GetVertices()[i]);
-            const std::wstring meshStem = std::filesystem::path(m_mesh->GetSourcePath()).stem().wstring();
+            const std::wstring meshStem = m_mesh->GetSourcePath().stem().wstring();
             vertexBuffer->SetName(L"DMesh " + meshStem + L" Sub" + std::to_wstring(i) + L" VB Shadow");
             m_VertexBuffers.push_back(vertexBuffer);
             std::shared_ptr<IndexBuffer> indexBuffer = commandList->CopyIndexBuffer(m_mesh->GetIndices()[i]);

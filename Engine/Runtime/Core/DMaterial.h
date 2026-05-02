@@ -2,13 +2,15 @@
 
 #include "EngineIncludes.h"
 
-#include <cstdint>
-#include <d3d12.h>
-#include <d3dx12.h>
-#include <DirectXMath.h>
-
 #include "Runtime/Core/DObject.h"
 #include "Runtime/Graphics/MaterialConstants.h"
+
+#include <d3d12.h>
+#include <d3dx12.h>
+
+#include <DirectXMath.h>
+
+#include <cstdint>
 
 #include "DMaterial.generated.h"
 

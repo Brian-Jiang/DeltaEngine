@@ -2,8 +2,9 @@
 
 #include "EngineIncludes.h"
 
-#include "Core/DObject.h"
+#include "Runtime/Core/DObject.h"
 
+#include <filesystem>
 #include <string>
 
 #include "PostProcessPass.generated.h"
@@ -42,11 +43,11 @@ public:
     virtual void Shutdown() {}
 
 protected:
-    DShader* ResolveShader(const std::wstring& fallbackPath,
-                           const std::wstring& vsEntry = L"VSMain",
-                           const std::wstring& psEntry = L"PSMain",
-                           const std::wstring& vsProfile = L"vs_6_0",
-                           const std::wstring& psProfile = L"ps_6_0");
+    DShader* ResolveShader(const std::filesystem::path& fallbackPath,
+                           const std::string& vsEntry = "VSMain",
+                           const std::string& psEntry = "PSMain",
+                           const std::string& vsProfile = "vs_6_0",
+                           const std::string& psProfile = "ps_6_0");
 
     void ReleaseFallbackShader();
 

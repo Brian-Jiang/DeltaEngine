@@ -2,10 +2,10 @@
 
 #include "EngineIncludes.h"
 
+#include "Runtime/Core/DObject.h"
+
 #include <string>
 #include <type_traits>
-
-#include "Core/DObject.h"
 
 #include "DComponent.generated.h"
 

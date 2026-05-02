@@ -1,9 +1,9 @@
-#include "Core/SceneComponent.h"
+#include "Runtime/Core/SceneComponent.h"
+
+#include "Runtime/Reflection/DClass.h"
+#include "Runtime/Reflection/DProperty.h"
 
 #include <cstdint>
-
-#include "Reflection/DClass.h"
-#include "Reflection/DProperty.h"
 
 using namespace DirectX;
 using namespace DeltaEngine;
