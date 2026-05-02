@@ -7,16 +7,32 @@
 #include "Graphics/ShaderCompile.h"
 #include "IO/IOManager.h"
 
-#include <cassert>
 #include <cstring>
+#include <cstddef>
 
 namespace
 {
+std::string WideToUtf8(const std::wstring& wide)
+{
+    if (wide.empty())
+        return {};
+    const int size = ::WideCharToMultiByte(CP_UTF8, 0, wide.data(), static_cast<int>(wide.size()), nullptr, 0, nullptr, nullptr);
+    std::string out(static_cast<size_t>(size), '\0');
+    ::WideCharToMultiByte(CP_UTF8, 0, wide.data(), static_cast<int>(wide.size()), out.data(), size, nullptr, nullptr);
+    return out;
+}
+
+bool BlobLooksValid(const Slang::ComPtr<ISlangBlob>& blob)
+{
+    return blob && blob->getBufferPointer() != nullptr && blob->getBufferSize() > 0;
+}
+
 DeltaEngine::TBulkData SerializeShaderBlobs(
     const Slang::ComPtr<ISlangBlob>& vertexBlob,
     const Slang::ComPtr<ISlangBlob>& pixelBlob)
 {
-    assert(vertexBlob && pixelBlob);
+    if (!BlobLooksValid(vertexBlob) || !BlobLooksValid(pixelBlob))
+        return {};
 
     const uint64_t vertexSize = static_cast<uint64_t>(vertexBlob->getBufferSize());
     const uint64_t pixelSize = static_cast<uint64_t>(pixelBlob->getBufferSize());
@@ -27,12 +43,12 @@ DeltaEngine::TBulkData SerializeShaderBlobs(
 
     std::memcpy(cursor, &vertexSize, sizeof(uint64_t));
     cursor += sizeof(uint64_t);
-    std::memcpy(cursor, vertexBlob->getBufferPointer(), vertexSize);
-    cursor += vertexSize;
+    std::memcpy(cursor, vertexBlob->getBufferPointer(), static_cast<size_t>(vertexSize));
+    cursor += static_cast<size_t>(vertexSize);
 
     std::memcpy(cursor, &pixelSize, sizeof(uint64_t));
     cursor += sizeof(uint64_t);
-    std::memcpy(cursor, pixelBlob->getBufferPointer(), pixelSize);
+    std::memcpy(cursor, pixelBlob->getBufferPointer(), static_cast<size_t>(pixelSize));
 
     DeltaEngine::TBulkData bulk;
     bulk.Set(buffer, totalSize);
@@ -45,27 +61,54 @@ bool DeserializeShaderBlobs(
     Slang::ComPtr<ISlangBlob>& outVertexBlob,
     Slang::ComPtr<ISlangBlob>& outPixelBlob)
 {
+    outVertexBlob = nullptr;
+    outPixelBlob = nullptr;
+
     if (!bulk.IsValid())
         return false;
 
-    const uint8_t* cursor = bulk.m_data;
+    size_t off = 0;
 
-    auto readBlob = [&](Slang::ComPtr<ISlangBlob>& outBlob) -> bool
-    {
-        uint64_t size = 0;
-        std::memcpy(&size, cursor, sizeof(uint64_t));
-        cursor += sizeof(uint64_t);
-
-        ISlangBlob* blob = slang_createBlob(cursor, static_cast<size_t>(size));
-        if (!blob)
+    auto readBlob = [&](Slang::ComPtr<ISlangBlob>& outBlob, const char* label) -> bool {
+        if (off + sizeof(uint64_t) > bulk.m_size)
+        {
+            DLOG(LogShader, ELogLevel::Warning,
+                "DeserializeShaderBlobs: truncated before {} blob size prefix at offset {}",
+                label,
+                static_cast<unsigned long long>(off));
             return false;
+        }
+
+        uint64_t size = 0;
+        std::memcpy(&size, bulk.m_data + off, sizeof(uint64_t));
+        off += sizeof(uint64_t);
+
+        if (off + size > bulk.m_size || size > static_cast<uint64_t>(SIZE_MAX))
+        {
+            DLOG(LogShader, ELogLevel::Warning,
+                "DeserializeShaderBlobs: {} blob payload out of range declaredBytes={} bulkBytes={}",
+                label,
+                static_cast<unsigned long long>(size),
+                static_cast<unsigned long long>(bulk.m_size));
+            return false;
+        }
+
+        ISlangBlob* blob = slang_createBlob(bulk.m_data + off, static_cast<size_t>(size));
+        if (!blob)
+        {
+            DLOG(LogShader, ELogLevel::Warning,
+                "DeserializeShaderBlobs: slang_createBlob failed for {} size={}",
+                label,
+                static_cast<unsigned long long>(size));
+            return false;
+        }
 
         outBlob.attach(blob);
-        cursor += size;
+        off += static_cast<size_t>(size);
         return true;
     };
 
-    return readBlob(outVertexBlob) && readBlob(outPixelBlob);
+    return readBlob(outVertexBlob, "vertex") && readBlob(outPixelBlob, "pixel");
 }
 
 DeltaEngine::TBulkData SerializeInputLayout(const std::vector<D3D12_INPUT_ELEMENT_DESC>& inputLayout)
@@ -73,7 +116,7 @@ DeltaEngine::TBulkData SerializeInputLayout(const std::vector<D3D12_INPUT_ELEMEN
     uint64_t totalSize = sizeof(uint32_t);
     for (const auto& element : inputLayout)
     {
-        const uint32_t nameLength = static_cast<uint32_t>(std::strlen(element.SemanticName));
+        const uint32_t nameLength = static_cast<uint32_t>(std::strlen(element.SemanticName ? element.SemanticName : ""));
         totalSize += sizeof(uint32_t) + nameLength + sizeof(uint32_t) * 6;
     }
 
@@ -91,10 +134,13 @@ DeltaEngine::TBulkData SerializeInputLayout(const std::vector<D3D12_INPUT_ELEMEN
 
     for (const auto& element : inputLayout)
     {
-        const uint32_t nameLength = static_cast<uint32_t>(std::strlen(element.SemanticName));
+        const uint32_t nameLength = static_cast<uint32_t>(std::strlen(element.SemanticName ? element.SemanticName : ""));
         write(nameLength);
-        std::memcpy(cursor, element.SemanticName, nameLength);
-        cursor += nameLength;
+        if (nameLength > 0)
+        {
+            std::memcpy(cursor, element.SemanticName, nameLength);
+            cursor += nameLength;
+        }
 
         write(static_cast<uint32_t>(element.SemanticIndex));
         write(static_cast<uint32_t>(element.Format));
@@ -115,19 +161,45 @@ bool DeserializeInputLayout(
     std::vector<D3D12_INPUT_ELEMENT_DESC>& outLayout,
     std::vector<std::string>& outSemanticNames)
 {
+    outLayout.clear();
+    outSemanticNames.clear();
+
     if (!bulk.IsValid())
         return false;
 
-    const uint8_t* cursor = bulk.m_data;
+    constexpr uint32_t kMaxElements = 128u;
+    constexpr uint32_t kMaxSemanticLength = 512u;
 
-    auto read = [&]<typename T>(T& value)
-    {
-        std::memcpy(&value, cursor, sizeof(T));
-        cursor += sizeof(T);
+    size_t off = 0;
+
+    auto consume = [&](void* dst, size_t nbytes, const char* ctx) -> bool {
+        if (off + nbytes > bulk.m_size)
+        {
+            DLOG(LogShader, ELogLevel::Warning,
+                "DeserializeInputLayout: truncated ({}) offset {} need {} have {}",
+                ctx,
+                static_cast<unsigned long long>(off),
+                static_cast<unsigned long long>(nbytes),
+                static_cast<unsigned long long>(bulk.m_size));
+            return false;
+        }
+        std::memcpy(dst, bulk.m_data + off, nbytes);
+        off += nbytes;
+        return true;
     };
 
     uint32_t count = 0;
-    read(count);
+    if (!consume(&count, sizeof(uint32_t), "element count"))
+        return false;
+
+    if (count > kMaxElements)
+    {
+        DLOG(LogShader, ELogLevel::Warning,
+            "DeserializeInputLayout: unreasonable element count {} (max {})",
+            count,
+            kMaxElements);
+        return false;
+    }
 
     outLayout.resize(count);
     outSemanticNames.resize(count);
@@ -135,10 +207,22 @@ bool DeserializeInputLayout(
     for (uint32_t index = 0; index < count; ++index)
     {
         uint32_t nameLength = 0;
-        read(nameLength);
+        if (!consume(&nameLength, sizeof(uint32_t), "semantic name length"))
+            return false;
 
-        outSemanticNames[index].assign(reinterpret_cast<const char*>(cursor), nameLength);
-        cursor += nameLength;
+        if (nameLength > kMaxSemanticLength || off + nameLength > bulk.m_size)
+        {
+            DLOG(LogShader, ELogLevel::Warning,
+                "DeserializeInputLayout: semantic name length {} invalid at offset {}",
+                nameLength,
+                static_cast<unsigned long long>(off));
+            outLayout.clear();
+            outSemanticNames.clear();
+            return false;
+        }
+
+        outSemanticNames[index].assign(reinterpret_cast<const char*>(bulk.m_data + off), nameLength);
+        off += nameLength;
 
         uint32_t semanticIndex = 0;
         uint32_t format = 0;
@@ -146,12 +230,18 @@ bool DeserializeInputLayout(
         uint32_t byteOffset = 0;
         uint32_t slotClass = 0;
         uint32_t stepRate = 0;
-        read(semanticIndex);
-        read(format);
-        read(inputSlot);
-        read(byteOffset);
-        read(slotClass);
-        read(stepRate);
+        if (!consume(&semanticIndex, sizeof(uint32_t), "semanticIndex"))
+            return false;
+        if (!consume(&format, sizeof(uint32_t), "format"))
+            return false;
+        if (!consume(&inputSlot, sizeof(uint32_t), "inputSlot"))
+            return false;
+        if (!consume(&byteOffset, sizeof(uint32_t), "byteOffset"))
+            return false;
+        if (!consume(&slotClass, sizeof(uint32_t), "slotClass"))
+            return false;
+        if (!consume(&stepRate, sizeof(uint32_t), "stepRate"))
+            return false;
 
         D3D12_INPUT_ELEMENT_DESC& desc = outLayout[index];
         desc.SemanticName = outSemanticNames[index].c_str();
@@ -162,6 +252,11 @@ bool DeserializeInputLayout(
         desc.InputSlotClass = static_cast<D3D12_INPUT_CLASSIFICATION>(slotClass);
         desc.InstanceDataStepRate = stepRate;
     }
+
+    if (off != bulk.m_size)
+        DLOG(LogShader, ELogLevel::Verbose,
+            "DeserializeInputLayout: {} trailing bytes ignored after layout parse",
+            static_cast<unsigned long long>(bulk.m_size - off));
 
     return true;
 }
@@ -259,16 +354,56 @@ void DShader::CompileShader()
 {
     m_vertexShaderBlob = CompileSlangStage(m_sourcePath, m_vertexShaderEntryPoint, m_vertexShaderTargetProfile, "DShader VS");
     m_pixelShaderBlob = CompileSlangStage(m_sourcePath, m_pixelShaderEntryPoint, m_pixelShaderTargetProfile, "DShader PS");
+
+    if (!BlobLooksValid(m_vertexShaderBlob))
+        DLOG(LogShader, ELogLevel::Error,
+            "CompileShader: vertex stage empty path='{}' entry='{}' profile='{}'",
+            WideToUtf8(m_sourcePath),
+            WideToUtf8(m_vertexShaderEntryPoint),
+            WideToUtf8(m_vertexShaderTargetProfile));
+
+    if (!BlobLooksValid(m_pixelShaderBlob))
+        DLOG(LogShader, ELogLevel::Error,
+            "CompileShader: pixel stage empty path='{}' entry='{}' profile='{}'",
+            WideToUtf8(m_sourcePath),
+            WideToUtf8(m_pixelShaderEntryPoint),
+            WideToUtf8(m_pixelShaderTargetProfile));
 }
 
 void DShader::OnBeforeSerialize()
 {
-    m_serializedShaderBlobs = SerializeShaderBlobs(m_vertexShaderBlob, m_pixelShaderBlob);
+    if (!BlobLooksValid(m_vertexShaderBlob) || !BlobLooksValid(m_pixelShaderBlob))
+    {
+        DLOG(LogShader, ELogLevel::Warning,
+            "DShader::OnBeforeSerialize: missing VS/PS blobs for '{}' — omitting serialized bytecode",
+            WideToUtf8(m_sourcePath));
+        m_serializedShaderBlobs = {};
+    }
+    else
+        m_serializedShaderBlobs = SerializeShaderBlobs(m_vertexShaderBlob, m_pixelShaderBlob);
+
     m_serializedInputLayout = SerializeInputLayout(m_inputLayout);
 }
 
 void DShader::OnAfterDeserialize()
 {
-    DeserializeShaderBlobs(m_serializedShaderBlobs, m_vertexShaderBlob, m_pixelShaderBlob);
-    DeserializeInputLayout(m_serializedInputLayout, m_inputLayout, m_inputLayoutSemanticNames);
+    if (!DeserializeShaderBlobs(m_serializedShaderBlobs, m_vertexShaderBlob, m_pixelShaderBlob))
+    {
+        DLOG(LogShader, ELogLevel::Warning,
+            "DShader::OnAfterDeserialize: invalid serialized shader blobs for '{}' bulkBytes={}",
+            WideToUtf8(m_sourcePath),
+            m_serializedShaderBlobs.m_size);
+        m_vertexShaderBlob = nullptr;
+        m_pixelShaderBlob = nullptr;
+    }
+
+    if (!DeserializeInputLayout(m_serializedInputLayout, m_inputLayout, m_inputLayoutSemanticNames))
+    {
+        DLOG(LogShader, ELogLevel::Warning,
+            "DShader::OnAfterDeserialize: invalid serialized input layout for '{}' bulkBytes={}",
+            WideToUtf8(m_sourcePath),
+            m_serializedInputLayout.m_size);
+        m_inputLayout.clear();
+        m_inputLayoutSemanticNames.clear();
+    }
 }

@@ -56,6 +56,7 @@ public:
         sceneComponent->RegisterComponent(this);
         sceneComponent->SetName(name);
         m_sceneComponents.push_back(sceneComponent);
+        DELTA_ASSERT(m_currentWorld != nullptr);
         if (!m_rootSceneComponent)
         {
             m_rootSceneComponent = sceneComponent;

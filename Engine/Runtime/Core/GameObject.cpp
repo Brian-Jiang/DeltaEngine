@@ -46,7 +46,12 @@ DComponent* GameObject::AddComponentByClass(const DClass* dclass)
     {
         SceneComponent* sc = registry.CreateObject<SceneComponent>(dclass->GetName());
         if (!sc)
+        {
+            DLOG(LogCore, ELogLevel::Error,
+                "AddComponentByClass: reflection failed creating SceneComponent-derived '{}' on GameObject '{}'",
+                dclass->GetName(), m_name);
             return nullptr;
+        }
 
         if (HasOwningAsset())
         {
@@ -75,7 +80,12 @@ DComponent* GameObject::AddComponentByClass(const DClass* dclass)
 
     DComponent* comp = registry.CreateObject<DComponent>(dclass->GetName());
     if (!comp)
+    {
+        DLOG(LogCore, ELogLevel::Error,
+            "AddComponentByClass: reflection failed creating DComponent-derived '{}' on GameObject '{}'",
+            dclass->GetName(), m_name);
         return nullptr;
+    }
 
     if (HasOwningAsset())
         GetOwningAsset()->AddObject(comp);

@@ -4,19 +4,32 @@
 
 #include <DirectXTex.h>
 
-#include <cassert>
-#include <cstdio>
 #include <cstring>
 #include <filesystem>
 #include <stdexcept>
 
 namespace
 {
+std::string NarrowGenericPath(const std::wstring& widePath)
+{
+    if (widePath.empty())
+        return {};
+    std::filesystem::path p(widePath);
+    return p.generic_string();
+}
+
 DeltaEngine::TBulkData SerializeTexture(
     const std::shared_ptr<DirectX::TexMetadata>& metadata,
     const std::shared_ptr<DirectX::ScratchImage>& scratchImage)
 {
-    assert(metadata && scratchImage);
+    if (!metadata || !scratchImage)
+    {
+        DLOG(LogAsset, ELogLevel::Warning,
+            "SerializeTexture: missing metadata ({}) or scratchImage ({}) — writing empty bulk",
+            static_cast<bool>(metadata),
+            static_cast<bool>(scratchImage));
+        return {};
+    }
 
     const bool needsCompression = !DirectX::IsCompressed(metadata->format);
 
@@ -41,9 +54,9 @@ DeltaEngine::TBulkData SerializeTexture(
             metadataToSerialize = compressedStorage.GetMetadata();
         }
         else
-        {
-            std::printf("[DTexture] Compress failed (0x%08X), serializing raw", hr);
-        }
+            DLOG(LogAsset, ELogLevel::Warning,
+                "SerializeTexture: Compress failed HRESULT={:#010x} — serializing uncompressed pixels",
+                static_cast<unsigned int>(hr));
     }
 
     const uint64_t pixelSize = static_cast<uint64_t>(imageToSerialize->GetPixelsSize());
@@ -75,34 +88,57 @@ bool DeserializeTexture(
     if (!bulk.IsValid())
         return false;
 
-    const uint8_t* cursor = bulk.m_data;
+    constexpr uint64_t kHeader = sizeof(DirectX::TexMetadata) + sizeof(uint64_t);
+    if (bulk.m_size < kHeader)
+    {
+        DLOG(LogAsset, ELogLevel::Warning,
+            "DeserializeTexture: bulk too small for header have {} need {}",
+            bulk.m_size, kHeader);
+        return false;
+    }
+
+    size_t off = 0;
+    const uint8_t* base = bulk.m_data;
 
     auto metadata = std::make_shared<DirectX::TexMetadata>();
-    std::memcpy(metadata.get(), cursor, sizeof(DirectX::TexMetadata));
-    cursor += sizeof(DirectX::TexMetadata);
+    std::memcpy(metadata.get(), base + off, sizeof(DirectX::TexMetadata));
+    off += sizeof(DirectX::TexMetadata);
 
     uint64_t pixelSize = 0;
-    std::memcpy(&pixelSize, cursor, sizeof(uint64_t));
-    cursor += sizeof(uint64_t);
+    std::memcpy(&pixelSize, base + off, sizeof(uint64_t));
+    off += sizeof(uint64_t);
+
+    if (bulk.m_size < off + pixelSize)
+    {
+        DLOG(LogAsset, ELogLevel::Warning,
+            "DeserializeTexture: truncated pixel payload off={} pixelBytes={} bulkSize={}",
+            static_cast<unsigned long long>(off),
+            static_cast<unsigned long long>(pixelSize),
+            static_cast<unsigned long long>(bulk.m_size));
+        return false;
+    }
 
     auto scratchImage = std::make_shared<DirectX::ScratchImage>();
     const HRESULT hr = scratchImage->Initialize(*metadata);
     if (FAILED(hr))
     {
-        std::printf("[DTexture] DeserializeTexture: ScratchImage::Initialize failed (HRESULT 0x%08X)", hr);
+        DLOG(LogAsset, ELogLevel::Warning,
+            "DeserializeTexture: ScratchImage::Initialize failed HRESULT={:#010x}",
+            static_cast<unsigned int>(hr));
         return false;
     }
 
     if (scratchImage->GetPixelsSize() != static_cast<size_t>(pixelSize))
     {
-        std::printf(
-            "[DTexture] DeserializeTexture: pixel size mismatch - expected %llu, got %zu",
+        DLOG(LogAsset, ELogLevel::Warning,
+            "DeserializeTexture: pixel size mismatch expected {} got {}",
             static_cast<unsigned long long>(pixelSize),
-            scratchImage->GetPixelsSize());
+            static_cast<unsigned long long>(scratchImage->GetPixelsSize()));
         return false;
     }
 
-    std::memcpy(scratchImage->GetPixels(), cursor, pixelSize);
+    if (pixelSize > 0)
+        std::memcpy(scratchImage->GetPixels(), base + off, static_cast<size_t>(pixelSize));
 
     outMetadata = std::move(metadata);
     outScratchImage = std::move(scratchImage);
@@ -145,7 +181,12 @@ void DTexture::LoadTexture()
 {
     const std::filesystem::path filePath(m_sourcePath);
     if (!std::filesystem::exists(filePath))
+    {
+        DLOG(LogAsset, ELogLevel::Error,
+            "LoadTexture: file not found (resolved generic path '{}')",
+            NarrowGenericPath(m_sourcePath));
         throw std::runtime_error("Texture file not found.");
+    }
 
     if (filePath.extension() == ".dds")
     {
@@ -197,16 +238,19 @@ void DTexture::OnAfterDeserialize()
 {
     std::shared_ptr<TexMetadata> metadata;
     std::shared_ptr<ScratchImage> scratchImage;
-    if (DeserializeTexture(m_bulkData, metadata, scratchImage))
+    if (!DeserializeTexture(m_bulkData, metadata, scratchImage))
     {
-        m_metadata = std::move(metadata);
-        m_scratchImage = std::move(scratchImage);
-    }
-    else
-    {
+        DLOG(LogAsset, ELogLevel::Warning,
+            "DTexture::OnAfterDeserialize: bulk restore failed bulkBytes={} source='{}' — resetting to empty image",
+            m_bulkData.m_size,
+            NarrowGenericPath(m_sourcePath));
         m_metadata = std::make_shared<TexMetadata>();
         m_scratchImage = std::make_shared<ScratchImage>();
+        return;
     }
+
+    m_metadata = std::move(metadata);
+    m_scratchImage = std::move(scratchImage);
 
     if (m_sRGB)
     {

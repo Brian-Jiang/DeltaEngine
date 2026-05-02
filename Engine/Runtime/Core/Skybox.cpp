@@ -15,8 +15,15 @@ Skybox::Skybox()
 
 void Skybox::Initialize(std::shared_ptr<DXGraphicsContext> context)
 {
-    if (!m_cubemapTexture)
+    if (!DELTA_ENSURE(context != nullptr))
         return;
+
+    if (!m_cubemapTexture)
+    {
+        DLOG(LogRenderer, ELogLevel::Warning,
+            "Skybox::Initialize: m_cubemapTexture is null — skipping GPU initialization");
+        return;
+    }
 
     if (!m_material)
     {
@@ -31,11 +38,15 @@ void Skybox::Initialize(std::shared_ptr<DXGraphicsContext> context)
     }
 
     m_renderProxy = std::make_shared<SkyboxRenderProxy>(m_cubemapTexture, m_material);
+    DELTA_ASSERT(m_renderProxy != nullptr);
     m_renderProxy->Initialize(context);
 }
 
 void Skybox::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context)
 {
+    if (!DELTA_ENSURE(context != nullptr))
+        return;
+
     if (!m_renderProxy)
         return;
 

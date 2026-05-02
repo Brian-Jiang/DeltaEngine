@@ -1,4 +1,7 @@
 #include "Core/SceneComponent.h"
+
+#include <cstdint>
+
 #include "Reflection/DClass.h"
 #include "Reflection/DProperty.h"
 
@@ -74,6 +77,9 @@ DirectX::SimpleMath::Quaternion DeltaEngine::SceneComponent::GetLocalRotation() 
     bool success = XMMatrixDecompose(&scale, &currentRotation, &translation, m_localTransform);
     if (!success)
     {
+        DLOG(LogCore, ELogLevel::Warning,
+            "SceneComponent::GetLocalRotation: XMMatrixDecompose failed on local transform (this={}) — returning identity quaternion",
+            reinterpret_cast<uintptr_t>(this));
         return SimpleMath::Quaternion::Identity;
     }
 
@@ -91,8 +97,11 @@ DirectX::SimpleMath::Quaternion DeltaEngine::SceneComponent::GetWorldRotation() 
     XMVECTOR currentRotation;
     XMVECTOR scale;
     bool success = XMMatrixDecompose(&scale, &currentRotation, &translation, m_worldTransform);
-    if (!success) {
-
+    if (!success)
+    {
+        DLOG(LogCore, ELogLevel::Warning,
+            "SceneComponent::GetWorldRotation: XMMatrixDecompose failed on world transform (this={}) — returning identity quaternion",
+            reinterpret_cast<uintptr_t>(this));
         return SimpleMath::Quaternion::Identity;
     }
 
@@ -114,6 +123,9 @@ void SceneComponent::SetLocalRotation(DirectX::XMVECTOR rotation)
     bool success = XMMatrixDecompose(&scale, &currentRotation, &translation, m_localTransform);
     if (!success)
     {
+        DLOG(LogCore, ELogLevel::Warning,
+            "SceneComponent::SetLocalRotation(XMVECTOR): XMMatrixDecompose failed on local transform (this={}) — no-op",
+            reinterpret_cast<uintptr_t>(this));
         return;
     }
 
@@ -142,8 +154,11 @@ void DeltaEngine::SceneComponent::SetWorldRotation(DirectX::XMVECTOR rotation)
         XMVECTOR parentRotation;
         XMVECTOR scale;
         bool success = XMMatrixDecompose(&scale, &parentRotation, &translation, parentWorldTransform);
-        if (!success) {
-
+        if (!success)
+        {
+            DLOG(LogCore, ELogLevel::Warning,
+                "SceneComponent::SetWorldRotation: XMMatrixDecompose failed on parent world transform (this={}, parent={}) — no-op",
+                reinterpret_cast<uintptr_t>(this), reinterpret_cast<uintptr_t>(m_parent));
             return;
         }
 
@@ -164,8 +179,11 @@ SimpleMath::Vector3 DeltaEngine::SceneComponent::GetLocalScale() const {
     XMVECTOR rotation;
     XMVECTOR scale;
     bool success = XMMatrixDecompose(&scale, &rotation, &translation, m_localTransform);
-    if (!success) {
-
+    if (!success)
+    {
+        DLOG(LogCore, ELogLevel::Warning,
+            "SceneComponent::GetLocalScale: XMMatrixDecompose failed on local transform (this={}) — returning Ones",
+            reinterpret_cast<uintptr_t>(this));
         return SimpleMath::Vector3::One;
     }
 
@@ -177,8 +195,11 @@ DirectX::SimpleMath::Vector3 DeltaEngine::SceneComponent::GetWorldScale() const 
     XMVECTOR rotation;
     XMVECTOR scale;
     bool success = XMMatrixDecompose(&scale, &rotation, &translation, m_worldTransform);
-    if (!success) {
-
+    if (!success)
+    {
+        DLOG(LogCore, ELogLevel::Warning,
+            "SceneComponent::GetWorldScale: XMMatrixDecompose failed on world transform (this={}) — returning Ones",
+            reinterpret_cast<uintptr_t>(this));
         return SimpleMath::Vector3::One;
     }
 
@@ -194,9 +215,12 @@ void DeltaEngine::SceneComponent::SetLocalScale(float x, float y, float z) {
     XMVECTOR translation;
     XMVECTOR rotation;
     XMVECTOR currentScale;
-    bool success = XMMatrixDecompose(&currentScale, &rotation, &translation, m_worldTransform);
-    if (!success) {
-
+    bool success = XMMatrixDecompose(&currentScale, &rotation, &translation, m_localTransform);
+    if (!success)
+    {
+        DLOG(LogCore, ELogLevel::Warning,
+            "SceneComponent::SetLocalScale: XMMatrixDecompose failed on local transform (this={}) — no-op",
+            reinterpret_cast<uintptr_t>(this));
         return;
     }
 
@@ -237,8 +261,11 @@ void DeltaEngine::SceneComponent::SetParent(SceneComponent* parent)
         // Check for circular reference
         SceneComponent* current = parent;
         while (current) {
-            if (current == this) {
-                // Circular reference detected, ignore the new parent assignment
+            if (current == this)
+            {
+                DLOG(LogCore, ELogLevel::Warning,
+                    "SceneComponent::SetParent: rejected circular parent assignment (this={}, proposedParent={})",
+                    reinterpret_cast<uintptr_t>(this), reinterpret_cast<uintptr_t>(parent));
                 return;
             }
             current = current->m_parent;

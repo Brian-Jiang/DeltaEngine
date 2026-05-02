@@ -45,7 +45,12 @@ GameObject* DWorld::CreateGameObjectByClass(const DClass* dclass)
         return nullptr;
     GameObject* gameObject = GetReflectionRegistry().CreateObject<GameObject>(dclass->GetName());
     if (!gameObject)
+    {
+        DLOG(LogCore, ELogLevel::Error,
+            "CreateGameObjectByClass: reflection failed for class '{}' (expected GameObject-derived registered type)",
+            dclass->GetName());
         return nullptr;
+    }
     gameObject->m_name = std::format("New {}", dclass->GetName());
     gameObject->m_currentWorld = this;
     m_gameObjects.push_back(gameObject);
@@ -77,6 +82,11 @@ void DWorld::DestroyGameObject(GameObject* gameObject)
 
 void DeltaEngine::DWorld::InitRenderers(std::shared_ptr<DXGraphicsContext> context) const
 {
+    if (!DELTA_ENSURE(context != nullptr))
+        return;
+
+    DELTA_ASSERT(m_rootSceneComponent != nullptr);
+
     std::stack<SceneComponent*> stack;
     stack.push(m_rootSceneComponent);
 
@@ -102,6 +112,11 @@ void DeltaEngine::DWorld::InitRenderers(std::shared_ptr<DXGraphicsContext> conte
 
 void DWorld::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const
 {
+    if (!DELTA_ENSURE(context != nullptr))
+        return;
+
+    DELTA_ASSERT(m_rootSceneComponent != nullptr);
+
     context->directionalLights.clear();
     context->pointLights.clear();
     context->spotLights.clear();
@@ -109,11 +124,15 @@ void DWorld::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) cons
     std::stack<SceneComponent*> stack;
     stack.push(m_rootSceneComponent);
     bool hasCamera = false;
+    int cameraBindCount = 0;
 
     while (!stack.empty())
     {
         SceneComponent* current = stack.top();
         stack.pop();
+
+        if (Camera* camProbe = dynamic_cast<Camera*>(current))
+            ++cameraBindCount;
 
         if (!hasCamera)
         {
@@ -136,10 +155,20 @@ void DWorld::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) cons
             stack.push(child);
         }
     }
+
+    if (cameraBindCount > 1)
+        DLOG(LogCore, ELogLevel::Warning,
+            "PreGatherDrawCalls: {} Camera scene components found under root; only the first binds renderContext->camera (expected 1)",
+            cameraBindCount);
 }
 
 void DWorld::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const
 {
+    if (!DELTA_ENSURE(context != nullptr))
+        return;
+
+    DELTA_ASSERT(m_rootSceneComponent != nullptr);
+
     std::stack<SceneComponent*> stack;
     stack.push(m_rootSceneComponent);
     
@@ -168,6 +197,11 @@ void DWorld::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const
 
 void DWorld::GatherShadowViews(std::shared_ptr<DXGraphicsContext> context, std::vector<ShadowView>& outViews) const
 {
+    if (!DELTA_ENSURE(context != nullptr))
+        return;
+
+    DELTA_ASSERT(m_rootSceneComponent != nullptr);
+
     std::stack<SceneComponent*> stack;
     stack.push(m_rootSceneComponent);
 
@@ -193,6 +227,11 @@ void DWorld::GatherShadowViews(std::shared_ptr<DXGraphicsContext> context, std::
 
 void DWorld::GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> context, const ShadowView& view) const
 {
+    if (!DELTA_ENSURE(context != nullptr))
+        return;
+
+    DELTA_ASSERT(m_rootSceneComponent != nullptr);
+
     std::stack<SceneComponent*> stack;
     stack.push(m_rootSceneComponent);
 
@@ -221,14 +260,16 @@ void DeltaEngine::DWorld::PreTick(float deltaTime)
 
 void DeltaEngine::DWorld::Clear()
 {
-    for (GameObject* gameObject : m_gameObjects)
+    while (!m_gameObjects.empty())
+        DestroyGameObject(m_gameObjects.front());
+
+    if (m_skybox)
     {
-        gameObject->Destroy();
+        GetReflectionRegistry().DestroyObject(m_skybox);
+        m_skybox = nullptr;
     }
 
-    m_gameObjects.clear();
-
-    GetReflectionRegistry().DestroyObject(m_skybox);
+    m_activeScene = nullptr;
 }
 
 void DWorld::DestroyAllWorldGameObjects()
@@ -276,8 +317,38 @@ GameObject* DWorld::CreateGameObjectInScene(DScene* scene, const DClass* dclass)
     if (!dclass)
         return nullptr;
 
-    const std::string name = std::format("New {}", dclass->GetName());
-    return CreateGameObjectInScene(scene, name);
+    GameObject* go = GetReflectionRegistry().CreateObject<GameObject>(dclass->GetName());
+    if (!go)
+    {
+        DLOG(LogCore, ELogLevel::Error,
+            "CreateGameObjectInScene: reflection CreateObject<GameObject> failed for class '{}' (expected registered GameObject-derived type)",
+            dclass->GetName());
+        return nullptr;
+    }
+
+    go->m_name = std::format("New {}", dclass->GetName());
+    go->m_currentWorld = this;
+
+    if (!scene)
+    {
+        go->SetObjectId(UUID::Generate());
+        m_gameObjects.push_back(go);
+        m_gameObjectsChanged = true;
+        return go;
+    }
+
+    DPrimaryAsset* pa = scene->GetOwningAsset();
+    go->SetObjectId(UUID::Generate());
+
+    if (pa)
+        pa->AddObject(go);
+
+    scene->AddGameObject(go);
+
+    m_gameObjects.push_back(go);
+    m_gameObjectsChanged = true;
+
+    return go;
 }
 
 void DWorld::AddGameObjectFromScene(GameObject* go)

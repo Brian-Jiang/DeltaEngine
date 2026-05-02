@@ -44,7 +44,7 @@ TEST(LightProxyShadowTests, DirectionalProducesOneViewWhenCasting)
     DirectionalLightRenderProxy p;
     p.SetDirectionalLightBufferIndex(0);
     p.UpdateParameters(XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f), 1.0f, true, 0.005f,
-        0.05f, 200.0f, 1.0f, 1024, 0.0f, 1.0f);
+        0.05f, 200.0f, 1.0f, 1024, 0.0f, 1.0f, 5000.0f);
 
     std::vector<ShadowView> views;
     p.GatherShadowViews(ctx, views);
@@ -57,7 +57,7 @@ TEST(LightProxyShadowTests, DirectionalProducesNoViewWhenShadowsOff)
     auto ctx = MakeDirCtx();
     DirectionalLightRenderProxy p;
     p.UpdateParameters(XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f), 1.0f, false, 0.005f,
-        0.05f, 200.0f, 1.0f, 1024, 0.0f, 1.0f);
+        0.05f, 200.0f, 1.0f, 1024, 0.0f, 1.0f, 5000.0f);
 
     std::vector<ShadowView> views;
     p.GatherShadowViews(ctx, views);
@@ -105,7 +105,7 @@ TEST(LightProxyShadowTests, DirectionalFinishedMatrixIsAffineBottomRow)
     DirectionalLightRenderProxy p;
     p.SetDirectionalLightBufferIndex(0);
     p.UpdateParameters(XMVectorSet(0.3f, -0.7f, 0.2f, 0.0f), XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f), 1.0f, true, 0.005f,
-        0.05f, 150.0f, 2.0f, 1024, 0.0f, 1.0f);
+        0.05f, 150.0f, 2.0f, 1024, 0.0f, 1.0f, 5000.0f);
 
     std::vector<ShadowView> views;
     p.GatherShadowViews(ctx, views);

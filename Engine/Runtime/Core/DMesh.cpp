@@ -8,12 +8,15 @@
 #include <assimp/scene.h>
 
 #include <cstring>
+#include <cstddef>
+#include <exception>
 #include <filesystem>
-#include <iostream>
 #include <utility>
 
 namespace
 {
+constexpr uint32_t kMaxMeshSubmeshes = 4096u;
+
 std::string GetParentDirectory(const std::string& filePath, int levelsUp)
 {
     std::filesystem::path path(filePath);
@@ -25,10 +28,22 @@ std::string GetParentDirectory(const std::string& filePath, int levelsUp)
 
 std::string FindTextureFile(const std::string& directory, const std::string& fileName)
 {
-    for (const auto& entry : std::filesystem::recursive_directory_iterator(directory))
+    try
     {
-        if (entry.is_regular_file() && entry.path().filename() == fileName)
-            return entry.path().string();
+        if (directory.empty() || !std::filesystem::exists(directory))
+            return {};
+
+        for (const auto& entry : std::filesystem::recursive_directory_iterator(directory))
+        {
+            if (entry.is_regular_file() && entry.path().filename() == fileName)
+                return entry.path().string();
+        }
+    }
+    catch (const std::filesystem::filesystem_error& ex)
+    {
+        DLOG(LogAsset, ELogLevel::Warning,
+            "FindTextureFile: filesystem scan failed directory='{}' fileName='{}' — {}",
+            directory, fileName, ex.what());
     }
 
     return {};
@@ -71,30 +86,64 @@ DeltaEngine::TBulkData SerializeVertices(const std::vector<std::vector<Vertex>>&
 
 void DeserializeVertices(const DeltaEngine::TBulkData& bulk, std::vector<std::vector<Vertex>>& outVertices)
 {
+    outVertices.clear();
     if (!bulk.IsValid())
         return;
 
-    const uint8_t* cursor = bulk.m_data;
+    size_t off = 0;
+    const uint8_t* base = bulk.m_data;
+    const uint64_t bulkSize = bulk.m_size;
+
+    auto consume = [&](void* dst, size_t nbytes, const char* contextTag) -> bool {
+        if (off + nbytes > bulkSize)
+        {
+            DLOG(LogAsset, ELogLevel::Warning,
+                "DeserializeVertices: truncated bulk ({}) at offset {} need {} have {}",
+                contextTag, static_cast<unsigned long long>(off), static_cast<unsigned long long>(nbytes),
+                static_cast<unsigned long long>(bulkSize));
+            outVertices.clear();
+            return false;
+        }
+        std::memcpy(dst, base + off, nbytes);
+        off += nbytes;
+        return true;
+    };
 
     uint32_t submeshCount = 0;
-    std::memcpy(&submeshCount, cursor, sizeof(uint32_t));
-    cursor += sizeof(uint32_t);
+    if (!consume(&submeshCount, sizeof(uint32_t), "submeshCount"))
+        return;
+
+    if (submeshCount > kMaxMeshSubmeshes)
+    {
+        DLOG(LogAsset, ELogLevel::Warning,
+            "DeserializeVertices: unreasonable submeshCount {} (max {}) — rejecting bulk",
+            submeshCount, kMaxMeshSubmeshes);
+        return;
+    }
 
     std::vector<uint32_t> counts(submeshCount);
     for (uint32_t index = 0; index < submeshCount; ++index)
     {
-        std::memcpy(&counts[index], cursor, sizeof(uint32_t));
-        cursor += sizeof(uint32_t);
+        if (!consume(&counts[index], sizeof(uint32_t), "per-submesh vertex count"))
+            return;
     }
 
     outVertices.resize(submeshCount);
     for (uint32_t index = 0; index < submeshCount; ++index)
     {
+        const uint64_t vertBytes64 = static_cast<uint64_t>(counts[index]) * sizeof(Vertex);
+        if (vertBytes64 > static_cast<uint64_t>(SIZE_MAX))
+        {
+            DLOG(LogAsset, ELogLevel::Warning,
+                "DeserializeVertices: vertex byte payload overflow submeshIndex={} count={}",
+                index, counts[index]);
+            outVertices.clear();
+            return;
+        }
+        const size_t vertBytes = static_cast<size_t>(vertBytes64);
         outVertices[index].resize(counts[index]);
-        const uint64_t bytes = sizeof(Vertex) * counts[index];
-        if (bytes > 0)
-            std::memcpy(outVertices[index].data(), cursor, bytes);
-        cursor += bytes;
+        if (vertBytes > 0 && !consume(outVertices[index].data(), vertBytes, "vertex bytes"))
+            return;
     }
 }
 
@@ -135,30 +184,64 @@ DeltaEngine::TBulkData SerializeIndices(const std::vector<std::vector<unsigned i
 
 void DeserializeIndices(const DeltaEngine::TBulkData& bulk, std::vector<std::vector<unsigned int>>& outIndices)
 {
+    outIndices.clear();
     if (!bulk.IsValid())
         return;
 
-    const uint8_t* cursor = bulk.m_data;
+    size_t off = 0;
+    const uint8_t* base = bulk.m_data;
+    const uint64_t bulkSize = bulk.m_size;
+
+    auto consume = [&](void* dst, size_t nbytes, const char* contextTag) -> bool {
+        if (off + nbytes > bulkSize)
+        {
+            DLOG(LogAsset, ELogLevel::Warning,
+                "DeserializeIndices: truncated bulk ({}) at offset {} need {} have {}",
+                contextTag, static_cast<unsigned long long>(off), static_cast<unsigned long long>(nbytes),
+                static_cast<unsigned long long>(bulkSize));
+            outIndices.clear();
+            return false;
+        }
+        std::memcpy(dst, base + off, nbytes);
+        off += nbytes;
+        return true;
+    };
 
     uint32_t submeshCount = 0;
-    std::memcpy(&submeshCount, cursor, sizeof(uint32_t));
-    cursor += sizeof(uint32_t);
+    if (!consume(&submeshCount, sizeof(uint32_t), "submeshCount"))
+        return;
+
+    if (submeshCount > kMaxMeshSubmeshes)
+    {
+        DLOG(LogAsset, ELogLevel::Warning,
+            "DeserializeIndices: unreasonable submeshCount {} (max {}) — rejecting bulk",
+            submeshCount, kMaxMeshSubmeshes);
+        return;
+    }
 
     std::vector<uint32_t> counts(submeshCount);
     for (uint32_t index = 0; index < submeshCount; ++index)
     {
-        std::memcpy(&counts[index], cursor, sizeof(uint32_t));
-        cursor += sizeof(uint32_t);
+        if (!consume(&counts[index], sizeof(uint32_t), "per-submesh index count"))
+            return;
     }
 
     outIndices.resize(submeshCount);
     for (uint32_t index = 0; index < submeshCount; ++index)
     {
+        const uint64_t idxBytes64 = static_cast<uint64_t>(counts[index]) * sizeof(unsigned int);
+        if (idxBytes64 > static_cast<uint64_t>(SIZE_MAX))
+        {
+            DLOG(LogAsset, ELogLevel::Warning,
+                "DeserializeIndices: index byte payload overflow submeshIndex={} count={}",
+                index, counts[index]);
+            outIndices.clear();
+            return;
+        }
+        const size_t idxBytes = static_cast<size_t>(idxBytes64);
         outIndices[index].resize(counts[index]);
-        const uint64_t bytes = sizeof(unsigned int) * counts[index];
-        if (bytes > 0)
-            std::memcpy(outIndices[index].data(), cursor, bytes);
-        cursor += bytes;
+        if (idxBytes > 0 && !consume(outIndices[index].data(), idxBytes, "index bytes"))
+            return;
     }
 }
 }
@@ -224,7 +307,13 @@ void DMesh::ImportMeshImpl(const std::wstring& absolutePath, bool loadTextures)
     const aiScene* scene = importer.ReadFile(path.string(), kImportFlags);
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
     {
-        std::cerr << "ERROR::ASSIMP::" << importer.GetErrorString() << std::endl;
+        DLOG(LogAsset, ELogLevel::Error,
+            "DMesh ImportMeshImpl: Assimp load failed path='{}' sceneValid={} incompleteFlag={:#x} rootNodeValid={} error='{}'",
+            path.string(),
+            static_cast<bool>(scene),
+            scene ? scene->mFlags : 0u,
+            static_cast<bool>(scene && scene->mRootNode),
+            importer.GetErrorString());
         return;
     }
 
@@ -239,6 +328,14 @@ void DMesh::ImportMesh()
 
 void DMesh::ProcessNode(aiNode* node, const aiScene* scene, DirectX::XMMATRIX accTransform, const std::string& absolutePath, bool loadTextures)
 {
+    if (!node || !scene)
+    {
+        DLOG(LogAsset, ELogLevel::Warning,
+            "ProcessNode: null node or scene (node={}, scene={}) — skipping subtree",
+            static_cast<const void*>(node), static_cast<const void*>(scene));
+        return;
+    }
+
     const auto localTransformation = DirectX::XMMATRIX(&(node->mTransformation.a1));
     accTransform = DirectX::XMMatrixMultiply(accTransform, localTransformation);
 
@@ -251,6 +348,14 @@ void DMesh::ProcessNode(aiNode* node, const aiScene* scene, DirectX::XMMATRIX ac
 
 void DMesh::ProcessMesh(aiMesh* mesh, const aiScene* scene, const std::string& absolutePath, bool loadTextures)
 {
+    if (!mesh || !scene)
+    {
+        DLOG(LogAsset, ELogLevel::Warning,
+            "ProcessMesh: null mesh or scene (mesh={}, scene={})",
+            static_cast<const void*>(mesh), static_cast<const void*>(scene));
+        return;
+    }
+
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
     std::vector<DTexture*> textures;
@@ -260,7 +365,16 @@ void DMesh::ProcessMesh(aiMesh* mesh, const aiScene* scene, const std::string& a
         Vertex vertex {};
         vertex.color = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
         vertex.position = DirectX::XMFLOAT3(&mesh->mVertices[vertexIndex].x);
-        vertex.normal = DirectX::XMFLOAT3(&mesh->mNormals[vertexIndex].x);
+        if (mesh->HasNormals())
+            vertex.normal = DirectX::XMFLOAT3(&mesh->mNormals[vertexIndex].x);
+        else
+        {
+            vertex.normal = DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f);
+            if (vertexIndex == 0)
+                DLOG(LogAsset, ELogLevel::Warning,
+                    "ProcessMesh: mesh '{}' missing normals — using fallback up-vector",
+                    mesh->mName.C_Str());
+        }
 
         if (mesh->HasTangentsAndBitangents())
             vertex.tangent = DirectX::XMFLOAT3(&mesh->mTangents[vertexIndex].x);
@@ -287,7 +401,7 @@ void DMesh::ProcessMesh(aiMesh* mesh, const aiScene* scene, const std::string& a
             indices.push_back(face.mIndices[index]);
     }
 
-    if (loadTextures && mesh->mMaterialIndex >= 0)
+    if (loadTextures && mesh->mMaterialIndex >= 0 && mesh->mMaterialIndex < scene->mNumMaterials)
     {
         aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
 
@@ -296,6 +410,14 @@ void DMesh::ProcessMesh(aiMesh* mesh, const aiScene* scene, const std::string& a
 
         std::vector<DTexture*> specularMaps = LoadMaterialTextures(scene, material, aiTextureType_SPECULAR, "texture_specular", absolutePath);
         textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
+    }
+    else if (loadTextures && mesh->mMaterialIndex >= 0 && mesh->mMaterialIndex >= scene->mNumMaterials)
+    {
+        DLOG(LogAsset, ELogLevel::Warning,
+            "ProcessMesh: material index {} out of range (numMaterials={}) mesh='{}'",
+            mesh->mMaterialIndex,
+            scene->mNumMaterials,
+            mesh->mName.C_Str());
     }
 
     m_vertices.push_back(std::move(vertices));
@@ -306,10 +428,17 @@ void DMesh::ProcessMesh(aiMesh* mesh, const aiScene* scene, const std::string& a
 std::vector<DTexture*> DMesh::LoadMaterialTextures(const aiScene* scene, aiMaterial* mat, aiTextureType type, std::string typeName, const std::string& filePath)
 {
     (void)scene;
-    (void)typeName;
+
+    std::vector<DTexture*> textures;
+    if (!mat)
+    {
+        DLOG(LogAsset, ELogLevel::Warning,
+            "LoadMaterialTextures: null aiMaterial type={} tag='{}'",
+            static_cast<int>(type), typeName);
+        return textures;
+    }
 
     const auto folderPath = GetParentDirectory(filePath, 2);
-    std::vector<DTexture*> textures;
     for (unsigned int textureIndex = 0; textureIndex < mat->GetTextureCount(type); ++textureIndex)
     {
         aiString str;
@@ -317,15 +446,34 @@ std::vector<DTexture*> DMesh::LoadMaterialTextures(const aiScene* scene, aiMater
 
         const std::string importedPath = str.C_Str();
         if (importedPath.empty())
+        {
+            DLOG(LogAsset, ELogLevel::Verbose,
+                "LoadMaterialTextures: empty imported texture path slot={} type={} tag='{}'",
+                textureIndex, static_cast<int>(type), typeName);
             continue;
+        }
 
         const auto fileName = importedPath.substr(importedPath.find_last_of("\\/") + 1);
         const auto texturePath = FindTextureFile(folderPath, fileName);
-        if (!std::filesystem::exists(texturePath))
+        if (texturePath.empty() || !std::filesystem::exists(texturePath))
+        {
+            DLOG(LogAsset, ELogLevel::Warning,
+                "LoadMaterialTextures: texture '{}' not resolved under '{}' (meshFolder={}, type={}, tag='{}')",
+                fileName, folderPath, filePath, static_cast<int>(type), typeName);
             continue;
+        }
 
-        DTexture* texture = DTexture::LoadFromFile(std::wstring(texturePath.begin(), texturePath.end()), true);
-        textures.push_back(texture);
+        try
+        {
+            DTexture* texture = DTexture::LoadFromFile(std::wstring(texturePath.begin(), texturePath.end()), true);
+            textures.push_back(texture);
+        }
+        catch (const std::exception& ex)
+        {
+            DLOG(LogAsset, ELogLevel::Warning,
+                "LoadMaterialTextures: exception loading '{}' — {}",
+                texturePath, ex.what());
+        }
     }
 
     return textures;

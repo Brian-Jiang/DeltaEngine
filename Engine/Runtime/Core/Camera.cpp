@@ -20,12 +20,22 @@ Camera::~Camera() = default;
 
 void Camera::UpdateAspectRatio(float aspectRatio)
 {
+    if (!DELTA_ENSURE(aspectRatio > 0.0f))
+        return;
+
     m_aspectRatio = aspectRatio;
     m_renderProxy->UpdateAspectRatio(aspectRatio);
 }
 
 void Camera::UpdateParameters(float fov, float aspectRatio, float nearPlane, float farPlane)
 {
+    if (!DELTA_ENSURE(fov > 0.0f && fov < DirectX::XM_PI - 0.001f))
+        return;
+    if (!DELTA_ENSURE(aspectRatio > 0.0f))
+        return;
+    if (!DELTA_ENSURE(nearPlane > 0.0f && farPlane > nearPlane))
+        return;
+
     m_fov = fov;
     m_aspectRatio = aspectRatio;
     m_near = nearPlane;
@@ -35,6 +45,11 @@ void Camera::UpdateParameters(float fov, float aspectRatio, float nearPlane, flo
 
 void Camera::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext)
 {
+    if (!DELTA_ENSURE(renderContext != nullptr))
+        return;
+
+    DELTA_ASSERT(m_renderProxy != nullptr);
+
     m_renderProxy->postProcessStack = m_postProcessStack;
     renderContext->camera = m_renderProxy.get();
     m_renderProxy->PreGatherDrawCalls(renderContext);

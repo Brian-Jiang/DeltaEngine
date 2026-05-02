@@ -16,6 +16,10 @@ set(DELTA_ENGINE_TEST_SOURCES
     Serialization/Core/TBulkDataTests.cpp
     Serialization/Core/JsonAssetArchiveTests.cpp
     Assets/Locator/NullAssetDatabaseTests.cpp
+    Core/CoreObjectLifecycleTests.cpp
+    Core/SceneComponentTests.cpp
+    Core/CoreAssetDataTests.cpp
+    Core/CoreUtilityTests.cpp
 )
 
 add_executable(DeltaEngineTests

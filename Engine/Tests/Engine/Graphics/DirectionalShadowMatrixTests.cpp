@@ -55,11 +55,11 @@ TEST(DirectionalShadowMatrixTests, LargerOrthoPaddingChangesViewProj)
     DirectionalLightRenderProxy lo;
     lo.SetDirectionalLightBufferIndex(0);
     lo.UpdateParameters(XMVectorSet(0.2f, -0.8f, 0.1f, 0.0f), XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f), 1.0f, true, 0.005f,
-        0.05f, 120.0f, 0.5f, 1024, 0.0f, 1.0f);
+        0.05f, 120.0f, 0.5f, 1024, 0.0f, 1.0f, 5000.0f);
 
     DirectionalLightRenderProxy hi = lo;
     hi.UpdateParameters(XMVectorSet(0.2f, -0.8f, 0.1f, 0.0f), XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f), 1.0f, true, 0.005f,
-        0.05f, 120.0f, 40.0f, 1024, 0.0f, 1.0f);
+        0.05f, 120.0f, 40.0f, 1024, 0.0f, 1.0f, 5000.0f);
 
     auto ctxLo = MakeCtx(arc);
     std::vector<ShadowView> viewsLo;
@@ -94,7 +94,7 @@ TEST(DirectionalShadowMatrixTests, TexelSnapStabilizesSubPixelFrustumChange)
     DirectionalLightRenderProxy proxy;
     proxy.SetDirectionalLightBufferIndex(0);
     proxy.UpdateParameters(XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f), 1.0f, true,
-        0.005f, 0.05f, 100.0f, 2.0f, 1024, 0.0f, 1.0f);
+        0.005f, 0.05f, 100.0f, 2.0f, 1024, 0.0f, 1.0f, 5000.0f);
 
     auto ctx0 = MakeCtx(arc0);
     std::vector<ShadowView> v0;

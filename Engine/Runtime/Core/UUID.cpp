@@ -1,10 +1,11 @@
 #include "Core/UUID.h"
 
-#include <random>
-#include <cstdint>
-#include <string>
-#include <cctype>
 #include <algorithm>
+#include <cctype>
+#include <cstdint>
+#include <cstdio>
+#include <random>
+#include <string>
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -46,7 +47,12 @@ UUID UUID::FromString(const std::string& str)
 {
     std::string hex = stripDashes(str);
     if (!isHexString(hex))
+    {
+        DLOG(LogSerialization, ELogLevel::Verbose,
+            "UUID::FromString: invalid hex payload strippedLen={}",
+            hex.size());
         return Null();
+    }
     try
     {
         UUID u;
@@ -56,6 +62,9 @@ UUID UUID::FromString(const std::string& str)
     }
     catch (...)
     {
+        DLOG(LogSerialization, ELogLevel::Verbose,
+            "UUID::FromString: numeric parse threw strippedLen={}",
+            hex.size());
         return Null();
     }
 }
