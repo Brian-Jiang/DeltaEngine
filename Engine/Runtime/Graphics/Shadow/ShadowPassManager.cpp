@@ -1,4 +1,4 @@
-#include "Graphics/Shadow/ShadowPassManager.h"
+#include "Runtime/Graphics/Shadow/ShadowPassManager.h"
 
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Graphics/DXGraphicsContext.h"
@@ -9,21 +9,53 @@
 #include "Runtime/Graphics/RenderProxy/RenderProxy.h"
 #include "Runtime/Graphics/Shadow/ShadowDepthPSO.h"
 #include "Runtime/Graphics/Shadow/ShadowView.h"
-#include "Runtime/Logging/LogChannels.h"
 
-#include <pix3.h>
+#include <stdexcept>
 #include <unordered_map>
 #include <vector>
 
-using namespace DeltaEngine;
+DELTA_ENGINE_NS_BEGIN
 
 void ShadowPassManager::Initialize(Device& device)
 {
     Shutdown();
-    m_directionalAtlas.Initialize(device, kAtlasSize, L"ShadowAtlas Directional");
-    m_spotAtlas.Initialize(device, kAtlasSize, L"ShadowAtlas Spot");
-    m_pointCubes.Initialize(device, kPointFaceSize, kPointCubeCount, L"ShadowCubeArray Point");
-    m_shadowDepthPso = std::make_unique<ShadowDepthPSO>(device);
+    m_skipRenderIssuesLogged = false;
+    m_directionalAtlas.Initialize(device, kAtlasSize, "ShadowAtlas Directional");
+    m_spotAtlas.Initialize(device, kAtlasSize, "ShadowAtlas Spot");
+    m_pointCubes.Initialize(device, kPointFaceSize, kPointCubeCount, "ShadowCubeArray Point");
+    try
+    {
+        m_shadowDepthPso = std::make_unique<ShadowDepthPSO>(device);
+    }
+    catch (const std::exception& ex)
+    {
+        m_shadowDepthPso.reset();
+        DLOG(LogShadow, ELogLevel::Error,
+            "ShadowPassManager::Initialize failed: ShadowDepthPSO construction threw (what='{}', expected successful shadow depth PSO build)",
+            ex.what());
+    }
+    catch (...)
+    {
+        m_shadowDepthPso.reset();
+        DLOG(LogShadow, ELogLevel::Error,
+            "ShadowPassManager::Initialize failed: ShadowDepthPSO construction threw a non-std exception (expected successful shadow depth PSO build)");
+    }
+
+    if (!ShadowResourcesReady())
+    {
+        DLOG(LogShadow, ELogLevel::Error,
+            "ShadowPassManager::Initialize completed with incomplete GPU resources (directionalTex={}, spotTex={}, pointTex={}, depthPso={}; expected all non-null)",
+            static_cast<const void*>(m_directionalAtlas.GetTexture().get()),
+            static_cast<const void*>(m_spotAtlas.GetTexture().get()),
+            static_cast<const void*>(m_pointCubes.GetTexture().get()),
+            static_cast<const void*>(m_shadowDepthPso.get()));
+    }
+    else
+    {
+        DLOG(LogShadow, ELogLevel::Info,
+            "ShadowPassManager initialized (atlasSize={}, directionalTilePx={}, spotTilePx={}, pointFacePx={}, pointCubes={})",
+            kAtlasSize, kDirectionalTileSize, kSpotTileSize, kPointFaceSize, kPointCubeCount);
+    }
 }
 
 void ShadowPassManager::Shutdown()
@@ -32,6 +64,8 @@ void ShadowPassManager::Shutdown()
     m_pointCubes.Shutdown();
     m_spotAtlas.Shutdown();
     m_directionalAtlas.Shutdown();
+    m_skipRenderIssuesLogged = false;
+    DLOG(LogShadow, ELogLevel::Info, "ShadowPassManager shut down");
 }
 
 bool ShadowPassManager::ShadowResourcesReady() const
@@ -56,8 +90,40 @@ std::shared_ptr<DirectX12Texture> ShadowPassManager::GetPointCubeArrayTexture() 
 
 void ShadowPassManager::Render(std::shared_ptr<DXGraphicsContext> ctx, DWorld& world)
 {
-    if (!ShadowResourcesReady() || !ctx || !ctx->commandList)
+    if (!ctx)
+    {
+        if (!m_skipRenderIssuesLogged)
+        {
+            m_skipRenderIssuesLogged = true;
+            DLOG(LogShadow, ELogLevel::Warning,
+                "ShadowPassManager::Render skipped: null DXGraphicsContext (expected valid frame context)");
+        }
         return;
+    }
+
+    if (!ctx->commandList)
+    {
+        if (!m_skipRenderIssuesLogged)
+        {
+            m_skipRenderIssuesLogged = true;
+            DLOG(LogShadow, ELogLevel::Warning,
+                "ShadowPassManager::Render skipped: null command list on context (expected recording command list)");
+        }
+        return;
+    }
+
+    if (!ShadowResourcesReady())
+    {
+        if (!m_skipRenderIssuesLogged)
+        {
+            m_skipRenderIssuesLogged = true;
+            DLOG(LogShadow, ELogLevel::Warning,
+                "ShadowPassManager::Render skipped: GPU shadow resources not ready (expected Initialize to succeed)");
+        }
+        return;
+    }
+
+    m_skipRenderIssuesLogged = false;
 
     CommandList& commandList = *ctx->commandList;
     auto* d3dCL = commandList.GetD3D12CommandList().Get();
@@ -284,3 +350,5 @@ void ShadowPassManager::Render(std::shared_ptr<DXGraphicsContext> ctx, DWorld& w
 
     PIXEndEvent(d3dCL);
 }
+
+DELTA_ENGINE_NS_END

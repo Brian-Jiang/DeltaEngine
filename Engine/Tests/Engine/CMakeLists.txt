@@ -13,6 +13,7 @@ set(DELTA_ENGINE_TEST_SOURCES
     Graphics/MeshRenderProxyTests.cpp
     Graphics/MeshShadowSubmissionTests.cpp
     Graphics/PostProcessTests_DataModel.cpp
+    Graphics/PostProcessStackHardeningTests.cpp
     Graphics/RenderCoreTests.cpp
     Graphics/ShadowMapAllocatorTests.cpp
     Graphics/DirectionalShadowMatrixTests.cpp

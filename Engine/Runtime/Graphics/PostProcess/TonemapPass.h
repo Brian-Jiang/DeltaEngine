@@ -2,7 +2,7 @@
 
 #include "EngineIncludes.h"
 
-#include "Graphics/PostProcess/PostProcessPass.h"
+#include "Runtime/Graphics/PostProcess/PostProcessPass.h"
 
 #include <memory>
 
@@ -37,6 +37,7 @@ private:
     std::shared_ptr<RootSignature> m_rootSignature;
     std::shared_ptr<PipelineStateObject> m_pso;
     bool m_initialized = false;
+    bool m_loggedExecuteSkip = false;
 };
 
 DELTA_ENGINE_NS_END

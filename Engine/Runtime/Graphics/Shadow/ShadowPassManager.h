@@ -2,12 +2,12 @@
 
 #include "EngineIncludes.h"
 
-#include "Graphics/Shadow/ShadowAtlas.h"
-#include "Graphics/Shadow/ShadowConstants.h"
-#include "Graphics/Shadow/ShadowCubeArray.h"
-#include "Graphics/Shadow/ShadowSettings.h"
-#include "Graphics/Shadow/ShadowDepthPSO.h"
-#include "Graphics/Shadow/ShadowMapAllocator.h"
+#include "Runtime/Graphics/Shadow/ShadowAtlas.h"
+#include "Runtime/Graphics/Shadow/ShadowConstants.h"
+#include "Runtime/Graphics/Shadow/ShadowCubeArray.h"
+#include "Runtime/Graphics/Shadow/ShadowSettings.h"
+#include "Runtime/Graphics/Shadow/ShadowDepthPSO.h"
+#include "Runtime/Graphics/Shadow/ShadowMapAllocator.h"
 
 #include <memory>
 #include <unordered_set>
@@ -52,6 +52,8 @@ private:
     PointSliceAllocator m_pointAllocator;
     std::unique_ptr<ShadowDepthPSO> m_shadowDepthPso;
     ShadowSettings m_settings;
+
+    bool m_skipRenderIssuesLogged = false;
 
     std::unordered_set<uint32_t> m_warnedDirectional;
     std::unordered_set<uint32_t> m_warnedSpot;
