@@ -9,7 +9,6 @@
 
 #include <cstdio>
 #include <filesystem>
-#include <iostream>
 #include <string>
 
 using namespace Microsoft::WRL;
@@ -31,7 +30,12 @@ void WriteShaderPdb(IDxcResult* result)
 
     FILE* file = nullptr;
     if (_wfopen_s(&file, pdbName->GetStringPointer(), L"wb") != 0 || file == nullptr)
+    {
+        const std::filesystem::path pdbPath(pdbName->GetStringPointer());
+        DLOG(LogShader, ELogLevel::Warning,
+            "Failed to open shader PDB for write: '{}'", pdbPath.string());
         return;
+    }
 
     std::fwrite(pdb->GetBufferPointer(), pdb->GetBufferSize(), 1, file);
     std::fclose(file);
@@ -65,10 +69,8 @@ void LogSlangDiagnostics(ISlangBlob* diagnostics, const char* debugLabel)
     const std::string message(
         static_cast<const char*>(diagnostics->getBufferPointer()),
         diagnostics->getBufferSize());
-    if (debugLabel)
-        std::cerr << debugLabel << " slang diagnostics: " << message << std::endl;
-    else
-        std::cerr << message << std::endl;
+    DLOG(LogShader, ELogLevel::Warning, "[{}] slang diagnostics: {}",
+        debugLabel ? debugLabel : "", message);
 }
 
 /// Accepts "sm_6_6", "vs_6_6", "ps_6_6" etc. Strips the stage prefix if present.
@@ -96,6 +98,10 @@ ComPtr<IDxcBlob> CompileHLSLStage(
     const std::wstring& targetProfile,
     const char* debugLabel)
 {
+    DELTA_ENSURE(!engineRelativePath.empty());
+    DELTA_ENSURE(!entryPoint.empty());
+    DELTA_ENSURE(!targetProfile.empty());
+
     ComPtr<IDxcUtils> dxcUtils;
     ComPtr<IDxcCompiler3> compiler;
     ComPtr<IDxcIncludeHandler> includeHandler;
@@ -132,10 +138,8 @@ ComPtr<IDxcBlob> CompileHLSLStage(
         if (error && error->GetBufferSize() > 0)
         {
             const std::string errorMessage(static_cast<const char*>(error->GetBufferPointer()), error->GetBufferSize());
-            if (debugLabel)
-                std::cerr << debugLabel << " compile error: " << errorMessage << std::endl;
-            else
-                std::cerr << errorMessage << std::endl;
+            DLOG(LogShader, ELogLevel::Error, "[{}] HLSL compile error: {}",
+                debugLabel ? debugLabel : "", errorMessage);
         }
         ThrowIfFailed(hr);
     }
@@ -152,10 +156,15 @@ Slang::ComPtr<ISlangBlob> CompileSlangStage(
     const std::string& targetProfile,
     const char* debugLabel)
 {
+    DELTA_ENSURE(!engineRelativePath.empty());
+    DELTA_ENSURE(!entryPoint.empty());
+    DELTA_ENSURE(!targetProfile.empty());
+
     slang::IGlobalSession* globalSession = GetSlangGlobalSession().get();
     if (!globalSession)
     {
-        std::cerr << (debugLabel ? debugLabel : "") << " slang: failed to create global session" << std::endl;
+        DLOG(LogShader, ELogLevel::Error, "[{}] slang: failed to create global session for '{}'",
+            debugLabel ? debugLabel : "", engineRelativePath.string());
         return {};
     }
 
@@ -185,7 +194,8 @@ Slang::ComPtr<ISlangBlob> CompileSlangStage(
     Slang::ComPtr<slang::ISession> session;
     if (SLANG_FAILED(globalSession->createSession(sessionDesc, session.writeRef())))
     {
-        std::cerr << (debugLabel ? debugLabel : "") << " slang: failed to create session" << std::endl;
+        DLOG(LogShader, ELogLevel::Error, "[{}] slang: failed to create session for '{}'",
+            debugLabel ? debugLabel : "", engineRelativePath.string());
         return {};
     }
 
@@ -193,12 +203,17 @@ Slang::ComPtr<ISlangBlob> CompileSlangStage(
     slang::IModule* module = session->loadModule(moduleName.c_str(), diagnostics.writeRef());
     LogSlangDiagnostics(diagnostics.get(), debugLabel);
     if (!module)
+    {
+        DLOG(LogShader, ELogLevel::Error, "[{}] slang: failed to load module '{}' (path '{}')",
+            debugLabel ? debugLabel : "", moduleName, engineRelativePath.string());
         return {};
+    }
 
     Slang::ComPtr<slang::IEntryPoint> entryPointObj;
     if (SLANG_FAILED(module->findEntryPointByName(entryPoint.c_str(), entryPointObj.writeRef())) || !entryPointObj)
     {
-        std::cerr << (debugLabel ? debugLabel : "") << " slang: entry point '" << entryPoint << "' not found" << std::endl;
+        DLOG(LogShader, ELogLevel::Error, "[{}] slang: entry point '{}' not found in '{}'",
+            debugLabel ? debugLabel : "", entryPoint, engineRelativePath.string());
         return {};
     }
 
@@ -208,6 +223,8 @@ Slang::ComPtr<ISlangBlob> CompileSlangStage(
     if (SLANG_FAILED(session->createCompositeComponentType(components, 2, composite.writeRef(), diagnostics.writeRef())))
     {
         LogSlangDiagnostics(diagnostics.get(), debugLabel);
+        DLOG(LogShader, ELogLevel::Error, "[{}] slang: failed to create composite for '{}' entry='{}'",
+            debugLabel ? debugLabel : "", engineRelativePath.string(), entryPoint);
         return {};
     }
     LogSlangDiagnostics(diagnostics.get(), debugLabel);
@@ -217,6 +234,8 @@ Slang::ComPtr<ISlangBlob> CompileSlangStage(
     if (SLANG_FAILED(composite->link(linked.writeRef(), diagnostics.writeRef())))
     {
         LogSlangDiagnostics(diagnostics.get(), debugLabel);
+        DLOG(LogShader, ELogLevel::Error, "[{}] slang: link failed for '{}' entry='{}'",
+            debugLabel ? debugLabel : "", engineRelativePath.string(), entryPoint);
         return {};
     }
     LogSlangDiagnostics(diagnostics.get(), debugLabel);
@@ -226,10 +245,14 @@ Slang::ComPtr<ISlangBlob> CompileSlangStage(
     if (SLANG_FAILED(linked->getEntryPointCode(0, 0, code.writeRef(), diagnostics.writeRef())))
     {
         LogSlangDiagnostics(diagnostics.get(), debugLabel);
+        DLOG(LogShader, ELogLevel::Error, "[{}] slang: getEntryPointCode failed for '{}' entry='{}'",
+            debugLabel ? debugLabel : "", engineRelativePath.string(), entryPoint);
         return {};
     }
     LogSlangDiagnostics(diagnostics.get(), debugLabel);
 
+    DLOG(LogShader, ELogLevel::Verbose, "[{}] slang: compiled '{}' entry='{}' profile='{}'",
+        debugLabel ? debugLabel : "", engineRelativePath.string(), entryPoint, targetProfile);
     return code;
 }
 

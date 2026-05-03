@@ -20,7 +20,11 @@
       "PowerShell(& \"D:\\\\Projects\\\\DeltaEngine\\\\Tools\\\\Scripts\\\\run-x64-debug-editor-tests.bat\" --automatic 2>&1 | Select-Object -Last 20)",
       "Bash(echo \"EXIT:$?\")",
       "Bash(Tools\\\\Scripts\\\\run-x64-debug-editor-tests.bat *)",
-      "PowerShell(& \"D:\\\\Projects\\\\DeltaEngine\\\\Tools\\\\Scripts\\\\run-x64-debug-editor-tests.bat\" --automatic 2>&1)"
+      "PowerShell(& \"D:\\\\Projects\\\\DeltaEngine\\\\Tools\\\\Scripts\\\\run-x64-debug-editor-tests.bat\" --automatic 2>&1)",
+      "Bash(D:/Projects/DeltaEngine/Build/x64-Debug/bin/DeltaEngineTests.exe \"--gtest_filter=IBLBakerHardeningTests*:LightComponentHardeningTests*:DXGraphicsContextHardeningTests*:DefaultTexturesHardeningTests*\")",
+      "Bash(D:/Projects/DeltaEngine/Build/x64-Debug/bin/DeltaEngineTests.exe \"--gtest_filter=DefaultTexturesHardeningFixture*\")",
+      "Bash(D:/Projects/DeltaEngine/Build/x64-Debug/bin/DeltaEngineTests.exe)",
+      "Bash(D:/Projects/DeltaEngine/Build/x64-Debug/bin/DeltaEditorTests.exe)"
     ]
   }
 }

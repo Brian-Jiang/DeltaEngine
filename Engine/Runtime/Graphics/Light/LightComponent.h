@@ -8,6 +8,8 @@
 
 #include "LightComponent.generated.h"
 
+DECLARE_LOG_CATEGORY(LogLight)
+
 DELTA_ENGINE_NS_BEGIN
 
 class DWorld;

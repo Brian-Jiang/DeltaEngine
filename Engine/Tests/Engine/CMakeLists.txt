@@ -6,7 +6,11 @@ set(DELTA_ENGINE_TEST_SOURCES
     Assets/SceneAssetIntegrationTests.cpp
     Graphics/CameraPostProcessStackTests.cpp
     Graphics/CameraRenderProxyTests.cpp
+    Graphics/DefaultTexturesHardeningTests.cpp
+    Graphics/DXGraphicsContextHardeningTests.cpp
     Graphics/GraphicsStructureTests.cpp
+    Graphics/IBLBakerHardeningTests.cpp
+    Graphics/LightComponentHardeningTests.cpp
     Graphics/LightProxyHardeningTests.cpp
     Graphics/LightProxyShadowTests.cpp
     Graphics/MeshRendererTests.cpp

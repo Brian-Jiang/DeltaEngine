@@ -20,6 +20,8 @@
 using namespace DeltaEngine;
 using namespace Microsoft::WRL;
 
+DEFINE_LOG_CATEGORY_STATIC(LogIBL);
+
 namespace
 {
     constexpr uint32_t kIrradianceSize   = 32;
@@ -79,12 +81,20 @@ IBLBaker::~IBLBaker() = default;
 void IBLBaker::Initialize(Device& device)
 {
     if (m_initialized)
+    {
+        DLOG(LogIBL, ELogLevel::Verbose, "IBLBaker::Initialize called when already initialized; ignoring");
         return;
+    }
 
     CompilePipelines(device);
-    BakeBrdfLut(device);
+    DELTA_VERIFY_MSG(m_iblRootSig && m_brdfLutRootSig && m_irradiancePSO && m_specularPSO && m_brdfLutPSO,
+        "IBLBaker pipelines failed to compile (irradiance={}, specular={}, brdfLut={})",
+        m_irradiancePSO != nullptr, m_specularPSO != nullptr, m_brdfLutPSO != nullptr);
 
+    BakeBrdfLut(device);
     m_initialized = true;
+
+    DLOG(LogIBL, ELogLevel::Log, "IBLBaker initialized (BRDF LUT size={})", kBrdfLutSize);
 }
 
 void IBLBaker::CompilePipelines(Device& device)
@@ -137,13 +147,25 @@ void IBLBaker::CompilePipelines(Device& device)
     {
         Slang::ComPtr<ISlangBlob> blob = CompileSlangStage(file, "CSMain", "cs_6_6", "IBL");
         if (!blob)
+        {
+            DLOG(LogIBL, ELogLevel::Error,
+                "IBL compute shader '{}' failed to compile (entry='CSMain', profile='cs_6_6')",
+                file.string());
             return nullptr;
+        }
 
         ComputeStream stream{};
         stream.pRootSignature = rs->GetD3D12RootSignature().Get();
         D3D12_SHADER_BYTECODE bc{ blob->getBufferPointer(), blob->getBufferSize() };
         stream.CS = bc;
-        return device.CreatePipelineStateObject(stream);
+        auto pso = device.CreatePipelineStateObject(stream);
+        if (!pso)
+        {
+            DLOG(LogIBL, ELogLevel::Error,
+                "IBL compute pipeline state object creation failed for shader '{}'",
+                file.string());
+        }
+        return pso;
     };
 
     m_irradiancePSO = makeCs("Shaders/IBL_IrradianceConvolve.slang", m_iblRootSig);
@@ -173,6 +195,12 @@ static std::shared_ptr<DirectX12Texture> CreateCubeUavTexture(
 
 void IBLBaker::BakeBrdfLut(Device& device)
 {
+    if (!DELTA_ENSURE(m_brdfLutPSO && m_brdfLutRootSig))
+    {
+        DLOG(LogIBL, ELogLevel::Error, "IBLBaker::BakeBrdfLut skipped: BRDF LUT PSO/root signature missing");
+        return;
+    }
+
     CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex2D(
         DXGI_FORMAT_R16G16B16A16_FLOAT,
         kBrdfLutSize, kBrdfLutSize,
@@ -220,6 +248,17 @@ void IBLBaker::BakeIrradiance(Device& device,
                               const std::shared_ptr<DirectX12Texture>& sourceCube,
                               IBLResources& out)
 {
+    if (!DELTA_ENSURE(m_irradiancePSO && m_iblRootSig))
+    {
+        DLOG(LogIBL, ELogLevel::Error, "IBLBaker::BakeIrradiance skipped: irradiance PSO/root signature missing");
+        return;
+    }
+    if (!DELTA_ENSURE(sourceCube))
+    {
+        DLOG(LogIBL, ELogLevel::Error, "IBLBaker::BakeIrradiance skipped: source cube is null");
+        return;
+    }
+
     auto irradiance = CreateCubeUavTexture(device, kIrradianceSize, 1, L"IBL_IrradianceCube");
 
     auto& queue = device.GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
@@ -271,6 +310,17 @@ void IBLBaker::BakeSpecular(Device& device,
                             const std::shared_ptr<DirectX12Texture>& sourceCube,
                             IBLResources& out)
 {
+    if (!DELTA_ENSURE(m_specularPSO && m_iblRootSig))
+    {
+        DLOG(LogIBL, ELogLevel::Error, "IBLBaker::BakeSpecular skipped: specular PSO/root signature missing");
+        return;
+    }
+    if (!DELTA_ENSURE(sourceCube))
+    {
+        DLOG(LogIBL, ELogLevel::Error, "IBLBaker::BakeSpecular skipped: source cube is null");
+        return;
+    }
+
     auto specular = CreateCubeUavTexture(device, kSpecularBaseSize, kSpecularMipCount, L"IBL_SpecularCube");
 
     uint32_t sourceSize = static_cast<uint32_t>(sourceCube->GetD3D12ResourceDesc().Width);
@@ -339,8 +389,16 @@ IBLBaker::IBLResources IBLBaker::Bake(Device& device,
                                      const std::shared_ptr<DirectX12Texture>& sourceCube)
 {
     IBLResources out{};
-    if (!m_initialized || !sourceCube)
+    if (!m_initialized)
+    {
+        DLOG(LogIBL, ELogLevel::Warning, "IBLBaker::Bake called before Initialize; returning empty resources");
         return out;
+    }
+    if (!sourceCube)
+    {
+        DLOG(LogIBL, ELogLevel::Warning, "IBLBaker::Bake called with null sourceCube; returning empty resources");
+        return out;
+    }
 
     BakeIrradiance(device, sourceCube, out);
     BakeSpecular(device, sourceCube, out);
@@ -352,6 +410,9 @@ IBLBaker::IBLResources IBLBaker::Bake(Device& device,
 
 void IBLBaker::Shutdown()
 {
+    if (m_initialized)
+        DLOG(LogIBL, ELogLevel::Log, "IBLBaker shutting down");
+
     m_staticLut      = {};
     m_brdfLutPSO.reset();
     m_specularPSO.reset();

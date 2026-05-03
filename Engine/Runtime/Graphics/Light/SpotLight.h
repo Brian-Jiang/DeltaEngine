@@ -26,11 +26,11 @@ public:
 
     DFUNCTION()
     /// Updates the light parameters used for draw submission.
-    void UpdateParameters(DirectX::XMVECTOR color, float intensity, float range,
+    DELTAENGINE_API void UpdateParameters(DirectX::XMVECTOR color, float intensity, float range,
         float innerConeAngle, float outerConeAngle);
 
     /// Uploads the current light data to the graphics context.
-    void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) override;
+    DELTAENGINE_API void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) override;
 
 private:
     std::shared_ptr<SpotLightRenderProxy> m_renderProxy;

@@ -53,6 +53,9 @@ void DXRenderManager::LoadPipeline()
 
 void DXRenderManager::LoadAssets()
 {
+    DELTA_VERIFY_MSG(m_device && m_renderTarget,
+        "DXRenderManager::LoadAssets requires a valid device and render target");
+
     // todo root signature should bind to pass?
     // ---- Root signature (shared across all renderers) ----
     D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
@@ -162,6 +165,10 @@ void DXRenderManager::LoadAssets()
 
 void DXRenderManager::InitWorldRenderers(DWorld& world)
 {
+    DELTA_VERIFY(m_device);
+    DELTA_VERIFY(m_renderTarget);
+    DLOG(LogRenderer, ELogLevel::Log, "DXRenderManager initializing world renderers ({}x{})", m_width, m_height);
+
     // Create a color buffer with sRGB for gamma correction.
     DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
     DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT;
@@ -304,6 +311,8 @@ void DXRenderManager::UpdateIBL(DTexture* skyboxCubemap)
 
     if (!gpuCube)
     {
+        DLOG(LogRenderer, ELogLevel::Warning,
+            "DXRenderManager::UpdateIBL: skybox cubemap has no GPU resource yet; falling back to black IBL");
         EnsureIBLFallback();
         return;
     }
@@ -316,7 +325,13 @@ void DXRenderManager::UpdateIBL(DTexture* skyboxCubemap)
 void DXRenderManager::StageIBLDescriptors(CommandList& commandList)
 {
     if (!m_iblResources.irradianceCube || !m_iblResources.specularCube || !m_iblResources.brdfLut)
+    {
+        DLOG(LogRenderer, ELogLevel::Verbose,
+            "DXRenderManager::StageIBLDescriptors skipped: IBL resources not ready (irradiance={}, specular={}, brdfLut={})",
+            m_iblResources.irradianceCube != nullptr, m_iblResources.specularCube != nullptr,
+            m_iblResources.brdfLut != nullptr);
         return;
+    }
 
     const int32_t rp = static_cast<int32_t>(RootParameterType::IBLTextures);
     commandList.SetShaderResourceView(rp, 0, m_iblResources.irradianceCube,
@@ -339,7 +354,11 @@ void DXRenderManager::StageShadowDescriptors(CommandList& commandList)
         auto fb2d = DefaultTextures::GetShadowMap2DFallback();
         auto fbCube = DefaultTextures::GetShadowCubeArrayFallback();
         if (!fb2d || !fbCube)
+        {
+            DLOG(LogRenderer, ELogLevel::Warning,
+                "DXRenderManager::StageShadowDescriptors skipped: shadow atlases unavailable and fallback textures missing");
             return;
+        }
 
         mapDir = fb2d;
         mapSpot = fb2d;
@@ -373,11 +392,15 @@ void DXRenderManager::RenderFrame()
 
 void DXRenderManager::Resize(UINT width, UINT height)
 {
+    DELTA_VERIFY(m_device);
+    DLOG_IF(LogRenderer, ELogLevel::Warning, width == 0u || height == 0u,
+        "DXRenderManager::Resize received zero dimension ({}x{}); clamping to 1", width, height);
+
     m_device->Flush();
 
     m_width = std::max(1u, width);
     m_height = std::max(1u, height);
-    m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+    m_aspectRatio = static_cast<float>(m_width) / static_cast<float>(m_height);
     m_viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, static_cast<float>(m_width), static_cast<float>(m_height));
     m_renderTarget->Resize(m_width, m_height);
     CreatePingPongTargets(m_width, m_height);

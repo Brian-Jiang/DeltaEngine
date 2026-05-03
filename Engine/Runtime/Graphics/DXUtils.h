@@ -15,9 +15,11 @@ static inline void ThrowIfFailed(HRESULT hr)
     if (FAILED(hr))
     {
         char errorMsg[512];
-        sprintf_s(errorMsg, "DirectX Error: File: %s, Line: %d, Function: %s, HRESULT: 0x%08X\n", 
+        sprintf_s(errorMsg, "DirectX Error: File: %s, Line: %d, Function: %s, HRESULT: 0x%08X\n",
                   __FILE__, __LINE__, __FUNCTION__, static_cast<unsigned int>(hr));
         OutputDebugStringA(errorMsg);
+        DLOG(LogRHI, ELogLevel::Error, "DirectX call failed at {}:{} in {} hr=0x{:08X}",
+            __FILE__, __LINE__, __FUNCTION__, static_cast<unsigned int>(hr));
         throw std::runtime_error(errorMsg);
     }
 }

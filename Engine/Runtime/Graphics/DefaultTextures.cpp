@@ -9,6 +9,8 @@
 
 using namespace DeltaEngine;
 
+DEFINE_LOG_CATEGORY_STATIC(LogDefaultTextures);
+
 namespace
 {
     std::shared_ptr<DirectX12Texture> g_whiteTexture;
@@ -16,12 +18,20 @@ namespace
     std::shared_ptr<DirectX12Texture> g_blackRGTexture;
     std::shared_ptr<DirectX12Texture> g_shadowMap2DFallback;
     std::shared_ptr<DirectX12Texture> g_shadowCubeArrayFallback;
+
+    bool g_warnedWhite = false;
+    bool g_warnedBlackCube = false;
+    bool g_warnedBlackRG = false;
+    bool g_warnedShadow2D = false;
+    bool g_warnedShadowCubeArray = false;
 }
 
 void DefaultTextures::Initialize(Device& device, CommandList& commandList)
 {
     if (g_whiteTexture)
         return;
+
+    DLOG(LogDefaultTextures, ELogLevel::Log, "DefaultTextures initializing fallback texture set");
 
     auto desc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, 1u, 1u, 1u, 1u);
     g_whiteTexture = device.CreateTexture(desc, nullptr);
@@ -106,7 +116,15 @@ void DefaultTextures::Initialize(Device& device, CommandList& commandList)
 D3D12_CPU_DESCRIPTOR_HANDLE DefaultTextures::GetWhiteSRV()
 {
     if (!g_whiteTexture)
+    {
+        if (!g_warnedWhite)
+        {
+            DLOG(LogDefaultTextures, ELogLevel::Warning,
+                "DefaultTextures::GetWhiteSRV called before Initialize; returning zero handle");
+            g_warnedWhite = true;
+        }
         return D3D12_CPU_DESCRIPTOR_HANDLE {};
+    }
     return g_whiteTexture->GetShaderResourceView();
 }
 
@@ -123,7 +141,15 @@ std::shared_ptr<DirectX12Texture> DefaultTextures::GetBlackCubeTexture()
 D3D12_CPU_DESCRIPTOR_HANDLE DefaultTextures::GetBlackCubeSRV()
 {
     if (!g_blackCubeTexture)
+    {
+        if (!g_warnedBlackCube)
+        {
+            DLOG(LogDefaultTextures, ELogLevel::Warning,
+                "DefaultTextures::GetBlackCubeSRV called before Initialize; returning zero handle");
+            g_warnedBlackCube = true;
+        }
         return D3D12_CPU_DESCRIPTOR_HANDLE{};
+    }
     return g_blackCubeTexture->GetShaderResourceView();
 }
 
@@ -135,7 +161,15 @@ std::shared_ptr<DirectX12Texture> DefaultTextures::GetBlackRGTexture()
 D3D12_CPU_DESCRIPTOR_HANDLE DefaultTextures::GetBlackRGSRV()
 {
     if (!g_blackRGTexture)
+    {
+        if (!g_warnedBlackRG)
+        {
+            DLOG(LogDefaultTextures, ELogLevel::Warning,
+                "DefaultTextures::GetBlackRGSRV called before Initialize; returning zero handle");
+            g_warnedBlackRG = true;
+        }
         return D3D12_CPU_DESCRIPTOR_HANDLE{};
+    }
     return g_blackRGTexture->GetShaderResourceView();
 }
 
@@ -147,7 +181,15 @@ std::shared_ptr<DirectX12Texture> DefaultTextures::GetShadowMap2DFallback()
 D3D12_CPU_DESCRIPTOR_HANDLE DefaultTextures::GetShadowMap2DFallbackSRV()
 {
     if (!g_shadowMap2DFallback)
+    {
+        if (!g_warnedShadow2D)
+        {
+            DLOG(LogDefaultTextures, ELogLevel::Warning,
+                "DefaultTextures::GetShadowMap2DFallbackSRV called before Initialize; returning zero handle");
+            g_warnedShadow2D = true;
+        }
         return D3D12_CPU_DESCRIPTOR_HANDLE{};
+    }
     return g_shadowMap2DFallback->GetShaderResourceView();
 }
 
@@ -159,15 +201,33 @@ std::shared_ptr<DirectX12Texture> DefaultTextures::GetShadowCubeArrayFallback()
 D3D12_CPU_DESCRIPTOR_HANDLE DefaultTextures::GetShadowCubeArrayFallbackSRV()
 {
     if (!g_shadowCubeArrayFallback)
+    {
+        if (!g_warnedShadowCubeArray)
+        {
+            DLOG(LogDefaultTextures, ELogLevel::Warning,
+                "DefaultTextures::GetShadowCubeArrayFallbackSRV called before Initialize; returning zero handle");
+            g_warnedShadowCubeArray = true;
+        }
         return D3D12_CPU_DESCRIPTOR_HANDLE{};
+    }
     return g_shadowCubeArrayFallback->GetShaderResourceView();
 }
 
 void DefaultTextures::Shutdown()
 {
+    const bool wasInitialized = static_cast<bool>(g_whiteTexture);
     g_whiteTexture.reset();
     g_blackCubeTexture.reset();
     g_blackRGTexture.reset();
     g_shadowMap2DFallback.reset();
     g_shadowCubeArrayFallback.reset();
+
+    g_warnedWhite           = false;
+    g_warnedBlackCube       = false;
+    g_warnedBlackRG         = false;
+    g_warnedShadow2D        = false;
+    g_warnedShadowCubeArray = false;
+
+    if (wasInitialized)
+        DLOG(LogDefaultTextures, ELogLevel::Log, "DefaultTextures shut down");
 }
