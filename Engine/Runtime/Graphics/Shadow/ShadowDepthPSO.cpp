@@ -1,6 +1,6 @@
-#include "Graphics/Shadow/ShadowDepthPSO.h"
+#include "Runtime/Graphics/Shadow/ShadowDepthPSO.h"
 
-#include "Graphics/ShaderCompile.h"
+#include "Runtime/Graphics/ShaderCompile.h"
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/DirectX/PipelineStateObject.h"
 #include "Runtime/Graphics/DirectX/RootSignature.h"
@@ -8,9 +8,10 @@
 
 #include <d3dx12.h>
 
+#include <filesystem>
 #include <stdexcept>
 
-using namespace DeltaEngine;
+DELTA_ENGINE_NS_BEGIN
 
 namespace
 {
@@ -20,6 +21,9 @@ std::shared_ptr<PipelineStateObject> BuildShadowDepthPSO(Device& device,
     float slopeScaledDepthBias,
     const wchar_t* debugName)
 {
+    if (!rootSig)
+        return {};
+
     D3D12_RT_FORMAT_ARRAY rtvFormats = {};
     rtvFormats.NumRenderTargets = 0;
 
@@ -91,15 +95,36 @@ ShadowDepthPSO::ShadowDepthPSO(Device& device)
     CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSigDesc(ShadowDepthRS::NumParameters,
         rootParameters, 0, nullptr, rootFlags);
     m_rootSignature = device.CreateRootSignature(rootSigDesc.Desc_1_1);
+    if (!m_rootSignature)
+    {
+        DLOG(LogShadow, ELogLevel::Error,
+            "ShadowDepthPSO failed: CreateRootSignature returned nullptr (expected valid shadow depth root signature)");
+        throw std::runtime_error("ShadowDepthPSO: CreateRootSignature failed");
+    }
 
     Slang::ComPtr<ISlangBlob> vsBlob =
-        CompileSlangStage("Shaders/ShadowDepth.slang", "VSMain", "vs_6_6", "ShadowDepthPSO");
+        CompileSlangStage(std::filesystem::path("Shaders/ShadowDepth.slang"), "VSMain", "vs_6_6", "ShadowDepthPSO");
     if (!vsBlob || vsBlob->getBufferSize() == 0)
+    {
+        DLOG(LogShadow, ELogLevel::Error,
+            "ShadowDepthPSO failed: CompileSlangStage returned empty VS blob for '{}' entry '{}' (expected non-empty bytecode)",
+            "Shaders/ShadowDepth.slang", "VSMain");
         throw std::runtime_error("ShadowDepthPSO: failed to compile ShadowDepth.slang VSMain");
+    }
 
     CD3DX12_SHADER_BYTECODE vsBytecode(const_cast<void*>(vsBlob->getBufferPointer()),
         static_cast<SIZE_T>(vsBlob->getBufferSize()));
 
     m_pso2D = BuildShadowDepthPSO(device, m_rootSignature, vsBytecode, 2.0f, L"PSO ShadowDepth 2D");
     m_psoCube = BuildShadowDepthPSO(device, m_rootSignature, vsBytecode, 3.0f, L"PSO ShadowDepth Cube");
+
+    if (!m_pso2D || !m_psoCube)
+    {
+        DLOG(LogShadow, ELogLevel::Error,
+            "ShadowDepthPSO failed: PSO build returned null (pso2D={}, psoCube={}, expected both valid)",
+            static_cast<const void*>(m_pso2D.get()), static_cast<const void*>(m_psoCube.get()));
+        throw std::runtime_error("ShadowDepthPSO: CreatePipelineStateObject failed");
+    }
 }
+
+DELTA_ENGINE_NS_END

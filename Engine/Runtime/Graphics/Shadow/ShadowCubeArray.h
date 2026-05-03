@@ -6,6 +6,7 @@
 
 #include <d3d12.h>
 #include <memory>
+#include <string>
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -15,7 +16,7 @@ class DirectX12Texture;
 class ShadowCubeArray
 {
 public:
-    DELTAENGINE_API void Initialize(Device& device, uint32_t faceSize, uint32_t cubeCount, const wchar_t* debugName);
+    DELTAENGINE_API void Initialize(Device& device, uint32_t faceSize, uint32_t cubeCount, const std::string& debugNameUtf8);
     DELTAENGINE_API void Shutdown();
 
     DELTAENGINE_API std::shared_ptr<DirectX12Texture> GetTexture() const { return m_texture; }

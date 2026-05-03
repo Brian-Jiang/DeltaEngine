@@ -1,21 +1,26 @@
-#include "Graphics/PostProcess/PassthroughPass.h"
+#include "Runtime/Graphics/PostProcess/PassthroughPass.h"
+
+#include "Runtime/Core/DShader.h"
+#include "Runtime/Graphics/DXGraphicsContext.h"
+#include "Runtime/Graphics/DirectX/CommandList.h"
+#include "Runtime/Graphics/DirectX/Device.h"
+#include "Runtime/Graphics/DirectX/PipelineStateObject.h"
+#include "Runtime/Graphics/DirectX/RootSignature.h"
 
 #include <d3d12.h>
 #include <d3dx12.h>
 #include <dxcapi.h>
 #include <wrl/client.h>
 
-#include "Core/DShader.h"
-#include "Graphics/DXGraphicsContext.h"
-#include "Graphics/DXRenderManager.h"
-#include "Graphics/DXUtils.h"
-#include "Graphics/DirectX/CommandList.h"
-#include "Graphics/DirectX/Device.h"
-#include "Graphics/DirectX/PipelineStateObject.h"
-#include "Graphics/DirectX/RootSignature.h"
+#include <string_view>
 
 using namespace Microsoft::WRL;
 using namespace DeltaEngine;
+
+namespace
+{
+constexpr std::string_view kPassthroughShaderRelativePath = "Shaders/PostProcess_Passthrough.slang";
+}
 
 void PassthroughPass::Initialize(Device& /*device*/)
 {
@@ -23,11 +28,28 @@ void PassthroughPass::Initialize(Device& /*device*/)
 
 void PassthroughPass::LazyInitialize(DXGraphicsContext& ctx)
 {
+    m_initialized = false;
+    if (!DELTA_ENSURE_MSG(ctx.device, "PassthroughPass::LazyInitialize requires non-null ctx.device (pass='{}', expected shared Device)",
+            m_passName))
+        return;
+
     Device& device = *ctx.device;
 
-    DShader* shader = ResolveShader("Shaders/PostProcess_Passthrough.slang", "VSMain", "PSMain", "vs_6_6", "ps_6_6");
+    DShader* shader =
+        ResolveShader(std::filesystem::path(kPassthroughShaderRelativePath), "VSMain", "PSMain", "vs_6_6", "ps_6_6");
+    if (!shader)
+        return;
+
     ISlangBlob* vsBlob = shader->GetVertexShaderBlob();
     ISlangBlob* psBlob = shader->GetPixelShaderBlob();
+    if (!DELTA_ENSURE_MSG(vsBlob && vsBlob->getBufferPointer() && vsBlob->getBufferSize() > 0,
+            "PassthroughPass VS blob missing after ResolveShader (pass='{}', path='{}', expected non-empty blob)",
+            m_passName, std::string(kPassthroughShaderRelativePath)))
+        return;
+    if (!DELTA_ENSURE_MSG(psBlob && psBlob->getBufferPointer() && psBlob->getBufferSize() > 0,
+            "PassthroughPass PS blob missing after ResolveShader (pass='{}', path='{}', expected non-empty blob)",
+            m_passName, std::string(kPassthroughShaderRelativePath)))
+        return;
 
     CD3DX12_DESCRIPTOR_RANGE1 srvRange{};
     srvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
@@ -53,6 +75,11 @@ void PassthroughPass::LazyInitialize(DXGraphicsContext& ctx)
     rsDesc.Init_1_1(1, &rootParam, 1, &linearSampler, flags);
 
     m_rootSignature = device.CreateRootSignature(rsDesc.Desc_1_1);
+    if (!DELTA_ENSURE_MSG(m_rootSignature,
+            "PassthroughPass CreateRootSignature failed (pass='{}', expected valid root signature)",
+            m_passName))
+        return;
+
     m_rootSignature->GetD3D12RootSignature()->SetName(L"RootSignature PostProcess Passthrough");
 
     struct PipelineStateStream
@@ -99,8 +126,17 @@ void PassthroughPass::LazyInitialize(DXGraphicsContext& ctx)
     pss.SampleDesc = sampleDesc;
 
     m_pso = device.CreatePipelineStateObject(pss);
+    if (!DELTA_ENSURE_MSG(m_pso,
+            "PassthroughPass CreatePipelineStateObject failed (pass='{}', expected valid PSO)",
+            m_passName))
+    {
+        m_rootSignature.reset();
+        return;
+    }
+
     m_pso->GetD3D12PipelineState()->SetName(L"PSO PostProcess Passthrough");
     m_initialized = true;
+    m_loggedExecuteSkip = false;
 }
 
 void PassthroughPass::Shutdown()
@@ -109,6 +145,7 @@ void PassthroughPass::Shutdown()
     m_rootSignature.reset();
     ReleaseFallbackShader();
     m_initialized = false;
+    m_loggedExecuteSkip = false;
 }
 
 void PassthroughPass::Execute(DXGraphicsContext& ctx,
@@ -120,7 +157,16 @@ void PassthroughPass::Execute(DXGraphicsContext& ctx,
         LazyInitialize(ctx);
 
     if (!m_initialized || !ctx.commandList)
+    {
+        if (!m_loggedExecuteSkip)
+        {
+            m_loggedExecuteSkip = true;
+            DLOG(LogPostProcess, ELogLevel::Warning,
+                "PassthroughPass::Execute skipping draw (pass='{}', initialized={}, commandList={} expected initialized pass with non-null command list)",
+                m_passName, m_initialized, static_cast<const void*>(ctx.commandList.get()));
+        }
         return;
+    }
 
     auto& cl = *ctx.commandList;
 

@@ -1,8 +1,8 @@
-#include "Graphics/Shadow/ShadowMapAllocator.h"
+#include "Runtime/Graphics/Shadow/ShadowMapAllocator.h"
 
 #include <algorithm>
 
-using namespace DeltaEngine;
+DELTA_ENGINE_NS_BEGIN
 
 void ShadowMapAllocator::Reset(uint32_t atlasWidth, uint32_t atlasHeight, uint32_t tileSize)
 {
@@ -78,7 +78,12 @@ void ShadowMapAllocator::Free(int32_t slotId)
 {
     auto it = m_slots.find(slotId);
     if (it == m_slots.end())
+    {
+        DLOG(LogShadow, ELogLevel::Warning,
+            "ShadowMapAllocator::Free ignored unknown slotId={} (activeSlots={}, expected id returned by Allocate)",
+            slotId, m_slots.size());
         return;
+    }
     const RegionCells& r = it->second;
     Occupy(r.cellX, r.cellY, r.span, false);
     m_slots.erase(it);
@@ -118,3 +123,5 @@ void PointSliceAllocator::Free(int32_t cubeIndex)
         return;
     m_inUse[static_cast<uint32_t>(cubeIndex)] = 0;
 }
+
+DELTA_ENGINE_NS_END

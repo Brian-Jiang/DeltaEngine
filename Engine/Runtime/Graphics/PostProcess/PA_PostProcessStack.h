@@ -2,7 +2,7 @@
 
 #include "EngineIncludes.h"
 
-#include "Assets/DPrimaryAsset.h"
+#include "Runtime/Assets/DPrimaryAsset.h"
 
 #include <string>
 

@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 #include <tuple>
+#include <cmath>
 
 using namespace DeltaEngine;
 
@@ -113,6 +114,38 @@ TEST(ShadowMapAllocatorTests, AllocatesExpectedNumberOfMinimalTiles)
     EXPECT_EQ(count, 4);
 }
 
+TEST(ShadowMapAllocatorTests, Free_UnknownSlot_LeavesOccupancyUnchanged)
+{
+    ShadowMapAllocator a;
+    a.Reset(1024, 1024, 512);
+    ShadowMapTileRegion r0 {};
+    ShadowMapTileRegion r1 {};
+    const int32_t id0 = a.Allocate(512, r0);
+    const int32_t id1 = a.Allocate(512, r1);
+    ASSERT_GE(id0, 0);
+    ASSERT_GE(id1, 0);
+
+    a.Free(99999);
+
+    ShadowMapTileRegion r2 {};
+    EXPECT_EQ(a.Allocate(1024, r2), -1);
+}
+
+TEST(ShadowMapAllocatorTests, FillAtlasUVRect_ZeroRegion_YieldsFiniteUVs)
+{
+    ShadowAllocation alloc {};
+    ShadowMapTileRegion region { 0, 0, 0, 0 };
+    ShadowMapAllocator::FillAtlasUVRect(1, 1, region, alloc);
+    EXPECT_TRUE(std::isfinite(alloc.atlasUVRect.x));
+    EXPECT_TRUE(std::isfinite(alloc.atlasUVRect.y));
+    EXPECT_TRUE(std::isfinite(alloc.atlasUVRect.z));
+    EXPECT_TRUE(std::isfinite(alloc.atlasUVRect.w));
+    EXPECT_FLOAT_EQ(alloc.atlasUVRect.x, 0.0f);
+    EXPECT_FLOAT_EQ(alloc.atlasUVRect.y, 0.0f);
+    EXPECT_FLOAT_EQ(alloc.atlasUVRect.z, 0.0f);
+    EXPECT_FLOAT_EQ(alloc.atlasUVRect.w, 0.0f);
+}
+
 TEST(PointSliceAllocatorTests, AllocateUntilFull)
 {
     PointSliceAllocator p;
@@ -131,5 +164,12 @@ TEST(PointSliceAllocatorTests, FreeAllowsAllocate)
     p.Free(0);
     EXPECT_EQ(p.Allocate(), 0);
     EXPECT_EQ(p.Allocate(), 2);
+    EXPECT_EQ(p.Allocate(), -1);
+}
+
+TEST(PointSliceAllocatorTests, Reset_ZeroMaxCubes_AllocateReturnsNegative)
+{
+    PointSliceAllocator p;
+    p.Reset(0);
     EXPECT_EQ(p.Allocate(), -1);
 }
