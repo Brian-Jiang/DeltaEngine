@@ -43,6 +43,13 @@ void DirectionalLightRenderProxy::SetDirectionalLightBufferIndex(uint32_t index)
 
 void DirectionalLightRenderProxy::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext)
 {
+    if (!DELTA_ENSURE(renderContext))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning,
+            "DirectionalLightRenderProxy::PreGatherDrawCalls skipped: renderContext is null");
+        return;
+    }
+
     DirectionalLightBuffer lightData = {};
     lightData.direction = m_direction;
     lightData.color = m_color;
@@ -60,8 +67,14 @@ void DirectionalLightRenderProxy::PreGatherDrawCalls(std::shared_ptr<DXGraphicsC
 
 void DirectionalLightRenderProxy::GatherShadowViews(std::shared_ptr<DXGraphicsContext> ctx, std::vector<ShadowView>& outViews)
 {
-    if (!m_castShadow || !ctx)
+    if (!m_castShadow)
         return;
+    if (!DELTA_ENSURE(ctx))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning,
+            "DirectionalLightRenderProxy::GatherShadowViews skipped: ctx is null");
+        return;
+    }
 
     float nearZ = 0.0f;
     float farEnd = 0.0f;
@@ -81,6 +94,7 @@ void DirectionalLightRenderProxy::GatherShadowViews(std::shared_ptr<DXGraphicsCo
     else if (ctx->camera)
     {
         const CameraRenderProxy* cam = ctx->camera;
+        DELTA_ASSERT(cam);
         nearZ = cam->GetNearPlane();
         farEnd = cam->GetFarPlane();
         tanHalfFov = std::tan(cam->GetFov() * 0.5f);
@@ -96,8 +110,14 @@ void DirectionalLightRenderProxy::GatherShadowViews(std::shared_ptr<DXGraphicsCo
 
     XMVECTOR detV{};
     const XMMATRIX invV = XMMatrixInverse(&detV, V_row);
-    if (std::fabs(XMVectorGetX(detV)) < 1e-12f)
+    const float det = XMVectorGetX(detV);
+    if (std::fabs(det) < 1e-12f)
+    {
+        DLOG(LogRenderer, ELogLevel::Warning,
+            "DirectionalLightRenderProxy::GatherShadowViews: degenerate camera view matrix (det={}); no view emitted",
+            det);
         return;
+    }
 
     const float halfHNear = nearZ * tanHalfFov;
     const float halfWNear = halfHNear * aspect;
@@ -204,8 +224,19 @@ void DirectionalLightRenderProxy::FinishShadowViewProj(uint32_t resolutionW, uin
 
 void DirectionalLightRenderProxy::WriteShadowParams(std::shared_ptr<DXGraphicsContext> ctx, const ShadowAllocation& alloc)
 {
-    if (!ctx || m_directionalLightBufferIndex >= ctx->directionalLights.size())
+    if (!DELTA_ENSURE(ctx))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning,
+            "DirectionalLightRenderProxy::WriteShadowParams skipped: ctx is null");
         return;
+    }
+    if (!DELTA_ENSURE(m_directionalLightBufferIndex < ctx->directionalLights.size()))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning,
+            "DirectionalLightRenderProxy::WriteShadowParams: light buffer index {} out of range (size={})",
+            m_directionalLightBufferIndex, ctx->directionalLights.size());
+        return;
+    }
 
     DirectionalLightBuffer& L = ctx->directionalLights[m_directionalLightBufferIndex];
     L.lightViewProj = XMMatrixTranspose(m_shadowViewProjRow);

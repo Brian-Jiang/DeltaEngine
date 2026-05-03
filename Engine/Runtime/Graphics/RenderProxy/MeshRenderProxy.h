@@ -23,31 +23,31 @@ class DMaterial;
 class MeshRenderProxy : public RenderProxy
 {
 public:
-    MeshRenderProxy();
-    MeshRenderProxy(DMesh* mesh, std::shared_ptr<MeshRendererSettings> settings);
-    ~MeshRenderProxy() override;
+    DELTAENGINE_API MeshRenderProxy();
+    DELTAENGINE_API MeshRenderProxy(DMesh* mesh, std::shared_ptr<MeshRendererSettings> settings);
+    DELTAENGINE_API ~MeshRenderProxy() override;
 
     /// Replaces the mesh used by the render proxy.
-    void SetMesh(DMesh* mesh);
+    DELTAENGINE_API void SetMesh(DMesh* mesh);
 
     /// Updates the world transform used for the next draw submission.
-    void UpdateWorldTransform(DirectX::XMMATRIX worldMatrix);
+    DELTAENGINE_API void UpdateWorldTransform(DirectX::XMMATRIX worldMatrix);
 
     /// Builds pipeline state objects and uploads textures for the current mesh.
-    void Initialize(std::shared_ptr<DXGraphicsContext> renderContext) override;
+    DELTAENGINE_API void Initialize(std::shared_ptr<DXGraphicsContext> renderContext) override;
 
     /// Records draw calls for the current mesh into the active command list.
-    void GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext) override;
+    DELTAENGINE_API void GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext) override;
 
-    void GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext, const ShadowView& view) override;
+    DELTAENGINE_API void GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext, const ShadowView& view) override;
 
     DELTAENGINE_API static bool SubmeshContributesToShadowMap(const DMaterial* material);
 
     /// Returns the number of indices in the first index buffer.
-    size_t GetIndexCount() const;
+    DELTAENGINE_API size_t GetIndexCount() const;
 
     /// Returns the number of vertices in the first vertex buffer.
-    size_t GetVertexCount() const;
+    DELTAENGINE_API size_t GetVertexCount() const;
 
 private:
     DMesh* m_mesh;

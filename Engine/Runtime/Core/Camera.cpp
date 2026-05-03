@@ -50,7 +50,7 @@ void Camera::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext
 
     DELTA_ASSERT(m_renderProxy != nullptr);
 
-    m_renderProxy->postProcessStack = m_postProcessStack;
+    m_renderProxy->SetPostProcessStack(m_postProcessStack);
     renderContext->camera = m_renderProxy.get();
     m_renderProxy->PreGatherDrawCalls(renderContext);
 }

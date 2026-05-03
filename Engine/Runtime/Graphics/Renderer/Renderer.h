@@ -27,8 +27,11 @@ public:
     virtual void CreateRenderProxy() = 0;
 
 protected:
+    /** One-time GPU-resource setup (PSOs, uploads). Invoked by the world before the first draw. */
     virtual void InitGraphicState(std::shared_ptr<DXGraphicsContext> context) = 0;
+    /** Records per-frame draw calls into the active command list. */
     virtual void GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) = 0;
+    /** Records depth-only draw calls for the supplied shadow view. Default no-op. */
     virtual void GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> context, const ShadowView& view) {}
 };
 

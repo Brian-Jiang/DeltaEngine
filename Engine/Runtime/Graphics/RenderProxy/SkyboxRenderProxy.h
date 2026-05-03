@@ -16,13 +16,13 @@ class DMaterial;
 class SkyboxRenderProxy : public RenderProxy
 {
 public:
-    SkyboxRenderProxy(DTexture* cubemapTexture, DMaterial* material);
+    DELTAENGINE_API SkyboxRenderProxy(DTexture* cubemapTexture, DMaterial* material);
 
     /// Eagerly uploads the cubemap and builds the PSO. Must be called once before GatherDrawCalls.
-    void Initialize(std::shared_ptr<DXGraphicsContext> renderContext) override;
+    DELTAENGINE_API void Initialize(std::shared_ptr<DXGraphicsContext> renderContext) override;
 
     /// Records the skybox draw call.
-    void GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext) override;
+    DELTAENGINE_API void GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext) override;
 
     /// Returns the GPU-resident cubemap texture once the proxy has been initialized.
     const std::shared_ptr<DirectX12Texture>& GetGpuCubemap() const { return m_gpuCubemap; }

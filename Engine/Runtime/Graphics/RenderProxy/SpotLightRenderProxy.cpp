@@ -15,6 +15,23 @@ void SpotLightRenderProxy::UpdateParameters(XMVECTOR position, XMVECTOR directio
     bool castShadow, float shadowBias, float pcssLightSize,
     float shadowNormalBias, float shadowSlopeBias)
 {
+    // Note: outerConeAngle drives FOV = 2*outer for the shadow projection, so values >= XM_PIDIV2
+    // are clamped at use site rather than rejected here (the default is XM_PIDIV2).
+    if (!DELTA_ENSURE(outerConeAngle > 0.0f))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning,
+            "SpotLightRenderProxy::UpdateParameters: outerConeAngle={} must be > 0; leaving previous values",
+            outerConeAngle);
+        return;
+    }
+    if (!DELTA_ENSURE(innerConeAngle >= 0.0f && innerConeAngle <= outerConeAngle))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning,
+            "SpotLightRenderProxy::UpdateParameters: innerConeAngle={} out of range [0, outerConeAngle={}]; leaving previous values",
+            innerConeAngle, outerConeAngle);
+        return;
+    }
+
     m_position = position;
     m_direction = direction;
     m_color = color;
@@ -36,6 +53,13 @@ void SpotLightRenderProxy::SetSpotLightBufferIndex(uint32_t index)
 
 void SpotLightRenderProxy::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext)
 {
+    if (!DELTA_ENSURE(renderContext))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning,
+            "SpotLightRenderProxy::PreGatherDrawCalls skipped: renderContext is null");
+        return;
+    }
+
     SpotLightBuffer lightData = {};
     lightData.position = m_position;
     lightData.direction = m_direction;
@@ -55,9 +79,17 @@ void SpotLightRenderProxy::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext>
     renderContext->spotLights.push_back(lightData);
 }
 
-void SpotLightRenderProxy::GatherShadowViews(std::shared_ptr<DXGraphicsContext>, std::vector<ShadowView>& outViews)
+void SpotLightRenderProxy::GatherShadowViews(std::shared_ptr<DXGraphicsContext> ctx, std::vector<ShadowView>& outViews)
 {
-    if (!m_castShadow || m_range <= 0.0f)
+    if (!m_castShadow)
+        return;
+    if (!DELTA_ENSURE(ctx))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning,
+            "SpotLightRenderProxy::GatherShadowViews skipped: ctx is null");
+        return;
+    }
+    if (m_range <= 0.0f)
         return;
 
     XMVECTOR dir = XMVector3Normalize(m_direction);
@@ -67,7 +99,8 @@ void SpotLightRenderProxy::GatherShadowViews(std::shared_ptr<DXGraphicsContext>,
 
     const XMMATRIX view = XMMatrixLookToLH(m_position, dir, up);
     const float nearZ = std::max(0.01f, std::min(m_range * 0.02f, 1.0f));
-    const float fov = 2.0f * m_outerConeAngle;
+    // Clamp FOV strictly below pi to avoid a degenerate perspective matrix when outerConeAngle >= pi/2.
+    const float fov = std::min(2.0f * m_outerConeAngle, DirectX::XM_PI - 0.01f);
     const XMMATRIX proj = XMMatrixPerspectiveFovLH(fov, 1.0f, nearZ, m_range);
     m_shadowViewProjRow = view * proj;
 
@@ -81,8 +114,19 @@ void SpotLightRenderProxy::GatherShadowViews(std::shared_ptr<DXGraphicsContext>,
 
 void SpotLightRenderProxy::WriteShadowParams(std::shared_ptr<DXGraphicsContext> ctx, const ShadowAllocation& alloc)
 {
-    if (!ctx || m_spotLightBufferIndex >= ctx->spotLights.size())
+    if (!DELTA_ENSURE(ctx))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning,
+            "SpotLightRenderProxy::WriteShadowParams skipped: ctx is null");
         return;
+    }
+    if (!DELTA_ENSURE(m_spotLightBufferIndex < ctx->spotLights.size()))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning,
+            "SpotLightRenderProxy::WriteShadowParams: light buffer index {} out of range (size={})",
+            m_spotLightBufferIndex, ctx->spotLights.size());
+        return;
+    }
 
     SpotLightBuffer& L = ctx->spotLights[m_spotLightBufferIndex];
     L.lightViewProj = XMMatrixTranspose(m_shadowViewProjRow);

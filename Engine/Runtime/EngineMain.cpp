@@ -109,7 +109,7 @@ void EngineMain::RecordSceneDraws(std::shared_ptr<DXGraphicsContext> context)
         world->GatherDrawCalls(context);
         PIXEndEvent(d3dCL);
 
-        PostProcessStack* stack = context->camera ? context->camera->postProcessStack : nullptr;
+        PostProcessStack* stack = context->camera ? context->camera->GetPostProcessStack() : nullptr;
         if (stack && stack->GetPassCount() > 0)
         {
             // TODO Phase 3: execute passes

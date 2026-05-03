@@ -2,13 +2,18 @@ set(DELTA_ENGINE_TEST_SOURCES
     Assets/DPrimaryAssetTests.cpp
     Assets/SceneAssetIntegrationTests.cpp
     Graphics/CameraPostProcessStackTests.cpp
+    Graphics/CameraRenderProxyTests.cpp
     Graphics/GraphicsStructureTests.cpp
+    Graphics/LightProxyHardeningTests.cpp
+    Graphics/LightProxyShadowTests.cpp
+    Graphics/MeshRendererTests.cpp
+    Graphics/MeshRenderProxyTests.cpp
+    Graphics/MeshShadowSubmissionTests.cpp
     Graphics/PostProcessTests_DataModel.cpp
     Graphics/RenderCoreTests.cpp
     Graphics/ShadowMapAllocatorTests.cpp
     Graphics/DirectionalShadowMatrixTests.cpp
-    Graphics/LightProxyShadowTests.cpp
-    Graphics/MeshShadowSubmissionTests.cpp
+    Graphics/SkyboxRenderProxyTests.cpp
     Reflection/ReflectionRegistryTests.cpp
     Reflection/ReflectionRegistryHardeningTests.cpp
     Reflection/ReflectionStructClassTests.cpp

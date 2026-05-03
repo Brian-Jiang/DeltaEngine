@@ -8,28 +8,61 @@ using namespace DeltaEngine;
 using namespace DirectX;
 
 CameraRenderProxy::CameraRenderProxy(float fov, float aspectRatio, float nearPlane, float farPlane)
-    : m_fov(fov)
-    , m_aspectRatio(aspectRatio)
-    , m_near(nearPlane)
-    , m_far(farPlane)
 {
+    if (ValidateProjectionParams(fov, aspectRatio, nearPlane, farPlane))
+    {
+        m_fov = fov;
+        m_aspectRatio = aspectRatio;
+        m_near = nearPlane;
+        m_far = farPlane;
+    }
     RecalculateViewProjectionMatrix();
 }
 
-void DeltaEngine::CameraRenderProxy::UpdateTransform(DirectX::XMMATRIX worldMatrix)
+bool CameraRenderProxy::ValidateProjectionParams(float fov, float aspectRatio, float nearPlane, float farPlane) const
+{
+    if (!DELTA_ENSURE(fov > 0.0f))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning, "CameraRenderProxy: invalid fov={} (expected > 0)", fov);
+        return false;
+    }
+    if (!DELTA_ENSURE(aspectRatio > 0.0f))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning, "CameraRenderProxy: invalid aspectRatio={} (expected > 0)", aspectRatio);
+        return false;
+    }
+    if (!DELTA_ENSURE(nearPlane > 0.0f))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning, "CameraRenderProxy: invalid nearPlane={} (expected > 0)", nearPlane);
+        return false;
+    }
+    if (!DELTA_ENSURE(farPlane > nearPlane))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning,
+            "CameraRenderProxy: invalid farPlane={} (expected > nearPlane={})", farPlane, nearPlane);
+        return false;
+    }
+    return true;
+}
+
+void CameraRenderProxy::UpdateTransform(DirectX::XMMATRIX worldMatrix)
 {
     m_worldMatrix = worldMatrix;
     RecalculateViewProjectionMatrix();
 }
 
-void DeltaEngine::CameraRenderProxy::UpdateAspectRatio(float aspectRatio)
+void CameraRenderProxy::UpdateAspectRatio(float aspectRatio)
 {
+    if (!ValidateProjectionParams(m_fov, aspectRatio, m_near, m_far))
+        return;
     m_aspectRatio = aspectRatio;
     RecalculateViewProjectionMatrix();
 }
 
-void DeltaEngine::CameraRenderProxy::UpdateParameters(float fov, float aspectRatio, float nearPlane, float farPlane)
+void CameraRenderProxy::UpdateParameters(float fov, float aspectRatio, float nearPlane, float farPlane)
 {
+    if (!ValidateProjectionParams(fov, aspectRatio, nearPlane, farPlane))
+        return;
     m_fov = fov;
     m_aspectRatio = aspectRatio;
     m_near = nearPlane;
@@ -37,15 +70,21 @@ void DeltaEngine::CameraRenderProxy::UpdateParameters(float fov, float aspectRat
     RecalculateViewProjectionMatrix();
 }
 
-void DeltaEngine::CameraRenderProxy::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext)
+void CameraRenderProxy::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext)
 {
+    if (!DELTA_ENSURE(renderContext && renderContext->commandList))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning,
+            "CameraRenderProxy::PreGatherDrawCalls skipped: renderContext or commandList is null");
+        return;
+    }
+
     CameraCB cameraData = {};
     cameraData.viewMatrix = XMMatrixTranspose(m_viewMatrix);
     cameraData.projectionMatrix = XMMatrixTranspose(m_projectionMatrix);
     cameraData.position = m_worldMatrix.r[3];
 
-    std::shared_ptr<CommandList> commandList = renderContext->commandList;
-    commandList->SetGraphicsDynamicConstantBuffer(0, cameraData);
+    renderContext->commandList->SetGraphicsDynamicConstantBuffer(0, cameraData);
 }
 
 void CameraRenderProxy::RecalculateViewProjectionMatrix()

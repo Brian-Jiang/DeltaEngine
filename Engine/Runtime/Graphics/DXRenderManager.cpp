@@ -362,7 +362,7 @@ void DXRenderManager::StageShadowDescriptors(CommandList& commandList)
 void DXRenderManager::RenderFrame()
 {
     auto ctx = m_currentContext ? m_currentContext : GetGraphicsContext();
-    PostProcessStack* stack = ctx->camera ? ctx->camera->postProcessStack : nullptr;
+    PostProcessStack* stack = ctx->camera ? ctx->camera->GetPostProcessStack() : nullptr;
     ExecutePostProcessStack(*ctx, stack, m_width, m_height);
 
     CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);

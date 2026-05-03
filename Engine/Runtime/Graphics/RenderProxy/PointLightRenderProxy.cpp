@@ -32,6 +32,13 @@ void PointLightRenderProxy::SetPointLightBufferIndex(uint32_t index)
 
 void PointLightRenderProxy::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext)
 {
+    if (!DELTA_ENSURE(renderContext))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning,
+            "PointLightRenderProxy::PreGatherDrawCalls skipped: renderContext is null");
+        return;
+    }
+
     PointLightBuffer lightData = {};
     lightData.position = m_position;
     lightData.color = m_color;
@@ -48,9 +55,17 @@ void PointLightRenderProxy::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext
     renderContext->pointLights.push_back(lightData);
 }
 
-void PointLightRenderProxy::GatherShadowViews(std::shared_ptr<DXGraphicsContext>, std::vector<ShadowView>& outViews)
+void PointLightRenderProxy::GatherShadowViews(std::shared_ptr<DXGraphicsContext> ctx, std::vector<ShadowView>& outViews)
 {
-    if (!m_castShadow || m_range <= 0.0f)
+    if (!m_castShadow)
+        return;
+    if (!DELTA_ENSURE(ctx))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning,
+            "PointLightRenderProxy::GatherShadowViews skipped: ctx is null");
+        return;
+    }
+    if (m_range <= 0.0f)
         return;
 
     // Cube face axes (LH, +X, -X, +Y, -Y, +Z, -Z) — D3D cube face order.
@@ -91,8 +106,19 @@ void PointLightRenderProxy::GatherShadowViews(std::shared_ptr<DXGraphicsContext>
 
 void PointLightRenderProxy::WriteShadowParams(std::shared_ptr<DXGraphicsContext> ctx, const ShadowAllocation& alloc)
 {
-    if (!ctx || m_pointLightBufferIndex >= ctx->pointLights.size())
+    if (!DELTA_ENSURE(ctx))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning,
+            "PointLightRenderProxy::WriteShadowParams skipped: ctx is null");
         return;
+    }
+    if (!DELTA_ENSURE(m_pointLightBufferIndex < ctx->pointLights.size()))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning,
+            "PointLightRenderProxy::WriteShadowParams: light buffer index {} out of range (size={})",
+            m_pointLightBufferIndex, ctx->pointLights.size());
+        return;
+    }
 
     PointLightBuffer& L = ctx->pointLights[m_pointLightBufferIndex];
     L.cubeArrayIndex = alloc.cubeArrayIndex;

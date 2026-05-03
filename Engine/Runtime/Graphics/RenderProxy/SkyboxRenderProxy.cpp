@@ -27,8 +27,32 @@ void SkyboxRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext> renderCont
 {
     if (m_initialized)
         return;
-    if (!m_cubemapTexture || !m_material || !m_material->GetShader())
+    if (!DELTA_ENSURE(m_cubemapTexture))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning, "SkyboxRenderProxy::Initialize skipped: cubemap texture is null");
         return;
+    }
+    if (!DELTA_ENSURE(m_material))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning, "SkyboxRenderProxy::Initialize skipped: material is null");
+        return;
+    }
+    if (!DELTA_ENSURE(m_material->GetShader()))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning, "SkyboxRenderProxy::Initialize skipped: material shader is null");
+        return;
+    }
+    if (!DELTA_ENSURE(renderContext && renderContext->commandList && renderContext->device && renderContext->renderManager))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning,
+            "SkyboxRenderProxy::Initialize skipped: renderContext missing commandList/device/renderManager");
+        return;
+    }
+    if (!DELTA_ENSURE(renderContext->renderManager->GetRootSignature()))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning, "SkyboxRenderProxy::Initialize skipped: root signature is null");
+        return;
+    }
 
     // Upload cubemap; LoadTexture calls CreateCubemapSRV() because IsCubemap() is true.
     m_gpuCubemap = renderContext->commandList->LoadTexture(m_cubemapTexture);
@@ -46,6 +70,12 @@ void SkyboxRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext> renderCont
 
     ISlangBlob* vs = m_material->GetShader()->GetVertexShaderBlob();
     ISlangBlob* ps = m_material->GetShader()->GetPixelShaderBlob();
+    if (!DELTA_ENSURE(vs && ps))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning,
+            "SkyboxRenderProxy::Initialize skipped: shader missing VS or PS blob");
+        return;
+    }
     CD3DX12_SHADER_BYTECODE vsBytecode{ const_cast<void*>(vs->getBufferPointer()), vs->getBufferSize() };
     CD3DX12_SHADER_BYTECODE psBytecode{ const_cast<void*>(ps->getBufferPointer()), ps->getBufferSize() };
 
@@ -84,6 +114,11 @@ void SkyboxRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext> renderCont
     stream.SampleDesc          = sample;
 
     m_pso = renderContext->device->CreatePipelineStateObject(stream);
+    if (!DELTA_ENSURE(m_pso))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning, "SkyboxRenderProxy::Initialize: PSO creation failed");
+        return;
+    }
     m_pso->GetD3D12PipelineState()->SetName(L"PSO Skybox");
 
     m_initialized = true;
@@ -93,6 +128,18 @@ void SkyboxRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> rende
 {
     if (!m_initialized)
         return;
+    if (!DELTA_ENSURE(m_pso && m_gpuCubemap))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning,
+            "SkyboxRenderProxy::GatherDrawCalls skipped: PSO or GPU cubemap is null after initialize");
+        return;
+    }
+    if (!DELTA_ENSURE(renderContext && renderContext->commandList))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning,
+            "SkyboxRenderProxy::GatherDrawCalls skipped: renderContext or commandList is null");
+        return;
+    }
 
     auto& commandList = renderContext->commandList;
     commandList->SetPipelineState(m_pso);
