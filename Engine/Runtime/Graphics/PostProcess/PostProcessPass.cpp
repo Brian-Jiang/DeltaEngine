@@ -3,7 +3,7 @@
 #include "Runtime/Core/DShader.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
 
-DELTA_ENGINE_NS_BEGIN
+using namespace DeltaEngine;
 
 namespace
 {
@@ -60,5 +60,3 @@ void PostProcessPass::ReleaseFallbackShader()
         m_fallbackShader = nullptr;
     }
 }
-
-DELTA_ENGINE_NS_END

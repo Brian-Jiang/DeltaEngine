@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-DELTA_ENGINE_NS_BEGIN
+using namespace DeltaEngine;
 
 void ShadowMapAllocator::Reset(uint32_t atlasWidth, uint32_t atlasHeight, uint32_t tileSize)
 {
@@ -123,5 +123,3 @@ void PointSliceAllocator::Free(int32_t cubeIndex)
         return;
     m_inUse[static_cast<uint32_t>(cubeIndex)] = 0;
 }
-
-DELTA_ENGINE_NS_END

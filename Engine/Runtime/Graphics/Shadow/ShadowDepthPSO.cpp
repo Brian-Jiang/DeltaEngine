@@ -11,7 +11,7 @@
 #include <filesystem>
 #include <stdexcept>
 
-DELTA_ENGINE_NS_BEGIN
+using namespace DeltaEngine;
 
 namespace
 {
@@ -126,5 +126,3 @@ ShadowDepthPSO::ShadowDepthPSO(Device& device)
         throw std::runtime_error("ShadowDepthPSO: CreatePipelineStateObject failed");
     }
 }
-
-DELTA_ENGINE_NS_END

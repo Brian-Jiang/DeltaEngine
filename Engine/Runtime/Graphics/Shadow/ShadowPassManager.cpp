@@ -10,11 +10,13 @@
 #include "Runtime/Graphics/Shadow/ShadowDepthPSO.h"
 #include "Runtime/Graphics/Shadow/ShadowView.h"
 
+#include <pix3.h>
+
 #include <stdexcept>
 #include <unordered_map>
 #include <vector>
 
-DELTA_ENGINE_NS_BEGIN
+using namespace DeltaEngine;
 
 void ShadowPassManager::Initialize(Device& device)
 {
@@ -52,7 +54,7 @@ void ShadowPassManager::Initialize(Device& device)
     }
     else
     {
-        DLOG(LogShadow, ELogLevel::Info,
+        DLOG(LogShadow, ELogLevel::Log,
             "ShadowPassManager initialized (atlasSize={}, directionalTilePx={}, spotTilePx={}, pointFacePx={}, pointCubes={})",
             kAtlasSize, kDirectionalTileSize, kSpotTileSize, kPointFaceSize, kPointCubeCount);
     }
@@ -65,7 +67,7 @@ void ShadowPassManager::Shutdown()
     m_spotAtlas.Shutdown();
     m_directionalAtlas.Shutdown();
     m_skipRenderIssuesLogged = false;
-    DLOG(LogShadow, ELogLevel::Info, "ShadowPassManager shut down");
+    DLOG(LogShadow, ELogLevel::Log, "ShadowPassManager shut down");
 }
 
 bool ShadowPassManager::ShadowResourcesReady() const
@@ -350,5 +352,3 @@ void ShadowPassManager::Render(std::shared_ptr<DXGraphicsContext> ctx, DWorld& w
 
     PIXEndEvent(d3dCL);
 }
-
-DELTA_ENGINE_NS_END

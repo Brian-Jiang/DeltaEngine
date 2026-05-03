@@ -3,13 +3,9 @@
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/DirectX/DirectX12Texture.h"
 
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <Windows.h>
-
 #include <d3dx12.h>
 
-DELTA_ENGINE_NS_BEGIN
+using namespace DeltaEngine;
 
 namespace
 {
@@ -127,5 +123,3 @@ D3D12_CPU_DESCRIPTOR_HANDLE ShadowCubeArray::GetSRV() const
         return {};
     return m_texture->GetShaderResourceView();
 }
-
-DELTA_ENGINE_NS_END

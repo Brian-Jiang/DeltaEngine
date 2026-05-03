@@ -5,7 +5,7 @@
 #include "Runtime/Graphics/PostProcess/PostProcessStack.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
 
-DELTA_ENGINE_NS_BEGIN
+using namespace DeltaEngine;
 
 PA_PostProcessStack* PA_PostProcessStack::Create()
 {
@@ -59,5 +59,3 @@ PostProcessPass* PA_PostProcessStack::AddPass(const std::string& className)
     m_stack->m_passes.push_back(pass);
     return pass;
 }
-
-DELTA_ENGINE_NS_END

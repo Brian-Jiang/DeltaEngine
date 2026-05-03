@@ -2,7 +2,7 @@
 
 #include "Runtime/Graphics/PostProcess/PostProcessPass.h"
 
-DELTA_ENGINE_NS_BEGIN
+using namespace DeltaEngine;
 
 PostProcessPass* PostProcessStack::GetPass(int index) const
 {
@@ -18,5 +18,3 @@ int PostProcessStack::GetPassCount() const
 {
     return static_cast<int>(m_passes.size());
 }
-
-DELTA_ENGINE_NS_END
