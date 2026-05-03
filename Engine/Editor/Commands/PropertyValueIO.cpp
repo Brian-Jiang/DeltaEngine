@@ -290,11 +290,12 @@ nlohmann::json DeltaEngine::PropertyToJson(const DObject* obj, const DProperty* 
         const DProperty* inner = vecProp->GetInnerProperty();
         if (!inner || inner->GetPropertyType() != EPropertyType::ObjectPtr)
             return nullptr;
-        const size_t count = vecProp->GetSize(obj);
+        void* vecStorage = vecProp->GetValue(const_cast<DObject*>(obj));
+        const size_t count = vecProp->GetSize(vecStorage);
         nlohmann::json arr = nlohmann::json::array();
         for (size_t i = 0; i < count; ++i)
         {
-            void* elemAddr = vecProp->GetElementAddress(const_cast<DObject*>(obj), i);
+            void* elemAddr = vecProp->GetElementAddress(vecStorage, i);
             DObject* pointed = inner->GetObjectPointer(elemAddr);
             if (!pointed || !pointed->GetOwningAsset())
                 arr.push_back(nullptr);
@@ -317,14 +318,14 @@ bool DeltaEngine::SetPropertyFromJson(DObject* obj, const DProperty* prop, const
             static_cast<const DObjectPtrPropertyBase*>(prop));
         if (value.is_null())
         {
-            ptrProp->ResolvePointer(obj, nullptr);
+            ptrProp->ResolvePointer(ptrProp->GetValue(obj), nullptr);
         }
         else
         {
             AssetId  assetId  = AssetId::FromString(value["assetId"].get<std::string>());
             ObjectId objectId = ObjectId::FromString(value["objectId"].get<std::string>());
             DObject* target   = core.ResolveObject(assetId, objectId);
-            ptrProp->ResolvePointer(obj, target);
+            ptrProp->ResolvePointer(ptrProp->GetValue(obj), target);
         }
         obj->MarkDirty();
         obj->PostEditChangeProperty(prop);
@@ -340,10 +341,11 @@ bool DeltaEngine::SetPropertyFromJson(DObject* obj, const DProperty* prop, const
             return false;
         auto* ptrProp = const_cast<DObjectPtrPropertyBase*>(
             static_cast<const DObjectPtrPropertyBase*>(inner));
-        const size_t count = std::min(value.size(), vecProp->GetSize(obj));
+        void* vecStorage = vecProp->GetValue(obj);
+        const size_t count = std::min(value.size(), vecProp->GetSize(vecStorage));
         for (size_t i = 0; i < count; ++i)
         {
-            void* elemAddr = vecProp->GetElementAddress(obj, i);
+            void* elemAddr = vecProp->GetElementAddress(vecStorage, i);
             const nlohmann::json& elem = value[i];
             if (elem.is_null())
             {

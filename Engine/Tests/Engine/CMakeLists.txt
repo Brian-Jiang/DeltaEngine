@@ -10,6 +10,10 @@ set(DELTA_ENGINE_TEST_SOURCES
     Graphics/LightProxyShadowTests.cpp
     Graphics/MeshShadowSubmissionTests.cpp
     Reflection/ReflectionRegistryTests.cpp
+    Reflection/ReflectionRegistryHardeningTests.cpp
+    Reflection/ReflectionStructClassTests.cpp
+    Reflection/ReflectionPropertyTests.cpp
+    Reflection/ReflectionReferenceTraversalTests.cpp
     Serialization/Core/UuidTests.cpp
     Serialization/Core/ScriptPointerTests.cpp
     Serialization/Core/BulkDataHandleTests.cpp

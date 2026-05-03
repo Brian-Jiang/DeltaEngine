@@ -1,8 +1,8 @@
 #include "Runtime/Reflection/DStruct.h"
 
+#include "Runtime/Core/DObject.h"
 #include "Runtime/Reflection/DProperty.h"
-#include "Serialization/AssetArchive.h"
-#include "Core/DObject.h"
+#include "Runtime/Serialization/AssetArchive.h"
 
 using namespace DeltaEngine;
 
@@ -19,6 +19,16 @@ DStruct::DStruct(std::string name,
 
 DProperty* DStruct::AddProperty(DProperty* property)
 {
+    DELTA_VERIFY(property != nullptr);
+
+    const std::string& propName = property->GetName();
+    DELTA_VERIFY(!propName.empty());
+
+    for (DProperty* p = m_ownProperties; p; p = p->m_next)
+    {
+        DELTA_VERIFY(p->GetName() != propName);
+    }
+
     property->m_declaringStruct = this;
 
     property->m_next = m_ownProperties;
@@ -72,6 +82,8 @@ DProperty* DStruct::GetOwnProperties() const { return m_ownProperties; }
 
 void DStruct::SerializeFields(AssetArchive& ar, void* basePtr)
 {
+    DELTA_VERIFY(basePtr != nullptr);
+
     if (DStruct* parent = GetSuper())
         parent->SerializeFields(ar, basePtr);
 

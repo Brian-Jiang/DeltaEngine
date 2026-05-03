@@ -1,13 +1,14 @@
 #include "Runtime/Reflection/DProperty.h"
 
+#include "Runtime/Assets/DPrimaryAsset.h"
 #include "Runtime/Reflection/DStruct.h"
-#include "Reflection/ReflectionRegistry.h"
-#include "Serialization/AssetArchive.h"
-#include "Assets/DPrimaryAsset.h"
+#include "Runtime/Reflection/ReflectionRegistry.h"
+#include "Runtime/Serialization/AssetArchive.h"
 #include "Runtime/Utils/StringUtils.h"
 
-#include "SimpleMath.h"
 #include <DirectXMath.h>
+#include <SimpleMath.h>
+
 #include <cstring>
 #include <filesystem>
 #include <vector>
@@ -54,11 +55,13 @@ EPropertyType DFloatProperty::GetPropertyType() const
 
 void DFloatProperty::Serialize(AssetArchive& ar, void* objectPtr)
 {
+    DELTA_VERIFY(objectPtr != nullptr);
     ar.Serialize(GetName(), *static_cast<float*>(GetValue(objectPtr)));
 }
 
 void DFloatProperty::SerializeElement(AssetArchive& ar, void* elementAddr)
 {
+    DELTA_VERIFY(elementAddr != nullptr);
     ar.SerializeElement(*static_cast<float*>(elementAddr));
 }
 
@@ -78,11 +81,13 @@ EPropertyType DIntProperty::GetPropertyType() const
 
 void DIntProperty::Serialize(AssetArchive& ar, void* objectPtr)
 {
+    DELTA_VERIFY(objectPtr != nullptr);
     ar.Serialize(GetName(), *static_cast<int*>(GetValue(objectPtr)));
 }
 
 void DIntProperty::SerializeElement(AssetArchive& ar, void* elementAddr)
 {
+    DELTA_VERIFY(elementAddr != nullptr);
     ar.SerializeElement(*static_cast<int*>(elementAddr));
 }
 
@@ -102,11 +107,13 @@ EPropertyType DBoolProperty::GetPropertyType() const
 
 void DBoolProperty::Serialize(AssetArchive& ar, void* objectPtr)
 {
+    DELTA_VERIFY(objectPtr != nullptr);
     ar.Serialize(GetName(), *static_cast<bool*>(GetValue(objectPtr)));
 }
 
 void DBoolProperty::SerializeElement(AssetArchive& ar, void* elementAddr)
 {
+    DELTA_VERIFY(elementAddr != nullptr);
     ar.SerializeElement(*static_cast<bool*>(elementAddr));
 }
 
@@ -126,11 +133,13 @@ EPropertyType DDoubleProperty::GetPropertyType() const
 
 void DDoubleProperty::Serialize(AssetArchive& ar, void* objectPtr)
 {
+    DELTA_VERIFY(objectPtr != nullptr);
     ar.Serialize(GetName(), *static_cast<double*>(GetValue(objectPtr)));
 }
 
 void DDoubleProperty::SerializeElement(AssetArchive& ar, void* elementAddr)
 {
+    DELTA_VERIFY(elementAddr != nullptr);
     ar.SerializeElement(*static_cast<double*>(elementAddr));
 }
 
@@ -189,11 +198,13 @@ EPropertyType DStringProperty::GetPropertyType() const
 
 void DStringProperty::Serialize(AssetArchive& ar, void* objectPtr)
 {
+    DELTA_VERIFY(objectPtr != nullptr);
     ar.Serialize(GetName(), *static_cast<std::string*>(GetValue(objectPtr)));
 }
 
 void DStringProperty::SerializeElement(AssetArchive& ar, void* elementAddr)
 {
+    DELTA_VERIFY(elementAddr != nullptr);
     ar.SerializeElement(*static_cast<std::string*>(elementAddr));
 }
 
@@ -256,11 +267,13 @@ EPropertyType DVector3Property::GetPropertyType() const
 
 void DVector3Property::Serialize(AssetArchive& ar, void* objectPtr)
 {
+    DELTA_VERIFY(objectPtr != nullptr);
     ar.Serialize(GetName(), *static_cast<Vector3*>(GetValue(objectPtr)));
 }
 
 void DVector3Property::SerializeElement(AssetArchive& ar, void* elementAddr)
 {
+    DELTA_VERIFY(elementAddr != nullptr);
     ar.SerializeElement(*static_cast<Vector3*>(elementAddr));
 }
 
@@ -324,11 +337,13 @@ EPropertyType DQuaternionProperty::GetPropertyType() const
 
 void DQuaternionProperty::Serialize(AssetArchive& ar, void* objectPtr)
 {
+    DELTA_VERIFY(objectPtr != nullptr);
     ar.Serialize(GetName(), *static_cast<Quaternion*>(GetValue(objectPtr)));
 }
 
 void DQuaternionProperty::SerializeElement(AssetArchive& ar, void* elementAddr)
 {
+    DELTA_VERIFY(elementAddr != nullptr);
     ar.SerializeElement(*static_cast<Quaternion*>(elementAddr));
 }
 
@@ -388,11 +403,13 @@ EPropertyType DWStringProperty::GetPropertyType() const
 
 void DWStringProperty::Serialize(AssetArchive& ar, void* objectPtr)
 {
+    DELTA_VERIFY(objectPtr != nullptr);
     ar.Serialize(GetName(), *static_cast<std::wstring*>(GetValue(objectPtr)));
 }
 
 void DWStringProperty::SerializeElement(AssetArchive& ar, void* elementAddr)
 {
+    DELTA_VERIFY(elementAddr != nullptr);
     ar.SerializeElement(*static_cast<std::wstring*>(elementAddr));
 }
 
@@ -465,6 +482,7 @@ EPropertyType DFilesystemPathProperty::GetPropertyType() const
 
 void DFilesystemPathProperty::Serialize(AssetArchive& ar, void* objectPtr)
 {
+    DELTA_VERIFY(objectPtr != nullptr);
     auto* p = static_cast<std::filesystem::path*>(GetValue(objectPtr));
     std::string utf8;
     if (ar.IsSaving())
@@ -476,6 +494,7 @@ void DFilesystemPathProperty::Serialize(AssetArchive& ar, void* objectPtr)
 
 void DFilesystemPathProperty::SerializeElement(AssetArchive& ar, void* elementAddr)
 {
+    DELTA_VERIFY(elementAddr != nullptr);
     auto* p = static_cast<std::filesystem::path*>(elementAddr);
     std::string utf8;
     if (ar.IsSaving())
@@ -546,11 +565,13 @@ EPropertyType DFloat4Property::GetPropertyType() const
 
 void DFloat4Property::Serialize(AssetArchive& ar, void* objectPtr)
 {
+    DELTA_VERIFY(objectPtr != nullptr);
     ar.Serialize(GetName(), *static_cast<XMFLOAT4*>(GetValue(objectPtr)));
 }
 
 void DFloat4Property::SerializeElement(AssetArchive& ar, void* elementAddr)
 {
+    DELTA_VERIFY(elementAddr != nullptr);
     ar.SerializeElement(*static_cast<XMFLOAT4*>(elementAddr));
 }
 
@@ -609,11 +630,13 @@ EPropertyType DFloat4x4Property::GetPropertyType() const
 
 void DFloat4x4Property::Serialize(AssetArchive& ar, void* objectPtr)
 {
+    DELTA_VERIFY(objectPtr != nullptr);
     ar.Serialize(GetName(), *static_cast<XMFLOAT4X4*>(GetValue(objectPtr)));
 }
 
 void DFloat4x4Property::SerializeElement(AssetArchive& ar, void* elementAddr)
 {
+    DELTA_VERIFY(elementAddr != nullptr);
     ar.SerializeElement(*static_cast<XMFLOAT4X4*>(elementAddr));
 }
 
@@ -648,9 +671,16 @@ DStruct* DStructProperty::GetSchema() const
 
 void DStructProperty::InitializeValue(void* address) const
 {
+    DELTA_VERIFY(address != nullptr);
+
     DStruct* ds = GetSchema();
     if (!ds)
+    {
+        DLOG(LogReflection, ELogLevel::Warning,
+             "DStructProperty::InitializeValue skipped: unknown struct type '{}' for property '{}' (expected FindStructByName match)",
+             m_structTypeName, GetName());
         return;
+    }
     std::vector<std::pair<DProperty*, void*>> pairs;
     CollectStructProps(ds, address, pairs);
     for (auto& [prop, addr] : pairs)
@@ -659,9 +689,16 @@ void DStructProperty::InitializeValue(void* address) const
 
 void DStructProperty::DestroyValue(void* address) const
 {
+    DELTA_VERIFY(address != nullptr);
+
     DStruct* ds = GetSchema();
     if (!ds)
+    {
+        DLOG(LogReflection, ELogLevel::Warning,
+             "DStructProperty::DestroyValue skipped: unknown struct type '{}' for property '{}' (expected FindStructByName match)",
+             m_structTypeName, GetName());
         return;
+    }
     std::vector<std::pair<DProperty*, void*>> pairs;
     CollectStructProps(ds, address, pairs);
     for (auto it = pairs.rbegin(); it != pairs.rend(); ++it)
@@ -685,9 +722,17 @@ void* DStructProperty::GetValue(const void* instance) const
 
 void DStructProperty::CopyValue(void* dest, const void* src) const
 {
+    DELTA_VERIFY(dest != nullptr);
+    DELTA_VERIFY(src != nullptr);
+
     DStruct* ds = GetSchema();
     if (!ds)
+    {
+        DLOG(LogReflection, ELogLevel::Warning,
+             "DStructProperty::CopyValue skipped: unknown struct type '{}' for property '{}' (expected FindStructByName match)",
+             m_structTypeName, GetName());
         return;
+    }
     std::vector<std::pair<DProperty*, void*>> pairs;
     CollectStructProps(ds, dest, pairs);
     std::vector<std::pair<DProperty*, void*>> srcPairs;
@@ -713,9 +758,16 @@ EPropertyType DStructProperty::GetPropertyType() const
 
 void DStructProperty::Serialize(AssetArchive& ar, void* objectPtr)
 {
+    DELTA_VERIFY(objectPtr != nullptr);
+
     DStruct* s = GetSchema();
     if (!s)
+    {
+        DLOG(LogReflection, ELogLevel::Warning,
+             "DStructProperty::Serialize skipped: unknown struct type '{}' for property '{}' (expected registered DSTRUCT)",
+             m_structTypeName, GetName());
         return;
+    }
     void* fieldPtr = static_cast<uint8_t*>(objectPtr) + m_offset;
     if (ar.IsSaving())
     {
@@ -735,9 +787,16 @@ void DStructProperty::Serialize(AssetArchive& ar, void* objectPtr)
 
 void DStructProperty::SerializeElement(AssetArchive& ar, void* elementAddr)
 {
+    DELTA_VERIFY(elementAddr != nullptr);
+
     DStruct* s = GetSchema();
     if (!s)
+    {
+        DLOG(LogReflection, ELogLevel::Warning,
+             "DStructProperty::SerializeElement skipped: unknown struct type '{}' for property '{}' (expected registered DSTRUCT)",
+             m_structTypeName, GetName());
         return;
+    }
     if (ar.IsSaving())
     {
         ar.BeginObject(s->GetName());
@@ -758,6 +817,8 @@ void DStructProperty::SerializeElement(AssetArchive& ar, void* elementAddr)
 
 void DObjectPtrPropertyBase::Serialize(AssetArchive& ar, void* objectPtr)
 {
+    DELTA_VERIFY(objectPtr != nullptr);
+
     if (ar.IsSaving()) {
         DObject* target = GetRawPointer(objectPtr);
         ScriptPointer sp;
@@ -770,12 +831,14 @@ void DObjectPtrPropertyBase::Serialize(AssetArchive& ar, void* objectPtr)
     } else {
         ScriptPointer sp;
         ar.Serialize(GetName(), sp);
-        m_unresolvedPointers[objectPtr] = sp;
+        m_unresolvedPointers[GetValue(objectPtr)] = sp;
     }
 }
 
 void DObjectPtrPropertyBase::SerializeElement(AssetArchive& ar, void* elementAddr)
 {
+    DELTA_VERIFY(elementAddr != nullptr);
+
     if (ar.IsSaving()) {
         DObject* target = GetRawPointer(elementAddr);
         ScriptPointer sp;

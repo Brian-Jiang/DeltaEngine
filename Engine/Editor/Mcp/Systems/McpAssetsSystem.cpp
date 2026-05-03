@@ -196,7 +196,8 @@ void VisitResolvedObjectReferencesInStruct(DStruct* ds, void* basePtr, Fn&& fn)
                 VisitResolvedObjectReferencesInStruct(inner, nested, std::forward<Fn>(fn));
             continue;
         }
-        VisitResolvedObjectReferencesInProperty(prop, basePtr, std::forward<Fn>(fn));
+        void* slot = static_cast<uint8_t*>(basePtr) + prop->GetOffset();
+        VisitResolvedObjectReferencesInProperty(prop, slot, std::forward<Fn>(fn));
     }
 }
 

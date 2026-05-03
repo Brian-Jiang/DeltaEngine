@@ -1,9 +1,9 @@
 #pragma once
 
 #include "EngineIncludes.h"
-#include "Reflection/DProperty.h"
-#include "Serialization/TBulkData.h"
-#include "Serialization/AssetArchive.h"
+#include "Runtime/Reflection/DProperty.h"
+#include "Runtime/Serialization/AssetArchive.h"
+#include "Runtime/Serialization/TBulkData.h"
 
 #include <cstring>
 #include <string>
@@ -37,11 +37,17 @@ public:
     void SetValue(void* instance, const void* field_value) const override
     {
         TBulkData& bulk = GetRef(instance);
-        if (field_value)
+        if (!field_value)
         {
-            const TBulkData& src = *static_cast<const TBulkData*>(field_value);
-            bulk.Set(src.m_data, src.m_size);
+            bulk.Set(nullptr, 0);
+            bulk.m_bulkId = 0;
+            static_cast<DObject*>(instance)->MarkDirty();
+            return;
         }
+        const TBulkData& src = *static_cast<const TBulkData*>(field_value);
+        bulk.Set(src.m_data, src.m_size);
+        bulk.m_bulkId = src.m_bulkId;
+        static_cast<DObject*>(instance)->MarkDirty();
     }
 
     void CopyValue(void* dest, const void* src) const override
@@ -49,6 +55,7 @@ public:
         const TBulkData& srcBulk = *static_cast<const TBulkData*>(src);
         TBulkData* destBulk = new (dest) TBulkData();
         destBulk->Set(srcBulk.m_data, srcBulk.m_size);
+        destBulk->m_bulkId = srcBulk.m_bulkId;
     }
 
     bool Identical(const void* a, const void* b) const override
@@ -75,6 +82,7 @@ public:
 
     void Serialize(AssetArchive& ar, void* objectPtr) override
     {
+        DELTA_VERIFY(objectPtr != nullptr);
         TBulkData& bulk = GetRef(objectPtr);
         BulkDataHandle handle = bulk.ToHandle();
         ar.Serialize(GetName(), handle);
@@ -85,6 +93,7 @@ public:
     /// Serializes the binary sidecar payload for this bulk-data field.
     void SerializeBulkPayload(AssetArchive& ar, void* objectPtr)
     {
+        DELTA_VERIFY(objectPtr != nullptr);
         TBulkData& bulk = GetRef(objectPtr);
         if (ar.IsSaving())
         {

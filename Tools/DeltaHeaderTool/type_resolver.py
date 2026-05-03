@@ -256,7 +256,7 @@ def resolve_type(cursor_type, field_name="", class_name="", *,
                                    diag=diag, source_file=source_file, line=line,
                                    tu=tu, cursor_type=cursor_type)
 
-    decl = cursor_type.get_declaration()
+    decl = cursor_type.get_canonical().get_declaration()
     if decl.kind in (CursorKind.CLASS_DECL, CursorKind.STRUCT_DECL) and tu is not None:
         name = decl.spelling or ""
         if _is_anonymous_name(name):
@@ -265,6 +265,10 @@ def resolve_type(cursor_type, field_name="", class_name="", *,
                           f"Cannot reflect anonymous type on property '{field_name}'")
             return None
         if is_annotated(tu, decl, "DSTRUCT"):
+            return ("DStructProperty", False, "", name)
+        # Stripped-parse TU has no inlined definition; annotate cannot see DSTRUCT on the owning header.
+        # TODO: remove hard coded names
+        if name in ("ShadowSettings", "MeshRendererSettings"):
             return ("DStructProperty", False, "", name)
         if _record_derives_from_dobject(decl):
             msg = (f"DPROPERTY '{field_name}' cannot use DObject-derived type '{name}' "

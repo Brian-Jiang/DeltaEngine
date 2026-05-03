@@ -17,6 +17,11 @@ DFunction::DFunction(std::string name,
 
 void DFunction::Invoke(DObject* context, void* params) const
 {
+    DELTA_VERIFY(context != nullptr);
+    DELTA_VERIFY(m_nativeFn != nullptr);
+    if (m_totalSize > 0u)
+        DELTA_VERIFY(params != nullptr);
+
     m_nativeFn(context, params);
 }
 

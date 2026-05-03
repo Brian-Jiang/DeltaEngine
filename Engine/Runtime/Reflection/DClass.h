@@ -43,12 +43,9 @@ public:
     /// Returns true when the class cannot be instantiated through reflection.
     DELTAENGINE_API bool IsAbstract() const;
 
-    /// Constructs an instance in caller-provided storage.
-    void ConstructObject(void* address) const;
-    /// Destroys an instance stored at the provided address.
-    void DestroyObject(void* address) const;
-    /// Copy-constructs an instance into caller-provided storage.
-    void CopyObject(void* dest, const void* src) const;
+    DELTAENGINE_API void ConstructObject(void* address) const;
+    DELTAENGINE_API void DestroyObject(void* address) const;
+    DELTAENGINE_API void CopyObject(void* dest, const void* src) const;
 
 private:
     void (*m_constructFn)(void* address);

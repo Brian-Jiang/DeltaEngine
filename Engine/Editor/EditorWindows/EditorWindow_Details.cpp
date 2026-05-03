@@ -1227,11 +1227,12 @@ bool EditorWindow_Details::DrawVectorProperty(DObject* instance, DProperty* prop
     }
 
     const std::string displayName = GetPropertyDisplayName(prop->GetName());
-    const size_t count = vectorProp->GetSize(instance);
+    void* vectorStorage = prop->GetValue(instance);
+    const size_t count = vectorProp->GetSize(vectorStorage);
     if (ImGui::TreeNodeEx(displayName.c_str(), ImGuiTreeNodeFlags_DefaultOpen,
         "%s [%zu]", displayName.c_str(), count))
     {
-        DrawVectorElements(vectorProp, instance, instance, depth + 1);
+        DrawVectorElements(vectorProp, vectorStorage, instance, depth + 1);
         ImGui::TreePop();
     }
     return false;

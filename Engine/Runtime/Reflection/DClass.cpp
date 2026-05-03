@@ -24,8 +24,19 @@ DClass::DClass(std::string name,
 
 void DClass::AddFunction(DFunction* function)
 {
+    DELTA_VERIFY(function != nullptr);
+    DELTA_VERIFY(!function->GetName().empty());
+
+    auto [it, inserted] = m_functions.try_emplace(function->GetName(), function);
+    if (!inserted)
+    {
+        DLOG(LogReflection, ELogLevel::Warning,
+             "Ignoring duplicate reflected function '{}' on '{}'; Reflection names must be unique (keeping first overload)",
+             function->GetName(), GetName());
+        return;
+    }
+
     function->m_declaringClass = this;
-    m_functions[function->GetName()] = function;
 }
 
 DFunction* DClass::FindFunctionByName(const std::string& name) const
@@ -61,18 +72,22 @@ const std::unordered_map<std::string, DFunction*>& DClass::GetFunctions() const 
 
 void DClass::ConstructObject(void* address) const
 {
-    if (m_constructFn)
-        m_constructFn(address);
+    DELTA_VERIFY(address != nullptr);
+    DELTA_VERIFY(m_constructFn != nullptr);
+    m_constructFn(address);
 }
 
 void DClass::DestroyObject(void* address) const
 {
+    DELTA_VERIFY(address != nullptr);
     if (m_destructFn)
         m_destructFn(address);
 }
 
 void DClass::CopyObject(void* dest, const void* src) const
 {
-    if (m_copyFn)
-        m_copyFn(dest, src);
+    DELTA_VERIFY(dest != nullptr);
+    DELTA_VERIFY(src != nullptr);
+    DELTA_VERIFY(m_copyFn != nullptr);
+    m_copyFn(dest, src);
 }

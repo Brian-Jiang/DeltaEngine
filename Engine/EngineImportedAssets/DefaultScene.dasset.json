@@ -206,7 +206,11 @@
         "assetId": "a521c98a-6402-46d4-b0d6-a61e1c232971",
         "objectId": "bd61905b-dc6c-49ac-9186-51f7cf4e5f24"
       },
-      "m_shadowSettings": 16
+      "m_shadowSettings": {
+        "m_pcssBlockerSamples": 16,
+        "m_pcssPCFSamples": 16,
+        "m_qualityScalar": 1.0
+      }
     },
     {
       "_class": "GameObject",
@@ -462,7 +466,7 @@
         0.0,
         1.0,
         0.0,
-        -440.6000061035156,
+        -399.6000061035156,
         229.10000610351563,
         0.0,
         1.0

@@ -2,8 +2,8 @@
 
 #include "EngineIncludes.h"
 
-#include "Reflection/DProperty.h"
-#include "Serialization/AssetArchive.h"
+#include "Runtime/Reflection/DProperty.h"
+#include "Runtime/Serialization/AssetArchive.h"
 
 #include <cstring>
 #include <memory>
@@ -49,6 +49,7 @@ public:
 
     void SetValue(void* instance, const void* field_value) const override
     {
+        DELTA_VERIFY(instance != nullptr);
         void* addr = static_cast<uint8_t*>(instance) + m_offset;
         *static_cast<std::vector<T>*>(addr) = field_value
             ? *static_cast<const std::vector<T>*>(field_value)
@@ -101,24 +102,27 @@ public:
 
     void Serialize(AssetArchive& ar, void* objectPtr) override
     {
+        DELTA_VERIFY(objectPtr != nullptr);
         auto& vec = *static_cast<std::vector<T>*>(GetValue(objectPtr));
         ar.Serialize(GetName(), vec, *m_innerProperty);
     }
 
     void SerializeElement(AssetArchive& ar, void* elementAddr) override
     {
+        DELTA_VERIFY(elementAddr != nullptr);
         auto& vec = *static_cast<std::vector<T>*>(elementAddr);
         ar.SerializeNested(vec, *m_innerProperty);
     }
 
     size_t GetSize(const void* instance) const override
     {
-        return static_cast<const std::vector<T>*>(GetValue(instance))->size();
+        DELTA_VERIFY(instance != nullptr);
+        return static_cast<const std::vector<T>*>(instance)->size();
     }
 
     void* GetElementAddress(void* instance, size_t index) const override
     {
-        auto* vec = static_cast<std::vector<T>*>(GetValue(instance));
+        auto* vec = static_cast<std::vector<T>*>(instance);
         return (index < vec->size()) ? &(*vec)[index] : nullptr;
     }
 

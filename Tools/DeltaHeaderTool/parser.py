@@ -143,6 +143,7 @@ class SpotLightRenderProxy;
 class MeshRenderProxy;
 class EngineMain;
 struct MeshRendererSettings;
+struct ShadowSettings;
 struct Vertex { float x; };
 struct TBulkData;
 }

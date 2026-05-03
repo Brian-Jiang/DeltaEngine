@@ -1,30 +1,36 @@
-#include "Reflection/ReflectionRegistry.h"
+#include "Runtime/Reflection/ReflectionRegistry.h"
 
-#include "Reflection/DStruct.h"
-#include "Reflection/DClass.h"
-#include "Core/DObject.h"
-#include "Core/DHandle.h"
-
-#include <iostream>
+#include "Runtime/Core/DHandle.h"
+#include "Runtime/Core/DObject.h"
+#include "Runtime/Reflection/DClass.h"
+#include "Runtime/Reflection/DStruct.h"
 
 using namespace DeltaEngine;
 
 void ReflectionRegistry::RegisterDStruct(DStruct* dstruct)
 {
+    DELTA_VERIFY(dstruct != nullptr);
     const std::string& name = dstruct->GetName();
-    if (m_structMap.find(name) == m_structMap.end())
-    {
-        m_structMap[name] = dstruct;
-    }
+    DELTA_VERIFY(!name.empty());
+
+    auto [it, inserted] = m_structMap.try_emplace(name, dstruct);
+    if (!inserted)
+        DLOG(LogReflection, ELogLevel::Warning,
+             "Ignored duplicate Reflection struct registration name='{}'; expected single definition (keeping first)",
+             name);
 }
 
 void ReflectionRegistry::RegisterDClass(DClass* cls)
 {
+    DELTA_VERIFY(cls != nullptr);
     const std::string& name = cls->GetName();
-    if (m_classMap.find(name) == m_classMap.end())
-    {
-        m_classMap[name] = cls;
-    }
+    DELTA_VERIFY(!name.empty());
+
+    auto [it, inserted] = m_classMap.try_emplace(name, cls);
+    if (!inserted)
+        DLOG(LogReflection, ELogLevel::Warning,
+             "Ignored duplicate Reflection class registration name='{}'; expected single definition (keeping first)",
+             name);
 }
 
 void ReflectionRegistry::FinalizeRegistration()
@@ -47,8 +53,9 @@ void ReflectionRegistry::FinalizeRegistration()
         }
         else
         {
-            std::cerr << "WARNING: Reflection superclass '" << superName
-                      << "' for struct '" << name << "' not found in ReflectionRegistry.\n";
+            DLOG(LogReflection, ELogLevel::Error,
+                 "FinalizeRegistration failed for struct '{}': superclass '{}' missing; register base before derived",
+                 name, superName);
         }
     }
 
@@ -72,8 +79,9 @@ void ReflectionRegistry::FinalizeRegistration()
             }
             else
             {
-                std::cerr << "WARNING: Reflection superclass '" << superName
-                          << "' for '" << name << "' not found in ReflectionRegistry.\n";
+                DLOG(LogReflection, ELogLevel::Error,
+                     "FinalizeRegistration failed for class '{}': superclass '{}' missing; register base before derived",
+                     name, superName);
             }
         }
     }
@@ -86,17 +94,33 @@ void ReflectionRegistry::FinalizeRegistration()
 
 DStruct* ReflectionRegistry::FindStructByName(const std::string& name) const
 {
+    if (name.empty())
+    {
+        DLOG(LogReflection, ELogLevel::Warning,
+             "FindStructByName failed: requested name was empty (expected non-empty)");
+        return nullptr;
+    }
+
     auto it = m_structMap.find(name);
     if (it != m_structMap.end())
         return it->second;
+
     return nullptr;
 }
 
 DClass* ReflectionRegistry::FindClassByName(const std::string& name) const
 {
+    if (name.empty())
+    {
+        DLOG(LogReflection, ELogLevel::Warning,
+             "FindClassByName failed: requested name was empty (expected non-empty)");
+        return nullptr;
+    }
+
     auto it = m_classMap.find(name);
     if (it != m_classMap.end())
         return it->second;
+
     return nullptr;
 }
 
@@ -108,39 +132,58 @@ const std::unordered_map<std::string, DClass*>& ReflectionRegistry::GetAllClasse
 void ReflectionRegistry::DestroyObject(DObject* obj) const
 {
     if (!obj)
+    {
+        DLOG(LogReflection, ELogLevel::Verbose, "DestroyObject no-op for null object pointer");
         return;
+    }
 
     DClass* cls = obj->GetClass();
-    if (cls)
+    if (!cls)
     {
-        cls->DestroyObject(obj);
-        operator delete(obj, std::align_val_t(cls->GetMinAlignment()));
+        DLOG(LogReflection, ELogLevel::Error,
+             "DestroyObject aborted: object at {} has null GetClass(); expected registered DClass",
+             reinterpret_cast<void*>(obj));
+        return;
     }
+
+    cls->DestroyObject(obj);
+    operator delete(obj, std::align_val_t(cls->GetMinAlignment()));
 }
 
 DObject* ReflectionRegistry::CreateObject(const std::string& className) const
 {
-    DClass* cls = FindClassByName(className);
-    if (cls)
+    if (className.empty())
     {
-        if (cls->IsAbstract())
-        {
-            std::cerr << "WARNING: Cannot create instance of abstract class '" << className << "'.\n";
-            return nullptr;
-        }
-
-        void* memory = operator new(cls->GetStructSize(), std::align_val_t(cls->GetMinAlignment()));
-        cls->ConstructObject(memory);
-        DHandle handle {};
-        handle.m_ptr = memory;
-        DObject* obj = static_cast<DObject*>(memory);
-        obj->SetHandle(handle);
-        obj->SetObjectId(ObjectId::Generate());
-        obj->SetOwningAsset(nullptr);
-        return obj;
+        DLOG(LogReflection, ELogLevel::Warning,
+             "CreateObject failed: class name empty (expected non-empty)");
+        return nullptr;
     }
 
-    return nullptr;
+    DClass* cls = FindClassByName(className);
+    if (!cls)
+    {
+        DLOG(LogReflection, ELogLevel::Warning,
+             "CreateObject failed: class '{}' unregistered (expected ReflectionRegistry.RegisterDClass output)",
+             className);
+        return nullptr;
+    }
+
+    if (cls->IsAbstract())
+    {
+        DLOG(LogReflection, ELogLevel::Warning,
+             "CreateObject refused: '{}' is abstract (expected concrete subclass name)", className);
+        return nullptr;
+    }
+
+    void* memory = operator new(cls->GetStructSize(), std::align_val_t(cls->GetMinAlignment()));
+    cls->ConstructObject(memory);
+    DHandle handle {};
+    handle.m_ptr = memory;
+    DObject* obj = static_cast<DObject*>(memory);
+    obj->SetHandle(handle);
+    obj->SetObjectId(ObjectId::Generate());
+    obj->SetOwningAsset(nullptr);
+    return obj;
 }
 
 ReflectionRegistry& DeltaEngine::GetReflectionRegistry()

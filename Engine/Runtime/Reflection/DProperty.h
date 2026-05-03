@@ -347,11 +347,10 @@ public:
         return nullptr;
     }
 
-    void ResolvePointer(void* objectPtr, DObject* resolved) override
+    void ResolvePointer(void* valueAddress, DObject* resolved) override
     {
-        void* addr = static_cast<uint8_t*>(objectPtr) + m_offset;
-        *static_cast<T**>(addr) = static_cast<T*>(resolved);
-        m_unresolvedPointers.erase(objectPtr);
+        *static_cast<T**>(valueAddress) = static_cast<T*>(resolved);
+        m_unresolvedPointers.erase(valueAddress);
     }
 };
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Runtime/Reflection/DProperty.h"
+#include "Runtime/Reflection/DStruct.h"
 #include "Runtime/Reflection/DVectorProperty.h"
 
 DELTA_ENGINE_NS_BEGIN
@@ -13,7 +14,6 @@ void VisitUnresolvedObjectReferencesInProperty(
 {
     if (!prop || !valueAddress)
         return;
-
     if (auto* ptrProp = dynamic_cast<DObjectPtrPropertyBase*>(prop))
     {
         ScriptPointer sp = ptrProp->GetUnresolvedPointer(valueAddress);
@@ -49,7 +49,6 @@ void VisitUnresolvedObjectReferencesInStruct(
 {
     if (!ds || !basePtr)
         return;
-
     if (DStruct* parent = ds->GetSuper())
         VisitUnresolvedObjectReferencesInStruct(parent, basePtr, visitor);
 
@@ -62,7 +61,8 @@ void VisitUnresolvedObjectReferencesInStruct(
                 VisitUnresolvedObjectReferencesInStruct(inner, nested, visitor);
             continue;
         }
-        VisitUnresolvedObjectReferencesInProperty(prop, basePtr, visitor);
+        void* slot = static_cast<uint8_t*>(basePtr) + prop->GetOffset();
+        VisitUnresolvedObjectReferencesInProperty(prop, slot, visitor);
     }
 }
 
