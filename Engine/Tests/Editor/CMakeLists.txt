@@ -17,6 +17,7 @@ set(DELTA_EDITOR_TEST_SOURCES
     Serialization/References/CrossAssetReferenceTests.cpp
     Serialization/BulkData/BulkDataRoundTripTests.cpp
     Serialization/Snapshot/PartialSnapshotTests.cpp
+    Serialization/Snapshot/ObjectSnapshotHardeningTests.cpp
     Mcp/McpSceneSystemTests.cpp
     Mcp/McpAssetsSystemTests.cpp
     Mcp/McpSelectionSystemTests.cpp

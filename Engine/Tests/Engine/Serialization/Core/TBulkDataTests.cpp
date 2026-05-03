@@ -70,3 +70,50 @@ TEST(TBulkDataTests, ConvertsToAndFromHandles)
     const BulkDataHandle roundTrip = bulkData.ToHandle();
     EXPECT_EQ(roundTrip, handle);
 }
+
+TEST(TBulkDataTests, TBulkData_ApplyHandle_ClearsResidentPayload)
+{
+    const std::array<uint8_t, 2> sourceBytes{ 6, 7 };
+    const BulkDataHandle handle{ 11u, 128u };
+    TBulkData bulkData;
+    bulkData.Set(sourceBytes.data(), sourceBytes.size());
+
+    bulkData.ApplyHandle(handle);
+
+    EXPECT_FALSE(bulkData.IsValid());
+    EXPECT_EQ(bulkData.m_data, nullptr);
+    EXPECT_EQ(bulkData.m_bulkId, 11u);
+    EXPECT_EQ(bulkData.m_size, 128u);
+}
+
+TEST(TBulkDataTests, TBulkData_SetWithNullSource_ClearsPayload)
+{
+    const std::array<uint8_t, 2> sourceBytes{ 1, 2 };
+    TBulkData bulkData;
+    bulkData.m_bulkId = 9;
+    bulkData.Set(sourceBytes.data(), sourceBytes.size());
+
+    bulkData.Set(nullptr, 4);
+
+    EXPECT_FALSE(bulkData.IsValid());
+    EXPECT_EQ(bulkData.m_data, nullptr);
+    EXPECT_EQ(bulkData.m_size, 0u);
+    EXPECT_EQ(bulkData.m_bulkId, 9u);
+}
+
+TEST(TBulkDataTests, TBulkData_MoveAssignToSelf_PreservesPayload)
+{
+    const std::array<uint8_t, 2> sourceBytes{ 3, 4 };
+    TBulkData bulkData;
+    bulkData.m_bulkId = 5;
+    bulkData.Set(sourceBytes.data(), sourceBytes.size());
+    uint8_t* originalData = bulkData.m_data;
+
+    bulkData = std::move(bulkData);
+
+    ASSERT_NE(bulkData.m_data, nullptr);
+    EXPECT_EQ(bulkData.m_data, originalData);
+    EXPECT_EQ(bulkData.m_size, sourceBytes.size());
+    EXPECT_EQ(bulkData.m_bulkId, 5u);
+    EXPECT_EQ(bulkData.m_data[0], 3u);
+}

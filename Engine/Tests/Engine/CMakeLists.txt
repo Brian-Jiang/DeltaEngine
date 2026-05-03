@@ -19,6 +19,7 @@ set(DELTA_ENGINE_TEST_SOURCES
     Serialization/Core/BulkDataHandleTests.cpp
     Serialization/Core/TBulkDataTests.cpp
     Serialization/Core/JsonAssetArchiveTests.cpp
+    Serialization/Core/JsonAssetArchiveHardeningTests.cpp
     Assets/Locator/NullAssetDatabaseTests.cpp
     Core/CoreObjectLifecycleTests.cpp
     Core/SceneComponentTests.cpp

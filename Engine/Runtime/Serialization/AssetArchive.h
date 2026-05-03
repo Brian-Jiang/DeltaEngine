@@ -2,17 +2,18 @@
 
 #include "EngineIncludes.h"
 
-#include "Core/UUID.h"
-#include "Serialization/ScriptPointer.h"
-#include "Serialization/BulkDataHandle.h"
-#include "Reflection/DProperty.h"
+#include "Runtime/Core/UUID.h"
+#include "Runtime/Reflection/DProperty.h"
+#include "Runtime/Serialization/BulkDataHandle.h"
+#include "Runtime/Serialization/ScriptPointer.h"
 
 #include "SimpleMath.h"
 #include <DirectXMath.h>
 
+#include <cstdint>
+#include <exception>
 #include <string>
 #include <vector>
-#include <cstdint>
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -101,7 +102,18 @@ public:
         else
         {
             size_t count = BeginArrayLoad(key);
-            vec.resize(count);
+            try
+            {
+                vec.resize(count);
+            }
+            catch (const std::exception& ex)
+            {
+                DLOG(LogSerialization, ELogLevel::Error,
+                     "Failed to resize serialized array '{}': requested {} elements but allocation failed ({})",
+                     key, count, ex.what());
+                EndArray();
+                return;
+            }
             for (size_t i = 0; i < count; ++i)
                 innerProp.SerializeElement(*this, &vec[i]);
             EndArray();
@@ -122,7 +134,18 @@ public:
         else
         {
             size_t count = BeginNestedArrayLoad();
-            vec.resize(count);
+            try
+            {
+                vec.resize(count);
+            }
+            catch (const std::exception& ex)
+            {
+                DLOG(LogSerialization, ELogLevel::Error,
+                     "Failed to resize nested serialized array: requested {} elements but allocation failed ({})",
+                     count, ex.what());
+                EndArray();
+                return;
+            }
             for (size_t i = 0; i < count; ++i)
                 innerProp.SerializeElement(*this, &vec[i]);
             EndArray();

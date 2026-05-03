@@ -1,11 +1,11 @@
-#include "Serialization/ObjectSnapshotWriter.h"
+#include "Runtime/Serialization/ObjectSnapshotWriter.h"
 
-#include "Core/DObject.h"
-#include "Core/GameObject.h"
-#include "Core/SceneComponent.h"
-#include "Reflection/DClass.h"
-#include "Serialization/JsonAssetArchive.h"
-#include "Serialization/ISerializationCallbackReceiver.h"
+#include "Runtime/Core/DObject.h"
+#include "Runtime/Core/GameObject.h"
+#include "Runtime/Core/SceneComponent.h"
+#include "Runtime/Reflection/DClass.h"
+#include "Runtime/Serialization/ISerializationCallbackReceiver.h"
+#include "Runtime/Serialization/JsonAssetArchive.h"
 
 #include <queue>
 
@@ -13,27 +13,65 @@ using namespace DeltaEngine;
 
 void ObjectSnapshotWriter::CollectObjects(DObject* root, std::vector<DObject*>& out)
 {
-    if (!root)
-        return;
+    DELTA_VERIFY_MSG(root != nullptr, "ObjectSnapshotWriter::CollectObjects requires a root object");
 
     if (auto* go = dynamic_cast<GameObject*>(root))
     {
         out.push_back(go);
 
         for (DComponent* comp : go->GetComponents())
-            out.push_back(comp);
+        {
+            if (comp)
+            {
+                out.push_back(comp);
+            }
+            else
+            {
+                DLOG(LogSerialization, ELogLevel::Warning,
+                     "Skipped null component while capturing GameObject snapshot '{}' (expected valid DComponent pointer)",
+                     go->GetName());
+            }
+        }
 
         std::queue<SceneComponent*> q;
         for (SceneComponent* sc : go->GetSceneComponents())
-            q.push(sc);
+        {
+            if (sc)
+            {
+                q.push(sc);
+            }
+            else
+            {
+                DLOG(LogSerialization, ELogLevel::Warning,
+                     "Skipped null scene component while capturing GameObject snapshot '{}' (expected valid SceneComponent pointer)",
+                     go->GetName());
+            }
+        }
 
         while (!q.empty())
         {
             SceneComponent* sc = q.front();
             q.pop();
+            if (!sc)
+            {
+                DLOG(LogSerialization, ELogLevel::Warning,
+                     "Skipped null scene component while traversing snapshot children (expected valid SceneComponent pointer)");
+                continue;
+            }
             out.push_back(sc);
             for (SceneComponent* child : sc->GetChildren())
-                q.push(child);
+            {
+                if (child)
+                {
+                    q.push(child);
+                }
+                else
+                {
+                    DLOG(LogSerialization, ELogLevel::Warning,
+                         "Skipped null scene component child while capturing snapshot for '{}' (expected valid child pointer)",
+                         sc->GetName());
+                }
+            }
         }
         return;
     }
@@ -46,9 +84,26 @@ void ObjectSnapshotWriter::CollectObjects(DObject* root, std::vector<DObject*>& 
         {
             SceneComponent* cur = q.front();
             q.pop();
+            if (!cur)
+            {
+                DLOG(LogSerialization, ELogLevel::Warning,
+                     "Skipped null scene component while capturing scene component subtree (expected valid SceneComponent pointer)");
+                continue;
+            }
             out.push_back(cur);
             for (SceneComponent* child : cur->GetChildren())
-                q.push(child);
+            {
+                if (child)
+                {
+                    q.push(child);
+                }
+                else
+                {
+                    DLOG(LogSerialization, ELogLevel::Warning,
+                         "Skipped null scene component child while capturing snapshot for '{}' (expected valid child pointer)",
+                         cur->GetName());
+                }
+            }
         }
         return;
     }
@@ -60,26 +115,41 @@ ObjectSnapshot ObjectSnapshotWriter::Capture(DObject* root)
 {
     ObjectSnapshot snapshot;
     if (!root)
+    {
+        DLOG(LogSerialization, ELogLevel::Warning,
+             "Skipped object snapshot capture: root object is null (expected valid DObject)");
+        DELTA_ENSURE_MSG(false, "ObjectSnapshotWriter::Capture received null root");
         return snapshot;
+    }
 
     DClass* rootClass = root->GetClass();
+    DELTA_VERIFY_MSG(rootClass != nullptr,
+                     "ObjectSnapshotWriter::Capture root object '{}' has no reflected class",
+                     root->GetObjectId().ToString());
     snapshot.rootClassName = rootClass ? rootClass->GetName() : std::string{};
 
     std::vector<DObject*> objects;
     CollectObjects(root, objects);
 
     for (DObject* obj : objects)
+    {
+        DELTA_VERIFY_MSG(obj != nullptr, "ObjectSnapshotWriter collected a null object");
         snapshot.capturedIds.push_back(obj->GetObjectId());
+    }
 
     JsonAssetArchive ar;
     ar.BeginArray("objects", objects.size());
 
     for (DObject* obj : objects)
     {
+        DELTA_VERIFY_MSG(obj != nullptr, "ObjectSnapshotWriter collected a null object");
         if (auto* cb = dynamic_cast<ISerializationCallbackReceiver*>(obj))
             cb->OnBeforeSerialize();
 
         DClass* cls = obj->GetClass();
+        DELTA_VERIFY_MSG(cls != nullptr,
+                         "ObjectSnapshotWriter cannot serialize object '{}' because reflected class is null",
+                         obj->GetObjectId().ToString());
         std::string className = cls->GetName();
         ar.BeginObject(className);
 

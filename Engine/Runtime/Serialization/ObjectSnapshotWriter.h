@@ -2,7 +2,7 @@
 
 #include "EngineIncludes.h"
 
-#include "Serialization/ObjectSnapshot.h"
+#include "Runtime/Serialization/ObjectSnapshot.h"
 
 #include <vector>
 
