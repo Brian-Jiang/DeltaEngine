@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Assets/IAssetDatabase.h"
+#include "Runtime/Assets/IAssetDatabase.h"
 
 DELTA_ENGINE_NS_BEGIN
 

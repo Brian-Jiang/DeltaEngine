@@ -1,11 +1,11 @@
-#include "Assets/PA_CommonAssets.h"
+#include "Runtime/Assets/PA_CommonAssets.h"
 
-#include "Core/DMaterial.h"
-#include "Core/DMesh.h"
-#include "Core/DShader.h"
-#include "Core/DTexture.h"
-#include "Core/Skybox.h"
-#include "Core/UUID.h"
+#include "Runtime/Core/DMaterial.h"
+#include "Runtime/Core/DMesh.h"
+#include "Runtime/Core/DShader.h"
+#include "Runtime/Core/DTexture.h"
+#include "Runtime/Core/Skybox.h"
+#include "Runtime/Core/UUID.h"
 
 using namespace DeltaEngine;
 
@@ -16,10 +16,18 @@ template <typename TAsset, typename TObject>
 TAsset* CreateTypedPrimaryAsset(TObject* object, const char* className)
 {
     TAsset* asset = CreateDObject<TAsset>();
+    DELTA_VERIFY_MSG(asset != nullptr, "Failed to create primary asset instance for '{}'", className);
     asset->GetHeader().m_persistentId = AssetId::Generate();
     asset->GetHeader().m_className = className;
 
-    if (object)
+    if (!object)
+    {
+        DLOG(LogAsset,
+             ELogLevel::Warning,
+             "Primary asset '{}' created without payload object (expected creator to supply typed payload)",
+             className);
+    }
+    else
     {
         if (object->GetObjectId().IsNull())
             object->SetObjectId(ObjectId::Generate());

@@ -4,7 +4,7 @@
 
 #include <string>
 
-#include "Assets/DPrimaryAsset.h"
+#include "Runtime/Assets/DPrimaryAsset.h"
 
 #include "PA_DScene.generated.h"
 
