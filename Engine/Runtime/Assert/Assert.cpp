@@ -2,7 +2,10 @@
 
 #include <cstdio>
 
-[[noreturn]] void DeltaAssertFailed(const char *expr, const char *file, int line, const char *msg)
+[[noreturn]] DELTAENGINE_API void DeltaAssertFailed(const char* expr,
+                                                    const char* file,
+                                                    int line,
+                                                    const char* msg)
 {
     if (msg)
         DLOG(LogCore, ELogLevel::Fatal, "ASSERT failed: {} — {}\n  {}:{}", expr, msg, file, line);

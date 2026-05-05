@@ -3,16 +3,14 @@
 #include "Commands/EditorCommandRegistry.h"
 #include "Editor/EditorCore.h"
 #include "Mcp/McpRegistry.h"
-#include "Runtime/Logging/LogCategory.h"
 #include "Runtime/IO/IOManager.h"
 
-#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 
 using namespace DeltaEngine;
 
-static DLogCategory LogMcpMeta{ "LogMcpMeta", ELogLevel::Log };
+DEFINE_LOG_CATEGORY(DeltaEngine::LogMcpMeta);
 
 void McpMetaSystem::RegisterTools(McpRegistry& registry)
 {
@@ -52,7 +50,12 @@ void McpMetaSystem::EnsureSchemasLoaded()
 
         std::ifstream file(entry.path());
         if (!file.is_open())
+        {
+            DLOG(LogMcpMeta, ELogLevel::Warning,
+                 "Failed to open MCP schema file for read (path='{}'): expected readable regular file",
+                 entry.path().string());
             continue;
+        }
 
         nlohmann::json data;
         try

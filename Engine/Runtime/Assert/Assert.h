@@ -14,7 +14,10 @@
 
 // ─── Internal handler ────────────────────────────────────────────────────────
 // Logs, breaks, aborts. Never inlined so the callstack stays readable.
-[[noreturn]] void DeltaAssertFailed(const char *expr, const char *file, int line, const char *msg = nullptr);
+[[noreturn]] DELTAENGINE_API void DeltaAssertFailed(const char* expr,
+                                                    const char* file,
+                                                    int line,
+                                                    const char* msg = nullptr);
 
 // ─── DELTA_ASSERT (debug/dev only, fatal) ────────────────────────────────────
 #ifndef DELTA_SHIPPING

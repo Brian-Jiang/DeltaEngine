@@ -1,12 +1,12 @@
 #include "McpSocketServer.h"
 
-#include "Runtime/Logging/LogCategory.h"
 #include "Runtime/IO/IOManager.h"
 
 #include <nlohmann/json.hpp>
 
-#include <filesystem>
+#include <format>
 #include <fstream>
+#include <filesystem>
 
 using namespace DeltaEngine;
 
@@ -30,7 +30,8 @@ uint16_t McpSocketServer::Start(uint16_t preferredPort)
     for (int attempt = 0; attempt < 10; ++attempt, ++port)
     {
         m_acceptor.open(asio::ip::tcp::v4(), ec);
-        if (ec) break;
+        if (ec)
+            break;
         m_acceptor.set_option(asio::ip::tcp::acceptor::reuse_address(true));
         m_acceptor.bind({asio::ip::tcp::v4(), port}, ec);
         if (!ec)
@@ -47,9 +48,20 @@ uint16_t McpSocketServer::Start(uint16_t preferredPort)
         return 0;
     }
 
-    auto portFile = std::filesystem::path(IOManager::GetIntermediateFolder()) / "EditorState" / "DeltaEditor.port";
+    auto portFile =
+        std::filesystem::path(IOManager::GetIntermediateFolder()) / "EditorState" / "DeltaEditor.port";
     std::filesystem::create_directories(portFile.parent_path());
-    std::ofstream(portFile) << port;
+    {
+        std::ofstream out(portFile);
+        if (!out || !(out << port))
+        {
+            DLOG(LogMcpServer,
+                 ELogLevel::Error,
+                 "Failed to write MCP port file at '{}': expected writable path with port {}",
+                 portFile.string(),
+                 port);
+        }
+    }
 
     DoAccept();
     m_thread = std::thread(&McpSocketServer::RunLoop, this);
@@ -67,8 +79,16 @@ void McpSocketServer::Stop()
     if (m_thread.joinable())
         m_thread.join();
 
-    auto portFile = std::filesystem::path(IOManager::GetIntermediateFolder()) / "EditorState" / "DeltaEditor.port";
-    std::filesystem::remove(portFile);
+    auto portFile =
+        std::filesystem::path(IOManager::GetIntermediateFolder()) / "EditorState" / "DeltaEditor.port";
+    std::error_code rmEc;
+    std::filesystem::remove(portFile, rmEc);
+    if (rmEc)
+        DLOG(LogMcpServer,
+             ELogLevel::Verbose,
+             "MCP port file remove '{}' failed: {}",
+             portFile.string(),
+             rmEc.message());
 }
 
 void McpSocketServer::RunLoop()
@@ -79,11 +99,29 @@ void McpSocketServer::RunLoop()
 void McpSocketServer::DoAccept()
 {
     m_acceptor.async_accept(m_clientSock, [this](asio::error_code ec) {
-        if (ec) return;  // acceptor was closed (Stop called)
+        if (ec)
+        {
+            if (ec != asio::error::operation_aborted)
+                DLOG(LogMcpServer, ELogLevel::Warning, "MCP async_accept failed: {}", ec.message());
+            return;
+        }
 
         if (m_clientConnected.exchange(true))
         {
-            // Second client — reject immediately
+            std::string remote = "(unknown)";
+            try
+            {
+                remote =
+                    std::format("{}:{}", m_clientSock.remote_endpoint().address().to_string(),
+                               m_clientSock.remote_endpoint().port());
+            }
+            catch (...)
+            {}
+
+            DLOG(LogMcpServer,
+                 ELogLevel::Warning,
+                 "Rejected additional MCP connection from {} while one client already connected",
+                 remote);
             m_clientSock.close();
             DoAccept();
             return;
@@ -137,6 +175,11 @@ void McpSocketServer::HandleIncomingLine(const std::string& line)
     }
     catch (const std::exception& e)
     {
+        DLOG(LogMcpServer,
+             ELogLevel::Warning,
+             "MCP inbound line rejected (exception): {} bytes={}",
+             e.what(),
+             line.size());
         DoWrite(nlohmann::json{{"ok", false}, {"error", e.what()}}.dump());
     }
 }
@@ -155,5 +198,10 @@ void McpSocketServer::SendResponse(const std::string& jsonLine)
     asio::post(m_ioc, [this, line = jsonLine]() mutable {
         if (m_clientConnected)
             DoWrite(std::move(line));
+        else
+            DLOG(LogMcpServer,
+                 ELogLevel::Verbose,
+                 "MCP SendResponse skipped: no client connected (payload {} bytes)",
+                 line.size());
     });
 }

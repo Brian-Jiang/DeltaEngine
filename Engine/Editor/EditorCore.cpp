@@ -92,11 +92,17 @@ void EditorCore::Initialize(EngineMain& engine, bool headless, std::filesystem::
 
     if (!m_headless)
     {
+        constexpr uint16_t kPreferredMcpPort = 57340;
         auto router = std::make_shared<McpQueryRouter>(*this, *m_mcpRegistry);
         g_mcpServer = std::make_unique<McpSocketServer>(
             [router](const std::string& json) { router->Route(json); },
             [router](const std::string& json) -> std::string { return router->Route(json); });
-        g_mcpServer->Start();
+        const uint16_t mcpPort = g_mcpServer->Start(kPreferredMcpPort);
+        if (mcpPort == 0)
+            DLOG(LogEditorCore,
+                 ELogLevel::Error,
+                 "MCP socket server failed to bind (tried up to 10 sequential ports beginning at {})",
+                 static_cast<unsigned>(kPreferredMcpPort));
     }
 }
 

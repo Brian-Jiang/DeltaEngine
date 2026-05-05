@@ -38,9 +38,9 @@ public:
                                             EditorCore& core,
                                             const nlohmann::json& params) const;
 
-    std::vector<std::string> GetSystemNames() const;
-    std::vector<std::string> GetOperationNames(const std::string& system) const;
-    bool HasOperation(const std::string& system, const std::string& op) const;
+    DELTAEDITOR_API std::vector<std::string> GetSystemNames() const;
+    DELTAEDITOR_API std::vector<std::string> GetOperationNames(const std::string& system) const;
+    DELTAEDITOR_API bool HasOperation(const std::string& system, const std::string& op) const;
 
 private:
     std::unordered_map<

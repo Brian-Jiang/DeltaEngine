@@ -7,6 +7,8 @@
 
 DELTA_ENGINE_NS_BEGIN
 
+DECLARE_LOG_CATEGORY(LogMcpMeta)
+
 class EditorCore;
 
 class McpMetaSystem : public IMcpSystem

@@ -193,6 +193,7 @@ nlohmann::json McpSelectionSystem::CommandSelectObject(EditorCore& core, const n
         case Kind::GameObject: sel->AddSelectedGameObject(r.id); break;
         case Kind::Component: sel->AddSelectedComponent(r.id); break;
         case Kind::Asset: sel->AddSelectedAsset(r.id); break;
+        default: DELTA_UNREACHABLE();
         }
     }
 

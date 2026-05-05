@@ -6,7 +6,7 @@
 
 DELTA_ENGINE_NS_BEGIN
 
-static DLogCategory LogMcpRouter{ "LogMcpRouter", ELogLevel::Log };
+DEFINE_LOG_CATEGORY(LogMcpRouter)
 
 McpQueryRouter::McpQueryRouter(EditorCore& core, McpRegistry& registry)
     : m_core(core)
@@ -16,6 +16,15 @@ McpQueryRouter::McpQueryRouter(EditorCore& core, McpRegistry& registry)
 
 std::string McpQueryRouter::Route(const std::string& rawJson) const
 {
+    if (rawJson.empty())
+    {
+        DLOG(LogMcpRouter, ELogLevel::Warning, "Empty MCP envelope (expected non-empty UTF-8 JSON)");
+        return nlohmann::json{
+            {"ok", false},
+            {"error", "Empty MCP request body (expected UTF-8 JSON object)"}}
+            .dump();
+    }
+
     try
     {
         auto q = nlohmann::json::parse(rawJson);
@@ -70,6 +79,10 @@ std::string McpQueryRouter::Route(const std::string& rawJson) const
     }
     catch (const nlohmann::json::parse_error& e)
     {
+        DLOG(LogMcpRouter, ELogLevel::Warning,
+             "JSON parse error routing MCP envelope: {} input_bytes={}",
+             e.what(),
+             rawJson.size());
         return nlohmann::json{
             {"ok", false},
             {"error", std::string("JSON parse error: ") + e.what()}
@@ -77,6 +90,10 @@ std::string McpQueryRouter::Route(const std::string& rawJson) const
     }
     catch (const std::exception& e)
     {
+        DLOG(LogMcpRouter, ELogLevel::Warning,
+             "Exception routing MCP envelope: {} input_bytes={}",
+             e.what(),
+             rawJson.size());
         return nlohmann::json{{"ok", false}, {"error", e.what()}}.dump();
     }
 }

@@ -29,8 +29,9 @@ static const char* PropertyTypeName(EPropertyType t)
     case EPropertyType::BulkData:   return "BulkData";
     case EPropertyType::Vector:     return "Vector";
     case EPropertyType::Struct:     return "Struct";
+    default:
+        DELTA_UNREACHABLE();
     }
-    return "unknown";
 }
 
 static nlohmann::json MakeError(const std::string& msg)
