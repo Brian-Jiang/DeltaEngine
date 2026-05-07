@@ -3,11 +3,14 @@
 #include "EditorIncludes.h"
 
 #include <cstdint>
+#include <filesystem>
 #include <string>
 
 #include "imgui.h"
 
 DELTA_ENGINE_NS_BEGIN
+
+DECLARE_LOG_CATEGORY(LogEditorTheme)
 
 class DELTAEDITOR_API EditorTheme
 {
@@ -47,28 +50,10 @@ public:
     };
 
     // Row height from current font and frame padding.
-    static float RowH()
-    {
-        return ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.f;
-    }
-
-    // App header chrome height (menu bar row with extra vertical padding).
-    static float HdrH()
-    {
-        const float kExtra = ImGui::GetFontSize() * 0.25f;
-        return ImGui::GetFontSize()
-            + (ImGui::GetStyle().FramePadding.y + kExtra) * 2.f;
-    }
-
-    // Main toolbar band height.
-    static float TbH()
-    {
-        const float kItemH = ImGui::GetFontSize() * 2.0f;
-        return kItemH + ImGui::GetStyle().ItemSpacing.y * 2.f;
-    }
-
-    // Status bar height (one frame row).
-    static float StH() { return ImGui::GetFrameHeight(); }
+    static float RowH();
+    static float HdrH();
+    static float TbH();
+    static float StH();
 
     // 0xRRGGBB or 0xRRGGBBAA; alphaOverride >= 0 replaces alpha.
     static ImVec4 ColorFromHex(uint32_t hex, float alphaOverride = -1.f)
@@ -105,7 +90,7 @@ public:
 
 private:
     void LoadFonts();
-    ImFont* TryLoadFont(std::string path, bool withFaSolid);
+    ImFont* TryLoadFont(const std::filesystem::path& path, bool withFaSolid);
     ImVec4 HexToVec4(uint32_t hex, float alphaOverride = -1.f) const;
 
     ImFont* m_regularFont;

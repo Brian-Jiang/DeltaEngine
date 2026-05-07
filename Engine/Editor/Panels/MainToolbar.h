@@ -1,6 +1,8 @@
 #pragma once
 
-#include "EngineIncludes.h"
+#include "EditorIncludes.h"
+
+#include "Panels/EditorChromeContext.h"
 
 #include "UIComponents/HorizontalToggleGroup.h"
 
@@ -14,11 +16,11 @@ enum class EEditorTransformTool
     Scale = 3,
 };
 
-class MainToolbar
+class DELTAEDITOR_API MainToolbar
 {
 public:
-    // Transform/play controls and viewport dropdowns below the app header.
     void Draw();
+    void Draw(const EditorChromeContext& ctx);
 
     /** Currently selected transform tool. */
     EEditorTransformTool GetTransformTool() const { return static_cast<EEditorTransformTool>(m_transformMode); }

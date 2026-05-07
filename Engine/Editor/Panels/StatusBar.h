@@ -1,12 +1,14 @@
 #pragma once
 
-#include "EngineIncludes.h"
+#include "EditorIncludes.h"
+
+#include "Panels/EditorChromeContext.h"
 
 #include <string>
 
 DELTA_ENGINE_NS_BEGIN
 
-class StatusBar
+class DELTAEDITOR_API StatusBar
 {
 public:
     // Status text sources; set from scene/editor code before Draw().
@@ -17,8 +19,8 @@ public:
     std::string buildConfig = "Debug x64";
     std::string engineVersion = "DeltaEngine 0.1.0";
 
-    // Bottom status strip; reads the string fields above each frame.
     void Draw();
+    void Draw(const EditorChromeContext& ctx);
 };
 
 DELTA_ENGINE_NS_END

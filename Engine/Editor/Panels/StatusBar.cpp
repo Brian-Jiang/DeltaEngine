@@ -1,17 +1,41 @@
 #include "Panels/StatusBar.h"
 
+#include "EditorCore.h"
 #include "EditorMain.h"
+#include "Panels/EditorChromeContext.h"
 #include "Style/EditorTheme.h"
 
 #include "imgui.h"
+
+#include <format>
+#include <string>
 
 using namespace DeltaEngine;
 
 void StatusBar::Draw()
 {
-    ImGuiIO& io = ImGui::GetIO();
-    EditorTheme* theme = g_editor->GetEditorTheme();
+    EditorChromeContext ctx;
+    ctx.theme  = g_editor ? g_editor->GetEditorTheme() : nullptr;
+    ctx.core   = g_editorCore;
+    ctx.editor = g_editor;
+    Draw(ctx);
+}
+
+void StatusBar::Draw(const EditorChromeContext& ctx)
+{
+    if (!ctx.theme)
+    {
+        DLOG(LogEditorChrome, ELogLevel::Warning,
+            "StatusBar::Draw skipped: missing EditorTheme (expected non-null ctx.theme; core={}, editor={})",
+            static_cast<const void*>(ctx.core), static_cast<const void*>(ctx.editor));
+        return;
+    }
+
+    EditorTheme* theme = ctx.theme;
+    DELTA_ASSERT(theme != nullptr);
     const auto& c = theme->colors;
+
+    ImGuiIO& io = ImGui::GetIO();
 
     const float fs  = ImGui::GetFontSize();
     const float pad = ImGui::GetStyle().ItemSpacing.x;
@@ -31,7 +55,7 @@ void StatusBar::Draw()
     ImDrawList* drawList = ImGui::GetWindowDrawList();
     ImVec2 winPos = ImGui::GetWindowPos();
     drawList->AddLine(
-        ImVec2(winPos.x,                    winPos.y),
+        ImVec2(winPos.x, winPos.y),
         ImVec2(winPos.x + io.DisplaySize.x, winPos.y),
         ImGui::ColorConvertFloat4ToU32(c.BDeep), 1.f);
 
@@ -92,11 +116,19 @@ void StatusBar::Draw()
         ImGui::PopStyleColor();
     }
 
-    char rBuf[256];
-    snprintf(rBuf, sizeof(rBuf), "Renderer %s  Build %s  %s",
-        rendererName.c_str(), buildConfig.c_str(), engineVersion.c_str());
-    const float rightW = ImGui::CalcTextSize(rBuf).x
-        + pad * 4.f;
+    std::string rightSummary = std::format(
+        "Renderer {}  Build {}  {}", rendererName, buildConfig, engineVersion);
+    constexpr std::size_t kRightSummarySoftCap = 4096;
+    if (rightSummary.size() > kRightSummarySoftCap)
+    {
+        DLOG(LogEditorChrome, ELogLevel::Warning,
+            "StatusBar right summary truncated (got {} chars, soft cap {}): rendererLen={}, buildLen={}, engineLen={}",
+            rightSummary.size(), kRightSummarySoftCap,
+            rendererName.size(), buildConfig.size(), engineVersion.size());
+        rightSummary.resize(kRightSummarySoftCap);
+    }
+
+    const float rightW = ImGui::CalcTextSize(rightSummary.c_str()).x + pad * 4.f;
 
     ImGui::SetCursorPosX(io.DisplaySize.x - rightW - pad);
     ImGui::SetCursorPosY((EditorTheme::StH() - fs) * 0.5f);

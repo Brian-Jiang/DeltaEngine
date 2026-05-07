@@ -12,7 +12,7 @@ TEST_F(UIComponentsImGuiFixture, HorizontalToggleGroup_Draw_NullId_ReturnsEmptyE
     HorizontalToggleGroup     g;
     HorizontalToggleGroup::Item items[] = {{"A", nullptr}};
     int                       sel = 0;
-    WidgetEditEvent           evt = g.Draw(nullptr, items, 1, sel);
+    WidgetEditEvent           evt = g.Draw(nullptr, m_theme.colors, items, 1, sel);
     EXPECT_FALSE(evt.valueChanged);
 }
 
@@ -21,8 +21,8 @@ TEST_F(UIComponentsImGuiFixture, HorizontalToggleGroup_Draw_NonPositiveCount_Ret
     HorizontalToggleGroup     g;
     HorizontalToggleGroup::Item items[] = {{"A", nullptr}};
     int                       sel = 0;
-    WidgetEditEvent           e1 = g.Draw("id", nullptr, 0, sel);
-    WidgetEditEvent           e2 = g.Draw("id", items, 0, sel);
+    WidgetEditEvent           e1 = g.Draw("id", m_theme.colors, nullptr, 0, sel);
+    WidgetEditEvent           e2 = g.Draw("id", m_theme.colors, items, 0, sel);
     EXPECT_FALSE(e1.valueChanged);
     EXPECT_FALSE(e2.valueChanged);
 }

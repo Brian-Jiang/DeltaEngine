@@ -1,6 +1,9 @@
 #pragma once
 
 #include "EditorIncludes.h"
+
+#include "Style/EditorTheme.h"
+
 #include "UIComponents/WidgetEditEvent.h"
 
 #include "imgui.h"
@@ -16,7 +19,7 @@ public:
         const char* tooltip;
     };
 
-    WidgetEditEvent Draw(const char* id, const Item* items, int itemCount,
+    WidgetEditEvent Draw(const char* id, const EditorTheme::ThemeColors& colors, const Item* items, int itemCount,
                          int& selected, float itemW = 0.f, float itemH = 0.f,
                          const int* overrideSelectedIndex = nullptr,
                          const ImVec4* overrideSelectedColor = nullptr);

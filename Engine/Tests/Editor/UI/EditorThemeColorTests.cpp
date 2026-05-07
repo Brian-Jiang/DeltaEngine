@@ -9,7 +9,7 @@ namespace
 constexpr float Inv255 = 1.f / 255.f;
 }
 
-TEST(EditorThemeColorTests, SixDigitOpaqueRed)
+TEST(EditorTheme_ColorFromHex, SixDigitOpaqueRed)
 {
     ImVec4 v = EditorTheme::ColorFromHex(0xFF0000);
     EXPECT_NEAR(v.x, 1.f, 1e-6f);
@@ -18,7 +18,7 @@ TEST(EditorThemeColorTests, SixDigitOpaqueRed)
     EXPECT_NEAR(v.w, 1.f, 1e-6f);
 }
 
-TEST(EditorThemeColorTests, EightDigitUsesAlphaChannel)
+TEST(EditorTheme_ColorFromHex, EightDigitUsesAlphaChannel)
 {
     ImVec4 v = EditorTheme::ColorFromHex(0xFF000080);
     EXPECT_NEAR(v.x, 1.f, 1e-6f);
@@ -27,14 +27,14 @@ TEST(EditorThemeColorTests, EightDigitUsesAlphaChannel)
     EXPECT_NEAR(v.w, 128.f * Inv255, 1e-5f);
 }
 
-TEST(EditorThemeColorTests, AlphaOverrideWins)
+TEST(EditorTheme_ColorFromHex, AlphaOverrideWins)
 {
     ImVec4 v = EditorTheme::ColorFromHex(0xFF0000FF, 0.25f);
     EXPECT_NEAR(v.x, 1.f, 1e-6f);
     EXPECT_NEAR(v.w, 0.25f, 1e-6f);
 }
 
-TEST(EditorThemeColorTests, BlackAndFullWhite)
+TEST(EditorTheme_ColorFromHex, BlackAndFullWhite)
 {
     ImVec4 b = EditorTheme::ColorFromHex(0x000000);
     EXPECT_NEAR(b.x, 0.f, 1e-6f);
@@ -45,7 +45,7 @@ TEST(EditorThemeColorTests, BlackAndFullWhite)
     EXPECT_NEAR(w.z, 1.f, 1e-6f);
 }
 
-TEST(EditorThemeColorTests, LeadingZeroRgbStillSixDigit)
+TEST(EditorTheme_ColorFromHex, LeadingZeroRgbStillSixDigit)
 {
     ImVec4 v = EditorTheme::ColorFromHex(0x00112233u);
     EXPECT_NEAR(v.x, 0x11 * Inv255, 1e-5f);

@@ -5,6 +5,8 @@ set(DELTA_EDITOR_TEST_SOURCES
     EditorCommandTests_CommandQueue.cpp
     EditorCommandTests_McpPath.cpp
     EditorCommandTests_UndoStack.cpp
+    Panels/EditorChromePanelTests.cpp
+    Style/EditorThemeLayoutTests.cpp
     UI/EditorThemeColorTests.cpp
     UIComponents/WidgetEditEventTests.cpp
     UIComponents/EditorInlineRenameTests.cpp

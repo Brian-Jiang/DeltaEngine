@@ -7,26 +7,47 @@
 #include "EditorCore.h"
 #include "EditorMain.h"
 #include "Assets/EditorAssetDatabase.h"
+#include "Editor/EditorWindows/EditorWindow_AssetBrowser.h"
+#include "Editor/EditorWindows/EditorWindow_ComponentsHierarchy.h"
+#include "Editor/EditorWindows/EditorWindow_Details.h"
+#include "Editor/EditorWindows/EditorWindow_WorldOutliner.h"
 #include "Style/EditorTheme.h"
 #include "Runtime/Assets/DPrimaryAsset.h"
-#include "Runtime/EngineMain.h"
 #include "Runtime/Core/DWorld.h"
-#include "Runtime/Reflection/ReflectionRegistry.h"
+#include "Runtime/EngineMain.h"
 #include "Runtime/Reflection/DClass.h"
-#include "Editor/EditorWindows/EditorWindow_WorldOutliner.h"
-#include "Editor/EditorWindows/EditorWindow_AssetBrowser.h"
-#include "Editor/EditorWindows/EditorWindow_Details.h"
-#include "Editor/EditorWindows/EditorWindow_ComponentsHierarchy.h"
+#include "Runtime/Reflection/ReflectionRegistry.h"
 
 #include "imgui.h"
 
 using namespace DeltaEngine;
 
+DEFINE_LOG_CATEGORY(DeltaEngine::LogEditorChrome)
+
 void AppHeader::Draw()
 {
-    ImGuiIO& io = ImGui::GetIO();
-    EditorTheme* theme = g_editor->GetEditorTheme();
+    EditorChromeContext ctx;
+    ctx.theme  = g_editor ? g_editor->GetEditorTheme() : nullptr;
+    ctx.core   = g_editorCore;
+    ctx.editor = g_editor;
+    Draw(ctx);
+}
+
+void AppHeader::Draw(const EditorChromeContext& ctx)
+{
+    if (!ctx.theme)
+    {
+        DLOG(LogEditorChrome, ELogLevel::Warning,
+            "AppHeader::Draw skipped: missing EditorTheme (expected non-null ctx.theme; core={}, editor={})",
+            static_cast<const void*>(ctx.core), static_cast<const void*>(ctx.editor));
+        return;
+    }
+
+    EditorTheme* theme = ctx.theme;
+    DELTA_ASSERT(theme != nullptr);
     const auto& c = theme->colors;
+
+    ImGuiIO& io = ImGui::GetIO();
 
     const float fh = ImGui::GetFrameHeight();
     const float fs = ImGui::GetFontSize();
@@ -63,7 +84,8 @@ void AppHeader::Draw()
         ImVec2(winPos.x + io.DisplaySize.x, sepY),
         ImGui::ColorConvertFloat4ToU32(c.BDeep), 1.f);
 
-    if (ImGui::BeginMenuBar()) {
+    if (ImGui::BeginMenuBar())
+    {
         {
             const float side = fs;
             const float triH = side * 0.866f;
@@ -85,29 +107,29 @@ void AppHeader::Draw()
 
         if (ImGui::BeginMenu("File"))
         {
-            if (ImGui::MenuItem("Save", "Ctrl+S"))
+            if (ImGui::MenuItem("Save", "Ctrl+S", false, ctx.core != nullptr))
             {
-                if (g_editorCore)
-                {
-                    EditorCommandContext ctx{ *g_editorCore };
-                    g_editorCore->GetCommandManager().ExecuteAuxiliary(
-                        std::make_unique<EditorAuxiliaryCommand_SaveScene>(), ctx);
-                }
+                EditorCommandContext cmdCtx{ *ctx.core };
+                ctx.core->GetCommandManager().ExecuteAuxiliary(
+                    std::make_unique<EditorAuxiliaryCommand_SaveScene>(), cmdCtx);
             }
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Edit"))
         {
-            auto& cmdMgr = g_editorCore->GetCommandManager();
-            if (ImGui::MenuItem("Undo", "Ctrl+Z", false, cmdMgr.CanUndo()))
+            if (ctx.core)
             {
-                EditorCommandContext ctx{ *g_editorCore };
-                cmdMgr.Undo(ctx);
-            }
-            if (ImGui::MenuItem("Redo", "Ctrl+Y", false, cmdMgr.CanRedo()))
-            {
-                EditorCommandContext ctx{ *g_editorCore };
-                cmdMgr.Redo(ctx);
+                EditorCommandManager& cmdMgr = ctx.core->GetCommandManager();
+                if (ImGui::MenuItem("Undo", "Ctrl+Z", false, cmdMgr.CanUndo()))
+                {
+                    EditorCommandContext cmdCtx{ *ctx.core };
+                    cmdMgr.Undo(cmdCtx);
+                }
+                if (ImGui::MenuItem("Redo", "Ctrl+Y", false, cmdMgr.CanRedo()))
+                {
+                    EditorCommandContext cmdCtx{ *ctx.core };
+                    cmdMgr.Redo(cmdCtx);
+                }
             }
             ImGui::EndMenu();
         }
@@ -115,37 +137,23 @@ void AppHeader::Draw()
             ImGui::EndMenu();
         if (ImGui::BeginMenu("Window"))
         {
-            // Viewport: always opens a new instance.
-            if (ImGui::MenuItem("Viewport"))
-                g_editor->OpenViewportWindow();
+            EditorMain* ed = ctx.editor;
+            const bool canOpen = ed != nullptr;
+            if (ImGui::MenuItem("Viewport", nullptr, false, canOpen))
+                ed->OpenViewportWindow();
 
-            if (ImGui::MenuItem("World Outliner"))
-                g_editor->OpenEditorWindow<EditorWindow_WorldOutliner>();
+            if (ImGui::MenuItem("World Outliner", nullptr, false, canOpen))
+                ed->OpenEditorWindow<EditorWindow_WorldOutliner>();
 
-            if (ImGui::MenuItem("Asset Browser"))
-            {
-                g_editor->OpenEditorWindow<EditorWindow_AssetBrowser>();
-            }
+            if (ImGui::MenuItem("Asset Browser", nullptr, false, canOpen))
+                ed->OpenEditorWindow<EditorWindow_AssetBrowser>();
 
-            if (ImGui::MenuItem("Details"))
-            {
-                g_editor->OpenEditorWindow<EditorWindow_Details>();
-            }
+            if (ImGui::MenuItem("Details", nullptr, false, canOpen))
+                ed->OpenEditorWindow<EditorWindow_Details>();
 
-            if (ImGui::MenuItem("Components Hierarchy"))
-            {
-                g_editor->OpenEditorWindow<EditorWindow_ComponentsHierarchy>();
-            }
+            if (ImGui::MenuItem("Components Hierarchy", nullptr, false, canOpen))
+                ed->OpenEditorWindow<EditorWindow_ComponentsHierarchy>();
 
-            //ImGui::Separator();
-
-            //// Singleton windows: open if closed, do nothing if already open.
-            //for (auto& info : g_editor->GetEditorWindowInfos())
-            //{
-            //    if (!info.m_window->IsSingleton()) continue;
-            //    if (ImGui::MenuItem(info.m_window->m_title, nullptr, false, !info.m_open))
-            //        info.m_open = true;
-            //}
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Scene"))
@@ -189,7 +197,7 @@ void AppHeader::Draw()
         ImGui::PopStyleColor(2);
 
         ImGui::SameLine(0.f, pad * 0.5f);
-        if (ImGui::Button("⚙##Settings", ImVec2(0.f, 0.f)))
+        if (ImGui::Button("\xe2\x9a\x99##Settings", ImVec2(0.f, 0.f)))
         { /* placeholder */
         }
         if (ImGui::IsItemHovered())
@@ -200,15 +208,16 @@ void AppHeader::Draw()
 
     if (const DClass* picked = m_goPickerPopup.Draw(c))
     {
-        if (g_editorCore)
+        if (ctx.core)
         {
-            DPrimaryAsset* sceneAsset = g_editorCore->GetActiveSceneAsset();
+            DPrimaryAsset* sceneAsset = ctx.core->GetActiveSceneAsset();
             if (sceneAsset)
             {
-                EditorCommandContext ctx{ *g_editorCore };
-                g_editorCore->GetCommandManager().Execute(
+                EditorCommandContext cmdCtx{ *ctx.core };
+                ctx.core->GetCommandManager().Execute(
                     std::make_unique<EditorCommand_CreateGameObject>(
-                        sceneAsset->GetAssetId(), std::string(picked->GetName())), ctx);
+                        sceneAsset->GetAssetId(), std::string(picked->GetName())),
+                    cmdCtx);
             }
         }
     }

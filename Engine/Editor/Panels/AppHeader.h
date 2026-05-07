@@ -1,16 +1,18 @@
 #pragma once
 
-#include "EngineIncludes.h"
+#include "EditorIncludes.h"
+
+#include "Panels/EditorChromeContext.h"
 
 #include "UIComponents/ClassPickerPopup.h"
 
 DELTA_ENGINE_NS_BEGIN
 
-class AppHeader
+class DELTAEDITOR_API AppHeader
 {
 public:
-    // Top menu bar, logo, and class picker for new GameObjects.
     void Draw();
+    void Draw(const EditorChromeContext& ctx);
 
 private:
     ClassPickerPopup m_goPickerPopup;

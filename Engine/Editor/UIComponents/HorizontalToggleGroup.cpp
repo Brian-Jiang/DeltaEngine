@@ -2,16 +2,13 @@
 
 #include "UIComponents/UIComponentsEditorTheme.h"
 
-#include "Style/EditorTheme.h"
-
 #include "imgui.h"
 
 using namespace DeltaEngine;
 
-WidgetEditEvent HorizontalToggleGroup::Draw(const char* id, const Item* items, int itemCount,
-                                            int& selected, float itemW, float itemH,
-                                            const int* overrideSelectedIndex,
-                                            const ImVec4* overrideSelectedColor)
+WidgetEditEvent HorizontalToggleGroup::Draw(const char* id, const EditorTheme::ThemeColors& colors, const Item* items,
+                                            int itemCount, int& selected, float itemW, float itemH,
+                                            const int* overrideSelectedIndex, const ImVec4* overrideSelectedColor)
 {
     if (!id)
     {
@@ -27,14 +24,7 @@ WidgetEditEvent HorizontalToggleGroup::Draw(const char* id, const Item* items, i
         return {};
     }
 
-    EditorTheme* theme = ResolveUIComponentsEditorTheme();
-    if (!theme)
-    {
-        DLOG(LogUIComponents, ELogLevel::Warning,
-            "HorizontalToggleGroup::Draw: no EditorTheme (expected g_editor or UIComponents test theme override)");
-        return {};
-    }
-    const auto& c       = theme->colors;
+    const auto& c          = colors;
     ImDrawList* drawList = ImGui::GetWindowDrawList();
     if (!drawList)
     {
@@ -49,16 +39,16 @@ WidgetEditEvent HorizontalToggleGroup::Draw(const char* id, const Item* items, i
     if (itemW <= 0.f)
         itemW = fh;
 
-    const float spacing         = 1.f;
-    const float totalW          = itemCount * itemW + (itemCount - 1) * spacing;
-    const float rounding        = 6.f;
+    const float spacing        = 1.f;
+    const float totalW         = itemCount * itemW + (itemCount - 1) * spacing;
+    const float rounding       = 6.f;
     const float buttonRounding = 4.f;
 
     ImGui::PushID(id);
     ImGui::BeginGroup();
     ImVec2 cursorScreen = ImGui::GetCursorScreenPos();
-    ImVec2 groupMin    = cursorScreen;
-    ImVec2 groupMax    = ImVec2(cursorScreen.x + totalW, cursorScreen.y + itemH);
+    ImVec2 groupMin     = cursorScreen;
+    ImVec2 groupMax     = ImVec2(cursorScreen.x + totalW, cursorScreen.y + itemH);
 
     drawList->AddRectFilled(groupMin, groupMax, ImGui::ColorConvertFloat4ToU32(c.DRaised), rounding);
 
@@ -66,22 +56,22 @@ WidgetEditEvent HorizontalToggleGroup::Draw(const char* id, const Item* items, i
     for (int i = 0; i < itemCount; ++i)
     {
         ImGui::PushID(i);
-        ImVec2 btnMin   = ImGui::GetCursorScreenPos();
+        ImVec2 btnMin     = ImGui::GetCursorScreenPos();
         ImVec2 btnSize(itemW, itemH);
         ImGui::InvisibleButton("##btn", btnSize);
-        bool hovered    = ImGui::IsItemHovered();
-        bool clicked    = ImGui::IsItemClicked();
-        bool isSelected = (selected == i);
+        bool hovered      = ImGui::IsItemHovered();
+        bool clicked      = ImGui::IsItemClicked();
+        bool isSelected   = (selected == i);
 
         if (clicked && !isSelected)
         {
-            selected = i;
+            selected           = i;
             selectionChanged = true;
         }
 
-        ImVec4 bgColor    = ImVec4(0, 0, 0, 0);
-        ImVec4 textColor  = c.TLabel;
-        bool   drawBorder = false;
+        ImVec4 bgColor     = ImVec4(0, 0, 0, 0);
+        ImVec4 textColor   = c.TLabel;
+        bool drawBorder    = false;
         ImVec4 borderColor = c.AccMid;
 
         if (isSelected)
@@ -120,8 +110,8 @@ WidgetEditEvent HorizontalToggleGroup::Draw(const char* id, const Item* items, i
         }
 
         const char* label = items[i].label ? items[i].label : "";
-        ImVec2 textSize = ImGui::CalcTextSize(label);
-        ImVec2 textPos  = ImVec2(
+        ImVec2 textSize   = ImGui::CalcTextSize(label);
+        ImVec2 textPos    = ImVec2(
             btnMin.x + (itemW - textSize.x) * 0.5f,
             btnMin.y + (itemH - textSize.y) * 0.5f);
         drawList->AddText(textPos, ImGui::ColorConvertFloat4ToU32(textColor), label);
