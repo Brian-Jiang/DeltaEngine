@@ -2,47 +2,21 @@
 
 #include "EngineIncludes.h"
 
+#include <filesystem>
 #include <string>
-#include <windows.h>
 
 DELTA_ENGINE_NS_BEGIN
 
 class StringUtils
 {
 public:
-    static std::string WStringToUtf8(const std::wstring& wstr)
-    {
-        if (wstr.empty())
-            return {};
-        int size = WideCharToMultiByte(
-            CP_UTF8, 0,
-            wstr.data(), (int)wstr.size(),
-            nullptr, 0,
-            nullptr, nullptr);
-        std::string result(size, 0);
-        WideCharToMultiByte(
-            CP_UTF8, 0,
-            wstr.data(), (int)wstr.size(),
-            result.data(), size,
-            nullptr, nullptr);
-        return result;
-    }
+    DELTAENGINE_API static std::string WStringToUtf8(const std::wstring& wstr);
+    DELTAENGINE_API static std::wstring Utf8ToWString(const std::string& str);
 
-    static std::wstring Utf8ToWString(const std::string& str)
-    {
-        if (str.empty())
-            return {};
-        int size = MultiByteToWideChar(
-            CP_UTF8, 0,
-            str.data(), (int)str.size(),
-            nullptr, 0);
-        std::wstring result(size, 0);
-        MultiByteToWideChar(
-            CP_UTF8, 0,
-            str.data(), (int)str.size(),
-            result.data(), size);
-        return result;
-    }
+    /** Build a path from a UTF-8 string. */
+    DELTAENGINE_API static std::filesystem::path Utf8ToPath(const std::string& utf8);
+    /** Render a path back to a UTF-8 string. */
+    DELTAENGINE_API static std::string PathToUtf8(const std::filesystem::path& p);
 };
 
 DELTA_ENGINE_NS_END

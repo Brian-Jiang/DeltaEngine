@@ -129,13 +129,13 @@ void EditorTheme::ApplyTheme()
 
 void EditorTheme::LoadFonts()
 {
-    std::string regularFontPath = IOManager::GetEditorSourceAssetFullPath("Fonts/Outfit-Regular.ttf");
+    std::string regularFontPath = IOManager::GetEditorSourceAssetFullPath("Fonts/Outfit-Regular.ttf").string();
     m_regularFont = TryLoadFont(regularFontPath, true);
 
-    std::string boldFontPath = IOManager::GetEditorSourceAssetFullPath("Fonts/Outfit-Bold.ttf");
+    std::string boldFontPath = IOManager::GetEditorSourceAssetFullPath("Fonts/Outfit-Bold.ttf").string();
     m_boldFont = TryLoadFont(boldFontPath, true);
 
-    std::string monoFontPath = IOManager::GetEditorSourceAssetFullPath("Fonts/JetBrainsMono-Regular.ttf");
+    std::string monoFontPath = IOManager::GetEditorSourceAssetFullPath("Fonts/JetBrainsMono-Regular.ttf").string();
     m_monoFont = TryLoadFont(monoFontPath, false);
 }
 
@@ -151,7 +151,7 @@ ImFont* EditorTheme::TryLoadFont(std::string path, bool withFaSolid)
             ImFontConfig faConfig;
             faConfig.MergeMode = true;
             faConfig.PixelSnapH = true;
-            std::string faSolidFontPath = IOManager::GetEditorSourceAssetFullPath("Fonts/Font Awesome 7 Free-Solid-900.otf");
+            std::string faSolidFontPath = IOManager::GetEditorSourceAssetFullPath("Fonts/Font Awesome 7 Free-Solid-900.otf").string();
             [[maybe_unused]] ImFont* merged =
                 ImGui::GetIO().Fonts->AddFontFromFileTTF(faSolidFontPath.c_str(), 0.0f, &faConfig);
         }

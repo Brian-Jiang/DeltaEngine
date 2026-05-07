@@ -38,6 +38,11 @@ set(DELTA_ENGINE_TEST_SOURCES
     Core/SceneComponentTests.cpp
     Core/CoreAssetDataTests.cpp
     Core/CoreUtilityTests.cpp
+    Core/EngineMainHardeningTests.cpp
+    IO/IOManagerTests.cpp
+    Logging/LogCategoryTests.cpp
+    Logging/LoggingManagerTests.cpp
+    Utils/StringUtilsTests.cpp
 )
 
 add_executable(DeltaEngineTests

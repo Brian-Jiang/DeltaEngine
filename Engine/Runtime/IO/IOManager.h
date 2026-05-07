@@ -2,24 +2,22 @@
 
 #include "EngineIncludes.h"
 
-#include <string>
-#include <vector>
-#include <wtypes.h>
+#include <filesystem>
 
 DELTA_ENGINE_NS_BEGIN
 
 class IOManager
 {
 public:
-	//static bool readFileToBuffer(const std::string &filePath, std::vector<char>& buffer);
-	//static std::wstring GetAssetFullPath(LPCWSTR assetName);
-	//static std::string GetAssetFullPath(const std::string & assetName);
-    DELTAENGINE_API static std::wstring GetEngineSourceAssetFullPath(std::wstring assetName);
-    DELTAENGINE_API static std::string GetEditorSourceAssetFullPath(std::string assetName);
-    DELTAENGINE_API static std::string GetEngineImportedAssetsFolder();
-    DELTAENGINE_API static std::string GetEngineImportedAssetFullPath(std::string assetName, bool isJson = true);
-    DELTAENGINE_API static std::string GetIntermediateFolder();
-    DELTAENGINE_API static std::string GetToolsFolder();
+    /** Absolute path to the repository root, resolved once from the executable directory. */
+    DELTAENGINE_API static const std::filesystem::path& GetProjectRoot();
+
+    DELTAENGINE_API static std::filesystem::path GetEngineSourceAssetFullPath(const std::filesystem::path& assetName);
+    DELTAENGINE_API static std::filesystem::path GetEditorSourceAssetFullPath(const std::filesystem::path& assetName);
+    DELTAENGINE_API static std::filesystem::path GetEngineImportedAssetsFolder();
+    DELTAENGINE_API static std::filesystem::path GetEngineImportedAssetFullPath(const std::filesystem::path& assetName, bool isJson = true);
+    DELTAENGINE_API static std::filesystem::path GetIntermediateFolder();
+    DELTAENGINE_API static std::filesystem::path GetToolsFolder();
 };
 
 DELTA_ENGINE_NS_END

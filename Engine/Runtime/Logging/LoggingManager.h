@@ -7,19 +7,14 @@
 class LoggingManager
 {
 public:
-    // Call once, very early in startup (before other subsystems)
-    static void Initialize(const std::filesystem::path& logDir = "Logs");
-    static void Shutdown();
+    DELTAENGINE_API static void Initialize(const std::filesystem::path& logDir = "Logs");
+    DELTAENGINE_API static void Shutdown();
+    DELTAENGINE_API static void AddSink(spdlog::sink_ptr sink);
+    DELTAENGINE_API static void SetGlobalLevel(ELogLevel level);
 
-    // Bolt on a custom sink after init (e.g. an in-editor console sink)
-    static void AddSink(spdlog::sink_ptr sink);
-
-    // Override every category's level at runtime (useful for -verbose flag)
-    static void SetGlobalLevel(ELogLevel level);
-
-    [[nodiscard]] static bool IsInitialized() { return s_initialized; }
+    [[nodiscard]] DELTAENGINE_API static bool IsInitialized();
 
 private:
-    static inline std::vector<spdlog::sink_ptr> s_sinks;
-    static inline bool s_initialized = false;
+    static std::vector<spdlog::sink_ptr> s_sinks;
+    static bool s_initialized;
 };

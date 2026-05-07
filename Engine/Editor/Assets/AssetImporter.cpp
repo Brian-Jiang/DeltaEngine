@@ -84,7 +84,7 @@ std::vector<AssetId> AssetImporter::ImportFbx(const std::filesystem::path& sourc
 {
     std::vector<AssetId> createdIds;
 
-    const std::filesystem::path importedRoot(IOManager::GetEngineImportedAssetsFolder());
+    const std::filesystem::path importedRoot = IOManager::GetEngineImportedAssetsFolder();
     const std::filesystem::path subDir = importedRoot / sourcePath.stem().string();
     std::filesystem::create_directories(subDir);
 
@@ -221,7 +221,7 @@ std::vector<AssetId> AssetImporter::ImportFbx(const std::filesystem::path& sourc
 std::vector<AssetId> AssetImporter::ImportFile(const std::filesystem::path& sourcePath, EditorAssetDatabase& db)
 {
     const std::string ext = sourcePath.extension().string();
-    const std::filesystem::path importedRoot(IOManager::GetEngineImportedAssetsFolder());
+    const std::filesystem::path importedRoot = IOManager::GetEngineImportedAssetsFolder();
     std::filesystem::create_directories(importedRoot);
 
     if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" ||

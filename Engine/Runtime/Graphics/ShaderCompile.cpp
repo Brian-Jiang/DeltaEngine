@@ -2,7 +2,6 @@
 
 #include "Graphics/DXUtils.h"
 #include "IO/IOManager.h"
-#include "Runtime/Utils/StringUtils.h"
 
 #include <slang.h>
 #include <slang-com-ptr.h>
@@ -109,7 +108,7 @@ ComPtr<IDxcBlob> CompileHLSLStage(
     ThrowIfFailed(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils)));
     ThrowIfFailed(dxcUtils->CreateDefaultIncludeHandler(&includeHandler));
 
-    const std::wstring shaderPath = IOManager::GetEngineSourceAssetFullPath(engineRelativePath);
+    const std::wstring shaderPath = IOManager::GetEngineSourceAssetFullPath(std::filesystem::path(engineRelativePath)).wstring();
     ComPtr<IDxcBlobEncoding> sourceBlob;
     ThrowIfFailed(dxcUtils->LoadFile(shaderPath.c_str(), nullptr, &sourceBlob));
 
@@ -168,11 +167,7 @@ Slang::ComPtr<ISlangBlob> CompileSlangStage(
         return {};
     }
 
-    const std::u8string relU8 = engineRelativePath.u8string();
-    const std::string relUtf8(reinterpret_cast<const char*>(relU8.data()), relU8.size());
-    const std::wstring relWide = StringUtils::Utf8ToWString(relUtf8);
-    const std::wstring fullPath = IOManager::GetEngineSourceAssetFullPath(relWide);
-    const std::filesystem::path fsPath(fullPath);
+    const std::filesystem::path fsPath = IOManager::GetEngineSourceAssetFullPath(engineRelativePath);
     const std::u8string parentU8 = fsPath.parent_path().u8string();
     const std::string searchPath(reinterpret_cast<const char*>(parentU8.data()), parentU8.size());
     const std::u8string stemU8 = fsPath.stem().u8string();

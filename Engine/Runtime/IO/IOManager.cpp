@@ -1,76 +1,115 @@
-#include "IOManager.h"
+#include "Runtime/IO/IOManager.h"
 
-#include <fstream>
-#include <vector>
+#include <windows.h>
+
+#include <system_error>
 
 using namespace DeltaEngine;
 
-//bool IOManager::readFileToBuffer(const std::string& filePath, std::vector<char>& buffer) {
-//	std::ifstream file(filePath, std::ios::binary);
-//	if (file.fail()) {
-//		perror(filePath.c_str());
-//		return false;
-//	}
-//
-//	// Seek to the end
-//	file.seekg(0, std::ios::end);
-//	 
-//	// Get the file size
-//	auto fileSize = file.tellg();
-//	file.seekg(0, std::ios::beg);
-// 
-//	// Reduce the file size by any header bytes that might be present
-//	fileSize -= file.tellg();
-// 
-//	buffer.resize(fileSize);
-//	file.read(&(buffer[0]), fileSize);
-//	file.close();
-// 
-//	return true;
-// }
-
-//std::wstring IOManager::GetAssetFullPath(LPCWSTR assetName)
-//{
-//	std::wstring prefix = L"../../../Engine/Runtime/";
-//    return prefix + assetName;
-//}
-
-//std::string IOManager::GetAssetFullPath(const std::string& assetName)
-//{
-//	std::string prefix = "../../../Engine/Runtime/";
-//	return prefix + std::string(assetName.begin(), assetName.end());
-//}
-
-std::wstring IOManager::GetEngineSourceAssetFullPath(std::wstring assetName)
+namespace
 {
-    std::string prefix = "../../../Engine/EngineSourceAssets/";
-    return std::wstring(prefix.begin(), prefix.end()) + assetName;
+constexpr const char* k_engineSourceAssetsRel  = "Engine/EngineSourceAssets";
+constexpr const char* k_editorSourceAssetsRel  = "Engine/EditorSourceAssets";
+constexpr const char* k_engineImportedAssetsRel = "Engine/EngineImportedAssets";
+constexpr const char* k_intermediateRel         = "Intermediate";
+constexpr const char* k_toolsRel                = "Tools";
+
+std::filesystem::path ResolveProjectRoot()
+{
+    wchar_t buffer[MAX_PATH] = {};
+    const DWORD len = ::GetModuleFileNameW(nullptr, buffer, MAX_PATH);
+    if (len == 0 || len == MAX_PATH)
+    {
+        DLOG(LogIO, ELogLevel::Error,
+            "IOManager: GetModuleFileNameW failed (len={}, GetLastError={}); falling back to CWD",
+            len, ::GetLastError());
+        std::error_code ec;
+        auto cwd = std::filesystem::current_path(ec);
+        if (ec)
+        {
+            DLOG(LogIO, ELogLevel::Error,
+                "IOManager: current_path also failed: {}", ec.message());
+            return std::filesystem::path {};
+        }
+        return cwd;
+    }
+
+    std::filesystem::path exe(buffer);
+    // Build/x64-Debug/bin/Foo.exe -> walk up three to repo root.
+    std::filesystem::path root = exe.parent_path().parent_path().parent_path().parent_path();
+
+    std::error_code ec;
+    if (!std::filesystem::exists(root, ec) || ec)
+    {
+        DLOG(LogIO, ELogLevel::Warning,
+            "IOManager: resolved project root '{}' does not exist (exe='{}'); using CWD",
+            root.string(), exe.string());
+        auto cwd = std::filesystem::current_path(ec);
+        if (ec)
+        {
+            DLOG(LogIO, ELogLevel::Error,
+                "IOManager: current_path failed: {}", ec.message());
+            return std::filesystem::path {};
+        }
+        return cwd;
+    }
+
+    DLOG(LogIO, ELogLevel::Display, "IOManager: project root resolved to '{}'", root.string());
+    return root;
 }
 
-std::string IOManager::GetEditorSourceAssetFullPath(std::string assetName)
+std::filesystem::path JoinUnderRoot(const char* relSegment, const std::filesystem::path& assetName)
 {
-    std::string prefix = "../../../Engine/EditorSourceAssets/";
-    return prefix + assetName;
+    DELTA_ENSURE_MSG(!assetName.empty(),
+        "IOManager: empty asset name passed to '{}'", relSegment);
+    DLOG_IF(LogIO, ELogLevel::Warning, assetName.is_absolute(),
+        "IOManager: asset name '{}' is absolute; expected relative",
+        assetName.string());
+    return IOManager::GetProjectRoot() / relSegment / assetName;
+}
 }
 
-std::string IOManager::GetEngineImportedAssetsFolder()
+const std::filesystem::path& IOManager::GetProjectRoot()
 {
-    return "../../../Engine/EngineImportedAssets/";
+    static const std::filesystem::path s_root = ResolveProjectRoot();
+    return s_root;
 }
 
-std::string IOManager::GetEngineImportedAssetFullPath(std::string assetName, bool isJson)
+std::filesystem::path IOManager::GetEngineSourceAssetFullPath(const std::filesystem::path& assetName)
 {
-    std::string prefix = GetEngineImportedAssetsFolder();
-    std::string extension = isJson ? ".dasset.json" : ".dasset";
-    return prefix + assetName + extension;
+    return JoinUnderRoot(k_engineSourceAssetsRel, assetName);
 }
 
-std::string IOManager::GetIntermediateFolder()
+std::filesystem::path IOManager::GetEditorSourceAssetFullPath(const std::filesystem::path& assetName)
 {
-    return "../../../Intermediate/";
+    return JoinUnderRoot(k_editorSourceAssetsRel, assetName);
 }
 
-std::string IOManager::GetToolsFolder()
+std::filesystem::path IOManager::GetEngineImportedAssetsFolder()
 {
-    return "../../../Tools/";
+    return GetProjectRoot() / k_engineImportedAssetsRel;
+}
+
+std::filesystem::path IOManager::GetEngineImportedAssetFullPath(const std::filesystem::path& assetName, bool isJson)
+{
+    DELTA_ENSURE_MSG(!assetName.empty(),
+        "IOManager::GetEngineImportedAssetFullPath: empty asset name");
+    DLOG_IF(LogIO, ELogLevel::Warning, assetName.is_absolute(),
+        "IOManager::GetEngineImportedAssetFullPath: asset name '{}' is absolute; expected relative",
+        assetName.string());
+
+    const char* extension = isJson ? ".dasset.json" : ".dasset";
+    std::filesystem::path full = GetProjectRoot() / k_engineImportedAssetsRel / assetName;
+    full += extension;
+    return full;
+}
+
+std::filesystem::path IOManager::GetIntermediateFolder()
+{
+    return GetProjectRoot() / k_intermediateRel;
+}
+
+std::filesystem::path IOManager::GetToolsFolder()
+{
+    return GetProjectRoot() / k_toolsRel;
 }

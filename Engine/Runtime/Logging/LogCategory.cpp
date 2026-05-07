@@ -1,8 +1,11 @@
 #include "Runtime/Logging/LogCategory.h"
 
+#include "Runtime/Assert/Assert.h"
+
+#include <spdlog/sinks/stdout_color_sinks.h>
+
 #include <algorithm>
 #include <ranges>
-#include <spdlog/sinks/stdout_color_sinks.h>
 
 std::vector<DLogCategory*>& DLogCategory::GetAllCategories()
 {
@@ -15,8 +18,8 @@ DLogCategory::DLogCategory(std::string_view name, ELogLevel defaultLevel)
     : m_name(name)
     , m_level(defaultLevel)
 {
-    // Fallback sink — active until LoggingManager::Initialize() replaces it.
-    // This way any DLOG() calls before engine startup aren't silently dropped.
+    DELTA_ENSURE_MSG(!m_name.empty(), "DLogCategory constructed with empty name");
+
     auto fallback = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
     m_logger = std::make_shared<spdlog::logger>(m_name, std::move(fallback));
     m_logger->set_level(ToSpdlogLevel(m_level));
@@ -41,8 +44,12 @@ void DLogCategory::SetLevel(ELogLevel level)
 
 void DLogCategory::ReinitializeWithSinks(const std::vector<spdlog::sink_ptr>& sinks)
 {
+    DELTA_ENSURE_MSG(!sinks.empty(), "DLogCategory::ReinitializeWithSinks called with empty sink list ({})", m_name);
+
     spdlog::drop(m_name);
     m_logger = std::make_shared<spdlog::logger>(m_name, sinks.begin(), sinks.end());
     m_logger->set_level(ToSpdlogLevel(m_level));
     spdlog::register_logger(m_logger);
+
+    DLOG(LogCore, ELogLevel::Verbose, "DLogCategory '{}' re-initialized with {} sinks", m_name, sinks.size());
 }

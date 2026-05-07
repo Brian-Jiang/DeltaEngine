@@ -2,7 +2,6 @@
 
 #include "Runtime/Core/DTexture.h"
 #include "Runtime/IO/IOManager.h"
-#include "Runtime/Utils/StringUtils.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
@@ -331,11 +330,7 @@ void DMesh::ImportMeshImpl(const std::filesystem::path& absolutePath, bool loadT
 
 void DMesh::ImportMesh()
 {
-    const std::u8string su8 = m_sourcePath.u8string();
-    const std::string relUtf8(reinterpret_cast<const char*>(su8.data()), su8.size());
-    const std::wstring relWide = StringUtils::Utf8ToWString(relUtf8);
-    const std::wstring fullPathW = IOManager::GetEngineSourceAssetFullPath(relWide);
-    ImportMeshImpl(std::filesystem::path(fullPathW), true);
+    ImportMeshImpl(IOManager::GetEngineSourceAssetFullPath(m_sourcePath), true);
 }
 
 void DMesh::ProcessNode(aiNode* node, const aiScene* scene, DirectX::XMMATRIX accTransform, const std::filesystem::path& absolutePath, bool loadTextures)

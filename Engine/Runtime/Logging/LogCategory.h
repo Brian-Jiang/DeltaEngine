@@ -79,9 +79,17 @@ private:
 #define DECLARE_LOG_CATEGORY(CategoryName) \
     extern DLogCategory CategoryName;
 
+// In a .h — forward-declares the category with an explicit DLL export macro
+#define DECLARE_LOG_CATEGORY_API(API, CategoryName) \
+    extern API DLogCategory CategoryName;
+
 // In a .cpp — defines a module-wide category
 #define DEFINE_LOG_CATEGORY(CategoryName) \
     DLogCategory CategoryName { #CategoryName, ELogLevel::Log };
+
+// In a .cpp — defines a module-wide category with an explicit DLL export macro
+#define DEFINE_LOG_CATEGORY_API(API, CategoryName) \
+    API DLogCategory CategoryName { #CategoryName, ELogLevel::Log };
 
 // In a .cpp — file-local category, no header needed
 #define DEFINE_LOG_CATEGORY_STATIC(CategoryName) \

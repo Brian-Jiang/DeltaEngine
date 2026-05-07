@@ -37,9 +37,10 @@ using namespace DirectX;
 
 EngineMain::EngineMain()
 {
-    LoggingManager::Initialize(IOManager::GetIntermediateFolder() + "Logs/");
+    LoggingManager::Initialize(IOManager::GetIntermediateFolder() / "Logs");
     time = std::make_unique<Time>();
     GetReflectionRegistry().FinalizeRegistration();
+    DLOG(LogEngine, ELogLevel::Display, "EngineMain constructed");
 }
 
 EngineMain::~EngineMain() = default;
@@ -57,7 +58,11 @@ DWorld* EngineMain::GetWorld() const
 
 void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer)
 {
-    DLOG(LogCore, ELogLevel::Display, "Initializing EngineMain with scene renderer {}.", static_cast<void*>(sceneRenderer.get()));
+    if (!DELTA_ENSURE_MSG(sceneRenderer != nullptr, "EngineMain::Initialize received null scene renderer"))
+        return;
+
+    DLOG(LogEngine, ELogLevel::Display, "EngineMain::Initialize: scene renderer={}",
+        static_cast<void*>(sceneRenderer.get()));
 
     dxRenderManager = std::move(sceneRenderer);
 }
@@ -70,6 +75,9 @@ void EngineMain::PreTick()
 
 void EngineMain::Tick()
 {
+    DELTA_ENSURE_MSG(time != nullptr, "EngineMain::Tick called before Time was constructed");
+    if (!time)
+        return;
     time->TickTime();
 }
 
@@ -89,7 +97,13 @@ void EngineMain::ProcessEvent(const SDL_Event& event)
 void EngineMain::OnWindowResized(UINT width, UINT height)
 {
     if (height == 0)
+    {
+        DLOG(LogEngine, ELogLevel::Warning,
+            "EngineMain::OnWindowResized ignored: height==0 (width={})", width);
         return;
+    }
+
+    DLOG(LogEngine, ELogLevel::Verbose, "EngineMain::OnWindowResized: {}x{}", width, height);
 
     if (Camera* camera = GetCamera())
         camera->UpdateAspectRatio(static_cast<float>(width) / static_cast<float>(height));
@@ -119,34 +133,53 @@ void EngineMain::RecordSceneDraws(std::shared_ptr<DXGraphicsContext> context)
 
 void EngineMain::CreateWorld()
 {
+    for (const WorldContext& ctx : m_worldContextList)
+    {
+        if (ctx.type == WorldType::Editor)
+        {
+            DLOG(LogEngine, ELogLevel::Warning,
+                "EngineMain::CreateWorld called twice; existing editor world {} retained",
+                static_cast<void*>(ctx.world));
+            return;
+        }
+    }
+
     DWorld* world = CreateDObject<DWorld>();
+    if (!DELTA_ENSURE_MSG(world != nullptr, "EngineMain::CreateWorld: CreateDObject<DWorld> returned null"))
+        return;
+
     m_worldContextList.push_back(WorldContext { WorldType::Editor, world });
+    DLOG(LogEngine, ELogLevel::Display, "EngineMain::CreateWorld: editor world={}",
+        static_cast<void*>(world));
 }
 
 void EngineMain::CreateGameObjects()
 {
     DWorld* world = GetWorld();
+    if (!DELTA_ENSURE_MSG(world != nullptr, "EngineMain::CreateGameObjects: no editor world"))
+        return;
     IAssetDatabase& assetDb = AssetDatabaseLocator::Get();
 
+    auto attachStaticMesh = [&](const char* goName, const std::filesystem::path& meshAsset, float x, float y, float z)
     {
-        GameObject* go = world->CreateGameObjectInScene(m_worldContextList[0].world->GetActiveScene(), "MeshRenderer");
-
+        GameObject* go = world->CreateGameObjectInScene(m_worldContextList[0].world->GetActiveScene(), goName);
         MeshRenderer* meshRenderer = go->AddSceneComponent<MeshRenderer>();
-        meshRenderer->SetLocalPosition(2.0f, 0.0f, 5.0f);
+        meshRenderer->SetLocalPosition(x, y, z);
 
-        PA_StaticMesh* paStaticMesh = assetDb.LoadAsset<PA_StaticMesh>(assetDb.FindAssetIdByPath(IOManager::GetEngineImportedAssetFullPath("StarMesh")));
+        const AssetId id = assetDb.FindAssetIdByPath(IOManager::GetEngineImportedAssetFullPath(meshAsset));
+        PA_StaticMesh* paStaticMesh = assetDb.LoadAsset<PA_StaticMesh>(id);
+        if (!paStaticMesh)
+        {
+            DLOG(LogEngine, ELogLevel::Warning,
+                "EngineMain::CreateGameObjects: failed to load static mesh asset '{}' for GameObject '{}'",
+                meshAsset.string(), goName);
+            return;
+        }
         meshRenderer->SetMesh(paStaticMesh->GetStaticMesh());
-    }
+    };
 
-    {
-        GameObject* go = world->CreateGameObjectInScene(m_worldContextList[0].world->GetActiveScene(), "HomeMeshRenderer");
-
-        MeshRenderer* meshRenderer = go->AddSceneComponent<MeshRenderer>();
-        meshRenderer->SetLocalPosition(0.0f, 0.0f, 0.0f);
-
-        PA_StaticMesh* paStaticMesh = assetDb.LoadAsset<PA_StaticMesh>(assetDb.FindAssetIdByPath(IOManager::GetEngineImportedAssetFullPath("HomeMesh")));
-        meshRenderer->SetMesh(paStaticMesh->GetStaticMesh());
-    }
+    attachStaticMesh("MeshRenderer", "StarMesh", 2.0f, 0.0f, 5.0f);
+    attachStaticMesh("HomeMeshRenderer", "HomeMesh", 0.0f, 0.0f, 0.0f);
 
     GameObject* cameraGo = world->CreateGameObjectInScene(m_worldContextList[0].world->GetActiveScene(), "Camera");
     m_cameraGameObject = cameraGo;
@@ -182,25 +215,49 @@ void EngineMain::LoadScene(const AssetId& sceneAssetId)
         world->DestroyAllWorldGameObjects();
         world->SetActiveScene(nullptr);
     }
+    else
+    {
+        DLOG(LogEngine, ELogLevel::Error,
+            "EngineMain::LoadScene: no editor world available (assetId={})",
+            sceneAssetId.ToString());
+        return;
+    }
 
     DPrimaryAsset* asset = AssetDatabaseLocator::Get().LoadAsset(sceneAssetId);
     if (!asset)
+    {
+        DLOG(LogEngine, ELogLevel::Warning,
+            "EngineMain::LoadScene: asset not found (assetId={})",
+            sceneAssetId.ToString());
         return;
+    }
 
-    DScene* scene = nullptr;
-    if (PA_DScene* sceneAsset = dynamic_cast<PA_DScene*>(asset))
-        scene = sceneAsset->GetScene();
+    PA_DScene* sceneAsset = dynamic_cast<PA_DScene*>(asset);
+    if (!sceneAsset)
+    {
+        DLOG(LogEngine, ELogLevel::Error,
+            "EngineMain::LoadScene: asset {} is not a PA_DScene",
+            sceneAssetId.ToString());
+        return;
+    }
 
+    DScene* scene = sceneAsset->GetScene();
     if (!scene)
+    {
+        DLOG(LogEngine, ELogLevel::Error,
+            "EngineMain::LoadScene: PA_DScene {} has null inner DScene",
+            sceneAssetId.ToString());
         return;
-
-    if (!world)
-        return;
+    }
 
     for (GameObject* go : scene->GetGameObjects())
         world->AddGameObjectFromScene(go);
 
     world->SetActiveScene(scene);
+
+    DLOG(LogEngine, ELogLevel::Display,
+        "EngineMain::LoadScene: loaded scene {} ({} game objects)",
+        sceneAssetId.ToString(), scene->GetGameObjects().size());
 
     if (dxRenderManager)
     {
@@ -226,6 +283,11 @@ void EngineMain::LoadScene(const AssetId& sceneAssetId)
 
 void EngineMain::Cleanup()
 {
+    if (m_worldContextList.empty() && !dxRenderManager)
+        return;
+
+    DLOG(LogEngine, ELogLevel::Display, "EngineMain::Cleanup");
+
     m_cameraGameObject = nullptr;
 
     if (DWorld* world = GetWorld())

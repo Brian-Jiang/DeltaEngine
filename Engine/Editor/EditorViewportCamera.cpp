@@ -43,7 +43,7 @@ ActiveRenderCamera EditorViewportCamera::BuildActiveRenderCamera(float w, float 
 
 static std::filesystem::path GetCameraStatePath()
 {
-    return std::filesystem::path(IOManager::GetIntermediateFolder()) / "EditorState" / "viewport_cameras.json";
+    return IOManager::GetIntermediateFolder() / "EditorState" / "viewport_cameras.json";
 }
 
 void DeltaEngine::SaveViewportCameras(const std::vector<EditorViewportCamera>& cameras)
