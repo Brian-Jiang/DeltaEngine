@@ -1,6 +1,6 @@
 #pragma once
 
-#include "EngineIncludes.h"
+#include "EditorIncludes.h"
 #include "UIComponents/WidgetEditEvent.h"
 #include "imgui.h"
 
@@ -8,7 +8,7 @@
 
 DELTA_ENGINE_NS_BEGIN
 
-class StringField
+class DELTAEDITOR_API StringField
 {
 public:
     WidgetEditEvent Draw(const char* label, char* buf, size_t bufSize, bool readOnly = false);

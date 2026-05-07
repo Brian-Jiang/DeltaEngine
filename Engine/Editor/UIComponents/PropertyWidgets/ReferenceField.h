@@ -1,11 +1,11 @@
 #pragma once
 
-#include "EngineIncludes.h"
+#include "EditorIncludes.h"
 #include "imgui.h"
 
 DELTA_ENGINE_NS_BEGIN
 
-class ReferenceField
+class DELTAEDITOR_API ReferenceField
 {
 public:
     // Read-only object reference row; shows displayName or "(null)" when isNull.

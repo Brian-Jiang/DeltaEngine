@@ -1,13 +1,13 @@
 #pragma once
 
-#include "EngineIncludes.h"
+#include "EditorIncludes.h"
 #include "UIComponents/WidgetEditEvent.h"
 
 #include "imgui.h"
 
 DELTA_ENGINE_NS_BEGIN
 
-class HorizontalToggleGroup
+class DELTAEDITOR_API HorizontalToggleGroup
 {
 public:
     struct Item

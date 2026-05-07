@@ -1,5 +1,7 @@
 #include "UIComponents/EditorInlineRename.h"
 
+#include "UIComponents/UIComponentsEditorTheme.h"
+
 #include "imgui.h"
 
 #include <cctype>
@@ -20,7 +22,7 @@ bool IsBlank(const char* s)
     }
     return true;
 }
-} // namespace
+}
 
 void EditorInlineRename::Begin(const std::string& initialName)
 {
@@ -42,6 +44,13 @@ EditorInlineRename::Result EditorInlineRename::Draw()
 {
     if (!m_active)
         return Result::None;
+
+    if (!ImGui::GetCurrentContext())
+    {
+        DLOG(LogUIComponents, ELogLevel::Warning,
+            "EditorInlineRename::Draw: no active ImGui context (call after CreateContext/NewFrame)");
+        return Result::None;
+    }
 
     if (ImGui::IsKeyPressed(ImGuiKey_Escape))
     {
@@ -68,7 +77,7 @@ EditorInlineRename::Result EditorInlineRename::Draw()
             Clear();
             return Result::Cancelled;
         }
-        m_active = false;
+        m_active       = false;
         m_requestFocus = false;
         return Result::Committed;
     }
@@ -80,7 +89,7 @@ EditorInlineRename::Result EditorInlineRename::Draw()
             Clear();
             return Result::Cancelled;
         }
-        m_active = false;
+        m_active       = false;
         m_requestFocus = false;
         return Result::Committed;
     }

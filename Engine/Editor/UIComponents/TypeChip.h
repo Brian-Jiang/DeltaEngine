@@ -1,13 +1,13 @@
 #pragma once
 
-#include "EngineIncludes.h"
+#include "EditorIncludes.h"
 
 #include "imgui.h"
 #include "Style/EditorTheme.h"
 
 DELTA_ENGINE_NS_BEGIN
 
-class TypeChip
+class DELTAEDITOR_API TypeChip
 {
 public:
     // Small type icon chip; advances layout — use SameLine after if needed.

@@ -1,6 +1,7 @@
 #include "UIComponents/HorizontalToggleGroup.h"
 
-#include "EditorMain.h"
+#include "UIComponents/UIComponentsEditorTheme.h"
+
 #include "Style/EditorTheme.h"
 
 #include "imgui.h"
@@ -12,41 +13,64 @@ WidgetEditEvent HorizontalToggleGroup::Draw(const char* id, const Item* items, i
                                             const int* overrideSelectedIndex,
                                             const ImVec4* overrideSelectedColor)
 {
-    if (!items || itemCount <= 0)
+    if (!id)
+    {
+        DLOG(LogUIComponents, ELogLevel::Warning,
+            "HorizontalToggleGroup::Draw: id was null (expected non-null ImGui ID string)");
         return {};
+    }
+    if (!items || itemCount <= 0)
+    {
+        DLOG(LogUIComponents, ELogLevel::Warning,
+            "HorizontalToggleGroup::Draw: expected non-null items and positive itemCount (items={}, itemCount={})",
+            static_cast<const void*>(items), itemCount);
+        return {};
+    }
 
-    const float fh = ImGui::GetFrameHeight();
-    if (itemH <= 0.f) itemH = fh;
-    if (itemW <= 0.f) itemW = fh;
-
-    EditorTheme* theme = g_editor->GetEditorTheme();
-    const auto& c = theme->colors;
+    EditorTheme* theme = ResolveUIComponentsEditorTheme();
+    if (!theme)
+    {
+        DLOG(LogUIComponents, ELogLevel::Warning,
+            "HorizontalToggleGroup::Draw: no EditorTheme (expected g_editor or UIComponents test theme override)");
+        return {};
+    }
+    const auto& c       = theme->colors;
     ImDrawList* drawList = ImGui::GetWindowDrawList();
     if (!drawList)
+    {
+        DLOG(LogUIComponents, ELogLevel::Warning,
+            "HorizontalToggleGroup::Draw: ImGui::GetWindowDrawList() returned null (expected active window)");
         return {};
-    const float spacing = 1.f;
-    const float totalW = itemCount * itemW + (itemCount - 1) * spacing;
-    const float rounding = 6.f;
+    }
+
+    const float fh = ImGui::GetFrameHeight();
+    if (itemH <= 0.f)
+        itemH = fh;
+    if (itemW <= 0.f)
+        itemW = fh;
+
+    const float spacing         = 1.f;
+    const float totalW          = itemCount * itemW + (itemCount - 1) * spacing;
+    const float rounding        = 6.f;
     const float buttonRounding = 4.f;
 
     ImGui::PushID(id);
     ImGui::BeginGroup();
     ImVec2 cursorScreen = ImGui::GetCursorScreenPos();
-    ImVec2 groupMin = cursorScreen;
-    ImVec2 groupMax = ImVec2(cursorScreen.x + totalW, cursorScreen.y + itemH);
+    ImVec2 groupMin    = cursorScreen;
+    ImVec2 groupMax    = ImVec2(cursorScreen.x + totalW, cursorScreen.y + itemH);
 
-    // Background rect
     drawList->AddRectFilled(groupMin, groupMax, ImGui::ColorConvertFloat4ToU32(c.DRaised), rounding);
 
     bool selectionChanged = false;
     for (int i = 0; i < itemCount; ++i)
     {
         ImGui::PushID(i);
-        ImVec2 btnMin = ImGui::GetCursorScreenPos();
+        ImVec2 btnMin   = ImGui::GetCursorScreenPos();
         ImVec2 btnSize(itemW, itemH);
         ImGui::InvisibleButton("##btn", btnSize);
-        bool hovered = ImGui::IsItemHovered();
-        bool clicked = ImGui::IsItemClicked();
+        bool hovered    = ImGui::IsItemHovered();
+        bool clicked    = ImGui::IsItemClicked();
         bool isSelected = (selected == i);
 
         if (clicked && !isSelected)
@@ -55,9 +79,9 @@ WidgetEditEvent HorizontalToggleGroup::Draw(const char* id, const Item* items, i
             selectionChanged = true;
         }
 
-        ImVec4 bgColor = ImVec4(0, 0, 0, 0);
-        ImVec4 textColor = c.TLabel;
-        bool drawBorder = false;
+        ImVec4 bgColor    = ImVec4(0, 0, 0, 0);
+        ImVec4 textColor  = c.TLabel;
+        bool   drawBorder = false;
         ImVec4 borderColor = c.AccMid;
 
         if (isSelected)
@@ -66,19 +90,19 @@ WidgetEditEvent HorizontalToggleGroup::Draw(const char* id, const Item* items, i
             bool useOverride = (overrideSelectedIndex && overrideSelectedColor && *overrideSelectedIndex == i);
             if (useOverride)
             {
-                textColor = *overrideSelectedColor;
+                textColor    = *overrideSelectedColor;
                 borderColor = *overrideSelectedColor;
             }
             else
             {
-                textColor = c.AccHi;
+                textColor    = c.AccHi;
                 borderColor = c.AccMid;
             }
             drawBorder = true;
         }
         else if (hovered)
         {
-            bgColor = c.DHover;
+            bgColor   = c.DHover;
             textColor = c.TPrimary;
         }
 
@@ -95,18 +119,15 @@ WidgetEditEvent HorizontalToggleGroup::Draw(const char* id, const Item* items, i
             drawList->AddRect(rectMin, rectMax, ImGui::ColorConvertFloat4ToU32(borderColor), buttonRounding, 0, 1.f);
         }
 
-        // Center text
         const char* label = items[i].label ? items[i].label : "";
         ImVec2 textSize = ImGui::CalcTextSize(label);
-        ImVec2 textPos = ImVec2(
+        ImVec2 textPos  = ImVec2(
             btnMin.x + (itemW - textSize.x) * 0.5f,
             btnMin.y + (itemH - textSize.y) * 0.5f);
         drawList->AddText(textPos, ImGui::ColorConvertFloat4ToU32(textColor), label);
 
         if (hovered && items[i].tooltip && items[i].tooltip[0] != '\0')
-        {
             ImGui::SetTooltip("%s", items[i].tooltip);
-        }
 
         ImGui::PopID();
 
@@ -114,7 +135,6 @@ WidgetEditEvent HorizontalToggleGroup::Draw(const char* id, const Item* items, i
             ImGui::SameLine(0.f, spacing);
     }
 
-    // Border rect on top of whole group
     drawList->AddRect(groupMin, groupMax, ImGui::ColorConvertFloat4ToU32(c.BLight), rounding, 0, 1.f);
 
     ImGui::EndGroup();

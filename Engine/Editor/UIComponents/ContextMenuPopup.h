@@ -1,6 +1,6 @@
 #pragma once
 
-#include "EngineIncludes.h"
+#include "EditorIncludes.h"
 
 #include <functional>
 #include <vector>
@@ -9,7 +9,7 @@
 
 DELTA_ENGINE_NS_BEGIN
 
-class ContextMenuPopup
+class DELTAEDITOR_API ContextMenuPopup
 {
 public:
     struct Item

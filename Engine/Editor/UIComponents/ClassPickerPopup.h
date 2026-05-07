@@ -1,6 +1,6 @@
 #pragma once
 
-#include "EngineIncludes.h"
+#include "EditorIncludes.h"
 
 #include <vector>
 
@@ -10,7 +10,7 @@ DELTA_ENGINE_NS_BEGIN
 
 class DClass;
 
-class ClassPickerPopup
+class DELTAEDITOR_API ClassPickerPopup
 {
 public:
     // Replaces the class list and clears the filter; call before OpenPopup("##ClassPicker").

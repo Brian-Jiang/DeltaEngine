@@ -1,33 +1,51 @@
 #include "UIComponents/PropertyWidgets/ScalarField.h"
-#include "UIComponents/PropertyWidgets/PropertyWidgetUtil.h"
 
-#include "EditorMain.h"
+#include "UIComponents/PropertyWidgets/PropertyWidgetUtil.h"
+#include "UIComponents/UIComponentsEditorTheme.h"
+
 #include "Style/EditorTheme.h"
+
 #include "imgui.h"
 
 using namespace DeltaEngine;
 
 WidgetEditEvent ScalarField::Draw(const char* label, float* value, float speed, const char* fmt)
 {
-    EditorTheme* theme = g_editor->GetEditorTheme();
-    const auto&  c     = theme->colors;
-    ImFont*      mono  = theme->GetMonoFont();
+    if (!label || !value)
+    {
+        DLOG(LogUIComponents, ELogLevel::Warning,
+            "ScalarField::Draw: expected non-null label and value (label={}, value={})",
+            static_cast<const void*>(label), static_cast<const void*>(value));
+        return {};
+    }
+
+    EditorTheme* theme = ResolveUIComponentsEditorTheme();
+    if (!theme)
+    {
+        DLOG(LogUIComponents, ELogLevel::Warning,
+            "ScalarField::Draw: no EditorTheme (expected g_editor or UIComponents test theme override)");
+        return {};
+    }
+    const auto& c    = theme->colors;
+    ImFont*     mono = theme->GetMonoFont();
 
     ImGui::PushID(label);
 
     float availW = BeginPropertyRow(label, c);
     ImGui::SetNextItemWidth(availW);
 
-    ImGui::PushStyleColor(ImGuiCol_FrameBg,        c.DInput);
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, c.DInput);
     ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, c.DHover);
-    ImGui::PushStyleColor(ImGuiCol_Border,         c.BLight);
-    ImGui::PushStyleColor(ImGuiCol_Text,           c.TPrimary);
+    ImGui::PushStyleColor(ImGuiCol_Border, c.BLight);
+    ImGui::PushStyleColor(ImGuiCol_Text, c.TPrimary);
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.f);
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding,   3.f);
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 3.f);
 
-    if (mono) ImGui::PushFont(mono);
+    if (mono)
+        ImGui::PushFont(mono);
     const bool changed = ImGui::DragFloat("##v", value, speed, 0.f, 0.f, fmt);
-    if (mono) ImGui::PopFont();
+    if (mono)
+        ImGui::PopFont();
 
     WidgetEditEvent evt = WidgetEditFromLastItem(changed);
 

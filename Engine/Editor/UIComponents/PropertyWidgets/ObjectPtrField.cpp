@@ -1,9 +1,10 @@
-#include "Editor/UIComponents/PropertyWidgets/ObjectPtrField.h"
-#include "Editor/UIComponents/PropertyWidgets/PropertyWidgetUtil.h"
+#include "UIComponents/PropertyWidgets/ObjectPtrField.h"
+
+#include "UIComponents/PropertyWidgets/PropertyWidgetUtil.h"
+#include "UIComponents/UIComponentsEditorTheme.h"
 
 #include "Editor/Assets/EditorAssetDatabase.h"
 #include "Editor/EditorCore.h"
-#include "Editor/EditorMain.h"
 #include "Editor/EditorSelectionState.h"
 #include "Editor/Style/EditorTheme.h"
 
@@ -70,7 +71,7 @@ std::string GetObjectFullDisplayName(DObject* obj)
             if (EditorAssetDatabase* db = g_editorCore->GetAssetDatabase())
             {
                 std::filesystem::path p = db->GetAssetPath(asset->GetAssetId());
-                std::string stem = p.stem().stem().string();
+                std::string            stem = p.stem().stem().string();
                 if (!stem.empty())
                     return stem + "/" + objName;
             }
@@ -84,17 +85,45 @@ std::string GetObjectFullDisplayName(DObject* obj)
 std::optional<DObject*> ObjectPtrField::Draw(
     const char* label, DObject* current, const DClass* targetClass, const char* popupId)
 {
+    if (!label || !popupId || !targetClass)
+    {
+        DLOG(LogUIComponents, ELogLevel::Warning,
+            "ObjectPtrField::Draw: expected non-null label, popupId, and targetClass (label={}, popupId={}, targetClass={})",
+            static_cast<const void*>(label), static_cast<const void*>(popupId), static_cast<const void*>(targetClass));
+        return std::nullopt;
+    }
+
+    if (!g_editorCore)
+    {
+        DLOG(LogUIComponents, ELogLevel::Warning,
+            "ObjectPtrField::Draw: g_editorCore is null (expected active EditorCore)");
+        return std::nullopt;
+    }
+
+    EditorTheme* theme = ResolveUIComponentsEditorTheme();
+    if (!theme)
+    {
+        DLOG(LogUIComponents, ELogLevel::Warning,
+            "ObjectPtrField::Draw: no EditorTheme (expected g_editor or UIComponents test theme override)");
+        return std::nullopt;
+    }
+
+    const auto& c    = theme->colors;
+    ImDrawList* dl   = ImGui::GetWindowDrawList();
+    if (!dl)
+    {
+        DLOG(LogUIComponents, ELogLevel::Warning,
+            "ObjectPtrField::Draw: ImGui::GetWindowDrawList() returned null (expected active window)");
+        return std::nullopt;
+    }
+
     std::optional<DObject*> result;
 
-    EditorTheme* theme = g_editor->GetEditorTheme();
-    const auto&  c     = theme->colors;
-    ImDrawList*  dl    = ImGui::GetWindowDrawList();
-    const float  fh    = ImGui::GetFrameHeight();
-    const float  fs    = ImGui::GetFontSize();
+    const float fh = ImGui::GetFrameHeight();
+    const float fs = ImGui::GetFontSize();
 
     const std::string currentName = GetObjectFullDisplayName(current);
 
-    // Row 1: clickable reference slot
     float  availW  = BeginPropertyRow(label, c);
     ImVec2 slotPos = ImGui::GetCursorScreenPos();
 
@@ -122,8 +151,7 @@ std::optional<DObject*> ObjectPtrField::Draw(
 
     EndPropertyRow();
 
-    // Row 2: Select + Clear buttons
-    availW = BeginPropertyRow("", c);
+    availW          = BeginPropertyRow("", c);
     const float btnW = (availW - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
 
     ImGui::BeginDisabled(current == nullptr);
@@ -131,10 +159,18 @@ std::optional<DObject*> ObjectPtrField::Draw(
     if (ImGui::Button("Select", {btnW, 0.f}))
     {
         EditorSelectionState* sel = g_editorCore->GetSelectionState();
-        if (dynamic_cast<GameObject*>(current))
-            sel->SetSelectedGameObject(current->GetObjectId());
-        else if (dynamic_cast<DComponent*>(current))
-            sel->SetSelectedComponent(current->GetObjectId());
+        if (!sel)
+        {
+            DLOG(LogUIComponents, ELogLevel::Warning,
+                "ObjectPtrField::Draw: GetSelectionState() returned null (cannot apply Select)");
+        }
+        else
+        {
+            if (dynamic_cast<GameObject*>(current))
+                sel->SetSelectedGameObject(current->GetObjectId());
+            else if (dynamic_cast<DComponent*>(current))
+                sel->SetSelectedComponent(current->GetObjectId());
+        }
     }
     ImGui::SameLine();
     if (ImGui::Button("Clear", {btnW, 0.f}))
@@ -143,7 +179,6 @@ std::optional<DObject*> ObjectPtrField::Draw(
     ImGui::EndDisabled();
     EndPropertyRow();
 
-    // Picker popup
     ImGui::SetNextWindowSize({320.f, 420.f}, ImGuiCond_Appearing);
     if (ImGui::BeginPopup(popupId))
     {
@@ -167,23 +202,26 @@ std::optional<DObject*> ObjectPtrField::Draw(
         {
             for (GameObject* go : world->GetGameObjects())
             {
-                if (!go) continue;
+                if (!go)
+                    continue;
                 DClass* goClass = go->GetClass();
                 CandidateGroup grp;
-                grp.groupName   = go->GetName().empty() ? "GameObject" : go->GetName();
-                grp.groupObject = (goClass && targetClass && goClass->IsChildOf(targetClass))
-                    ? go : nullptr;
+                grp.groupName = go->GetName().empty() ? "GameObject" : go->GetName();
+                grp.groupObject =
+                    (goClass && targetClass && goClass->IsChildOf(targetClass)) ? go : nullptr;
 
                 for (SceneComponent* sc : go->GetSceneComponents())
                 {
-                    if (!sc) continue;
+                    if (!sc)
+                        continue;
                     DClass* scClass = sc->GetClass();
                     if (scClass && targetClass && scClass->IsChildOf(targetClass))
                         grp.items.push_back(sc);
                 }
                 for (DComponent* comp : go->GetComponents())
                 {
-                    if (!comp) continue;
+                    if (!comp)
+                        continue;
                     DClass* compClass = comp->GetClass();
                     if (compClass && targetClass && compClass->IsChildOf(targetClass))
                         grp.items.push_back(comp);
@@ -210,7 +248,8 @@ std::optional<DObject*> ObjectPtrField::Draw(
 
                 for (DObject* obj : asset->GetObjects())
                 {
-                    if (!obj) continue;
+                    if (!obj)
+                        continue;
                     DClass* objClass = obj->GetClass();
                     if (objClass && targetClass && objClass->IsChildOf(targetClass))
                         grp.items.push_back(obj);
@@ -227,7 +266,8 @@ std::optional<DObject*> ObjectPtrField::Draw(
 
         auto matches = [&](const std::string& str) -> bool
         {
-            if (filterLower.empty()) return true;
+            if (filterLower.empty())
+                return true;
             std::string s;
             s.reserve(str.size());
             for (unsigned char ch : str)
@@ -254,7 +294,11 @@ std::optional<DObject*> ObjectPtrField::Draw(
             if (!anyItemMatch)
             {
                 for (DObject* item : grp.items)
-                    if (matches(GetObjectDisplayName(item))) { anyItemMatch = true; break; }
+                    if (matches(GetObjectDisplayName(item)))
+                    {
+                        anyItemMatch = true;
+                        break;
+                    }
                 if (!grp.groupObject && !anyItemMatch)
                     continue;
                 if (grp.groupObject && !anyItemMatch && !grpNameMatches)

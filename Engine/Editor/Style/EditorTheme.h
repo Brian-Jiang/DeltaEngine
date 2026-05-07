@@ -1,6 +1,6 @@
 #pragma once
 
-#include "EngineIncludes.h"
+#include "EditorIncludes.h"
 
 #include <cstdint>
 #include <string>
@@ -9,7 +9,7 @@
 
 DELTA_ENGINE_NS_BEGIN
 
-class EditorTheme
+class DELTAEDITOR_API EditorTheme
 {
 public:
     // Named RGBA tokens for chrome, property rows, and widgets (filled by ApplyTheme).

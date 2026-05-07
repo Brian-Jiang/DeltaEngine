@@ -6,6 +6,13 @@ set(DELTA_EDITOR_TEST_SOURCES
     EditorCommandTests_McpPath.cpp
     EditorCommandTests_UndoStack.cpp
     UI/EditorThemeColorTests.cpp
+    UIComponents/WidgetEditEventTests.cpp
+    UIComponents/EditorInlineRenameTests.cpp
+    UIComponents/ClassPickerPopupTests.cpp
+    UIComponents/ContextMenuPopupTests.cpp
+    UIComponents/PropertyWidgetsTests.cpp
+    UIComponents/HorizontalToggleGroupTests.cpp
+    UIComponents/ObjectPtrFieldTests.cpp
     EditorWindows/EditorWindowConceptTests.cpp
     EditorWindows/ViewportPresetTests.cpp
     Assets/Locator/EditorAssetDatabaseLocatorTests.cpp

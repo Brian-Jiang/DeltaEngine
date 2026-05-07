@@ -1,5 +1,7 @@
 #include "UIComponents/TypeChip.h"
 
+#include "UIComponents/UIComponentsEditorTheme.h"
+
 #include "imgui.h"
 #include "imgui_internal.h"
 
@@ -7,7 +9,15 @@ using namespace DeltaEngine;
 
 void TypeChip::Draw(const EditorTheme::ThemeColors& c)
 {
-    constexpr float kSize = 25.f;
+    ImFont* font = ImGui::GetFont();
+    if (!font)
+    {
+        DLOG(LogUIComponents, ELogLevel::Warning,
+            "TypeChip::Draw: ImGui::GetFont() returned null (expected font atlas built)");
+        return;
+    }
+
+    constexpr float       kSize = 25.f;
     constexpr const char* kIcon = "\xef\x86\xb2";
 
     ImVec2 cursorPos = ImGui::GetCursorScreenPos();
@@ -22,17 +32,17 @@ void TypeChip::Draw(const EditorTheme::ThemeColors& c)
     ImVec2 pMax = ImVec2(pos.x + kSize, pos.y + kSize);
 
     ImVec4 bgColor = c.CMesh;
-    bgColor.w = 0.07f;
+    bgColor.w      = 0.07f;
     dl->AddRectFilled(pMin, pMax, ImGui::ColorConvertFloat4ToU32(bgColor), 3.f);
 
     ImVec4 borderColor = c.CMesh;
-    borderColor.w = 0.16f;
+    borderColor.w      = 0.16f;
     dl->AddRect(pMin, pMax, ImGui::ColorConvertFloat4ToU32(borderColor), 3.f, 0, 1.f);
 
-    ImVec2 textSize = ImGui::GetFont()->CalcTextSizeA(18.5f, FLT_MAX, 0.f, kIcon);
-    ImVec2 textPos = ImVec2(
+    ImVec2 textSize = font->CalcTextSizeA(18.5f, FLT_MAX, 0.f, kIcon);
+    ImVec2 textPos  = ImVec2(
         pos.x + (kSize - textSize.x) * 0.5f,
         pos.y + (kSize - textSize.y) * 0.5f);
-    dl->AddText(ImGui::GetFont(), 18.5f, textPos,
+    dl->AddText(font, 18.5f, textPos,
         ImGui::ColorConvertFloat4ToU32(c.CMesh), kIcon);
 }

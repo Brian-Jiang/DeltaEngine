@@ -1,9 +1,13 @@
 #include "UIComponents/ClassPickerPopup.h"
 
-#include <cctype>
-#include <cstring>
+#include "UIComponents/UIComponentsEditorTheme.h"
+
+#include "Style/EditorTheme.h"
 
 #include "Runtime/Reflection/DClass.h"
+
+#include <cctype>
+#include <cstring>
 
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -26,7 +30,15 @@ void ClassPickerPopup::RebuildFilter()
     if (m_filterBuf[0] == '\0')
     {
         for (const DClass* cls : m_allClasses)
+        {
+            if (!cls)
+            {
+                DLOG(LogUIComponents, ELogLevel::Warning,
+                    "ClassPickerPopup::RebuildFilter: skipping null DClass* in class list (expected non-null entries)");
+                continue;
+            }
             m_filtered.push_back(cls);
+        }
         return;
     }
 
@@ -39,6 +51,12 @@ void ClassPickerPopup::RebuildFilter()
 
     for (const DClass* cls : m_allClasses)
     {
+        if (!cls)
+        {
+            DLOG(LogUIComponents, ELogLevel::Warning,
+                "ClassPickerPopup::RebuildFilter: skipping null DClass* in class list (expected non-null entries)");
+            continue;
+        }
         std::string haystack;
         const std::string& name = cls->GetName();
         haystack.reserve(name.size());
@@ -57,17 +75,17 @@ const DClass* ClassPickerPopup::Draw(const EditorTheme::ThemeColors& c)
 
     const DClass* picked = nullptr;
 
-    ImGui::PushStyleColor(ImGuiCol_FrameBg,        c.DInput);
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, c.DInput);
     ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, c.DHover);
-    ImGui::PushStyleColor(ImGuiCol_Border,         c.BLight);
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding,   4.f);
+    ImGui::PushStyleColor(ImGuiCol_Border, c.BLight);
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.f);
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.f);
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,    ImVec2(7.f, 6.f));
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(7.f, 6.f));
 
     if (m_justOpened)
         ImGui::SetKeyboardFocusHere();
 
-    ImVec2 filterOrigin = ImGui::GetCursorScreenPos();
+    ImVec2 filterOrigin    = ImGui::GetCursorScreenPos();
     ImGui::SetNextItemWidth(240.f);
     bool filterChanged = ImGui::InputText("##CPFilter", m_filterBuf, sizeof(m_filterBuf));
 
@@ -89,11 +107,18 @@ const DClass* ClassPickerPopup::Draw(const EditorTheme::ThemeColors& c)
     ImGui::BeginChild("##CPList", ImVec2(240.f, 280.f), ImGuiChildFlags_None,
         ImGuiWindowFlags_NoScrollbar);
 
-    constexpr const char* kIcon    = "\xef\x86\xb2";
-    constexpr float       kIconSz  = 14.f;
+    constexpr const char* kIcon   = "\xef\x86\xb2";
+    constexpr float       kIconSz = 14.f;
 
     for (const DClass* cls : m_filtered)
     {
+        if (!cls)
+        {
+            DLOG(LogUIComponents, ELogLevel::Warning,
+                "ClassPickerPopup::Draw: filtered list contained null DClass* (skipping row)");
+            continue;
+        }
+
         ImVec2 rowMin = ImGui::GetCursorScreenPos();
         float  rowH   = EditorTheme::RowH();
         float  rowW   = ImGui::GetContentRegionAvail().x;
@@ -114,8 +139,8 @@ const DClass* ClassPickerPopup::Draw(const EditorTheme::ThemeColors& c)
         }
 
         const float textLineH = ImGui::GetTextLineHeight();
-        float contentY = rowMin.y + (rowH - textLineH) * 0.5f;
-        float iconOffY = (textLineH - kIconSz) * 0.5f;
+        float       contentY  = rowMin.y + (rowH - textLineH) * 0.5f;
+        float       iconOffY  = (textLineH - kIconSz) * 0.5f;
 
         ImVec2 iconPos(rowMin.x + 8.f, contentY + iconOffY);
         dl->AddText(ImGui::GetFont(), kIconSz, iconPos,
