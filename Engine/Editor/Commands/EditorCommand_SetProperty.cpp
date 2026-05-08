@@ -66,7 +66,7 @@ bool EditorCommand_SetProperty::ApplyValue(EditorCommandContext& ctx, const nloh
 
 bool EditorCommand_SetProperty::Execute(EditorCommandContext& ctx)
 {
-    DLOG(LogEditorCommand, ELogLevel::Log, "[Set Property] Execute: Start");
+    DLOG(LogEditorCommand, ELogLevel::Verbose, "[Set Property] Execute: Start");
 
     if (m_valueBefore.is_null())
     {
@@ -85,7 +85,7 @@ bool EditorCommand_SetProperty::Execute(EditorCommandContext& ctx)
 
 bool EditorCommand_SetProperty::Undo(EditorCommandContext& ctx)
 {
-    DLOG(LogEditorCommand, ELogLevel::Log, "[Set Property] Undo: Start");
+    DLOG(LogEditorCommand, ELogLevel::Verbose, "[Set Property] Undo: Start");
     return ApplyValue(ctx, m_valueBefore);
 }
 

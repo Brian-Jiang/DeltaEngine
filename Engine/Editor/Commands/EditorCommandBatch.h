@@ -9,11 +9,15 @@
 
 DELTA_ENGINE_NS_BEGIN
 
-class EditorCommandBatch : public EditorCommand
+class DELTAEDITOR_API EditorCommandBatch : public EditorCommand
 {
 public:
     EditorCommandBatch() = default;
     explicit EditorCommandBatch(std::string description);
+    EditorCommandBatch(const EditorCommandBatch&)            = delete;
+    EditorCommandBatch& operator=(const EditorCommandBatch&) = delete;
+    EditorCommandBatch(EditorCommandBatch&&)                 = default;
+    EditorCommandBatch& operator=(EditorCommandBatch&&)      = default;
 
     void Add(std::unique_ptr<EditorCommand> cmd);
 

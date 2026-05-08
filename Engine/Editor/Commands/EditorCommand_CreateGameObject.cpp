@@ -35,7 +35,7 @@ std::string_view EditorCommand_CreateGameObject::GetDescription() const
 
 bool EditorCommand_CreateGameObject::Execute(EditorCommandContext& ctx)
 {
-    DLOG(LogEditorCommand, ELogLevel::Log, "[Create GameObject] Execute: Start");
+    DLOG(LogEditorCommand, ELogLevel::Verbose, "[Create GameObject] Execute: Start");
 
     DPrimaryAsset* asset = ctx.core.GetActiveSceneAsset();
     if (!asset)
@@ -74,7 +74,7 @@ bool EditorCommand_CreateGameObject::Execute(EditorCommandContext& ctx)
 
 bool EditorCommand_CreateGameObject::Undo(EditorCommandContext& ctx)
 {
-    DLOG(LogEditorCommand, ELogLevel::Log, "[Create GameObject] Undo: Start");
+    DLOG(LogEditorCommand, ELogLevel::Verbose, "[Create GameObject] Undo: Start");
 
     DWorld* world = ctx.core.GetWorld();
     if (!world)
@@ -109,7 +109,7 @@ bool EditorCommand_CreateGameObject::Undo(EditorCommandContext& ctx)
 
 bool EditorCommand_CreateGameObject::Redo(EditorCommandContext& ctx)
 {
-    DLOG(LogEditorCommand, ELogLevel::Log, "[Create GameObject] Redo: Start");
+    DLOG(LogEditorCommand, ELogLevel::Verbose, "[Create GameObject] Redo: Start");
 
     if (!m_hasSnapshot)
         return Execute(ctx);

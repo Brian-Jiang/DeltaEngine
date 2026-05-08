@@ -28,7 +28,7 @@ std::string_view EditorCommand_DeleteGameObject::GetDescription() const
 
 bool EditorCommand_DeleteGameObject::Execute(EditorCommandContext& ctx)
 {
-    DLOG(LogEditorCommand, ELogLevel::Log, "[Delete GameObject] Execute: Start");
+    DLOG(LogEditorCommand, ELogLevel::Verbose, "[Delete GameObject] Execute: Start");
 
     DObject* obj = ctx.core.ResolveObject(m_assetId, m_gameObjectId);
     auto* go = dynamic_cast<GameObject*>(obj);
@@ -55,7 +55,7 @@ bool EditorCommand_DeleteGameObject::Execute(EditorCommandContext& ctx)
 
 bool EditorCommand_DeleteGameObject::Undo(EditorCommandContext& ctx)
 {
-    DLOG(LogEditorCommand, ELogLevel::Log, "[Delete GameObject] Undo: Start");
+    DLOG(LogEditorCommand, ELogLevel::Verbose, "[Delete GameObject] Undo: Start");
 
     DWorld* world = ctx.core.GetWorld();
     if (!world)

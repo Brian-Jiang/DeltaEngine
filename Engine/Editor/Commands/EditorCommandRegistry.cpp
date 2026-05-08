@@ -1,4 +1,4 @@
-#include "EditorCommandRegistry.h"
+#include "Editor/Commands/EditorCommandRegistry.h"
 
 using namespace DeltaEngine;
 
@@ -10,7 +10,15 @@ EditorCommandRegistry& EditorCommandRegistry::Get()
 
 void EditorCommandRegistry::Register(std::string_view typeName, CommandFactory factory)
 {
-    m_factories[std::string(typeName)] = std::move(factory);
+    const std::string key{typeName};
+    if (auto it = m_factories.find(key); it != m_factories.end())
+    {
+        DLOG(LogEditorCommand, ELogLevel::Warning,
+             "[Command Registry] Duplicate registration for command type '{}' — replacing existing factory "
+             "(expected only one Registrar per concrete command)",
+             key);
+    }
+    m_factories[key] = std::move(factory);
 }
 
 std::unique_ptr<EditorCommand> EditorCommandRegistry::Create(std::string_view typeName) const
@@ -18,7 +26,9 @@ std::unique_ptr<EditorCommand> EditorCommandRegistry::Create(std::string_view ty
     auto it = m_factories.find(std::string(typeName));
     if (it == m_factories.end())
     {
-        DLOG(LogEditorCommand, ELogLevel::Error, "[Command Registry] Unknown command type: {}", typeName);
+        DLOG(LogEditorCommand, ELogLevel::Error,
+             "[Command Registry] Unknown command type: '{}' — not registered (typo or binary mismatch?)",
+             typeName);
         return nullptr;
     }
     return it->second();

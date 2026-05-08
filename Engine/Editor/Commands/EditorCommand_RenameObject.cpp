@@ -60,7 +60,20 @@ bool EditorCommand_RenameObject::Execute(EditorCommandContext& ctx)
     DClass* dc = obj->GetClass();
     DProperty* nameProp = dc ? dc->FindPropertyByName("m_name") : nullptr;
     if (nameProp)
-        m_oldName = PropertyToJson(obj, nameProp).get<std::string>();
+    {
+        const nlohmann::json jName = PropertyToJson(obj, nameProp);
+        if (!jName.is_string())
+        {
+            DLOG(LogEditorCommand, ELogLevel::Error,
+                 "[Rename] Execute: capturing undo for 'm_name' on object {} (class '{}'): "
+                 "PropertyToJson must yield JSON string — got '{}' (fixes corrupt Undo without std::terminate)",
+                 m_targetObjectId.ToString(),
+                 dc ? dc->GetName() : "(null class)",
+                 jName.type_name());
+            return false;
+        }
+        m_oldName = jName.get<std::string>();
+    }
 
     return ApplyName(ctx, m_newName);
 }

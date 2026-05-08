@@ -1,14 +1,18 @@
-#include "EditorCommandManager.h"
-#include "EditorCommandRegistry.h"
+#include "Editor/Commands/EditorCommandManager.h"
+
+#include "Editor/Commands/EditorCommandRegistry.h"
 
 using namespace DeltaEngine;
 
 bool EditorCommandManager::Execute(std::unique_ptr<EditorCommand> cmd, EditorCommandContext& ctx)
 {
-    DLOG(LogEditorCommand, ELogLevel::Log, "[Command Manager] Execute: {}", cmd->GetTypeName());
+    DELTA_ASSERT(cmd != nullptr);
+    DLOG(LogEditorCommand, ELogLevel::Verbose, "[Command Manager] Execute: {}", cmd->GetTypeName());
     if (!cmd->Execute(ctx))
     {
-        DLOG(LogEditorCommand, ELogLevel::Error, "[Command Manager] Execute failed: {}", cmd->GetTypeName());
+        DLOG(LogEditorCommand, ELogLevel::Error,
+             "[Command Manager] Execute failed: command '{}' reported failure (Undo stack unchanged; fix state manually if persisted)",
+             cmd->GetTypeName());
         return false;
     }
 
@@ -23,6 +27,7 @@ bool EditorCommandManager::Execute(std::unique_ptr<EditorCommand> cmd, EditorCom
 
 void EditorCommandManager::ExecuteAuxiliary(std::unique_ptr<EditorAuxiliaryCommand> cmd, EditorCommandContext& ctx)
 {
+    DELTA_ASSERT(cmd != nullptr);
     cmd->Execute(ctx);
 }
 
@@ -30,17 +35,19 @@ bool EditorCommandManager::Undo(EditorCommandContext& ctx)
 {
     if (m_undoStack.empty())
     {
-        DLOG(LogEditorCommand, ELogLevel::Warning, "[Command Manager] Undo: Stack empty");
+        DLOG(LogEditorCommand, ELogLevel::Warning, "[Command Manager] Undo invoked with empty stack (expected undoable command)");
         return false;
     }
 
     auto cmd = std::move(m_undoStack.back());
     m_undoStack.pop_back();
 
-    DLOG(LogEditorCommand, ELogLevel::Log, "[Command Manager] Undo: {}", cmd->GetTypeName());
+    DLOG(LogEditorCommand, ELogLevel::Verbose, "[Command Manager] Undo: {}", cmd->GetTypeName());
     bool result = cmd->Undo(ctx);
     if (!result)
-        DLOG(LogEditorCommand, ELogLevel::Error, "[Command Manager] Undo failed: {}", cmd->GetTypeName());
+        DLOG(LogEditorCommand, ELogLevel::Error,
+             "[Command Manager] Undo failed: command '{}' reported failure (object may diverge from last executed state)",
+             cmd->GetTypeName());
     m_redoStack.push_back(std::move(cmd));
     return result;
 }
@@ -49,17 +56,19 @@ bool EditorCommandManager::Redo(EditorCommandContext& ctx)
 {
     if (m_redoStack.empty())
     {
-        DLOG(LogEditorCommand, ELogLevel::Warning, "[Command Manager] Redo: Stack empty");
+        DLOG(LogEditorCommand, ELogLevel::Warning, "[Command Manager] Redo invoked with empty stack");
         return false;
     }
 
     auto cmd = std::move(m_redoStack.back());
     m_redoStack.pop_back();
 
-    DLOG(LogEditorCommand, ELogLevel::Log, "[Command Manager] Redo: {}", cmd->GetTypeName());
+    DLOG(LogEditorCommand, ELogLevel::Verbose, "[Command Manager] Redo: {}", cmd->GetTypeName());
     bool result = cmd->Redo(ctx);
     if (!result)
-        DLOG(LogEditorCommand, ELogLevel::Error, "[Command Manager] Redo failed: {}", cmd->GetTypeName());
+        DLOG(LogEditorCommand, ELogLevel::Error,
+             "[Command Manager] Redo failed: command '{}' reported failure",
+             cmd->GetTypeName());
     m_undoStack.push_back(std::move(cmd));
     return result;
 }
@@ -104,18 +113,53 @@ void EditorCommandManager::SerializeUndoStack(nlohmann::json& out) const
 void EditorCommandManager::DeserializeAndReplay(const nlohmann::json& in, EditorCommandContext& ctx)
 {
     if (!in.contains("undoStack"))
+    {
+        DLOG(LogEditorCommand, ELogLevel::Verbose,
+             "[Command Manager] DeserializeAndReplay: input missing 'undoStack' key — nothing replayed");
         return;
+    }
     for (const auto& envelope : in["undoStack"])
     {
-        std::string type = envelope.value("type", "");
+        const std::string type = envelope.value("type", "");
+        if (type.empty())
+        {
+            DLOG(LogEditorCommand, ELogLevel::Error,
+                 "[Command Manager] DeserializeAndReplay: skipped entry with missing or empty command type "
+                 "(expected envelope['type'])");
+            continue;
+        }
+        if (!envelope.contains("data"))
+        {
+            DLOG(LogEditorCommand, ELogLevel::Error,
+                 "[Command Manager] DeserializeAndReplay: skipped entry for '{}' — missing 'data' object with serialized fields",
+                 type);
+            continue;
+        }
+        if (!envelope["data"].is_object())
+        {
+            DLOG(LogEditorCommand, ELogLevel::Error,
+                 "[Command Manager] DeserializeAndReplay: skipped entry for '{}' — 'data' must be JSON object "
+                 "(actual type discriminator: {})",
+                 type, envelope["data"].type_name());
+            continue;
+        }
         auto cmd = EditorCommandRegistry::Get().Create(type);
-        if (cmd)
+        if (!cmd)
+            continue;
+
+        try
         {
             cmd->Deserialize(envelope["data"]);
-            Execute(std::move(cmd), ctx);
         }
-        else
-            DLOG(LogEditorCommand, ELogLevel::Error, "[Command Manager] DeserializeAndReplay: Unknown command type: {}", type);
+        catch (const std::exception& e)
+        {
+            DLOG(LogEditorCommand, ELogLevel::Error,
+                 "[Command Manager] DeserializeAndReplay: deserialization failed for command '{}': {} (skipped)",
+                 type, e.what());
+            continue;
+        }
+
+        Execute(std::move(cmd), ctx);
     }
 }
 

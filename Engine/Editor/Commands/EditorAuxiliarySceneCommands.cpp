@@ -12,7 +12,10 @@ void EditorAuxiliaryCommand_SaveScene::Execute(EditorCommandContext& ctx)
     {
         db->SaveDirtyAssets();
         DLOG(LogEditorCommand, ELogLevel::Log, "[SaveScene] Scene saved");
+        return;
     }
+    DLOG(LogEditorCommand, ELogLevel::Warning,
+         "[SaveScene] Skipped SaveDirtyAssets — EditorAssetDatabase is null (nothing persisted)");
 }
 
 EditorAuxiliaryCommand_LoadScene::EditorAuxiliaryCommand_LoadScene(std::filesystem::path scenePath)

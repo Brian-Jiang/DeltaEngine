@@ -35,7 +35,7 @@ std::string_view EditorCommand_CreateComponent::GetDescription() const
 
 bool EditorCommand_CreateComponent::Execute(EditorCommandContext& ctx)
 {
-    DLOG(LogEditorCommand, ELogLevel::Log, "[Create Component] Execute: Start");
+    DLOG(LogEditorCommand, ELogLevel::Verbose, "[Create Component] Execute: Start");
 
     DPrimaryAsset* asset = ctx.core.GetActiveSceneAsset();
     if (!asset)
@@ -91,7 +91,7 @@ bool EditorCommand_CreateComponent::Execute(EditorCommandContext& ctx)
 
 bool EditorCommand_CreateComponent::Undo(EditorCommandContext& ctx)
 {
-    DLOG(LogEditorCommand, ELogLevel::Log, "[Create Component] Undo: Start");
+    DLOG(LogEditorCommand, ELogLevel::Verbose, "[Create Component] Undo: Start");
 
     DPrimaryAsset* asset = ctx.core.GetActiveSceneAsset();
     if (!asset)
@@ -128,7 +128,7 @@ bool EditorCommand_CreateComponent::Undo(EditorCommandContext& ctx)
 
 bool EditorCommand_CreateComponent::Redo(EditorCommandContext& ctx)
 {
-    DLOG(LogEditorCommand, ELogLevel::Log, "[Create Component] Redo: Start");
+    DLOG(LogEditorCommand, ELogLevel::Verbose, "[Create Component] Redo: Start");
 
     if (!m_hasSnapshot)
         return Execute(ctx);

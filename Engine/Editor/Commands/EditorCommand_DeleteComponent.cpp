@@ -32,7 +32,7 @@ std::string_view EditorCommand_DeleteComponent::GetDescription() const
 
 bool EditorCommand_DeleteComponent::Execute(EditorCommandContext& ctx)
 {
-    DLOG(LogEditorCommand, ELogLevel::Log, "[Delete Component] Execute: Start");
+    DLOG(LogEditorCommand, ELogLevel::Verbose, "[Delete Component] Execute: Start");
 
     DPrimaryAsset* asset = ctx.core.GetActiveSceneAsset();
     if (!asset)
@@ -93,7 +93,7 @@ bool EditorCommand_DeleteComponent::Execute(EditorCommandContext& ctx)
 
 bool EditorCommand_DeleteComponent::Undo(EditorCommandContext& ctx)
 {
-    DLOG(LogEditorCommand, ELogLevel::Log, "[Delete Component] Undo: Start");
+    DLOG(LogEditorCommand, ELogLevel::Verbose, "[Delete Component] Undo: Start");
 
     DPrimaryAsset* asset = ctx.core.GetActiveSceneAsset();
     if (!asset)
@@ -160,7 +160,7 @@ bool EditorCommand_DeleteComponent::Undo(EditorCommandContext& ctx)
 
 bool EditorCommand_DeleteComponent::Redo(EditorCommandContext& ctx)
 {
-    DLOG(LogEditorCommand, ELogLevel::Log, "[Delete Component] Redo: Start");
+    DLOG(LogEditorCommand, ELogLevel::Verbose, "[Delete Component] Redo: Start");
     return Execute(ctx);
 }
 
