@@ -35,7 +35,8 @@
       "PowerShell(Tools\\\\Scripts\\\\build-x64-debug-engine-tests.bat --automatic)",
       "Bash(\"D:/Projects/DeltaEngine/Build/x64-Debug/bin/DeltaEngineTests.exe\" \"--gtest_filter=JsonAssetArchiveTests.*\")",
       "Bash(\"D:/Projects/DeltaEngine/Build/x64-Debug/bin/DeltaEngineTests.exe\")",
-      "Bash(\"D:/Projects/DeltaEngine/Build/x64-Debug/bin/DeltaEditorTests.exe\")"
+      "Bash(\"D:/Projects/DeltaEngine/Build/x64-Debug/bin/DeltaEditorTests.exe\")",
+      "Bash(Tools/Scripts/run-x64-debug-editor-tests.bat --automatic --gtest_filter=DynamicMetaRoundTripTests.*)"
     ]
   }
 }

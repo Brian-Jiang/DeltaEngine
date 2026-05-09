@@ -288,6 +288,17 @@ void EditorAssetDatabase::LoadAssetRecursive(const AssetId& id)
         JsonAssetArchive bulkAr(root, entry.m_filePath.parent_path());
         asset->SerializeBulkData(bulkAr);
 
+        const bool legacyMissingMeta = !root.contains("meta");
+        nlohmann::json metaRoot = legacyMissingMeta ? nlohmann::json::object() : root["meta"];
+        JsonAssetArchive metaAr(metaRoot, entry.m_filePath.parent_path());
+        asset->SerializeMeta(metaAr);
+        if (legacyMissingMeta)
+        {
+            DLOG(LogEditorAssets, ELogLevel::Warning,
+                 "LoadAssetRecursive: '{}' has no 'meta' block — applied empty defaults (legacy file)",
+                 entry.m_filePath.string());
+        }
+
         auto refs = asset->CollectExternalReferences();
         for (const auto& sp : refs)
         {
@@ -420,11 +431,15 @@ void EditorAssetDatabase::SaveAsset(const AssetId& id)
         JsonAssetArchive bodyAr;
         asset->SerializeBody(bodyAr);
 
+        JsonAssetArchive metaAr;
+        asset->SerializeMeta(metaAr);
+
         nlohmann::json output;
         output["header"] = headerAr.GetRoot();
         const auto& bulkRoot = bulkAr.GetRoot();
         if (bulkRoot.contains("header") && bulkRoot["header"].contains("bulkDataMap"))
             output["header"]["bulkDataMap"] = bulkRoot["header"]["bulkDataMap"];
+        output["meta"] = metaAr.GetRoot();
         for (auto& [key, val] : bodyAr.GetRoot().items())
             output[key] = val;
 
@@ -482,11 +497,15 @@ AssetId EditorAssetDatabase::DuplicateAsset(const AssetId& id)
     JsonAssetArchive bodyAr;
     asset->SerializeBody(bodyAr);
 
+    JsonAssetArchive metaAr;
+    asset->SerializeMeta(metaAr);
+
     nlohmann::json output;
     output["header"] = headerAr.GetRoot();
     const auto& bulkRoot = bulkAr.GetRoot();
     if (bulkRoot.contains("header") && bulkRoot["header"].contains("bulkDataMap"))
         output["header"]["bulkDataMap"] = bulkRoot["header"]["bulkDataMap"];
+    output["meta"] = metaAr.GetRoot();
     for (auto& [key, val] : bodyAr.GetRoot().items())
         output[key] = val;
 

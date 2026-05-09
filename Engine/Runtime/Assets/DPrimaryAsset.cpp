@@ -15,6 +15,83 @@ using namespace DeltaEngine;
 namespace
 {
 constexpr uint32_t kSupportedPrimaryAssetFileVersion = 1;
+
+void EnsureDynamicMetaShape(nlohmann::json& meta, bool warn)
+{
+    if (!meta.is_object())
+    {
+        if (warn)
+        {
+            DLOG(LogAsset, ELogLevel::Warning,
+                 "Dynamic asset meta is not an object (was '{}'); replacing with empty defaults",
+                 meta.type_name());
+        }
+        meta = nlohmann::json::object();
+    }
+
+    auto descIt = meta.find("desc");
+    if (descIt == meta.end())
+    {
+        if (warn)
+        {
+            DLOG(LogAsset, ELogLevel::Warning,
+                 "Dynamic asset meta missing 'desc'; backfilling empty string");
+        }
+        meta["desc"] = std::string();
+    }
+    else if (!descIt->is_string())
+    {
+        if (warn)
+        {
+            DLOG(LogAsset, ELogLevel::Warning,
+                 "Dynamic asset meta 'desc' has wrong type '{}'; replacing with empty string",
+                 descIt->type_name());
+        }
+        *descIt = std::string();
+    }
+
+    auto tagsIt = meta.find("tags");
+    if (tagsIt == meta.end())
+    {
+        if (warn)
+        {
+            DLOG(LogAsset, ELogLevel::Warning,
+                 "Dynamic asset meta missing 'tags'; backfilling empty array");
+        }
+        meta["tags"] = nlohmann::json::array();
+    }
+    else if (!tagsIt->is_array())
+    {
+        if (warn)
+        {
+            DLOG(LogAsset, ELogLevel::Warning,
+                 "Dynamic asset meta 'tags' has wrong type '{}'; replacing with empty array",
+                 tagsIt->type_name());
+        }
+        *tagsIt = nlohmann::json::array();
+    }
+    else
+    {
+        nlohmann::json cleaned = nlohmann::json::array();
+        bool dropped = false;
+        for (auto& entry : *tagsIt)
+        {
+            if (entry.is_string())
+                cleaned.push_back(entry);
+            else
+                dropped = true;
+        }
+        if (dropped)
+        {
+            if (warn)
+            {
+                DLOG(LogAsset, ELogLevel::Warning,
+                     "Dynamic asset meta 'tags' contained non-string entries; dropped them");
+            }
+            *tagsIt = std::move(cleaned);
+        }
+    }
+}
 }
 
 void DPrimaryAsset::AddObject(DObject* obj)
@@ -228,6 +305,24 @@ void DPrimaryAsset::SerializeBulkData(AssetArchive& ar)
     {
         DELTA_VERIFY_MSG(prop != nullptr && obj != nullptr, "SerializeBulkData invalid bulk property slot");
         prop->SerializeBulkPayload(ar, obj);
+    }
+}
+
+void DPrimaryAsset::SerializeMeta(AssetArchive& ar)
+{
+    nlohmann::json staticBlock = nlohmann::json::object();
+    ar.Serialize("static", staticBlock);
+
+    if (ar.IsSaving())
+    {
+        nlohmann::json dynamicOut = m_dynamicMeta;
+        EnsureDynamicMetaShape(dynamicOut, /*warn=*/false);
+        ar.Serialize("dynamic", dynamicOut);
+    }
+    else
+    {
+        ar.Serialize("dynamic", m_dynamicMeta);
+        EnsureDynamicMetaShape(m_dynamicMeta, /*warn=*/true);
     }
 }
 

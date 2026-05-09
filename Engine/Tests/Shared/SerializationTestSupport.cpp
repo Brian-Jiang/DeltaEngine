@@ -75,8 +75,12 @@ void EditorSerializationTest::SaveAssetToFile(
     JsonAssetArchive bodyArchive;
     asset->SerializeBody(bodyArchive);
 
+    JsonAssetArchive metaArchive;
+    asset->SerializeMeta(metaArchive);
+
     nlohmann::json output;
     output["header"] = headerArchive.GetRoot();
+    output["meta"] = metaArchive.GetRoot();
     for (auto& [key, value] : bodyArchive.GetRoot().items())
         output[key] = value;
 
@@ -102,6 +106,9 @@ void EditorSerializationTest::SaveAssetWithBulkData(
     JsonAssetArchive bodyArchive;
     asset->SerializeBody(bodyArchive);
 
+    JsonAssetArchive metaArchive;
+    asset->SerializeMeta(metaArchive);
+
     nlohmann::json output;
     output["header"] = headerArchive.GetRoot();
 
@@ -109,6 +116,7 @@ void EditorSerializationTest::SaveAssetWithBulkData(
     if (bulkRoot.contains("header") && bulkRoot["header"].contains("bulkDataMap"))
         output["header"]["bulkDataMap"] = bulkRoot["header"]["bulkDataMap"];
 
+    output["meta"] = metaArchive.GetRoot();
     for (auto& [key, value] : bodyArchive.GetRoot().items())
         output[key] = value;
 

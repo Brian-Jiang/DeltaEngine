@@ -6,6 +6,8 @@
 #include "Core/UUID.h"
 #include "Serialization/ScriptPointer.h"
 
+#include <nlohmann/json.hpp>
+
 #include <cstdint>
 #include <string>
 #include <utility>
@@ -74,11 +76,22 @@ public:
     /// Serializes bulk payloads for owned objects.
     void SerializeBulkData(AssetArchive& ar);
 
+    /// Serializes the asset metadata block ({static, dynamic}).
+    void SerializeMeta(AssetArchive& ar);
+
+    /// Returns the dynamic metadata JSON (free-form; canonicalized to contain desc/tags).
+    const nlohmann::json& GetDynamicMeta() const { return m_dynamicMeta; }
+    /// Returns the mutable dynamic metadata JSON.
+    nlohmann::json& GetDynamicMeta() { return m_dynamicMeta; }
+    /// Replaces the dynamic metadata JSON.
+    void SetDynamicMeta(nlohmann::json value) { m_dynamicMeta = std::move(value); }
+
 private:
     void DeserializeBody(AssetArchive& ar);
 
     Header m_header;
     std::vector<DObject*> m_objects;
+    nlohmann::json m_dynamicMeta;
     bool m_dirty = true;
 };
 
