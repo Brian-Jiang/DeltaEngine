@@ -49,8 +49,13 @@ EditorCore::~EditorCore()
 
 void EditorCore::Initialize(EngineMain& engine, bool headless, std::filesystem::path assetRootOverride)
 {
+    DELTA_VERIFY_MSG(m_engine == nullptr, "EditorCore::Initialize called twice without Shutdown");
     m_engine = &engine;
     m_headless = headless;
+
+    DLOG(LogEditorCore, ELogLevel::Verbose,
+         "EditorCore::Initialize headless={} assetRootOverride='{}'",
+         headless, assetRootOverride.string());
 
     m_assetDatabase = std::make_unique<EditorAssetDatabase>();
     AssetDatabaseLocator::Register(m_assetDatabase.get());
@@ -70,7 +75,9 @@ void EditorCore::Initialize(EngineMain& engine, bool headless, std::filesystem::
         if (sceneAsset)
             m_engine->LoadScene(sceneAsset->GetAssetId());
         else
-            std::printf("Failed to load DefaultScene (temp root).\n");
+            DLOG(LogEditorCore, ELogLevel::Error,
+                 "Failed to load DefaultScene (assetRootOverride='{}'); expected DefaultScene.dasset.json under that root",
+                 assetRootOverride.string());
     }
     else
     {
@@ -81,7 +88,9 @@ void EditorCore::Initialize(EngineMain& engine, bool headless, std::filesystem::
         if (sceneAsset)
             m_engine->LoadScene(sceneAsset->GetAssetId());
         else
-            std::printf("Failed to load DefaultScene.\n");
+            DLOG(LogEditorCore, ELogLevel::Error,
+                 "Failed to load DefaultScene from imported assets folder '{}'; expected DefaultScene.dasset.json",
+                 IOManager::GetEngineImportedAssetsFolder().string());
     }
 
     m_selectionState = std::make_unique<EditorSelectionState>();
@@ -108,6 +117,7 @@ void EditorCore::Initialize(EngineMain& engine, bool headless, std::filesystem::
 
 void EditorCore::Shutdown()
 {
+    DLOG(LogEditorCore, ELogLevel::Verbose, "EditorCore::Shutdown");
     g_mcpServer.reset();
     m_mcpRegistry.reset();
     if (m_commandManager)
@@ -142,13 +152,25 @@ DWorld* EditorCore::GetWorld()
 
 void EditorCore::LoadScene(const std::filesystem::path& scenePath)
 {
-    if (!m_assetDatabase || !m_engine)
+    if (!DELTA_ENSURE(m_assetDatabase && m_engine))
+    {
+        DLOG(LogEditorCore, ELogLevel::Error,
+             "LoadScene called before Initialize (path='{}'); expected initialized EditorCore",
+             scenePath.string());
         return;
+    }
+
+    DLOG(LogEditorCore, ELogLevel::Verbose, "LoadScene: path='{}'", scenePath.string());
 
     const std::filesystem::path canonical = std::filesystem::weakly_canonical(scenePath);
     AssetId id = m_assetDatabase->FindAssetIdByPath(canonical);
     if (id.IsNull())
+    {
+        DLOG(LogEditorCore, ELogLevel::Warning,
+             "LoadScene: scene asset not found for path '{}' (canonical='{}'); expected a registered .dasset.json",
+             scenePath.string(), canonical.string());
         return;
+    }
 
     if (DWorld* world = m_engine->GetWorld())
     {
@@ -173,16 +195,18 @@ DObject* EditorCore::ResolveObject(const AssetId& assetId, const ObjectId& objec
         asset = m_assetDatabase->LoadAsset(assetId);
     if (!asset)
     {
-        std::printf("[EditorCore] ResolveObject: asset not found or failed to load (assetId=%s)\n",
-            assetId.ToString().c_str());
+        DLOG(LogEditorCore, ELogLevel::Warning,
+             "ResolveObject: asset not found or failed to load (assetId='{}'); expected a registered, loadable asset",
+             assetId.ToString());
         return nullptr;
     }
 
     DObject* obj = asset->FindObject(objectId);
     if (!obj)
     {
-        std::printf("[EditorCore] ResolveObject: objectId not found in asset (objectId=%s assetId=%s)\n",
-            objectId.ToString().c_str(), assetId.ToString().c_str());
+        DLOG(LogEditorCore, ELogLevel::Warning,
+             "ResolveObject: objectId '{}' not found in asset '{}' (expected an object owned by this asset)",
+             objectId.ToString(), assetId.ToString());
     }
     return obj;
 }
@@ -226,6 +250,13 @@ DPrimaryAsset* EditorCore::GetActiveSceneAsset()
 
 void EditorCore::EnqueueSerializedCommand(std::string jsonPayload)
 {
+    if (!DELTA_ENSURE(!jsonPayload.empty()))
+    {
+        DLOG(LogEditorCore, ELogLevel::Warning,
+             "EnqueueSerializedCommand: empty payload dropped (expected non-empty JSON envelope)");
+        return;
+    }
+
     std::lock_guard lock(m_commandQueueMutex);
     m_pendingCommands.push_back(std::move(jsonPayload));
 }
@@ -240,6 +271,8 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
 
     if (batch.empty())
         return;
+
+    DLOG(LogEditorCore, ELogLevel::Verbose, "DrainCommandQueue: pending={}", batch.size());
 
     EditorCommandContext ctx{ *this };
 
@@ -349,8 +382,6 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
         }
     }
 
-    if (!outResponses.empty())
-        DLOG(LogEditorCore, ELogLevel::VeryVerbose, "Drained {} commands", outResponses.size());
 }
 
  void EditorCore::CreateAssets()

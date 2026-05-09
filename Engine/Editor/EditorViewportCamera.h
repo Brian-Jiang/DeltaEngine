@@ -22,8 +22,8 @@ struct EditorViewportCamera
 
     float GetAspectRatio(float w, float h) const { return (h > 0.f) ? w / h : 1.f; }
 
-    CameraCB BuildCameraCB(float w, float h) const;
-    ActiveRenderCamera BuildActiveRenderCamera(float w, float h) const;
+    DELTAEDITOR_API CameraCB BuildCameraCB(float w, float h) const;
+    DELTAEDITOR_API ActiveRenderCamera BuildActiveRenderCamera(float w, float h) const;
 };
 
 /// Persists viewport camera states to a JSON file at the given path (parent dirs created).

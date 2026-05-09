@@ -12,6 +12,7 @@ using namespace DeltaEngine;
 
 void EditorSelectionState::SetSelectedGameObject(ObjectId id)
 {
+    DELTA_CHECK(!id.IsNull());
     ClearAssetSelection();
     ClearFolderSelection();
     m_selectedGameObjects.clear();
@@ -20,6 +21,7 @@ void EditorSelectionState::SetSelectedGameObject(ObjectId id)
 
 void EditorSelectionState::AddSelectedGameObject(ObjectId id)
 {
+    DELTA_CHECK(!id.IsNull());
     ClearAssetSelection();
     ClearFolderSelection();
     if (std::find(m_selectedGameObjects.begin(), m_selectedGameObjects.end(), id) == m_selectedGameObjects.end())
@@ -47,6 +49,7 @@ bool EditorSelectionState::IsGameObjectSelected(ObjectId id) const
 
 void EditorSelectionState::SetSelectedComponent(ObjectId id)
 {
+    DELTA_CHECK(!id.IsNull());
     ClearAssetSelection();
     ClearFolderSelection();
     m_selectedComponents.clear();
@@ -55,6 +58,7 @@ void EditorSelectionState::SetSelectedComponent(ObjectId id)
 
 void EditorSelectionState::AddSelectedComponent(ObjectId id)
 {
+    DELTA_CHECK(!id.IsNull());
     ClearAssetSelection();
     ClearFolderSelection();
     if (std::find(m_selectedComponents.begin(), m_selectedComponents.end(), id) == m_selectedComponents.end())
@@ -82,6 +86,7 @@ bool EditorSelectionState::IsComponentSelected(ObjectId id) const
 
 void EditorSelectionState::SetSelectedAsset(AssetId id)
 {
+    DELTA_CHECK(!id.IsNull());
     ClearGameObjectSelection();
     ClearComponentSelection();
     ClearFolderSelection();
@@ -91,6 +96,7 @@ void EditorSelectionState::SetSelectedAsset(AssetId id)
 
 void EditorSelectionState::AddSelectedAsset(AssetId id)
 {
+    DELTA_CHECK(!id.IsNull());
     ClearGameObjectSelection();
     ClearComponentSelection();
     ClearFolderSelection();

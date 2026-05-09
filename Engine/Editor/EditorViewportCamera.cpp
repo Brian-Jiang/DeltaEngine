@@ -6,6 +6,7 @@
 
 #include <DirectXMath.h>
 
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <exception>
@@ -101,27 +102,57 @@ bool DeltaEngine::LoadViewportCamerasFromPath(std::vector<EditorViewportCamera>&
             return false;
         }
 
+        auto readFinite = [&path](const nlohmann::json& src, const char* key, float fallback) -> float
+        {
+            if (!src.contains(key) || !src[key].is_number())
+                return fallback;
+            const float v = src[key].get<float>();
+            if (!std::isfinite(v))
+            {
+                DLOG(LogEditorWindows, ELogLevel::Warning,
+                     "LoadViewportCamerasFromPath: non-finite '{}' in '{}' (expected finite float); using default",
+                     key, path.string());
+                return fallback;
+            }
+            return v;
+        };
+
+        auto readFiniteAt = [&path](const nlohmann::json& arr, size_t idx, float fallback, const char* arrName) -> float
+        {
+            if (!arr[idx].is_number())
+                return fallback;
+            const float v = arr[idx].get<float>();
+            if (!std::isfinite(v))
+            {
+                DLOG(LogEditorWindows, ELogLevel::Warning,
+                     "LoadViewportCamerasFromPath: non-finite '{}[{}]' in '{}' (expected finite float); using default",
+                     arrName, idx, path.string());
+                return fallback;
+            }
+            return v;
+        };
+
         std::vector<EditorViewportCamera> result;
         result.reserve(arr.size());
         for (const auto& entry : arr)
         {
             EditorViewportCamera cam;
-            cam.fov       = entry.value("fov", cam.fov);
-            cam.nearPlane = entry.value("nearPlane", cam.nearPlane);
-            cam.farPlane  = entry.value("farPlane", cam.farPlane);
+            cam.fov       = readFinite(entry, "fov",       cam.fov);
+            cam.nearPlane = readFinite(entry, "nearPlane", cam.nearPlane);
+            cam.farPlane  = readFinite(entry, "farPlane",  cam.farPlane);
 
             if (entry.contains("position") && entry["position"].is_array() && entry["position"].size() == 3)
             {
-                cam.position.x = entry["position"][0];
-                cam.position.y = entry["position"][1];
-                cam.position.z = entry["position"][2];
+                cam.position.x = readFiniteAt(entry["position"], 0, cam.position.x, "position");
+                cam.position.y = readFiniteAt(entry["position"], 1, cam.position.y, "position");
+                cam.position.z = readFiniteAt(entry["position"], 2, cam.position.z, "position");
             }
             if (entry.contains("rotation") && entry["rotation"].is_array() && entry["rotation"].size() == 4)
             {
-                cam.rotation.x = entry["rotation"][0];
-                cam.rotation.y = entry["rotation"][1];
-                cam.rotation.z = entry["rotation"][2];
-                cam.rotation.w = entry["rotation"][3];
+                cam.rotation.x = readFiniteAt(entry["rotation"], 0, cam.rotation.x, "rotation");
+                cam.rotation.y = readFiniteAt(entry["rotation"], 1, cam.rotation.y, "rotation");
+                cam.rotation.z = readFiniteAt(entry["rotation"], 2, cam.rotation.z, "rotation");
+                cam.rotation.w = readFiniteAt(entry["rotation"], 3, cam.rotation.w, "rotation");
             }
             result.push_back(cam);
         }

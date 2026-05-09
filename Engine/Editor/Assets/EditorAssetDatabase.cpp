@@ -1,6 +1,7 @@
 #include "Editor/Assets/EditorAssetDatabase.h"
 
 #include "Editor/Assets/AssetImporter.h"
+#include "Editor/Assets/EditorAssetsLog.h"
 
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DObjectReferenceTraversal.h"
@@ -24,7 +25,14 @@ void EditorAssetDatabase::ReloadAssetFromDisk(const AssetId& id)
 {
     auto it = m_assets.find(id);
     if (it == m_assets.end())
+    {
+        DLOG(LogEditorAssets, ELogLevel::Warning,
+             "ReloadAssetFromDisk: asset id '{}' is not registered (expected a known asset)",
+             id.ToString());
         return;
+    }
+
+    DLOG(LogEditorAssets, ELogLevel::Verbose, "ReloadAssetFromDisk: id='{}'", id.ToString());
 
     AssetEntry& entry = it->second;
     if (entry.m_instance)
@@ -42,6 +50,16 @@ void EditorAssetDatabase::ReloadAssetFromDisk(const AssetId& id)
 
 void EditorAssetDatabase::ScanAssetsFolder(const std::filesystem::path& root)
 {
+    if (!DELTA_ENSURE(std::filesystem::is_directory(root)))
+    {
+        DLOG(LogEditorAssets, ELogLevel::Warning,
+             "ScanAssetsFolder: root '{}' is not a directory (expected an existing folder)",
+             root.string());
+        return;
+    }
+
+    DLOG(LogEditorAssets, ELogLevel::Verbose, "ScanAssetsFolder: root='{}'", root.string());
+
     for (auto& entry : std::filesystem::recursive_directory_iterator(root))
     {
         if (!entry.is_regular_file())
@@ -133,9 +151,11 @@ DPrimaryAsset::Header EditorAssetDatabase::ReadAssetHeaderFromFile(
                 header.m_persistentId = UUID::FromString(h["assetId"].get<std::string>());
             }
         }
-        catch (std::exception& e)
+        catch (const std::exception& e)
         {
-            printf("Failed to read asset header from JSON file '%s': %s\n", path.string().c_str(), e.what());
+            DLOG(LogEditorAssets, ELogLevel::Error,
+                 "ReadAssetHeaderFromFile: JSON parse failed for '{}': {} (expected valid .dasset.json header)",
+                 path.string(), e.what());
             header.m_magic = 0;
         }
     }
@@ -156,10 +176,18 @@ DPrimaryAsset* EditorAssetDatabase::LoadAsset(const AssetId& id)
 {
     auto it = m_assets.find(id);
     if (it == m_assets.end())
+    {
+        DLOG(LogEditorAssets, ELogLevel::Warning,
+             "LoadAsset: asset id '{}' is not registered (expected a known asset)",
+             id.ToString());
         return nullptr;
+    }
 
     if (it->second.m_state == AssetState::Loaded)
         return it->second.m_instance;
+
+    DLOG(LogEditorAssets, ELogLevel::Verbose, "LoadAsset: id='{}' path='{}'",
+         id.ToString(), it->second.m_filePath.string());
 
     m_newlyLoadedBatch.clear();
     LoadAssetRecursive(id);
@@ -200,7 +228,12 @@ void EditorAssetDatabase::LoadAssetRecursive(const AssetId& id)
     if (entry.m_state == AssetState::Loaded)
         return;
     if (m_currentlyLoading.contains(id))
+    {
+        DLOG(LogEditorAssets, ELogLevel::Verbose,
+             "LoadAssetRecursive: cycle detected for id='{}' path='{}' (already on the loading stack); skipping",
+             id.ToString(), entry.m_filePath.string());
         return;
+    }
 
     m_currentlyLoading.insert(id);
 
@@ -212,7 +245,9 @@ void EditorAssetDatabase::LoadAssetRecursive(const AssetId& id)
         if (!file.is_open())
         {
             m_currentlyLoading.erase(id);
-            printf("Failed to open asset file '%s'\n", entry.m_filePath.string().c_str());
+            DLOG(LogEditorAssets, ELogLevel::Error,
+                 "LoadAssetRecursive: failed to open '{}' (expected readable .dasset.json)",
+                 entry.m_filePath.string());
             return;
         }
 
@@ -221,10 +256,12 @@ void EditorAssetDatabase::LoadAssetRecursive(const AssetId& id)
         {
             root = nlohmann::json::parse(file);
         }
-        catch (std::exception& e)
+        catch (const std::exception& e)
         {
             m_currentlyLoading.erase(id);
-            printf("Failed to parse JSON file '%s': %s\n", entry.m_filePath.string().c_str(), e.what());
+            DLOG(LogEditorAssets, ELogLevel::Error,
+                 "LoadAssetRecursive: JSON parse failed for '{}': {} (expected valid JSON document)",
+                 entry.m_filePath.string(), e.what());
             return;
         }
 
@@ -238,7 +275,9 @@ void EditorAssetDatabase::LoadAssetRecursive(const AssetId& id)
         else
         {
             m_currentlyLoading.erase(id);
-            printf("JSON file '%s' does not contain 'header' object\n", entry.m_filePath.string().c_str());
+            DLOG(LogEditorAssets, ELogLevel::Error,
+                 "LoadAssetRecursive: '{}' missing top-level 'header' object (expected DLTA asset header)",
+                 entry.m_filePath.string());
             return;
         }
 
@@ -284,7 +323,9 @@ void EditorAssetDatabase::ResolvePendingBatch()
         auto it = m_assets.find(assetId);
         if (it == m_assets.end() || !it->second.m_instance)
         {
-            printf("Unexpected error: asset '%s' not found during resolve phase\n", assetId.ToString().c_str());
+            DLOG(LogEditorAssets, ELogLevel::Error,
+                 "ResolvePendingBatch: asset '{}' not present or has no instance (expected loaded entry from this batch)",
+                 assetId.ToString());
             continue;
         }
 
@@ -335,12 +376,25 @@ void EditorAssetDatabase::SaveAsset(const AssetId& id)
 {
     auto it = m_assets.find(id);
     if (it == m_assets.end())
+    {
+        DLOG(LogEditorAssets, ELogLevel::Warning,
+             "SaveAsset: asset id '{}' is not registered (expected a known asset)",
+             id.ToString());
         return;
+    }
 
     auto& entry = it->second;
     auto& asset = entry.m_instance;
     if (!asset)
+    {
+        DLOG(LogEditorAssets, ELogLevel::Warning,
+             "SaveAsset: asset '{}' has no in-memory instance (expected loaded asset)",
+             id.ToString());
         return;
+    }
+
+    DLOG(LogEditorAssets, ELogLevel::Verbose, "SaveAsset: id='{}' path='{}'",
+         id.ToString(), entry.m_filePath.string());
 
     for (auto& obj : asset->GetObjects())
     {
@@ -375,7 +429,21 @@ void EditorAssetDatabase::SaveAsset(const AssetId& id)
             output[key] = val;
 
         std::ofstream out(entry.m_filePath);
+        if (!out.is_open())
+        {
+            DLOG(LogEditorAssets, ELogLevel::Error,
+                 "SaveAsset: cannot open '{}' for write (expected writable .dasset.json path)",
+                 entry.m_filePath.string());
+            return;
+        }
         out << output.dump(2);
+        if (!out.good())
+        {
+            DLOG(LogEditorAssets, ELogLevel::Error,
+                 "SaveAsset: incomplete write to '{}' (expected full JSON body flushed)",
+                 entry.m_filePath.string());
+            return;
+        }
     }
 
     asset->ClearDirty();
@@ -383,6 +451,8 @@ void EditorAssetDatabase::SaveAsset(const AssetId& id)
 
 AssetId EditorAssetDatabase::DuplicateAsset(const AssetId& id)
 {
+    DLOG(LogEditorAssets, ELogLevel::Verbose, "DuplicateAsset: id='{}'", id.ToString());
+
     DPrimaryAsset* asset = LoadAsset(id);
     if (!asset)
         return AssetId::Null();
@@ -470,7 +540,12 @@ AssetId EditorAssetDatabase::DuplicateAsset(const AssetId& id)
 
     std::ofstream out(targetPath);
     if (!out.is_open())
+    {
+        DLOG(LogEditorAssets, ELogLevel::Error,
+             "DuplicateAsset: cannot open '{}' for write (expected writable target path)",
+             targetPath.string());
         return AssetId::Null();
+    }
     out << output.dump(2);
 
     DPrimaryAsset::Header header = ReadAssetHeaderFromFile(targetPath, true);
@@ -491,9 +566,17 @@ bool EditorAssetDatabase::DeleteAsset(const AssetId& id)
 {
     auto it = m_assets.find(id);
     if (it == m_assets.end())
+    {
+        DLOG(LogEditorAssets, ELogLevel::Warning,
+             "DeleteAsset: asset id '{}' is not registered (expected a known asset)",
+             id.ToString());
         return false;
+    }
 
     const std::filesystem::path assetPath = it->second.m_filePath;
+    DLOG(LogEditorAssets, ELogLevel::Verbose, "DeleteAsset: id='{}' path='{}'",
+         id.ToString(), assetPath.string());
+
     bool deletedAnything = false;
 
     if (assetPath.string().ends_with(".dasset.json") && std::filesystem::exists(assetPath))
@@ -517,8 +600,11 @@ bool EditorAssetDatabase::DeleteAsset(const AssetId& id)
                 }
             }
         }
-        catch (...)
+        catch (const std::exception& e)
         {
+            DLOG(LogEditorAssets, ELogLevel::Warning,
+                 "DeleteAsset: bulk-data cleanup failed for '{}': {} (expected readable JSON; will still delete primary file)",
+                 assetPath.string(), e.what());
         }
     }
 
@@ -554,8 +640,11 @@ void CollectBulkPathsFromJsonFile(
             outBulkAbsolute.push_back(parent / bulkEntry["file"].get<std::string>());
         }
     }
-    catch (...)
+    catch (const std::exception& e)
     {
+        DLOG(LogEditorAssets, ELogLevel::Warning,
+             "CollectBulkPathsFromJsonFile: failed to read '{}': {} (expected readable .dasset.json)",
+             assetJsonPath.string(), e.what());
     }
 }
 } // namespace
@@ -564,30 +653,59 @@ bool EditorAssetDatabase::MoveAsset(const AssetId& id, const std::filesystem::pa
 {
     auto it = m_assets.find(id);
     if (it == m_assets.end())
+    {
+        DLOG(LogEditorAssets, ELogLevel::Warning,
+             "MoveAsset: asset id '{}' is not registered (expected a known asset)",
+             id.ToString());
         return false;
+    }
 
     const std::filesystem::path oldPath = it->second.m_filePath;
     if (!oldPath.string().ends_with(".dasset.json"))
+    {
+        DLOG(LogEditorAssets, ELogLevel::Warning,
+             "MoveAsset: asset '{}' is not a .dasset.json (path='{}')",
+             id.ToString(), oldPath.string());
         return false;
+    }
+
+    DLOG(LogEditorAssets, ELogLevel::Verbose,
+         "MoveAsset: id='{}' oldPath='{}' targetFolder='{}'",
+         id.ToString(), oldPath.string(), targetFolder.string());
 
     std::error_code ec;
     const std::filesystem::path absTarget = std::filesystem::absolute(targetFolder, ec);
     if (ec)
+    {
+        DLOG(LogEditorAssets, ELogLevel::Warning,
+             "MoveAsset: failed to resolve target '{}': {} (expected resolvable absolute path)",
+             targetFolder.string(), ec.message());
         return false;
+    }
 
     if (std::filesystem::equivalent(oldPath.parent_path(), absTarget, ec) && !ec)
         return true;
 
     const std::filesystem::path newPath = absTarget / oldPath.filename();
     if (std::filesystem::exists(newPath))
+    {
+        DLOG(LogEditorAssets, ELogLevel::Warning,
+             "MoveAsset: target '{}' already exists (expected a free destination)",
+             newPath.string());
         return false;
+    }
 
     std::vector<std::filesystem::path> bulkPaths;
     CollectBulkPathsFromJsonFile(oldPath, bulkPaths);
 
     std::filesystem::rename(oldPath, newPath, ec);
     if (ec)
+    {
+        DLOG(LogEditorAssets, ELogLevel::Error,
+             "MoveAsset: rename '{}' -> '{}' failed: {} (expected successful filesystem rename)",
+             oldPath.string(), newPath.string(), ec.message());
         return false;
+    }
 
     for (const auto& bulkPath : bulkPaths)
     {
@@ -604,8 +722,13 @@ bool EditorAssetDatabase::MoveAsset(const AssetId& id, const std::filesystem::pa
 
 bool EditorAssetDatabase::RenameAssetToExactStem(const AssetId& id, const std::string& exactStem)
 {
-    if (exactStem.empty())
+    if (!DELTA_ENSURE(!exactStem.empty()))
+    {
+        DLOG(LogEditorAssets, ELogLevel::Warning,
+             "RenameAssetToExactStem: empty stem (id='{}'); expected non-empty stem",
+             id.ToString());
         return false;
+    }
 
     DPrimaryAsset* asset = LoadAsset(id);
     if (!asset)
@@ -617,7 +740,16 @@ bool EditorAssetDatabase::RenameAssetToExactStem(const AssetId& id, const std::s
 
     std::filesystem::path oldPath = it->second.m_filePath;
     if (!oldPath.string().ends_with(".dasset.json"))
+    {
+        DLOG(LogEditorAssets, ELogLevel::Warning,
+             "RenameAssetToExactStem: asset '{}' is not a .dasset.json (path='{}')",
+             id.ToString(), oldPath.string());
         return false;
+    }
+
+    DLOG(LogEditorAssets, ELogLevel::Verbose,
+         "RenameAssetToExactStem: id='{}' oldPath='{}' newStem='{}'",
+         id.ToString(), oldPath.string(), exactStem);
 
     const std::string oldStem = oldPath.stem().stem().string();
     if (exactStem == oldStem)
@@ -633,11 +765,19 @@ bool EditorAssetDatabase::RenameAssetToExactStem(const AssetId& id, const std::s
         {
             same = std::filesystem::equivalent(newPath, oldPath);
         }
-        catch (...)
+        catch (const std::exception& e)
         {
+            DLOG(LogEditorAssets, ELogLevel::Verbose,
+                 "RenameAssetToExactStem: equivalent('{}', '{}') threw: {} (treating as not equivalent)",
+                 newPath.string(), oldPath.string(), e.what());
         }
         if (!same)
+        {
+            DLOG(LogEditorAssets, ELogLevel::Warning,
+                 "RenameAssetToExactStem: target '{}' already exists (expected a free stem in same folder)",
+                 newPath.string());
             return false;
+        }
     }
 
     std::vector<std::filesystem::path> oldBulkPaths;
@@ -657,8 +797,11 @@ bool EditorAssetDatabase::RenameAssetToExactStem(const AssetId& id, const std::s
             if (!std::filesystem::equivalent(oldPath, newPath))
                 std::filesystem::remove(oldPath);
         }
-        catch (...)
+        catch (const std::exception& e)
         {
+            DLOG(LogEditorAssets, ELogLevel::Warning,
+                 "RenameAssetToExactStem: removing old path '{}' failed: {} (expected old file removable after rename)",
+                 oldPath.string(), e.what());
         }
     }
 
@@ -670,8 +813,11 @@ bool EditorAssetDatabase::RenameAssetToExactStem(const AssetId& id, const std::s
             {
                 std::filesystem::remove(bulkPath);
             }
-            catch (...)
+            catch (const std::exception& e)
             {
+                DLOG(LogEditorAssets, ELogLevel::Warning,
+                     "RenameAssetToExactStem: removing old bulk sidecar '{}' failed: {}",
+                     bulkPath.string(), e.what());
             }
         }
     }
@@ -681,16 +827,30 @@ bool EditorAssetDatabase::RenameAssetToExactStem(const AssetId& id, const std::s
 
 bool EditorAssetDatabase::RenameAssetToStem(const AssetId& id, const std::string& desiredStem, std::string* outFinalStem)
 {
-    if (desiredStem.empty())
+    if (!DELTA_ENSURE(!desiredStem.empty()))
+    {
+        DLOG(LogEditorAssets, ELogLevel::Warning,
+             "RenameAssetToStem: empty desiredStem (id='{}'); expected non-empty stem",
+             id.ToString());
         return false;
+    }
 
     auto it = m_assets.find(id);
     if (it == m_assets.end())
+    {
+        DLOG(LogEditorAssets, ELogLevel::Warning,
+             "RenameAssetToStem: asset id '{}' is not registered",
+             id.ToString());
         return false;
+    }
 
     const std::filesystem::path oldPath = it->second.m_filePath;
     if (!oldPath.string().ends_with(".dasset.json"))
         return false;
+
+    DLOG(LogEditorAssets, ELogLevel::Verbose,
+         "RenameAssetToStem: id='{}' oldPath='{}' desiredStem='{}'",
+         id.ToString(), oldPath.string(), desiredStem);
 
     const std::filesystem::path parent = oldPath.parent_path();
 
@@ -705,8 +865,11 @@ bool EditorAssetDatabase::RenameAssetToStem(const AssetId& id, const std::string
             {
                 ok = std::filesystem::equivalent(testPath, oldPath);
             }
-            catch (...)
+            catch (const std::exception& e)
             {
+                DLOG(LogEditorAssets, ELogLevel::Verbose,
+                     "RenameAssetToStem: equivalent('{}', '{}') threw: {} (treating as not equivalent)",
+                     testPath.string(), oldPath.string(), e.what());
                 ok = false;
             }
         }
@@ -723,8 +886,15 @@ bool EditorAssetDatabase::RenameAssetToStem(const AssetId& id, const std::string
 // todo handle existing asset at filePath?
 void EditorAssetDatabase::CreateAsset(const std::filesystem::path& filePath, DPrimaryAsset* asset)
 {
-    if (!asset)
+    if (!DELTA_ENSURE(asset != nullptr))
+    {
+        DLOG(LogEditorAssets, ELogLevel::Error,
+             "CreateAsset: null asset for path '{}' (expected a valid DPrimaryAsset*)",
+             filePath.string());
         return;
+    }
+
+    DLOG(LogEditorAssets, ELogLevel::Verbose, "CreateAsset: path='{}'", filePath.string());
 
     AssetId newId = asset->GetAssetId();
     if (newId.IsNull())
@@ -748,8 +918,13 @@ void EditorAssetDatabase::CreateAsset(const std::filesystem::path& filePath, DPr
 
 void EditorAssetDatabase::CreateAsset(const std::filesystem::path& filePath, DObject* object)
 {
-    if (!object)
+    if (!DELTA_ENSURE(object != nullptr))
+    {
+        DLOG(LogEditorAssets, ELogLevel::Error,
+             "CreateAsset: null object for path '{}' (expected a valid DObject*)",
+             filePath.string());
         return;
+    }
 
     auto asset = CreateDObject<DPrimaryAsset>();
     asset->GetHeader().m_persistentId = UUID::Generate();

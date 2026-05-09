@@ -1,6 +1,7 @@
 #include "Editor/Assets/AssetImporter.h"
 
 #include "Editor/Assets/EditorAssetDatabase.h"
+#include "Editor/Assets/EditorAssetsLog.h"
 #include "Runtime/Assets/PA_CommonAssets.h"
 #include "Runtime/Core/DMaterial.h"
 #include "Runtime/Core/DMesh.h"
@@ -44,6 +45,14 @@ std::string GetSearchDirectory(const std::filesystem::path& fbxPath)
 
 std::filesystem::path AssetImporter::ResolveDestPath(const std::filesystem::path& dir, const std::string& baseName, EditorAssetDatabase& db)
 {
+    if (!DELTA_ENSURE(!baseName.empty()))
+    {
+        DLOG(LogEditorAssets, ELogLevel::Error,
+             "ResolveDestPath: empty baseName (dir='{}'); expected non-empty asset stem",
+             dir.string());
+        return dir / "Asset.dasset.json";
+    }
+
     std::filesystem::path candidate = dir / (baseName + ".dasset.json");
     if (!std::filesystem::exists(candidate) && db.FindAssetIdByPath(candidate).IsNull())
         return candidate;
@@ -55,6 +64,9 @@ std::filesystem::path AssetImporter::ResolveDestPath(const std::filesystem::path
             return candidate;
     }
 
+    DLOG(LogEditorAssets, ELogLevel::Error,
+         "ResolveDestPath: exhausted 10000 suffix candidates for base '{}' in '{}' (expected a free filename); returning last candidate '{}'",
+         baseName, dir.string(), candidate.string());
     return candidate;
 }
 
@@ -107,7 +119,12 @@ std::vector<AssetId> AssetImporter::ImportFbx(const std::filesystem::path& sourc
 
     const aiScene* scene = importer.ReadFile(sourcePath.string(), kFlags);
     if (!scene || (scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) || !scene->mRootNode)
+    {
+        DLOG(LogEditorAssets, ELogLevel::Error,
+             "ImportFbx: Assimp failed to load '{}': {} (expected complete scene with root node)",
+             sourcePath.string(), importer.GetErrorString());
         return createdIds;
+    }
 
     const std::string searchDir = GetSearchDirectory(sourcePath);
 
@@ -142,7 +159,12 @@ std::vector<AssetId> AssetImporter::ImportFbx(const std::filesystem::path& sourc
                 const std::string fileName = std::filesystem::path(texPath).filename().string();
                 const std::string fullTexPath = FindTextureFile(searchDir, fileName);
                 if (!std::filesystem::exists(fullTexPath))
+                {
+                    DLOG(LogEditorAssets, ELogLevel::Warning,
+                         "ImportFbx: texture '{}' referenced by FBX '{}' not found under search dir '{}' (expected file by name); skipping",
+                         fileName, sourcePath.string(), searchDir);
                     continue;
+                }
 
                 const std::filesystem::path texSrc(fullTexPath);
                 DTexture* texture = CreateDObject<DTexture>();
@@ -220,9 +242,27 @@ std::vector<AssetId> AssetImporter::ImportFbx(const std::filesystem::path& sourc
 
 std::vector<AssetId> AssetImporter::ImportFile(const std::filesystem::path& sourcePath, EditorAssetDatabase& db)
 {
+    if (!DELTA_ENSURE(!sourcePath.empty()))
+    {
+        DLOG(LogEditorAssets, ELogLevel::Error,
+             "ImportFile: empty sourcePath (expected absolute or relative path to a source asset)");
+        return {};
+    }
+
+    if (!std::filesystem::exists(sourcePath))
+    {
+        DLOG(LogEditorAssets, ELogLevel::Warning,
+             "ImportFile: source path does not exist '{}' (expected an existing file)",
+             sourcePath.string());
+        return {};
+    }
+
     const std::string ext = sourcePath.extension().string();
     const std::filesystem::path importedRoot = IOManager::GetEngineImportedAssetsFolder();
     std::filesystem::create_directories(importedRoot);
+
+    DLOG(LogEditorAssets, ELogLevel::Verbose,
+         "ImportFile dispatch: ext='{}' src='{}'", ext, sourcePath.string());
 
     if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" ||
         ext == ".tga" || ext == ".dds" || ext == ".hdr")
@@ -244,5 +284,8 @@ std::vector<AssetId> AssetImporter::ImportFile(const std::filesystem::path& sour
         return {};
     }
 
+    DLOG(LogEditorAssets, ELogLevel::Warning,
+         "ImportFile: unsupported extension '{}' for source '{}' (expected one of png/jpg/jpeg/bmp/tga/dds/hdr/fbx/obj/slang)",
+         ext, sourcePath.string());
     return {};
 }

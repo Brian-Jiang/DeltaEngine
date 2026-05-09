@@ -172,6 +172,86 @@ TEST_F(EditorAssetDatabaseLifecycleTests, DuplicateAssetRemapsInternalRefsAndPre
         duplicatedPath.parent_path() / (duplicatedPath.stem().stem().string() + "_Bulk1.bin")));
 }
 
+TEST_F(EditorAssetDatabaseLifecycleTests, ScanAssetsFolder_NonExistentRoot_IsNoOp)
+{
+    const auto tempDir = MakeTempDir("DeltaScanMissing");
+    const auto missing = tempDir.Path() / "does_not_exist";
+
+    EditorAssetDatabase db;
+    db.ScanAssetsFolder(missing);
+
+    EXPECT_TRUE(db.GetAllAssets().empty());
+}
+
+TEST_F(EditorAssetDatabaseLifecycleTests, LoadAsset_UnregisteredId_ReturnsNull)
+{
+    EditorAssetDatabase db;
+    EXPECT_EQ(db.LoadAsset(AssetId::Generate()), nullptr);
+}
+
+TEST_F(EditorAssetDatabaseLifecycleTests, MoveAsset_SameFolder_IsNoOpSuccess)
+{
+    const auto tempDir = MakeTempDir("DeltaMoveSame");
+
+    auto* asset = CreateDObject<PA_TestAsset>();
+    const AssetId id = AssetId::Generate();
+    asset->GetHeader().m_persistentId = id;
+    asset->GetHeader().m_className = "PA_TestAsset";
+    SaveAssetToFile(asset, tempDir.Path() / "Stay.dasset.json");
+
+    EditorAssetDatabase db;
+    db.ScanAssetsFolder(tempDir.Path());
+
+    EXPECT_TRUE(db.MoveAsset(id, tempDir.Path()));
+    EXPECT_EQ(db.GetAssetPath(id), tempDir.Path() / "Stay.dasset.json");
+}
+
+TEST_F(EditorAssetDatabaseLifecycleTests, RenameAssetToExactStem_ReturnsFalseOnCollision)
+{
+    const auto tempDir = MakeTempDir("DeltaRenameCollide");
+
+    auto* a = CreateDObject<PA_TestAsset>();
+    const AssetId aId = AssetId::Generate();
+    a->GetHeader().m_persistentId = aId;
+    a->GetHeader().m_className = "PA_TestAsset";
+    SaveAssetToFile(a, tempDir.Path() / "Alpha.dasset.json");
+
+    auto* b = CreateDObject<PA_TestAsset>();
+    const AssetId bId = AssetId::Generate();
+    b->GetHeader().m_persistentId = bId;
+    b->GetHeader().m_className = "PA_TestAsset";
+    SaveAssetToFile(b, tempDir.Path() / "Beta.dasset.json");
+
+    EditorAssetDatabase db;
+    db.ScanAssetsFolder(tempDir.Path());
+
+    EXPECT_FALSE(db.RenameAssetToExactStem(aId, "Beta"));
+    EXPECT_EQ(db.GetAssetPath(aId), tempDir.Path() / "Alpha.dasset.json");
+}
+
+TEST_F(EditorAssetDatabaseLifecycleTests, RenameAssetToStem_ResolvesCollisionWithSuffix)
+{
+    const auto tempDir = MakeTempDir("DeltaRenameSuffix");
+
+    auto* a = CreateDObject<PA_TestAsset>();
+    const AssetId aId = AssetId::Generate();
+    a->GetHeader().m_persistentId = aId;
+    a->GetHeader().m_className = "PA_TestAsset";
+    SaveAssetToFile(a, tempDir.Path() / "Alpha.dasset.json");
+
+    auto* taken = CreateDObject<PA_TestAsset>();
+    taken->GetHeader().m_persistentId = AssetId::Generate();
+    taken->GetHeader().m_className = "PA_TestAsset";
+    SaveAssetToFile(taken, tempDir.Path() / "Beta.dasset.json");
+
+    EditorAssetDatabase db;
+    db.ScanAssetsFolder(tempDir.Path());
+
+    std::string finalStem;
+    EXPECT_TRUE(db.RenameAssetToStem(aId, "Beta", &finalStem));
+    EXPECT_EQ(finalStem, "Beta_1");
+}
+
 TEST_F(EditorAssetDatabaseLifecycleTests, DeleteAssetRemovesJsonAndBulkFiles)
 {
     const auto tempDir = MakeTempDir("DeltaDeleteAssetTest");

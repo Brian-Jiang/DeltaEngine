@@ -1,6 +1,7 @@
 #include "EditorMain.h"
 
 #include "Editor/EditorCore.h"
+#include "Editor/EditorMainLog.h"
 #include "Editor/McpSocketServer.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
 #include "Editor/Commands/EditorAuxiliarySceneCommands.h"
@@ -56,7 +57,9 @@ EditorMain::EditorMain()
 
     if (!SDL_Init(SDL_INIT_VIDEO))
     {
-        std::printf("Couldn't initialize SDL: %s\n", SDL_GetError());
+        DLOG(LogEditorMain, ELogLevel::Fatal,
+             "SDL_Init(SDL_INIT_VIDEO) failed: {} (expected successful SDL initialization)",
+             SDL_GetError());
         m_exitCode = 1;
         m_running = false;
         return;
@@ -68,7 +71,9 @@ EditorMain::EditorMain()
         SDL_DestroyWindow);
     if (!m_window)
     {
-        std::printf("Failed to create window: %s\n", SDL_GetError());
+        DLOG(LogEditorMain, ELogLevel::Fatal,
+             "SDL_CreateWindow failed: {} (expected a usable SDL_Window* for the editor)",
+             SDL_GetError());
         m_exitCode = 1;
         m_running = false;
         return;
@@ -77,7 +82,8 @@ EditorMain::EditorMain()
     auto hwnd = static_cast<HWND>(SDL_GetPointerProperty(SDL_GetWindowProperties(m_window.get()), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr));
     if (!hwnd)
     {
-        std::printf("Failed to acquire a Win32 window handle.\n");
+        DLOG(LogEditorMain, ELogLevel::Fatal,
+             "Failed to acquire a Win32 HWND from SDL_GetPointerProperty (expected SDL_PROP_WINDOW_WIN32_HWND_POINTER)");
         m_exitCode = 1;
         m_running = false;
         return;
@@ -107,7 +113,8 @@ EditorMain::EditorMain()
 
     if (!ImGui_ImplSDL3_InitForD3D(m_window.get()))
     {
-        std::printf("Failed to initialize the ImGui SDL3 backend.\n");
+        DLOG(LogEditorMain, ELogLevel::Fatal,
+             "ImGui_ImplSDL3_InitForD3D failed (expected successful ImGui SDL3 backend init)");
         m_exitCode = 1;
         m_running = false;
         return;
@@ -131,7 +138,8 @@ EditorMain::EditorMain()
     imguiInit.SrvDescriptorFreeFn = ImGuiDescriptorFree;
     if (!ImGui_ImplDX12_Init(&imguiInit))
     {
-        std::printf("Failed to initialize the ImGui DX12 backend.\n");
+        DLOG(LogEditorMain, ELogLevel::Fatal,
+             "ImGui_ImplDX12_Init failed (expected successful ImGui DX12 backend init)");
         m_exitCode = 1;
         m_running = false;
         return;
@@ -167,6 +175,8 @@ int EditorMain::Run()
     OpenEditorWindow<EditorWindow_Details>();
     OpenEditorWindow<EditorWindow_AssetBrowser>();
 
+    DLOG(LogEditorMain, ELogLevel::Verbose, "Editor main loop started (target 60 fps)");
+
     // todo check if needs redraw
     while (m_running)
     {
@@ -198,6 +208,7 @@ int EditorMain::Run()
     }
 
     m_engine->Cleanup();
+    DLOG(LogEditorMain, ELogLevel::Verbose, "Editor main loop exited (code={})", m_engine->exitCode);
     return m_engine->exitCode;
 }
 

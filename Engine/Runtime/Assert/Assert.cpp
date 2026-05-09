@@ -2,7 +2,7 @@
 
 #include <cstdio>
 
-[[noreturn]] DELTAENGINE_API void DeltaAssertFailed(const char* expr,
+[[noreturn]] void DeltaAssertFailed(const char* expr,
                                                     const char* file,
                                                     int line,
                                                     const char* msg)

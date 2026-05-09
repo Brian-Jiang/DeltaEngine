@@ -66,7 +66,7 @@
 // Returns the expression result so you can write: if (!DELTA_ENSURE(ptr)) return;
 namespace DeltaInternal
 {
-bool EnsureFailed(const char *expr, const char *file, int line, const char *msg = nullptr);
+DELTAENGINE_API bool EnsureFailed(const char *expr, const char *file, int line, const char *msg = nullptr);
 }
 
 #define DELTA_ENSURE(expr) ((expr) || DeltaInternal::EnsureFailed(#expr, __FILE__, __LINE__))
