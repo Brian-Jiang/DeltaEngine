@@ -577,6 +577,17 @@ void JsonAssetArchive::Serialize(const std::string& key, BulkDataHandle& value)
         });
 }
 
+void JsonAssetArchive::Serialize(const std::string& key, nlohmann::json& value)
+{
+    auto& cur = CurrentNode(m_stack, "SerializeJson");
+    StoreOrLoadNode(
+        cur,
+        IsSaving(),
+        key,
+        [&]() -> nlohmann::json { return value; },
+        [&](const nlohmann::json& node) { value = node; });
+}
+
 void JsonAssetArchive::SerializeElement(float& value)
 {
     auto& cur = CurrentNode(m_stack, "SerializeElementFloat");

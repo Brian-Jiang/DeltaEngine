@@ -10,6 +10,7 @@
 #include "SimpleMath.h"
 #include <DirectXCollision.h>
 #include <DirectXMath.h>
+#include <nlohmann/json.hpp>
 
 #include <cstdint>
 #include <exception>
@@ -75,6 +76,9 @@ public:
     virtual void Serialize(const std::string& key, ScriptPointer&  value) = 0;
     virtual void Serialize(const std::string& key, UUID&           value) = 0;
     virtual void Serialize(const std::string& key, BulkDataHandle& value) = 0;
+
+    /// Serializes an opaque JSON subtree for free-form blobs (e.g. dynamic asset meta).
+    virtual void Serialize(const std::string& key, nlohmann::json& value) = 0;
 
     /// Serializes the next array element in the current array scope.
     virtual void SerializeElement(float&       value) = 0;

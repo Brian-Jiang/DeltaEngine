@@ -60,6 +60,7 @@ public:
     void Serialize(const std::string& key, ScriptPointer&  value) override;
     void Serialize(const std::string& key, UUID&           value) override;
     void Serialize(const std::string& key, BulkDataHandle& value) override;
+    void Serialize(const std::string& key, nlohmann::json& value) override;
 
     void SerializeElement(float&       value) override;
     void SerializeElement(double&      value) override;

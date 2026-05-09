@@ -6,6 +6,37 @@
 
 using namespace DeltaEngine;
 
+TEST(JsonAssetArchiveTests, RoundTripsOpaqueJsonBlob)
+{
+    JsonAssetArchive writer;
+    nlohmann::json original = {
+        { "desc",   "A test asset" },
+        { "tags",   { "hero", "metal", "wip" } },
+        { "stats",  { { "hp", 42 }, { "mp", 7 }, { "ratios", { 0.1, 0.5, 0.9 } } } },
+        { "active", true },
+        { "owner",  nullptr }
+    };
+
+    writer.Serialize("meta", original);
+
+    JsonAssetArchive reader(writer.GetRoot(), {});
+    nlohmann::json loaded;
+    reader.Serialize("meta", loaded);
+
+    EXPECT_EQ(loaded, original);
+}
+
+TEST(JsonAssetArchiveTests, OpaqueJsonBlobMissingKeyLeavesValueUntouched)
+{
+    JsonAssetArchive writer;
+    JsonAssetArchive reader(writer.GetRoot(), {});
+
+    nlohmann::json sentinel = { { "untouched", true } };
+    reader.Serialize("absent", sentinel);
+
+    EXPECT_EQ(sentinel, (nlohmann::json{ { "untouched", true } }));
+}
+
 TEST(JsonAssetArchiveTests, RoundTripsUtf8Strings)
 {
     JsonAssetArchive writer;
