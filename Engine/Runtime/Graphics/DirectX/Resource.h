@@ -36,8 +36,9 @@
 #include <d3d12.h>
 #include <wrl.h>
 
-#include <string>
 #include <memory>
+#include <string>
+#include <string_view>
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -70,8 +71,8 @@ public:
     /**
      * Set the name of the resource. Useful for debugging purposes.
      */
-    DELTAENGINE_API void                SetName(const std::wstring& name);
-    const std::wstring& GetName() const {
+    DELTAENGINE_API void                SetName(std::string_view utf8Name);
+    const std::string& GetName() const {
         return m_ResourceName;
     }
 
@@ -99,7 +100,7 @@ protected:
     Microsoft::WRL::ComPtr<ID3D12Resource> m_d3d12Resource;
     D3D12_FEATURE_DATA_FORMAT_SUPPORT      m_FormatSupport;
     std::unique_ptr<D3D12_CLEAR_VALUE>     m_d3d12ClearValue;
-    std::wstring                           m_ResourceName;
+    std::string                            m_ResourceName;
 
 private:
     // Check the format support and populate the m_FormatSupport structure.

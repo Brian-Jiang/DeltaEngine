@@ -49,7 +49,6 @@ Rules:
 | `bool` | `DBoolProperty` |
 | `double` | `DDoubleProperty` |
 | `std::string` | `DStringProperty` |
-| `std::wstring` | `DWStringProperty` |
 | `FVector3` / `DirectX::XMFLOAT3` | `DVector3Property` |
 | `FQuaternion` | `DQuaternionProperty` |
 | `DirectX::XMFLOAT4` | `DFloat4Property` |

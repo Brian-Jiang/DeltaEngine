@@ -1,5 +1,7 @@
 #include "Runtime/IO/IOManager.h"
 
+#include "Runtime/Utils/StringUtils.h"
+
 #include <gtest/gtest.h>
 
 #include <filesystem>
@@ -71,11 +73,12 @@ TEST(IOManager, IOManager_GetEngineSourceAssetFullPath_AcceptsPathWithSpaces)
 
 TEST(IOManager, IOManager_GetEngineSourceAssetFullPath_RoundTripsUnicodeAssetName)
 {
-    const std::wstring name = L"Шейдеры/星のテクスチャ.dds";
+    const std::filesystem::path name(L"Шейдеры/星のテクスチャ.dds");
     const std::filesystem::path full =
-        IOManager::GetEngineSourceAssetFullPath(std::filesystem::path(name));
+        IOManager::GetEngineSourceAssetFullPath(name);
 
-    EXPECT_EQ(full.filename().wstring(), L"星のテクスチャ.dds");
+    const std::string expected = StringUtils::WStringToUtf8(L"星のテクスチャ.dds");
+    EXPECT_EQ(StringUtils::PathToUtf8(full.filename()), expected);
 }
 
 TEST(IOManager, IOManager_GetEngineImportedAssetsFolder_DoesNotDependOnCurrentDirectory)

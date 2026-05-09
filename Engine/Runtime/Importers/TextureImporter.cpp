@@ -7,7 +7,7 @@
 
 using namespace DeltaEngine;
 
-void TextureImporter::Import(const std::wstring& filePath) {
+void TextureImporter::Import(const std::filesystem::path& filePath) {
 	//stbi_set_flip_vertically_on_load(true);
 	
 	//unsigned char* d = stbi_load(filePath.c_str(), &width, &height, &comp, 4);

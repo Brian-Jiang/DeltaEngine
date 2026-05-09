@@ -95,7 +95,7 @@ void EditorRenderManager::PrepareViewportSceneTexture(CommandList& commandList)
                 const auto colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(
                     ppFormat, ppWidth, ppHeight, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE);
                 m_viewportDisplayTexture = m_device->CreateTexture(colorDesc, nullptr);
-                m_viewportDisplayTexture->SetName(L"Viewport Display Target");
+                m_viewportDisplayTexture->SetName("Viewport Display Target");
             }
             commandList.CopyResource(m_viewportDisplayTexture, finalTex);
             commandList.TransitionBarrier(m_viewportDisplayTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -121,7 +121,7 @@ void EditorRenderManager::PrepareViewportSceneTexture(CommandList& commandList)
         {
             const auto colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, width, height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE);
             m_viewportDisplayTexture = m_device->CreateTexture(colorDesc, nullptr);
-            m_viewportDisplayTexture->SetName(L"Viewport Display Target");
+            m_viewportDisplayTexture->SetName("Viewport Display Target");
         }
 
         commandList.ResolveSubresource(m_viewportDisplayTexture, offscreenColor);

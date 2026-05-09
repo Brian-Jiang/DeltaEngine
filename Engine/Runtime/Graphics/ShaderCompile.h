@@ -13,9 +13,9 @@
 DELTA_ENGINE_NS_BEGIN
 
 DELTAENGINE_API Microsoft::WRL::ComPtr<IDxcBlob> CompileHLSLStage(
-    const std::wstring& engineRelativePath,
-    const std::wstring& entryPoint,
-    const std::wstring& targetProfile,
+    const std::filesystem::path& engineRelativePath,
+    const std::string& entryPoint,
+    const std::string& targetProfile,
     const char* debugLabel = nullptr);
 
 /** Compiles a single stage from a .slang file via the Slang C++ API.

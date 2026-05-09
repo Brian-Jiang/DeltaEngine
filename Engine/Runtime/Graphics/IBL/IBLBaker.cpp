@@ -177,7 +177,7 @@ void IBLBaker::CompilePipelines(Device& device)
 }
 
 static std::shared_ptr<DirectX12Texture> CreateCubeUavTexture(
-    Device& device, uint32_t size, uint32_t mipLevels, const wchar_t* name)
+    Device& device, uint32_t size, uint32_t mipLevels, std::string_view name)
 {
     CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex2D(
         DXGI_FORMAT_R16G16B16A16_FLOAT,
@@ -209,7 +209,7 @@ void IBLBaker::BakeBrdfLut(Device& device)
         D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
     auto lut = device.CreateTexture(desc, nullptr);
-    lut->SetName(L"IBL_BrdfLut");
+    lut->SetName("IBL_BrdfLut");
 
     auto& queue = device.GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
     auto cl     = queue.GetCommandList();
@@ -259,7 +259,7 @@ void IBLBaker::BakeIrradiance(Device& device,
         return;
     }
 
-    auto irradiance = CreateCubeUavTexture(device, kIrradianceSize, 1, L"IBL_IrradianceCube");
+    auto irradiance = CreateCubeUavTexture(device, kIrradianceSize, 1, "IBL_IrradianceCube");
 
     auto& queue = device.GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
     auto cl     = queue.GetCommandList();
@@ -321,7 +321,7 @@ void IBLBaker::BakeSpecular(Device& device,
         return;
     }
 
-    auto specular = CreateCubeUavTexture(device, kSpecularBaseSize, kSpecularMipCount, L"IBL_SpecularCube");
+    auto specular = CreateCubeUavTexture(device, kSpecularBaseSize, kSpecularMipCount, "IBL_SpecularCube");
 
     uint32_t sourceSize = static_cast<uint32_t>(sourceCube->GetD3D12ResourceDesc().Width);
 

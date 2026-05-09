@@ -16,10 +16,6 @@ TYPE_MAP = {
     "std::basic_string<char>":            "DStringProperty",
     "std::basic_string<char, std::char_traits<char>>": "DStringProperty",
     "std::basic_string<char, std::char_traits<char>, std::allocator<char>>": "DStringProperty",
-    "std::wstring":                       "DWStringProperty",
-    "std::basic_string<wchar_t>":         "DWStringProperty",
-    "std::basic_string<wchar_t, std::char_traits<wchar_t>>": "DWStringProperty",
-    "std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t>>": "DWStringProperty",
     "std::filesystem::path":              "DFilesystemPathProperty",
     "DirectX::SimpleMath::Vector3":       "DVector3Property",
     "DirectX::SimpleMath::Quaternion":    "DQuaternionProperty",
@@ -33,7 +29,7 @@ TYPE_MAP = {
 
 VECTOR_ELEMENT_PROPERTY_CLASSES = {
     "DFloatProperty", "DIntProperty", "DBoolProperty", "DDoubleProperty",
-    "DStringProperty", "DWStringProperty", "DFilesystemPathProperty",
+    "DStringProperty", "DFilesystemPathProperty",
     "DVector3Property", "DQuaternionProperty",
     "DFloat4Property", "DFloat4x4Property",
 }
@@ -44,7 +40,6 @@ INNER_TYPE_TO_CPP = {
     "DBoolProperty":       "bool",
     "DDoubleProperty":     "double",
     "DStringProperty":     "std::string",
-    "DWStringProperty":    "std::wstring",
     "DFilesystemPathProperty": "std::filesystem::path",
     "DVector3Property":    "DirectX::SimpleMath::Vector3",
     "DQuaternionProperty": "DirectX::SimpleMath::Quaternion",
@@ -53,7 +48,6 @@ INNER_TYPE_TO_CPP = {
 }
 
 _STRING_RE = re.compile(r"^std::(?:string|basic_string\s*<\s*char\b)")
-_WSTRING_RE = re.compile(r"^std::(?:wstring|basic_string\s*<\s*wchar_t\b)")
 _VECTOR_RE = re.compile(r"^std::vector\s*<")
 
 
@@ -111,8 +105,6 @@ def _resolve_vector_inner(inner_type: str) -> tuple | None:
 
     if _STRING_RE.match(s):
         return ("DStringProperty", "std::string", False, "")
-    if _WSTRING_RE.match(s):
-        return ("DWStringProperty", "std::wstring", False, "")
     if s == "std::filesystem::path":
         return ("DFilesystemPathProperty", "std::filesystem::path", False, "")
 
@@ -233,8 +225,6 @@ def resolve_type(cursor_type, field_name="", class_name="", *,
 
     if _STRING_RE.match(spelling):
         return ("DStringProperty", False, "")
-    if _WSTRING_RE.match(spelling):
-        return ("DWStringProperty", False, "")
 
     if _VECTOR_RE.match(spelling):
         return _try_resolve_vector(spelling, field_name, class_name,
@@ -248,8 +238,6 @@ def resolve_type(cursor_type, field_name="", class_name="", *,
 
     if _STRING_RE.match(canonical):
         return ("DStringProperty", False, "")
-    if _WSTRING_RE.match(canonical):
-        return ("DWStringProperty", False, "")
 
     if _VECTOR_RE.match(canonical):
         return _try_resolve_vector(canonical, field_name, class_name,
@@ -310,8 +298,6 @@ def resolve_type_from_string(type_str: str, field_name: str = "", class_name: st
 
     if _STRING_RE.match(s):
         return ("DStringProperty", False, "")
-    if _WSTRING_RE.match(s):
-        return ("DWStringProperty", False, "")
 
     if _VECTOR_RE.match(s):
         return _try_resolve_vector(s, field_name, class_name)

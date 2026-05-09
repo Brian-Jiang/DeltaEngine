@@ -35,7 +35,7 @@ void DefaultTextures::Initialize(Device& device, CommandList& commandList)
 
     auto desc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, 1u, 1u, 1u, 1u);
     g_whiteTexture = device.CreateTexture(desc, nullptr);
-    g_whiteTexture->SetName(L"DefaultWhiteTexture");
+    g_whiteTexture->SetName("DefaultWhiteTexture");
 
     static const uint32_t whitePixel = 0xFFFFFFFFu;
     D3D12_SUBRESOURCE_DATA subresource {};
@@ -50,7 +50,7 @@ void DefaultTextures::Initialize(Device& device, CommandList& commandList)
         auto cubeDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R16G16B16A16_FLOAT,
             1u, 1u, 6u, 1u);
         g_blackCubeTexture = device.CreateTexture(cubeDesc, nullptr);
-        g_blackCubeTexture->SetName(L"DefaultBlackCubeTexture");
+        g_blackCubeTexture->SetName("DefaultBlackCubeTexture");
         g_blackCubeTexture->CreateCubemapSRV();
 
         static const uint16_t blackCubeTexel[4] = { 0, 0, 0, 0 };
@@ -69,7 +69,7 @@ void DefaultTextures::Initialize(Device& device, CommandList& commandList)
         auto rgDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R16G16B16A16_FLOAT,
             1u, 1u, 1u, 1u);
         g_blackRGTexture = device.CreateTexture(rgDesc, nullptr);
-        g_blackRGTexture->SetName(L"DefaultBlackRGTexture");
+        g_blackRGTexture->SetName("DefaultBlackRGTexture");
 
         static const uint16_t blackRGTexel[4] = { 0, 0, 0, 0 };
         D3D12_SUBRESOURCE_DATA rgData{};
@@ -83,7 +83,7 @@ void DefaultTextures::Initialize(Device& device, CommandList& commandList)
     {
         auto shadow2DDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R32_FLOAT, 1u, 1u, 1u, 1u);
         g_shadowMap2DFallback           = device.CreateTexture(shadow2DDesc, nullptr);
-        g_shadowMap2DFallback->SetName(L"DefaultShadowMap2DFallback");
+        g_shadowMap2DFallback->SetName("DefaultShadowMap2DFallback");
 
         static const float depthOne = 1.0f;
         D3D12_SUBRESOURCE_DATA shadow2DData{};
@@ -97,7 +97,7 @@ void DefaultTextures::Initialize(Device& device, CommandList& commandList)
     {
         auto cubeArrDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R32_FLOAT, 1u, 1u, 6u, 1u);
         g_shadowCubeArrayFallback           = device.CreateTexture(cubeArrDesc, nullptr);
-        g_shadowCubeArrayFallback->SetName(L"DefaultShadowCubeArrayFallback");
+        g_shadowCubeArrayFallback->SetName("DefaultShadowCubeArrayFallback");
         g_shadowCubeArrayFallback->CreateTextureCubeArraySRV();
 
         static const float depthOne = 1.0f;

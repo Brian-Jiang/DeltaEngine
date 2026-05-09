@@ -4,6 +4,7 @@
 
 #include "Runtime/Graphics/DirectX/ResourceStateTracker.h"
 #include "Runtime/Graphics/DirectX/Device.h"
+#include "Runtime/Utils/StringUtils.h"
 #include "Graphics/DXUtils.h"
 
 using namespace DeltaEngine;
@@ -38,10 +39,11 @@ Resource::Resource(Device& device, Microsoft::WRL::ComPtr<ID3D12Resource> resour
     CheckFeatureSupport();
 }
 
-void Resource::SetName(const std::wstring& name) {
-    m_ResourceName = name;
+void Resource::SetName(std::string_view utf8Name) {
+    m_ResourceName.assign(utf8Name);
     if (m_d3d12Resource && !m_ResourceName.empty()) {
-        m_d3d12Resource->SetName(m_ResourceName.c_str());
+        const std::wstring wide = StringUtils::Utf8ToWString(m_ResourceName);
+        m_d3d12Resource->SetName(wide.c_str());
     }
 }
 

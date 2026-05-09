@@ -348,88 +348,8 @@ void DQuaternionProperty::SerializeElement(AssetArchive& ar, void* elementAddr)
 }
 
 // ---------------------------------------------------------------------------
-// DWStringProperty
-// ---------------------------------------------------------------------------
-
-DWStringProperty::DWStringProperty(std::string name, uint32_t offset)
-    : DProperty(std::move(name), "std::wstring", offset, sizeof(std::wstring))
-{
-}
-
-void DWStringProperty::InitializeValue(void* address) const
-{
-    new (address) std::wstring();
-}
-
-void DWStringProperty::DestroyValue(void* address) const
-{
-    static_cast<std::wstring*>(address)->~basic_string();
-}
-
-void DWStringProperty::SetValue(void* instance, const void* field_value) const
-{
-    void* addr = static_cast<uint8_t*>(instance) + m_offset;
-    *static_cast<std::wstring*>(addr) = field_value
-        ? *static_cast<const std::wstring*>(field_value)
-        : std::wstring{};
-    static_cast<DObject*>(instance)->MarkDirty();
-}
-
-void* DWStringProperty::GetValue(const void* instance) const
-{
-    return static_cast<uint8_t*>(const_cast<void*>(instance)) + m_offset;
-}
-
-void DWStringProperty::CopyValue(void* dest, const void* src) const
-{
-    new (dest) std::wstring(*static_cast<const std::wstring*>(src));
-}
-
-bool DWStringProperty::Identical(const void* a, const void* b) const
-{
-    return *static_cast<const std::wstring*>(a) == *static_cast<const std::wstring*>(b);
-}
-
-std::string DWStringProperty::ToString(const void* address) const
-{
-    const auto& ws = *static_cast<const std::wstring*>(address);
-    return StringUtils::WStringToUtf8(ws);
-}
-
-EPropertyType DWStringProperty::GetPropertyType() const
-{
-    return EPropertyType::WString;
-}
-
-void DWStringProperty::Serialize(AssetArchive& ar, void* objectPtr)
-{
-    DELTA_VERIFY(objectPtr != nullptr);
-    ar.Serialize(GetName(), *static_cast<std::wstring*>(GetValue(objectPtr)));
-}
-
-void DWStringProperty::SerializeElement(AssetArchive& ar, void* elementAddr)
-{
-    DELTA_VERIFY(elementAddr != nullptr);
-    ar.SerializeElement(*static_cast<std::wstring*>(elementAddr));
-}
-
-// ---------------------------------------------------------------------------
 // DFilesystemPathProperty
 // ---------------------------------------------------------------------------
-
-namespace
-{
-std::string PathToUtf8(const std::filesystem::path& p)
-{
-    const std::u8string u8 = p.u8string();
-    return std::string(reinterpret_cast<const char*>(u8.data()), u8.size());
-}
-
-std::filesystem::path Utf8ToPath(const std::string& utf8)
-{
-    return std::filesystem::path(std::u8string(reinterpret_cast<const char8_t*>(utf8.data()), utf8.size()));
-}
-} // namespace
 
 DFilesystemPathProperty::DFilesystemPathProperty(std::string name, uint32_t offset)
     : DProperty(std::move(name), "std::filesystem::path", offset, sizeof(std::filesystem::path))
@@ -472,7 +392,7 @@ bool DFilesystemPathProperty::Identical(const void* a, const void* b) const
 
 std::string DFilesystemPathProperty::ToString(const void* address) const
 {
-    return PathToUtf8(*static_cast<const std::filesystem::path*>(address));
+    return StringUtils::PathToUtf8(*static_cast<const std::filesystem::path*>(address));
 }
 
 EPropertyType DFilesystemPathProperty::GetPropertyType() const
@@ -486,10 +406,10 @@ void DFilesystemPathProperty::Serialize(AssetArchive& ar, void* objectPtr)
     auto* p = static_cast<std::filesystem::path*>(GetValue(objectPtr));
     std::string utf8;
     if (ar.IsSaving())
-        utf8 = PathToUtf8(*p);
+        utf8 = StringUtils::PathToUtf8(*p);
     ar.Serialize(GetName(), utf8);
     if (ar.IsLoading())
-        *p = Utf8ToPath(utf8);
+        *p = StringUtils::Utf8ToPath(utf8);
 }
 
 void DFilesystemPathProperty::SerializeElement(AssetArchive& ar, void* elementAddr)
@@ -498,10 +418,10 @@ void DFilesystemPathProperty::SerializeElement(AssetArchive& ar, void* elementAd
     auto* p = static_cast<std::filesystem::path*>(elementAddr);
     std::string utf8;
     if (ar.IsSaving())
-        utf8 = PathToUtf8(*p);
+        utf8 = StringUtils::PathToUtf8(*p);
     ar.SerializeElement(utf8);
     if (ar.IsLoading())
-        *p = Utf8ToPath(utf8);
+        *p = StringUtils::Utf8ToPath(utf8);
 }
 
 // ---------------------------------------------------------------------------

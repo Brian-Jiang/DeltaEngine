@@ -1,9 +1,5 @@
 #include "Runtime/Serialization/JsonAssetArchive.h"
 
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <Windows.h>
-
 #include <fstream>
 #include <system_error>
 
@@ -16,74 +12,6 @@ static nlohmann::json& CurrentNode(std::vector<nlohmann::json*>& stack, const ch
     DELTA_VERIFY_MSG(!stack.empty(), "JsonAssetArchive {} called with an empty stack", operationName);
     DELTA_VERIFY_MSG(stack.back() != nullptr, "JsonAssetArchive {} called with a null stack entry", operationName);
     return *stack.back();
-}
-
-static std::string WStringToUtf8(const std::wstring& wide)
-{
-    if (wide.empty())
-        return {};
-
-    const int size = WideCharToMultiByte(
-        CP_UTF8, 0,
-        wide.data(), static_cast<int>(wide.size()),
-        nullptr, 0,
-        nullptr, nullptr);
-
-    if (size <= 0)
-    {
-        DLOG(LogSerialization, ELogLevel::Warning,
-             "Failed to convert wide string to UTF-8: conversion returned {} bytes (expected positive byte count)",
-             size);
-        return {};
-    }
-
-    std::string result(static_cast<size_t>(size), '\0');
-    const int written = WideCharToMultiByte(
-        CP_UTF8, 0,
-        wide.data(), static_cast<int>(wide.size()),
-        result.data(), size,
-        nullptr, nullptr);
-    if (written != size)
-    {
-        DLOG(LogSerialization, ELogLevel::Warning,
-             "Failed to convert wide string to UTF-8: wrote {} bytes but expected {} bytes",
-             written, size);
-        return {};
-    }
-    return result;
-}
-
-static std::wstring Utf8ToWString(const std::string& utf8)
-{
-    if (utf8.empty())
-        return {};
-
-    const int size = MultiByteToWideChar(
-        CP_UTF8, 0,
-        utf8.data(), static_cast<int>(utf8.size()),
-        nullptr, 0);
-
-    if (size <= 0)
-    {
-        DLOG(LogSerialization, ELogLevel::Warning,
-             "Failed to convert UTF-8 string to wide string: conversion returned {} code units (expected positive count)",
-             size);
-        return {};
-    }
-
-    std::wstring result(static_cast<size_t>(size), L'\0');
-    const int written = MultiByteToWideChar(
-        CP_UTF8, 0,
-        utf8.data(), static_cast<int>(utf8.size()),
-        result.data(), size);
-    if (written != size)
-    {
-        DLOG(LogSerialization, ELogLevel::Warning,
-             "Failed to convert UTF-8 string to wide string: wrote {} code units but expected {} code units",
-             written, size);
-        return {};
-    }
-    return result;
 }
 
 static bool IsSafeRelativeBulkPath(const std::filesystem::path& relativePath)
@@ -499,17 +427,6 @@ void JsonAssetArchive::Serialize(const std::string& key, std::string& value)
     StoreOrLoadValue(cur, IsSaving(), key, value);
 }
 
-void JsonAssetArchive::Serialize(const std::string& key, std::wstring& value)
-{
-    auto& cur = CurrentNode(m_stack, "SerializeWString");
-    StoreOrLoadNode(
-        cur,
-        IsSaving(),
-        key,
-        [&]() -> nlohmann::json { return WStringToUtf8(value); },
-        [&](const nlohmann::json& node) { value = Utf8ToWString(node.get<std::string>()); });
-}
-
 void JsonAssetArchive::Serialize(const std::string& key, DirectX::SimpleMath::Vector3& value)
 {
     auto& cur = CurrentNode(m_stack, "SerializeVector3");
@@ -664,17 +581,6 @@ void JsonAssetArchive::SerializeElement(std::string& value)
 {
     auto& cur = CurrentNode(m_stack, "SerializeElementString");
     StoreOrLoadElementValue(cur, IsSaving(), m_arrayIndex, value);
-}
-
-void JsonAssetArchive::SerializeElement(std::wstring& value)
-{
-    auto& cur = CurrentNode(m_stack, "SerializeElementWString");
-    StoreOrLoadElementNode(
-        cur,
-        IsSaving(),
-        m_arrayIndex,
-        [&]() -> nlohmann::json { return WStringToUtf8(value); },
-        [&](const nlohmann::json& node) { value = Utf8ToWString(node.get<std::string>()); });
 }
 
 void JsonAssetArchive::SerializeElement(DirectX::SimpleMath::Vector3& value)

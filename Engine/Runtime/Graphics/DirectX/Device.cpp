@@ -235,7 +235,7 @@ std::shared_ptr<Device> Device::Create(std::shared_ptr<Adapter> adapter)
     return std::make_shared<MakeDevice>(adapter);
 }
 
-std::wstring Device::GetDescription() const
+std::string Device::GetDescription() const
 {
     return m_Adapter->GetDescription();
 }

@@ -50,7 +50,6 @@ public:
     void Serialize(const std::string& key, int&          value) override;
     void Serialize(const std::string& key, bool&         value) override;
     void Serialize(const std::string& key, std::string&  value) override;
-    void Serialize(const std::string& key, std::wstring& value) override;
 
     void Serialize(const std::string& key, DirectX::SimpleMath::Vector3&    value) override;
     void Serialize(const std::string& key, DirectX::SimpleMath::Quaternion& value) override;
@@ -66,7 +65,6 @@ public:
     void SerializeElement(int&         value) override;
     void SerializeElement(bool&        value) override;
     void SerializeElement(std::string& value) override;
-    void SerializeElement(std::wstring& value) override;
     void SerializeElement(DirectX::SimpleMath::Vector3&    value) override;
     void SerializeElement(DirectX::SimpleMath::Quaternion& value) override;
     void SerializeElement(DirectX::XMFLOAT4&               value) override;

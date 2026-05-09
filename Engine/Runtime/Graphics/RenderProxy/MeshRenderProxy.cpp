@@ -23,6 +23,9 @@
 #include "Core/DMesh.h"
 #include "Core/DShader.h"
 #include "Core/DTexture.h"
+#include "Runtime/Utils/StringUtils.h"
+
+#include <format>
 
 using namespace DeltaEngine;
 using namespace DirectX;
@@ -188,8 +191,9 @@ void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext>
         m_pipelineStateObjects.push_back(device->CreatePipelineStateObject(pipelineStateStream));
         if (m_pipelineStateObjects.back())
         {
-            m_pipelineStateObjects.back()->GetD3D12PipelineState()->SetName(
-                (L"PSO MeshRenderProxy Sub" + std::to_wstring(i)).c_str());
+            const std::wstring psoName = StringUtils::Utf8ToWString(
+                std::format("PSO MeshRenderProxy Sub{}", i));
+            m_pipelineStateObjects.back()->GetD3D12PipelineState()->SetName(psoName.c_str());
         }
 
         m_textures.insert({ i, std::unordered_map<uint32_t, std::shared_ptr<DirectX12Texture>>() });
@@ -226,11 +230,11 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
         for (int i = 0; i < submeshCount; ++i)
         {
             std::shared_ptr<VertexBuffer> vertexBuffer = commandList->CopyVertexBuffer(m_mesh->GetVertices()[i]);
-            const std::wstring meshStem = m_mesh->GetSourcePath().stem().wstring();
-            vertexBuffer->SetName(L"DMesh " + meshStem + L" Sub" + std::to_wstring(i) + L" VB");
+            const std::string meshStem = StringUtils::PathToUtf8(m_mesh->GetSourcePath().stem());
+            vertexBuffer->SetName(std::format("DMesh {} Sub{} VB", meshStem, i));
             m_VertexBuffers.push_back(vertexBuffer);
             std::shared_ptr<IndexBuffer> indexBuffer = commandList->CopyIndexBuffer(m_mesh->GetIndices()[i]);
-            indexBuffer->SetName(L"DMesh " + meshStem + L" Sub" + std::to_wstring(i) + L" IB");
+            indexBuffer->SetName(std::format("DMesh {} Sub{} IB", meshStem, i));
             m_IndexBuffers.push_back(indexBuffer);
         }
 
@@ -356,11 +360,11 @@ void MeshRenderProxy::GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> r
         for (int i = 0; i < submeshCount; ++i)
         {
             std::shared_ptr<VertexBuffer> vertexBuffer = commandList->CopyVertexBuffer(m_mesh->GetVertices()[i]);
-            const std::wstring meshStem = m_mesh->GetSourcePath().stem().wstring();
-            vertexBuffer->SetName(L"DMesh " + meshStem + L" Sub" + std::to_wstring(i) + L" VB Shadow");
+            const std::string meshStem = StringUtils::PathToUtf8(m_mesh->GetSourcePath().stem());
+            vertexBuffer->SetName(std::format("DMesh {} Sub{} VB Shadow", meshStem, i));
             m_VertexBuffers.push_back(vertexBuffer);
             std::shared_ptr<IndexBuffer> indexBuffer = commandList->CopyIndexBuffer(m_mesh->GetIndices()[i]);
-            indexBuffer->SetName(L"DMesh " + meshStem + L" Sub" + std::to_wstring(i) + L" IB Shadow");
+            indexBuffer->SetName(std::format("DMesh {} Sub{} IB Shadow", meshStem, i));
             m_IndexBuffers.push_back(indexBuffer);
         }
 

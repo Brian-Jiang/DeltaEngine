@@ -51,7 +51,7 @@ public:
     /**
      * Get a description of the adapter that was used to create the device.
      */
-    DELTAENGINE_API std::wstring GetDescription() const;
+    DELTAENGINE_API std::string GetDescription() const;
 
     /**
      * Allocate a number of CPU visible descriptors.

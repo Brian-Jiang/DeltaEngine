@@ -2,6 +2,7 @@
 
 #include "Graphics/DXUtils.h"
 #include "IO/IOManager.h"
+#include "Runtime/Utils/StringUtils.h"
 
 #include <slang.h>
 #include <slang-com-ptr.h>
@@ -38,16 +39,6 @@ void WriteShaderPdb(IDxcResult* result)
 
     std::fwrite(pdb->GetBufferPointer(), pdb->GetBufferSize(), 1, file);
     std::fclose(file);
-}
-
-std::string WideToUtf8(const std::wstring& wide)
-{
-    if (wide.empty())
-        return {};
-    const int size = ::WideCharToMultiByte(CP_UTF8, 0, wide.data(), static_cast<int>(wide.size()), nullptr, 0, nullptr, nullptr);
-    std::string out(static_cast<size_t>(size), '\0');
-    ::WideCharToMultiByte(CP_UTF8, 0, wide.data(), static_cast<int>(wide.size()), out.data(), size, nullptr, nullptr);
-    return out;
 }
 
 Slang::ComPtr<slang::IGlobalSession>& GetSlangGlobalSession()
@@ -92,9 +83,9 @@ std::string NormalizeSlangProfile(const std::string& targetProfile)
 }
 
 ComPtr<IDxcBlob> CompileHLSLStage(
-    const std::wstring& engineRelativePath,
-    const std::wstring& entryPoint,
-    const std::wstring& targetProfile,
+    const std::filesystem::path& engineRelativePath,
+    const std::string& entryPoint,
+    const std::string& targetProfile,
     const char* debugLabel)
 {
     DELTA_ENSURE(!engineRelativePath.empty());
@@ -108,7 +99,7 @@ ComPtr<IDxcBlob> CompileHLSLStage(
     ThrowIfFailed(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils)));
     ThrowIfFailed(dxcUtils->CreateDefaultIncludeHandler(&includeHandler));
 
-    const std::wstring shaderPath = IOManager::GetEngineSourceAssetFullPath(std::filesystem::path(engineRelativePath)).wstring();
+    const std::wstring shaderPath = IOManager::GetEngineSourceAssetFullPath(engineRelativePath).wstring();
     ComPtr<IDxcBlobEncoding> sourceBlob;
     ThrowIfFailed(dxcUtils->LoadFile(shaderPath.c_str(), nullptr, &sourceBlob));
 
@@ -117,10 +108,13 @@ ComPtr<IDxcBlob> CompileHLSLStage(
     ThrowIfFailed(sourceBlob->GetEncoding(&known, &encoding));
     DxcBuffer sourceBuffer { .Ptr = sourceBlob->GetBufferPointer(), .Size = sourceBlob->GetBufferSize(), .Encoding = encoding };
 
+    const std::wstring entryPointW = StringUtils::Utf8ToWString(entryPoint);
+    const std::wstring targetProfileW = StringUtils::Utf8ToWString(targetProfile);
+
     LPCWSTR args[] = {
         shaderPath.c_str(),
-        L"-E", entryPoint.c_str(),
-        L"-T", targetProfile.c_str(),
+        L"-E", entryPointW.c_str(),
+        L"-T", targetProfileW.c_str(),
         L"-Zi",
         L"-Fd", L"./",
     };

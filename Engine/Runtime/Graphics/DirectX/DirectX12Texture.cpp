@@ -3,6 +3,7 @@
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/DirectX/ResourceStateTracker.h"
 #include "Runtime/Graphics/DXUtils.h"
+#include "Runtime/Utils/StringUtils.h"
 #include "DirectXTex.h"
 
 using namespace DeltaEngine;
@@ -38,7 +39,10 @@ void DirectX12Texture::Resize(uint32_t width, uint32_t height, uint32_t depthOrA
             &heapPorp, D3D12_HEAP_FLAG_NONE, &resDesc,
             D3D12_RESOURCE_STATE_COMMON, m_d3d12ClearValue.get(), IID_PPV_ARGS(&m_d3d12Resource)));
 
-        m_d3d12Resource->SetName(m_ResourceName.c_str());
+        if (!m_ResourceName.empty()) {
+            const std::wstring wide = StringUtils::Utf8ToWString(m_ResourceName);
+            m_d3d12Resource->SetName(wide.c_str());
+        }
         ResourceStateTracker::AddGlobalResourceState(m_d3d12Resource.Get(), D3D12_RESOURCE_STATE_COMMON);
         CreateViews();
     }

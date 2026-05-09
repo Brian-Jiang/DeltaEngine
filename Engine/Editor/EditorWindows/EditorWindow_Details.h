@@ -52,7 +52,6 @@ private:
     WidgetEditEvent DrawBoolProperty(DObject* instance, DProperty* prop);
     WidgetEditEvent DrawStringProperty(DObject* instance, DProperty* prop);
     WidgetEditEvent DrawFilesystemPathProperty(DObject* instance, DProperty* prop);
-    bool DrawWStringProperty(DObject* instance, DProperty* prop);
     WidgetEditEvent DrawVector3Property(DObject* instance, DProperty* prop);
     WidgetEditEvent DrawQuaternionProperty(DObject* instance, DProperty* prop);
     WidgetEditEvent DrawFloat4Property(DObject* instance, DProperty* prop);

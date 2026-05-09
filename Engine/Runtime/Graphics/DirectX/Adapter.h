@@ -38,6 +38,7 @@
 #include <wrl/client.h>
 
 #include <memory>
+#include <string>
 #include <vector>
 
 DELTA_ENGINE_NS_BEGIN
@@ -78,7 +79,7 @@ public:
     /**
      * Get the description of the adapter.
      */
-    const std::wstring GetDescription() const;
+    std::string GetDescription() const;
 
 protected:
     Adapter(Microsoft::WRL::ComPtr<IDXGIAdapter4> dxgiAdapter);

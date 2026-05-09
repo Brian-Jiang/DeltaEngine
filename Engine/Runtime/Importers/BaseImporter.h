@@ -2,7 +2,7 @@
 
 #include "EngineIncludes.h"
 
-#include <string>
+#include <filesystem>
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -12,7 +12,7 @@ public:
 	BaseImporter();
 	~BaseImporter();
 
-	virtual void Import(const std::wstring& filePath) = 0;
+	virtual void Import(const std::filesystem::path& filePath) = 0;
 };
 
 DELTA_ENGINE_NS_END

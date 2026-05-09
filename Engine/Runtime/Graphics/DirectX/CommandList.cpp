@@ -28,6 +28,7 @@
 #include "Runtime/Graphics/DXUtils.h"
 #include "Runtime/Core/DTexture.h"
 #include "Runtime/Math/Common.h"
+#include "Runtime/Utils/StringUtils.h"
 
 using namespace DeltaEngine;
 using namespace Microsoft::WRL;
@@ -45,7 +46,7 @@ public:
     virtual ~MakeUploadBuffer() { }
 };
 
-std::map<std::wstring, ID3D12Resource*> CommandList::ms_TextureCache;
+std::map<std::string, ID3D12Resource*> CommandList::ms_TextureCache;
 std::mutex CommandList::ms_TextureCacheMutex;
 
 DeltaEngine::CommandList::CommandList(Device& device, D3D12_COMMAND_LIST_TYPE type)
@@ -300,18 +301,20 @@ void CommandList::SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY primitiveTopology)
     m_d3d12CommandList->IASetPrimitiveTopology(primitiveTopology);
 }
 
-std::shared_ptr<DirectX12Texture> CommandList::LoadTextureFromFile(const std::wstring& fileName, bool sRGB)
+std::shared_ptr<DirectX12Texture> CommandList::LoadTextureFromFile(const std::filesystem::path& fileName, bool sRGB)
 {
     namespace fs = std::filesystem;
     std::shared_ptr<DirectX12Texture> texture;
-    fs::path filePath(fileName);
-    if (!fs::exists(filePath))
+    if (!fs::exists(fileName))
     {
         throw std::exception("File not found.");
     }
 
+    const std::string cacheKey = StringUtils::PathToUtf8(fileName);
+    const std::wstring widePath = fileName.wstring();
+
     std::lock_guard<std::mutex> lock(ms_TextureCacheMutex);
-    auto iter = ms_TextureCache.find(fileName);
+    auto iter = ms_TextureCache.find(cacheKey);
     if (iter != ms_TextureCache.end())
     {
         texture = m_Device.CreateTexture(iter->second);
@@ -320,18 +323,18 @@ std::shared_ptr<DirectX12Texture> CommandList::LoadTextureFromFile(const std::ws
         TexMetadata metadata;
         ScratchImage scratchImage;
 
-        if (filePath.extension() == ".dds")
+        if (fileName.extension() == ".dds")
         {
-            ThrowIfFailed(LoadFromDDSFile(fileName.c_str(), DDS_FLAGS_FORCE_RGB, &metadata, scratchImage));
-        } else if (filePath.extension() == ".hdr")
+            ThrowIfFailed(LoadFromDDSFile(widePath.c_str(), DDS_FLAGS_FORCE_RGB, &metadata, scratchImage));
+        } else if (fileName.extension() == ".hdr")
         {
-            ThrowIfFailed(LoadFromHDRFile(fileName.c_str(), &metadata, scratchImage));
-        } else if (filePath.extension() == ".tga")
+            ThrowIfFailed(LoadFromHDRFile(widePath.c_str(), &metadata, scratchImage));
+        } else if (fileName.extension() == ".tga")
         {
-            ThrowIfFailed(LoadFromTGAFile(fileName.c_str(), &metadata, scratchImage));
+            ThrowIfFailed(LoadFromTGAFile(widePath.c_str(), &metadata, scratchImage));
         } else
         {
-            ThrowIfFailed(LoadFromWICFile(fileName.c_str(), WIC_FLAGS_FORCE_RGB, &metadata, scratchImage));
+            ThrowIfFailed(LoadFromWICFile(widePath.c_str(), WIC_FLAGS_FORCE_RGB, &metadata, scratchImage));
         }
 
         // Force the texture format to be sRGB to convert to linear when sampling the texture in a shader.
@@ -376,7 +379,7 @@ std::shared_ptr<DirectX12Texture> CommandList::LoadTextureFromFile(const std::ws
         ));
 
         texture = m_Device.CreateTexture(textureResource);
-        texture->SetName(fileName);
+        texture->SetName(cacheKey);
 
         // Update the global state tracker.
         ResourceStateTracker::AddGlobalResourceState(textureResource.Get(), D3D12_RESOURCE_STATE_COMMON);
@@ -399,7 +402,7 @@ std::shared_ptr<DirectX12Texture> CommandList::LoadTextureFromFile(const std::ws
         }
 
         // Add the texture resource to the texture cache.
-        ms_TextureCache[fileName] = textureResource.Get();
+        ms_TextureCache[cacheKey] = textureResource.Get();
     }
 
     return texture;
@@ -409,9 +412,10 @@ std::shared_ptr<DirectX12Texture> CommandList::LoadTexture(DTexture* texture)
 {
     std::shared_ptr<DirectX12Texture> dx12texture;
 
-    auto fileName = texture->GetSourcePath().wstring();
+    const std::filesystem::path sourcePath = texture->GetSourcePath();
+    const std::string cacheKey = StringUtils::PathToUtf8(sourcePath);
     std::lock_guard<std::mutex> lock(ms_TextureCacheMutex);
-    auto iter = ms_TextureCache.find(fileName);
+    auto iter = ms_TextureCache.find(cacheKey);
     if (iter != ms_TextureCache.end())
     {
         dx12texture = m_Device.CreateTexture(iter->second);
@@ -457,7 +461,7 @@ std::shared_ptr<DirectX12Texture> CommandList::LoadTexture(DTexture* texture)
             IID_PPV_ARGS(&textureResource)));
 
         dx12texture = m_Device.CreateTexture(textureResource);
-        dx12texture->SetName(L"DTexture " + std::filesystem::path(fileName).stem().wstring());
+        dx12texture->SetName("DTexture " + StringUtils::PathToUtf8(sourcePath.stem()));
 
         if (texture->IsCubemap())
             dx12texture->CreateCubemapSRV();
@@ -481,7 +485,7 @@ std::shared_ptr<DirectX12Texture> CommandList::LoadTexture(DTexture* texture)
         }
 
         // Add the texture resource to the texture cache.
-        ms_TextureCache[fileName] = textureResource.Get();
+        ms_TextureCache[cacheKey] = textureResource.Get();
     }
 
     return dx12texture;
@@ -738,7 +742,7 @@ void CommandList::PanoToCubemap(const std::shared_ptr<DirectX12Texture>& cubemap
         ResourceStateTracker::AddGlobalResourceState(stagingResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST);
 
         stagingTexture = m_Device.CreateTexture(stagingResource);
-        stagingTexture->SetName(L"Pano to Cubemap Staging Texture");
+        stagingTexture->SetName("Pano to Cubemap Staging Texture");
 
         CopyResource(stagingTexture, cubemapTexture);
     }

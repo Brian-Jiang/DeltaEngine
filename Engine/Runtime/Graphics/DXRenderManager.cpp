@@ -188,7 +188,7 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
     colorClearValue.Color[3] = 1.0f;
 
     auto colorTexture = m_device->CreateTexture(colorDesc, &colorClearValue);
-    colorTexture->SetName(L"Color Render Target");
+    colorTexture->SetName("Color Render Target");
 
     // Create a depth buffer.
     auto depthDesc = CD3DX12_RESOURCE_DESC::Tex2D(depthBufferFormat, m_width, m_height, 1, 1, sampleDesc.Count,
@@ -199,7 +199,7 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
     depthClearValue.DepthStencil = { 1.0f, 0 };
 
     auto depthTexture = m_device->CreateTexture(depthDesc, &depthClearValue);
-    depthTexture->SetName(L"Depth Render Target");
+    depthTexture->SetName("Depth Render Target");
 
     m_renderTarget->AttachTexture(AttachmentPoint::Color0, colorTexture);
     m_renderTarget->AttachTexture(AttachmentPoint::DepthStencil, depthTexture);
@@ -436,7 +436,7 @@ void DXRenderManager::ExecutePostProcessStack(DXGraphicsContext& ctx, PostProces
                 sceneDesc.Format, sceneDesc.Width, static_cast<UINT>(sceneDesc.Height),
                 1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE);
             m_resolvedScene = m_device->CreateTexture(resolvedDesc, nullptr);
-            m_resolvedScene->SetName(L"PostProcess Resolved Scene");
+            m_resolvedScene->SetName("PostProcess Resolved Scene");
         }
 
         cl.ResolveSubresource(m_resolvedScene, sceneTex);
@@ -499,7 +499,7 @@ void DXRenderManager::CreatePingPongTargets(UINT width, UINT height)
     for (int i = 0; i < 2; ++i)
     {
         m_pingPong[i].texture = m_device->CreateTexture(desc, &clear);
-        m_pingPong[i].texture->SetName(i == 0 ? L"PostProcess Ping" : L"PostProcess Pong");
+        m_pingPong[i].texture->SetName(i == 0 ? "PostProcess Ping" : "PostProcess Pong");
         m_pingPong[i].rtv = m_pingPong[i].texture->GetRenderTargetView();
         m_pingPong[i].srv = m_pingPong[i].texture->GetShaderResourceView();
     }

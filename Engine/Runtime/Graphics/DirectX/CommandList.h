@@ -4,10 +4,12 @@
 
 #include <d3d12.h>
 #include <wrl.h>
+#include <filesystem>
 #include <memory>
 #include <vector>
 #include <map>
 #include <mutex>
+#include <string>
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -162,7 +164,7 @@ public:
     /**
      * Load a texture by a filename.
      */
-    DELTAENGINE_API std::shared_ptr<DirectX12Texture> LoadTextureFromFile(const std::wstring& fileName, bool sRGB = false);
+    DELTAENGINE_API std::shared_ptr<DirectX12Texture> LoadTextureFromFile(const std::filesystem::path& fileName, bool sRGB = false);
     DELTAENGINE_API std::shared_ptr<DirectX12Texture> LoadTexture(DTexture* texture);
 
     /**
@@ -583,7 +585,7 @@ private:
     TrackedObjects m_TrackedObjects;
 
     // Keep track of loaded textures to avoid loading the same texture multiple times.
-    static std::map<std::wstring, ID3D12Resource*> ms_TextureCache;
+    static std::map<std::string, ID3D12Resource*> ms_TextureCache;
     static std::mutex ms_TextureCacheMutex;
 };
 

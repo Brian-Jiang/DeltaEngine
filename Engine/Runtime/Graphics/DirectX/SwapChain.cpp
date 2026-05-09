@@ -11,6 +11,8 @@
 #include "Runtime/Graphics/DirectX/Adapter.h"
 #include "Runtime/Graphics/DXUtils.h"
 
+#include <format>
+
 //#include <dx12lib/SwapChain.h>
 //
 //#include <dx12lib/Adapter.h>
@@ -213,6 +215,6 @@ void SwapChain::UpdateRenderTargetViews()
 
         // Set the names for the backbuffer textures.
         // Useful for debugging.
-        m_BackBufferTextures[i]->SetName( L"Backbuffer[" + std::to_wstring( i ) + L"]" );
+        m_BackBufferTextures[i]->SetName(std::format("Backbuffer[{}]", i));
     }
 }

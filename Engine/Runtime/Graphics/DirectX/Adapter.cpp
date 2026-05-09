@@ -1,6 +1,7 @@
 #include "Graphics/DirectX/Adapter.h"
 
 #include "Runtime/Graphics/DXUtils.h"
+#include "Runtime/Utils/StringUtils.h"
 
 using namespace DeltaEngine;
 using namespace Microsoft::WRL;
@@ -83,9 +84,9 @@ std::shared_ptr<Adapter> Adapter::Create(DXGI_GPU_PREFERENCE gpuPreference, bool
     return adapter;
 }
 
-const std::wstring Adapter::GetDescription() const
+std::string Adapter::GetDescription() const
 {
-    return m_Desc.Description;
+    return StringUtils::WStringToUtf8(m_Desc.Description);
 }
 
 Adapter::Adapter(Microsoft::WRL::ComPtr<IDXGIAdapter4> dxgiAdapter)

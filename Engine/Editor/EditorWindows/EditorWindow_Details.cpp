@@ -532,9 +532,6 @@ void EditorWindow_Details::RenderSingleProperty(DObject* instance, DProperty* pr
     case EPropertyType::FilesystemPath:
         evt = DrawFilesystemPathProperty(instance, prop);
         break;
-    case EPropertyType::WString:
-        DrawWStringProperty(instance, prop);
-        break;
     case EPropertyType::Vector3:
         evt = DrawVector3Property(instance, prop);
         break;
@@ -1003,13 +1000,6 @@ WidgetEditEvent EditorWindow_Details::DrawFilesystemPathPropertyAt(void* contain
 WidgetEditEvent EditorWindow_Details::DrawFilesystemPathProperty(DObject* instance, DProperty* prop)
 {
     return DrawFilesystemPathPropertyAt(instance, prop);
-}
-
-bool EditorWindow_Details::DrawWStringProperty(DObject* instance, DProperty* prop)
-{
-    const std::wstring& ws = *static_cast<const std::wstring*>(prop->GetValue(instance));
-    DrawReadOnlyProperty(FormatPropertyInspectorLabel(prop->GetName()), StringUtils::WStringToUtf8(ws));
-    return false;
 }
 
 WidgetEditEvent EditorWindow_Details::DrawVector3Property(DObject* instance, DProperty* prop)

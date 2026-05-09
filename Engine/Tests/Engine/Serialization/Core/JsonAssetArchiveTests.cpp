@@ -1,18 +1,20 @@
 #include "Runtime/Serialization/JsonAssetArchive.h"
 
+#include "Runtime/Utils/StringUtils.h"
+
 #include <gtest/gtest.h>
 
 using namespace DeltaEngine;
 
-TEST(JsonAssetArchiveTests, RoundTripsWideStringsAsUtf8)
+TEST(JsonAssetArchiveTests, RoundTripsUtf8Strings)
 {
     JsonAssetArchive writer;
-    std::wstring expected = L"Delta caf\u00E9 \u4F60\u597D";
+    std::string expected = StringUtils::WStringToUtf8(L"Delta caf\u00E9 \u4F60\u597D");
 
     writer.Serialize("label", expected);
 
     JsonAssetArchive reader(writer.GetRoot(), {});
-    std::wstring loaded;
+    std::string loaded;
     reader.Serialize("label", loaded);
 
     EXPECT_EQ(loaded, expected);

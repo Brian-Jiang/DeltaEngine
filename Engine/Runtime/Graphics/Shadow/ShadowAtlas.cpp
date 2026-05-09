@@ -7,32 +7,6 @@
 
 using namespace DeltaEngine;
 
-namespace
-{
-std::wstring Utf8DebugNameToWide(const std::string& utf8)
-{
-    if (utf8.empty())
-        return {};
-
-    const int size = MultiByteToWideChar(
-        CP_UTF8, MB_ERR_INVALID_CHARS,
-        utf8.data(), static_cast<int>(utf8.size()),
-        nullptr, 0);
-
-    if (size <= 0)
-        return {};
-
-    std::wstring wide(static_cast<size_t>(size), L'\0');
-    const int written = MultiByteToWideChar(
-        CP_UTF8, MB_ERR_INVALID_CHARS,
-        utf8.data(), static_cast<int>(utf8.size()),
-        wide.data(), size);
-    if (written != size)
-        return {};
-    return wide;
-}
-}
-
 void ShadowAtlas::Initialize(Device& device, uint32_t widthHeight, const std::string& debugNameUtf8)
 {
     Shutdown();
@@ -58,9 +32,8 @@ void ShadowAtlas::Initialize(Device& device, uint32_t widthHeight, const std::st
         return;
     }
 
-    const std::wstring wideName = Utf8DebugNameToWide(debugNameUtf8);
-    if (!wideName.empty())
-        m_texture->SetName(wideName.c_str());
+    if (!debugNameUtf8.empty())
+        m_texture->SetName(debugNameUtf8);
 }
 
 void ShadowAtlas::Shutdown()

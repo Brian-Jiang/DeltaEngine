@@ -64,7 +64,6 @@ public:
     virtual void Serialize(const std::string& key, int&         value) = 0;
     virtual void Serialize(const std::string& key, bool&        value) = 0;
     virtual void Serialize(const std::string& key, std::string& value) = 0;
-    virtual void Serialize(const std::string& key, std::wstring& value) = 0;
 
     virtual void Serialize(const std::string& key, DirectX::SimpleMath::Vector3&    value) = 0;
     virtual void Serialize(const std::string& key, DirectX::SimpleMath::Quaternion& value) = 0;
@@ -81,7 +80,6 @@ public:
     virtual void SerializeElement(int&         value) = 0;
     virtual void SerializeElement(bool&        value) = 0;
     virtual void SerializeElement(std::string& value) = 0;
-    virtual void SerializeElement(std::wstring& value) = 0;
     virtual void SerializeElement(DirectX::SimpleMath::Vector3&    value) = 0;
     virtual void SerializeElement(DirectX::SimpleMath::Quaternion& value) = 0;
     virtual void SerializeElement(DirectX::XMFLOAT4&               value) = 0;

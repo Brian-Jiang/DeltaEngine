@@ -23,7 +23,6 @@ enum class EPropertyType
     Bool,
     Double,
     String,
-    WString,
     FilesystemPath,
     Vector3,
     Quaternion,
@@ -352,24 +351,6 @@ public:
         *static_cast<T**>(valueAddress) = static_cast<T*>(resolved);
         m_unresolvedPointers.erase(valueAddress);
     }
-};
-
-
-class DWStringProperty : public DProperty
-{
-public:
-    DWStringProperty(std::string name, uint32_t offset);
-
-    void InitializeValue(void* address) const override;
-    void DestroyValue(void* address) const override;
-    void SetValue(void* instance, const void* field_value) const override;
-    void* GetValue(const void* instance) const override;
-    void CopyValue(void* dest, const void* src) const override;
-    bool Identical(const void* a, const void* b) const override;
-    std::string ToString(const void* address) const override;
-    EPropertyType GetPropertyType() const override;
-    void Serialize(AssetArchive& ar, void* objectPtr) override;
-    void SerializeElement(AssetArchive& ar, void* elementAddr) override;
 };
 
 
