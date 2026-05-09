@@ -24,7 +24,9 @@
       "Bash(D:/Projects/DeltaEngine/Build/x64-Debug/bin/DeltaEngineTests.exe \"--gtest_filter=IBLBakerHardeningTests*:LightComponentHardeningTests*:DXGraphicsContextHardeningTests*:DefaultTexturesHardeningTests*\")",
       "Bash(D:/Projects/DeltaEngine/Build/x64-Debug/bin/DeltaEngineTests.exe \"--gtest_filter=DefaultTexturesHardeningFixture*\")",
       "Bash(D:/Projects/DeltaEngine/Build/x64-Debug/bin/DeltaEngineTests.exe)",
-      "Bash(D:/Projects/DeltaEngine/Build/x64-Debug/bin/DeltaEditorTests.exe)"
+      "Bash(D:/Projects/DeltaEngine/Build/x64-Debug/bin/DeltaEditorTests.exe)",
+      "Bash(Tools\\\\Scripts\\\\build-x64-debug-engine-tests.bat --automatic)",
+      "PowerShell(.\\\\Tools\\\\Scripts\\\\build-x64-debug-engine-tests.bat --automatic)"
     ]
   }
 }

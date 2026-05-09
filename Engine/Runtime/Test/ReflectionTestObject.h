@@ -39,6 +39,12 @@ public:
     DFUNCTION()
     void VoidMethod();
 
+    DFUNCTION()
+    int Compute(int x);
+
+    DFUNCTION()
+    float Compute(float x);
+
 private:
     DPROPERTY()
     float m_rFloat = 0.0f;

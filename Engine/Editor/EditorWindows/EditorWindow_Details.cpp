@@ -612,13 +612,13 @@ void EditorWindow_Details::DrawFunctionButtons(DObject* instance, DClass* dclass
         DClass* c = dynamic_cast<DClass*>(s);
         if (!c)
             continue;
-        for (const auto& [name, fn] : c->GetFunctions())
+        for (DFunction* fn : c->GetFunctions())
         {
             if (!fn || !fn->HasMeta("ShowAsButton"))
                 continue;
             if (fn->GetNumParams() != 0)
                 continue;
-            if (!seen.insert(name).second)
+            if (!seen.insert(fn->GetName()).second)
                 continue;
             buttons.push_back(fn);
         }

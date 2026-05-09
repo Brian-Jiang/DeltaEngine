@@ -156,24 +156,53 @@ nlohmann::json McpReflectionSystem::QueryClassSchema(EditorCore&, const nlohmann
     if (includeFunctions)
     {
         nlohmann::json functions = nlohmann::json::array();
+        auto signatureKey = [](const DFunction* fn) -> std::string
+        {
+            std::string key = fn->GetName();
+            key.push_back('(');
+            const auto& params = fn->GetParams();
+            for (size_t i = 0; i < params.size(); ++i)
+            {
+                if (i > 0)
+                    key.push_back(',');
+                if (params[i])
+                    key.append(params[i]->GetType());
+            }
+            key.push_back(')');
+            return key;
+        };
+
         if (includeInherited)
         {
-            std::unordered_set<std::string> seen;
+            std::unordered_set<std::string> seenNames;
+            std::unordered_set<std::string> seenSignatures;
             for (const DStruct* s = dclass; s; s = s->GetSuper())
             {
                 const DClass* cls = dynamic_cast<const DClass*>(s);
                 if (!cls)
                     break;
-                for (auto& [fname, fn] : cls->GetFunctions())
+                std::unordered_set<std::string> namesAddedAtThisLevel;
+                for (DFunction* fn : cls->GetFunctions())
                 {
-                    if (seen.insert(fname).second)
+                    if (!fn)
+                        continue;
+                    const std::string& fname = fn->GetName();
+                    // Derived overload group shadows the base group with the same name.
+                    if (seenNames.count(fname) && !namesAddedAtThisLevel.count(fname))
+                        continue;
+                    if (seenSignatures.insert(signatureKey(fn)).second)
+                    {
                         functions.push_back(SerializeFunctionSchema(fn));
+                        namesAddedAtThisLevel.insert(fname);
+                    }
                 }
+                for (const auto& n : namesAddedAtThisLevel)
+                    seenNames.insert(n);
             }
         }
         else
         {
-            for (auto& [fname, fn] : dclass->GetFunctions())
+            for (DFunction* fn : dclass->GetFunctions())
                 functions.push_back(SerializeFunctionSchema(fn));
         }
         result["functions"] = std::move(functions);

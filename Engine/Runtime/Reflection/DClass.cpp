@@ -1,8 +1,43 @@
 #include "Runtime/Reflection/DClass.h"
 
 #include "Runtime/Reflection/DFunction.h"
+#include "Runtime/Reflection/DProperty.h"
 
 using namespace DeltaEngine;
+
+namespace
+{
+    bool ParamsMatch(const DFunction& fn, std::span<const std::string_view> paramTypes)
+    {
+        const auto& params = fn.GetParams();
+        if (params.size() != paramTypes.size())
+            return false;
+        for (size_t i = 0; i < params.size(); ++i)
+        {
+            if (params[i] == nullptr)
+                return false;
+            if (params[i]->GetType() != paramTypes[i])
+                return false;
+        }
+        return true;
+    }
+
+    bool SignaturesEqual(const DFunction& a, const DFunction& b)
+    {
+        const auto& pa = a.GetParams();
+        const auto& pb = b.GetParams();
+        if (pa.size() != pb.size())
+            return false;
+        for (size_t i = 0; i < pa.size(); ++i)
+        {
+            if (pa[i] == nullptr || pb[i] == nullptr)
+                return false;
+            if (pa[i]->GetType() != pb[i]->GetType())
+                return false;
+        }
+        return true;
+    }
+}
 
 DClass::DClass(std::string name,
                std::string superName,
@@ -27,23 +62,27 @@ void DClass::AddFunction(DFunction* function)
     DELTA_VERIFY(function != nullptr);
     DELTA_VERIFY(!function->GetName().empty());
 
-    auto [it, inserted] = m_functions.try_emplace(function->GetName(), function);
-    if (!inserted)
+    auto& bucket = m_functions[function->GetName()];
+    for (DFunction* existing : bucket)
     {
-        DLOG(LogReflection, ELogLevel::Warning,
-             "Ignoring duplicate reflected function '{}' on '{}'; Reflection names must be unique (keeping first overload)",
-             function->GetName(), GetName());
-        return;
+        if (existing && SignaturesEqual(*existing, *function))
+        {
+            DLOG(LogReflection, ELogLevel::Warning,
+                 "Ignoring duplicate reflected function '{}' on '{}' with identical signature",
+                 function->GetName(), GetName());
+            return;
+        }
     }
 
+    bucket.push_back(function);
     function->m_declaringClass = this;
 }
 
 DFunction* DClass::FindFunctionByName(const std::string& name) const
 {
     auto it = m_functions.find(name);
-    if (it != m_functions.end())
-        return it->second;
+    if (it != m_functions.end() && !it->second.empty())
+        return it->second.front();
 
     DStruct* super = GetSuper();
     if (super)
@@ -53,6 +92,36 @@ DFunction* DClass::FindFunctionByName(const std::string& name) const
             return superClass->FindFunctionByName(name);
     }
 
+    return nullptr;
+}
+
+std::vector<DFunction*> DClass::FindOverloads(const std::string& name) const
+{
+    auto it = m_functions.find(name);
+    if (it == m_functions.end())
+        return {};
+    return it->second;
+}
+
+DFunction* DClass::FindFunction(const std::string& name,
+                                std::span<const std::string_view> paramTypes) const
+{
+    auto it = m_functions.find(name);
+    if (it != m_functions.end())
+    {
+        for (DFunction* fn : it->second)
+        {
+            if (fn && ParamsMatch(*fn, paramTypes))
+                return fn;
+        }
+    }
+
+    DStruct* super = GetSuper();
+    if (super)
+    {
+        if (DClass* superClass = dynamic_cast<DClass*>(super))
+            return superClass->FindFunction(name, paramTypes);
+    }
     return nullptr;
 }
 
@@ -68,7 +137,16 @@ bool DClass::IsChildOf(const DClass* other) const
 
 bool DClass::IsAbstract() const { return m_abstract; }
 
-const std::unordered_map<std::string, DFunction*>& DClass::GetFunctions() const { return m_functions; }
+std::vector<DFunction*> DClass::GetFunctions() const
+{
+    std::vector<DFunction*> out;
+    for (const auto& [name, bucket] : m_functions)
+    {
+        for (DFunction* fn : bucket)
+            out.push_back(fn);
+    }
+    return out;
+}
 
 void DClass::ConstructObject(void* address) const
 {

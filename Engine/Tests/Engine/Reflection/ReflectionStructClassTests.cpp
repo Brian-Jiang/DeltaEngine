@@ -101,3 +101,59 @@ TEST(ReflectionStructClassTests, FindFunctionByName_InheritedFrom_TestComponent_
     ASSERT_NE(addFn, nullptr);
     EXPECT_EQ(addFn->GetDeclaringClass()->GetName(), "TestComponent");
 }
+
+TEST(ReflectionStructClassTests, OverloadedFunctions_BothRegistered)
+{
+    auto& registry = GetReflectionRegistry();
+    DClass* cls = registry.FindClassByName("ReflectionTestObject");
+    ASSERT_NE(cls, nullptr);
+
+    EXPECT_NE(cls->FindFunctionByName("Compute"), nullptr);
+
+    auto overloads = cls->FindOverloads("Compute");
+    EXPECT_EQ(overloads.size(), 2u);
+}
+
+TEST(ReflectionStructClassTests, OverloadedFunctions_FindBySignature_Disambiguates)
+{
+    auto& registry = GetReflectionRegistry();
+    DClass* cls = registry.FindClassByName("ReflectionTestObject");
+    ASSERT_NE(cls, nullptr);
+
+    std::string_view intParam[] = { "int32_t" };
+    std::string_view floatParam[] = { "float" };
+
+    DFunction* intFn = cls->FindFunction("Compute", std::span<const std::string_view>(intParam));
+    DFunction* floatFn = cls->FindFunction("Compute", std::span<const std::string_view>(floatParam));
+
+    ASSERT_NE(intFn, nullptr);
+    ASSERT_NE(floatFn, nullptr);
+    EXPECT_NE(intFn, floatFn);
+    ASSERT_EQ(intFn->GetNumParams(), 1u);
+    ASSERT_EQ(floatFn->GetNumParams(), 1u);
+    EXPECT_EQ(intFn->GetParams()[0]->GetType(), "int32_t");
+    EXPECT_EQ(floatFn->GetParams()[0]->GetType(), "float");
+}
+
+TEST(ReflectionStructClassTests, OverloadedFunctions_InvokeIntOverload_DoublesValue)
+{
+    auto& registry = GetReflectionRegistry();
+    ReflectionTestObject* obj =
+        registry.CreateObject<ReflectionTestObject>("ReflectionTestObject");
+    ASSERT_NE(obj, nullptr);
+
+    std::string_view intParam[] = { "int32_t" };
+    DFunction* intFn = obj->GetClass()->FindFunction("Compute", std::span<const std::string_view>(intParam));
+    ASSERT_NE(intFn, nullptr);
+
+    std::vector<std::byte> buf(intFn->GetTotalSize());
+    auto* params = reinterpret_cast<int*>(buf.data());
+    params[0] = 7;
+
+    intFn->Invoke(obj, buf.data());
+
+    int* retSlot = reinterpret_cast<int*>(buf.data() + intFn->GetReturnValueOffset());
+    EXPECT_EQ(*retSlot, 14);
+
+    registry.DestroyObject(obj);
+}
