@@ -8,6 +8,7 @@
 #include "Editor/EditorMain.h"
 #include "Editor/EditorRenderManager.h"
 #include "Editor/EditorSelectionState.h"
+#include "Editor/EditorWindows/EditorWindowsLog.h"
 #include "Editor/Panels/MainToolbar.h"
 #include "Runtime/Assets/DPrimaryAsset.h"
 #include "Runtime/Core/GameObject.h"
@@ -24,25 +25,25 @@
 
 #include "SimpleMath.h"
 
+#include <type_traits>
+
 #include <algorithm>
 
 using namespace DeltaEngine;
 using namespace DirectX;
 
-// ---------------------------------------------------------------------------
-// Static viewport index counter
-// ---------------------------------------------------------------------------
-static int s_nextViewportIndex = 0;
-
-// ---------------------------------------------------------------------------
-// Construction / destruction
-// ---------------------------------------------------------------------------
+static int AllocateViewportSlot()
+{
+    static int s_nextSlot = 0;
+    return s_nextSlot++;
+}
 
 EditorWindow_Viewport::EditorWindow_Viewport()
 {
+    DELTA_ASSERT(g_editor != nullptr);
     m_title = "Viewport";
-    m_sceneTextureId = g_editor->GetSceneTextureId();
-    m_viewportIndex = s_nextViewportIndex++;
+    m_viewportIndex = AllocateViewportSlot();
+    m_sceneTextureId          = g_editor->GetSceneTextureId();
 
     std::vector<EditorViewportCamera> cameras;
     if (LoadViewportCameras(cameras) && m_viewportIndex < static_cast<int>(cameras.size()))
@@ -51,16 +52,12 @@ EditorWindow_Viewport::EditorWindow_Viewport()
 
 EditorWindow_Viewport::~EditorWindow_Viewport()
 {
-    // Grow the list to hold at least m_viewportIndex + 1 entries so we don't
-    // lose state for other viewports that haven't been destroyed yet.
     std::vector<EditorViewportCamera> cameras;
     LoadViewportCameras(cameras);
     if (m_viewportIndex >= static_cast<int>(cameras.size()))
-        cameras.resize(m_viewportIndex + 1);
-    cameras[m_viewportIndex] = m_previewCamera;
+        cameras.resize(static_cast<size_t>(m_viewportIndex) + 1);
+    cameras[static_cast<size_t>(m_viewportIndex)] = m_previewCamera;
     SaveViewportCameras(cameras);
-
-    --s_nextViewportIndex;
 }
 
 void EditorWindow_Viewport::SetPreviewCamera(const EditorViewportCamera& cam)
@@ -79,6 +76,7 @@ void EditorWindow_Viewport::UpdateSceneRenderSize(int renderW, int renderH)
     if (renderW < 1 || renderH < 1)
         return;
 
+    DELTA_ASSERT(g_editor != nullptr);
     UINT currentW, currentH;
     g_editor->GetSceneRenderSize(currentW, currentH);
 
@@ -177,6 +175,7 @@ void EditorWindow_Viewport::UpdateViewportFlyMode(bool viewportImageHovered)
 
 void EditorWindow_Viewport::Render(bool& open)
 {
+    DELTA_ASSERT(g_editor != nullptr);
     if (!ImGui::Begin(GetImGuiTitle(), &open))
     {
         g_editor->ClearActiveRenderCamera();
@@ -257,7 +256,14 @@ void EditorWindow_Viewport::Render(bool& open)
     }
     else
     {
-        GetResolutionPresetSize(m_resolution, renderW, renderH);
+        if (!TryGetResolutionPresetSize(m_resolution, renderW, renderH))
+        {
+            DLOG(LogEditorWindows, ELogLevel::Warning,
+                "Ignored invalid ViewportResolution raw value {} — using fallback 1×1 render size (expected < Count)",
+                static_cast<std::underlying_type_t<ViewportResolution>>(m_resolution));
+            renderW = 1;
+            renderH = 1;
+        }
         UpdateSceneRenderSize(renderW, renderH);
     }
 
@@ -353,10 +359,16 @@ ImGuizmo::OPERATION ToolToOperation(EEditorTransformTool tool)
 {
     switch (tool)
     {
-        case EEditorTransformTool::Move:   return ImGuizmo::TRANSLATE;
-        case EEditorTransformTool::Rotate: return ImGuizmo::ROTATE;
-        case EEditorTransformTool::Scale:  return ImGuizmo::SCALE;
-        default:                           return ImGuizmo::TRANSLATE;
+    case EEditorTransformTool::Move:   return ImGuizmo::TRANSLATE;
+    case EEditorTransformTool::Rotate: return ImGuizmo::ROTATE;
+    case EEditorTransformTool::Scale:  return ImGuizmo::SCALE;
+    case EEditorTransformTool::Select:
+        DELTA_UNREACHABLE();
+    default:
+        DELTA_CHECK_MSG(false,
+            "EEditorTransformTool value {} unexpected (expected Move, Rotate, or Scale)",
+            static_cast<int>(tool));
+        return ImGuizmo::TRANSLATE;
     }
 }
 } // namespace

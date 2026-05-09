@@ -43,6 +43,30 @@ TEST(ViewportPresetTests, PresetSizes)
     EXPECT_EQ(h, 2160);
 }
 
+TEST(ViewportPresetTests, TryGetResolutionPresetSize_InvalidRaw_ReturnsFalse)
+{
+    constexpr auto bad = static_cast<ViewportResolution>(999);
+    int w{};
+    int h{};
+    EXPECT_FALSE(TryGetResolutionPresetSize(bad, w, h));
+}
+
+TEST(ViewportPresetTests, TryGetResolutionPresetSize_Count_ReturnsFalse)
+{
+    int w{};
+    int h{};
+    EXPECT_FALSE(TryGetResolutionPresetSize(ViewportResolution::Count, w, h));
+}
+
+TEST(ViewportPresetTests, TryGetResolutionPresetSize_HD_ReturnsDimensions)
+{
+    int w{};
+    int h{};
+    ASSERT_TRUE(TryGetResolutionPresetSize(ViewportResolution::Resolution_1920x1080, w, h));
+    EXPECT_EQ(w, 1920);
+    EXPECT_EQ(h, 1080);
+}
+
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

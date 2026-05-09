@@ -20,7 +20,12 @@ set(DELTA_EDITOR_TEST_SOURCES
     UIComponents/PropertyWidgetsTests.cpp
     UIComponents/HorizontalToggleGroupTests.cpp
     UIComponents/ObjectPtrFieldTests.cpp
+    EditorWindows/EditorAssetBrowserPathTests.cpp
+    EditorWindows/EditorDetailsPropertyFormattingTests.cpp
+    EditorWindows/EditorOutlinerFilteringTests.cpp
+    EditorWindows/EditorViewportCameraPersistenceTests.cpp
     EditorWindows/EditorWindowConceptTests.cpp
+    EditorWindows/EditorWindowIdTests.cpp
     EditorWindows/ViewportPresetTests.cpp
     Assets/Locator/EditorAssetDatabaseLocatorTests.cpp
     Assets/Lifecycle/EditorAssetDatabaseLifecycleTests.cpp

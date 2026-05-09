@@ -8,6 +8,7 @@
 #include "Editor/EditorCore.h"
 #include "Editor/EditorMain.h"
 #include "Editor/EditorSelectionState.h"
+#include "Editor/EditorWindows/EditorWindowsLog.h"
 #include "Editor/Style/EditorTheme.h"
 #include "Runtime/Assets/DPrimaryAsset.h"
 #include "Runtime/Core/DObject.h"
@@ -64,8 +65,25 @@ void EditorWindow_ComponentsHierarchy::Render(bool& open)
         return;
     }
 
+    if (g_editor == nullptr)
+    {
+        DLOG(LogEditorWindows, ELogLevel::Warning,
+            "ComponentsHierarchy skipped: global g_editor null (expected EditorMain instance)");
+        ImGui::TextDisabled("No editor shell");
+        ImGui::End();
+        return;
+    }
+
     EditorTheme* theme = g_editor->GetEditorTheme();
-    const EditorTheme::ThemeColors& c = theme ? theme->colors : EditorTheme::ThemeColors{};
+    if (theme == nullptr)
+    {
+        DLOG(LogEditorWindows, ELogLevel::Warning,
+            "ComponentsHierarchy: EditorMain returned null EditorTheme (expected themed editor shell)");
+        ImGui::TextDisabled("Theme unavailable");
+        ImGui::End();
+        return;
+    }
+    const EditorTheme::ThemeColors& c = theme->colors;
 
     auto* selectionState   = g_editorCore->GetSelectionState();
     auto contextGameObject = selectionState->GetContextGameObject(*g_editorCore);
@@ -184,8 +202,8 @@ void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(SceneComponent* 
     if (!sceneComponent)
         return;
 
-    EditorTheme* theme = g_editor ? g_editor->GetEditorTheme() : nullptr;
-    const EditorTheme::ThemeColors& c = theme ? theme->colors : EditorTheme::ThemeColors{};
+    DELTA_ASSERT(g_editor != nullptr && g_editor->GetEditorTheme() != nullptr);
+    const EditorTheme::ThemeColors& c = g_editor->GetEditorTheme()->colors;
 
     ImGui::PushID(static_cast<void*>(sceneComponent));
     const auto& children = sceneComponent->GetChildren();
@@ -293,8 +311,8 @@ void EditorWindow_ComponentsHierarchy::RenderSceneComponentTree(SceneComponent* 
 
 void EditorWindow_ComponentsHierarchy::RenderRegularComponents(const std::vector<DComponent*>& components)
 {
-    EditorTheme* theme = g_editor ? g_editor->GetEditorTheme() : nullptr;
-    const EditorTheme::ThemeColors& c = theme ? theme->colors : EditorTheme::ThemeColors{};
+    DELTA_ASSERT(g_editor != nullptr && g_editor->GetEditorTheme() != nullptr);
+    const EditorTheme::ThemeColors& c = g_editor->GetEditorTheme()->colors;
 
     auto* selectionState = g_editorCore->GetSelectionState();
 

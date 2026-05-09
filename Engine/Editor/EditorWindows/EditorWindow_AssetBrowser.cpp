@@ -7,6 +7,8 @@
 #include "Editor/EditorCore.h"
 #include "Editor/EditorMain.h"
 #include "Editor/EditorSelectionState.h"
+#include "Editor/EditorWindows/EditorAssetBrowserPaths.h"
+#include "Editor/EditorWindows/EditorWindowsLog.h"
 #include "Runtime/Assets/PA_CommonAssets.h"
 #include "Runtime/Assets/PA_DScene.h"
 #include "Runtime/Core/Skybox.h"
@@ -67,64 +69,6 @@ std::vector<std::filesystem::path> OpenImportFileDialog()
 }
 
 } // namespace
-
-namespace
-{
-std::string GetAssetDisplayName(const std::filesystem::path& path)
-{
-    return path.stem().stem().string();
-}
-
-std::filesystem::path UniqueDir(const std::filesystem::path& parent, const std::string& base)
-{
-    auto candidate = parent / base;
-    for (int i = 1; std::filesystem::exists(candidate); ++i)
-        candidate = parent / (base + "_" + std::to_string(i));
-    return candidate;
-}
-
-std::filesystem::path UniqueAssetPath(const std::filesystem::path& folder, const std::string& base)
-{
-    auto tryPath = [&](const std::string& name) { return folder / (name + ".dasset.json"); };
-    auto candidate = tryPath(base);
-    for (int i = 1; std::filesystem::exists(candidate); ++i)
-        candidate = tryPath(base + "_" + std::to_string(i));
-    return candidate;
-}
-
-std::filesystem::path NormalizePath(const std::filesystem::path& path)
-{
-    std::error_code ec;
-    const auto normalized = std::filesystem::weakly_canonical(path, ec);
-    return ec ? std::filesystem::absolute(path) : normalized;
-}
-
-bool IsSameOrChildPath(const std::filesystem::path& path, const std::filesystem::path& parent)
-{
-    const auto normPath   = NormalizePath(path);
-    const auto normParent = NormalizePath(parent);
-    if (normPath == normParent)
-        return true;
-
-    std::error_code ec;
-    const auto rel = std::filesystem::relative(normPath, normParent, ec);
-    if (ec || rel.empty())
-        return false;
-
-    const auto first = *rel.begin();
-    return first != "..";
-}
-
-std::string ToAssetRootRelativeString(const std::filesystem::path& path)
-{
-    std::error_code ec;
-    auto rel = std::filesystem::relative(
-        NormalizePath(path),
-        NormalizePath(IOManager::GetEngineImportedAssetsFolder()),
-        ec);
-    return ec ? std::string{} : rel.generic_string();
-}
-}
 
 EditorWindow_AssetBrowser::EditorWindow_AssetBrowser()
 {
@@ -217,14 +161,14 @@ void EditorWindow_AssetBrowser::Render(bool& open)
             if (!p.empty())
             {
                 m_renameAssetId = id;
-                m_inlineRename.Begin(GetAssetDisplayName(p));
+                m_inlineRename.Begin(GetAssetDisplayNameForBrowser(p));
             }
         }
         else if (sel && sel->HasFolderSelection())
         {
             m_renameFolderRelPath = sel->GetSelectedFolder();
             m_renameFolderAbsPath =
-                NormalizePath(std::filesystem::path(IOManager::GetEngineImportedAssetsFolder()) / m_renameFolderRelPath);
+                NormalizeEditorPath(std::filesystem::path(IOManager::GetEngineImportedAssetsFolder()) / m_renameFolderRelPath);
             m_inlineRename.Begin(m_renameFolderAbsPath.filename().string());
         }
     }
@@ -249,7 +193,18 @@ void EditorWindow_AssetBrowser::BuildTree(FolderNode& root,
                 cur = &cur->m_children[part.string()];
         }
     }
-    catch (...) {}
+    catch (const std::exception& ex)
+    {
+        DLOG(LogEditorWindows, ELogLevel::Warning,
+            "Asset browser directory scan failed under '{}': {} (expected readable asset root tree)",
+            assetRoot.string(), ex.what());
+    }
+    catch (...)
+    {
+        DLOG(LogEditorWindows, ELogLevel::Warning,
+            "Asset browser directory scan failed under '{}' with unknown exception (expected readable asset root tree)",
+            assetRoot.string());
+    }
 
     for (const auto& [assetId, entry] : assets)
     {
@@ -261,8 +216,18 @@ void EditorWindow_AssetBrowser::BuildTree(FolderNode& root,
         {
             relativePath = std::filesystem::relative(entry.m_filePath, assetRoot);
         }
+        catch (const std::exception& ex)
+        {
+            DLOG(LogEditorWindows, ELogLevel::Warning,
+                "relative() failed for asset path '{}' versus root '{}': {} (fallback to filename only)",
+                entry.m_filePath.string(), assetRoot.string(), ex.what());
+            relativePath = entry.m_filePath.filename();
+        }
         catch (...)
         {
+            DLOG(LogEditorWindows, ELogLevel::Warning,
+                "relative() failed for asset path '{}' versus root '{}' with unknown exception (fallback to filename only)",
+                entry.m_filePath.string(), assetRoot.string());
             relativePath = entry.m_filePath.filename();
         }
 
@@ -333,7 +298,7 @@ void EditorWindow_AssetBrowser::RenderFolderNode(const FolderNode& node,
         items.push_back({"Rename", [&, fullPath]() {
             m_renameFolderRelPath = fullPath;
             m_renameFolderAbsPath =
-                NormalizePath(std::filesystem::path(IOManager::GetEngineImportedAssetsFolder()) / fullPath);
+                NormalizeEditorPath(std::filesystem::path(IOManager::GetEngineImportedAssetsFolder()) / fullPath);
             m_inlineRename.Begin(m_renameFolderAbsPath.filename().string());
         }});
         items.push_back({"Delete", [&, fullPath]() {
@@ -385,7 +350,9 @@ void EditorWindow_AssetBrowser::RenderAssetLeaf(const AssetId& assetId, EditorAs
         return;
 
     EditorSelectionState* sel = g_editorCore->GetSelectionState();
-    const bool isSelected     = sel && sel->IsAssetSelected(assetId);
+    if (!sel)
+        return;
+    const bool isSelected = sel->IsAssetSelected(assetId);
 
     ImGui::PushID(assetPath.generic_string().c_str());
     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen |
@@ -397,7 +364,7 @@ void EditorWindow_AssetBrowser::RenderAssetLeaf(const AssetId& assetId, EditorAs
     if (renamingRow)
         flags |= ImGuiTreeNodeFlags_AllowOverlap;
 
-    ImGui::TreeNodeEx(GetAssetDisplayName(assetPath).c_str(), flags);
+    ImGui::TreeNodeEx(GetAssetDisplayNameForBrowser(assetPath).c_str(), flags);
 
     if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
     {
@@ -442,7 +409,7 @@ void EditorWindow_AssetBrowser::RenderAssetLeaf(const AssetId& assetId, EditorAs
         {
             items.push_back({"Rename", [&]() {
                 m_renameAssetId = assetId;
-                m_inlineRename.Begin(GetAssetDisplayName(assetPath));
+                m_inlineRename.Begin(GetAssetDisplayNameForBrowser(assetPath));
             }});
         }
         items.push_back({ "Duplicate", [&]()
@@ -504,29 +471,57 @@ void EditorWindow_AssetBrowser::MoveSelectedItems(EditorAssetDatabase* assetData
     const std::filesystem::path& targetFolder)
 {
     if (!assetDatabase || !g_editorCore)
+    {
+        DLOG(LogEditorWindows, ELogLevel::Warning,
+            "MoveSelectedItems skipped: assetDatabase or EditorCore missing (expected valid browser context)");
         return;
+    }
     EditorSelectionState* sel = g_editorCore->GetSelectionState();
     if (!sel)
+    {
+        DLOG(LogEditorWindows, ELogLevel::Warning,
+            "MoveSelectedItems skipped: selection state missing (expected EditorSelectionState from EditorCore)");
         return;
+    }
 
     if (sel->HasFolderSelection())
     {
-        const std::filesystem::path assetRoot = NormalizePath(IOManager::GetEngineImportedAssetsFolder());
-        const std::filesystem::path source    = NormalizePath(assetRoot / sel->GetSelectedFolder());
-        const std::filesystem::path target    = NormalizePath(targetFolder);
+        const std::filesystem::path assetRoot = NormalizeEditorPath(IOManager::GetEngineImportedAssetsFolder());
+        const std::filesystem::path source    = NormalizeEditorPath(assetRoot / sel->GetSelectedFolder());
+        const std::filesystem::path target    = NormalizeEditorPath(targetFolder);
         if (!std::filesystem::exists(source) || !std::filesystem::is_directory(source))
+        {
+            DLOG(LogEditorWindows, ELogLevel::Warning,
+                "Folder move aborted: source '{}' missing or not a directory (expected selected folder under '{}')",
+                source.string(), assetRoot.string());
             return;
-        if (target == source.parent_path() || IsSameOrChildPath(target, source))
+        }
+        if (target == source.parent_path() || IsSameOrChildPathNormalized(target, source))
+        {
+            DLOG(LogEditorWindows, ELogLevel::Warning,
+                "Folder move aborted: invalid target '{}' for source '{}' (expected different parent and not under source subtree)",
+                target.string(), source.string());
             return;
+        }
 
         const std::filesystem::path destination = target / source.filename();
         if (std::filesystem::exists(destination))
+        {
+            DLOG(LogEditorWindows, ELogLevel::Warning,
+                "Folder move aborted: destination '{}' already exists (expected unique folder name)",
+                destination.string());
             return;
+        }
 
         std::error_code ec;
         std::filesystem::create_directories(destination, ec);
         if (ec)
+        {
+            DLOG(LogEditorWindows, ELogLevel::Error,
+                "Folder move failed: create_directories '{}' error {} (expected writable intermediate path)",
+                destination.string(), ec.message());
             return;
+        }
 
         for (const auto& entry : std::filesystem::recursive_directory_iterator(source))
         {
@@ -540,7 +535,7 @@ void EditorWindow_AssetBrowser::MoveSelectedItems(EditorAssetDatabase* assetData
         std::vector<AssetId> containedAssets;
         for (const auto& [assetId, entry] : assetDatabase->GetAllAssets())
         {
-            if (IsSameOrChildPath(entry.m_filePath.parent_path(), source))
+            if (IsSameOrChildPathNormalized(entry.m_filePath.parent_path(), source))
                 containedAssets.push_back(assetId);
         }
 
@@ -552,6 +547,9 @@ void EditorWindow_AssetBrowser::MoveSelectedItems(EditorAssetDatabase* assetData
             if (ec)
             {
                 movedAllAssets = false;
+                DLOG(LogEditorWindows, ELogLevel::Warning,
+                    "Folder move partially failed: relative() asset '{}' vs source '{}' error {}",
+                    oldPath.string(), source.string(), ec.message());
                 continue;
             }
             const std::filesystem::path newParent = destination / relParent;
@@ -559,14 +557,29 @@ void EditorWindow_AssetBrowser::MoveSelectedItems(EditorAssetDatabase* assetData
             if (!ec)
                 movedAllAssets = assetDatabase->MoveAsset(id, newParent) && movedAllAssets;
             else
+            {
                 movedAllAssets = false;
+                DLOG(LogEditorWindows, ELogLevel::Warning,
+                    "Folder move failed creating '{}': {}",
+                    newParent.string(), ec.message());
+            }
         }
 
         if (!movedAllAssets)
+        {
+            DLOG(LogEditorWindows, ELogLevel::Error,
+                "Folder move aborted for '{}' -> '{}': one or more assets did not move (expected complete move before delete)",
+                source.string(), destination.string());
             return;
+        }
 
         std::filesystem::remove_all(source, ec);
-        const std::string newRel = ToAssetRootRelativeString(destination);
+        if (ec)
+            DLOG(LogEditorWindows, ELogLevel::Error,
+                "Folder move incomplete: remove_all '{}' failed: {} (expected empty source folder after asset moves)",
+                source.string(), ec.message());
+        const std::string newRel =
+            ToAssetRootRelativeString(destination, IOManager::GetEngineImportedAssetsFolder());
         if (!newRel.empty())
             sel->SetSelectedFolder(newRel);
         return;
@@ -574,7 +587,12 @@ void EditorWindow_AssetBrowser::MoveSelectedItems(EditorAssetDatabase* assetData
 
     const std::vector<AssetId> toMove = sel->GetSelectedAssets();
     for (const AssetId& id : toMove)
-        assetDatabase->MoveAsset(id, targetFolder);
+    {
+        if (!assetDatabase->MoveAsset(id, targetFolder))
+            DLOG(LogEditorWindows, ELogLevel::Warning,
+                "MoveAsset failed for asset id (MoveAsset returned false): target '{}' (expected writable destination)",
+                NormalizeEditorPath(targetFolder).string());
+    }
 }
 
 void EditorWindow_AssetBrowser::RenameFolder(EditorAssetDatabase* assetDatabase,
@@ -582,17 +600,31 @@ void EditorWindow_AssetBrowser::RenameFolder(EditorAssetDatabase* assetDatabase,
     const std::string& newName)
 {
     if (!assetDatabase || !g_editorCore || folderRelPath.empty() || newName.empty())
+    {
+        DLOG(LogEditorWindows, ELogLevel::Warning,
+            "RenameFolder skipped: invalid inputs (assetDatabase={}, editorCore={}, relPath empty={}, newName empty={})",
+            static_cast<void*>(assetDatabase), static_cast<void*>(g_editorCore), folderRelPath.empty(), newName.empty());
         return;
+    }
 
     EditorSelectionState* sel = g_editorCore->GetSelectionState();
     if (!sel)
+    {
+        DLOG(LogEditorWindows, ELogLevel::Warning,
+            "RenameFolder skipped: selection state missing");
         return;
+    }
 
-    const std::filesystem::path assetRoot = NormalizePath(IOManager::GetEngineImportedAssetsFolder());
-    const std::filesystem::path source    = NormalizePath(assetRoot / folderRelPath);
+    const std::filesystem::path assetRoot = NormalizeEditorPath(IOManager::GetEngineImportedAssetsFolder());
+    const std::filesystem::path source    = NormalizeEditorPath(assetRoot / folderRelPath);
     const std::filesystem::path target    = source.parent_path() / newName;
     if (!std::filesystem::exists(source) || std::filesystem::exists(target))
+    {
+        DLOG(LogEditorWindows, ELogLevel::Warning,
+            "RenameFolder aborted: source exists={}, target exists={}, source='{}', target='{}' (expected existing source and free target name)",
+            std::filesystem::exists(source), std::filesystem::exists(target), source.string(), target.string());
         return;
+    }
 
     if (source.filename() == newName)
         return;
@@ -600,7 +632,12 @@ void EditorWindow_AssetBrowser::RenameFolder(EditorAssetDatabase* assetDatabase,
     std::error_code ec;
     std::filesystem::create_directories(target, ec);
     if (ec)
+    {
+        DLOG(LogEditorWindows, ELogLevel::Error,
+            "RenameFolder failed: create_directories '{}' error {} (expected writable path)",
+            target.string(), ec.message());
         return;
+    }
 
     for (const auto& entry : std::filesystem::recursive_directory_iterator(source))
     {
@@ -614,7 +651,7 @@ void EditorWindow_AssetBrowser::RenameFolder(EditorAssetDatabase* assetDatabase,
     std::vector<AssetId> containedAssets;
     for (const auto& [assetId, entry] : assetDatabase->GetAllAssets())
     {
-        if (IsSameOrChildPath(entry.m_filePath.parent_path(), source))
+        if (IsSameOrChildPathNormalized(entry.m_filePath.parent_path(), source))
             containedAssets.push_back(assetId);
     }
 
@@ -626,6 +663,9 @@ void EditorWindow_AssetBrowser::RenameFolder(EditorAssetDatabase* assetDatabase,
         if (ec)
         {
             movedAllAssets = false;
+            DLOG(LogEditorWindows, ELogLevel::Warning,
+                "RenameFolder: relative failed for '{}' vs '{}': {}",
+                oldPath.string(), source.string(), ec.message());
             continue;
         }
         const std::filesystem::path newParent = target / relParent;
@@ -633,14 +673,27 @@ void EditorWindow_AssetBrowser::RenameFolder(EditorAssetDatabase* assetDatabase,
         if (!ec)
             movedAllAssets = assetDatabase->MoveAsset(id, newParent) && movedAllAssets;
         else
+        {
             movedAllAssets = false;
+            DLOG(LogEditorWindows, ELogLevel::Warning,
+                "RenameFolder: mkdir '{}' failed: {}", newParent.string(), ec.message());
+        }
     }
 
     if (!movedAllAssets)
+    {
+        DLOG(LogEditorWindows, ELogLevel::Error,
+            "RenameFolder aborted for '{}' -> '{}': asset registry move incomplete",
+            source.string(), target.string());
         return;
+    }
 
     std::filesystem::remove_all(source, ec);
-    const std::string newRel = ToAssetRootRelativeString(target);
+    if (ec)
+        DLOG(LogEditorWindows, ELogLevel::Error,
+            "RenameFolder: remove_all '{}' failed: {} after moving assets",
+            source.string(), ec.message());
+    const std::string newRel = ToAssetRootRelativeString(target, IOManager::GetEngineImportedAssetsFolder());
     if (!newRel.empty())
         sel->SetSelectedFolder(newRel);
 }
@@ -648,15 +701,19 @@ void EditorWindow_AssetBrowser::RenameFolder(EditorAssetDatabase* assetDatabase,
 void EditorWindow_AssetBrowser::DeleteFolder(EditorAssetDatabase* assetDatabase, const std::string& folderRelPath)
 {
     if (!assetDatabase || !g_editorCore || folderRelPath.empty())
+    {
+        DLOG(LogEditorWindows, ELogLevel::Warning,
+            "DeleteFolder skipped: invalid arguments (folderRelPath empty or missing context)");
         return;
+    }
 
     const std::filesystem::path folderPath =
-        NormalizePath(std::filesystem::path(IOManager::GetEngineImportedAssetsFolder()) / folderRelPath);
+        NormalizeEditorPath(std::filesystem::path(IOManager::GetEngineImportedAssetsFolder()) / folderRelPath);
 
     std::vector<AssetId> containedAssets;
     for (const auto& [assetId, entry] : assetDatabase->GetAllAssets())
     {
-        if (IsSameOrChildPath(entry.m_filePath.parent_path(), folderPath))
+        if (IsSameOrChildPathNormalized(entry.m_filePath.parent_path(), folderPath))
             containedAssets.push_back(assetId);
     }
 
@@ -665,6 +722,10 @@ void EditorWindow_AssetBrowser::DeleteFolder(EditorAssetDatabase* assetDatabase,
 
     std::error_code ec;
     std::filesystem::remove_all(folderPath, ec);
+    if (ec)
+        DLOG(LogEditorWindows, ELogLevel::Error,
+            "DeleteFolder: remove_all '{}' failed: {} (expected deletable folder after asset purge)",
+            folderPath.string(), ec.message());
 
     EditorSelectionState* sel = g_editorCore->GetSelectionState();
     if (sel && sel->IsFolderSelected(folderRelPath))
@@ -699,7 +760,7 @@ void EditorWindow_AssetBrowser::RenderCreateButton(EditorAssetDatabase* assetDat
     if (ImGui::MenuItem("New Folder"))
     {
         const std::filesystem::path target = GetTargetFolder(assetDatabase);
-        const std::filesystem::path absPath = UniqueDir(std::filesystem::absolute(target), "NewFolder");
+        const std::filesystem::path absPath = UniqueDirUnderParent(std::filesystem::absolute(target), "NewFolder");
         std::error_code ec;
         std::filesystem::create_directory(absPath, ec);
         if (!ec)
@@ -712,6 +773,10 @@ void EditorWindow_AssetBrowser::RenderCreateButton(EditorAssetDatabase* assetDat
             m_inlineRename.Begin(absPath.filename().string());
             g_editorCore->GetSelectionState()->SetSelectedFolder(relPath);
         }
+        else
+            DLOG(LogEditorWindows, ELogLevel::Error,
+                "create_directory '{}' failed: {} (expected writable parent under '{}')",
+                absPath.string(), ec.message(), assetRoot.string());
     }
 
     ImGui::Separator();
@@ -721,7 +786,7 @@ void EditorWindow_AssetBrowser::RenderCreateButton(EditorAssetDatabase* assetDat
         if (!ImGui::MenuItem(label))
             return;
         const std::filesystem::path target   = GetTargetFolder(assetDatabase);
-        const std::filesystem::path filePath = UniqueAssetPath(target, defaultName);
+        const std::filesystem::path filePath = UniqueAssetPathInFolder(target, defaultName);
         auto* asset                          = makeAsset();
         assetDatabase->CreateAsset(filePath, asset);
         const AssetId newId = assetDatabase->FindAssetIdByPath(filePath);

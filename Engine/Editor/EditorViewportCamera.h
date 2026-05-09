@@ -1,10 +1,11 @@
 #pragma once
 
-#include "EngineIncludes.h"
+#include "EditorIncludes.h"
 
 #include "Runtime/Graphics/Structures/Camera.h"
 
 #include <DirectXMath.h>
+#include <filesystem>
 #include <vector>
 
 DELTA_ENGINE_NS_BEGIN
@@ -24,6 +25,13 @@ struct EditorViewportCamera
     CameraCB BuildCameraCB(float w, float h) const;
     ActiveRenderCamera BuildActiveRenderCamera(float w, float h) const;
 };
+
+/// Persists viewport camera states to a JSON file at the given path (parent dirs created).
+DELTAEDITOR_API void SaveViewportCamerasToPath(const std::vector<EditorViewportCamera>& cameras,
+    const std::filesystem::path& path);
+
+DELTAEDITOR_API bool LoadViewportCamerasFromPath(std::vector<EditorViewportCamera>& cameras,
+    const std::filesystem::path& path);
 
 /// Persists all viewport camera states to Intermediate/EditorState/viewport_cameras.json.
 /// Creates the directory if it does not exist.

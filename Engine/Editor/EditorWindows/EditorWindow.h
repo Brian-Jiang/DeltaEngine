@@ -1,6 +1,6 @@
 #pragma once
 
-#include "EngineIncludes.h"
+#include "EditorIncludes.h"
 
 #include <concepts>
 #include <string>
@@ -29,6 +29,7 @@ public:
     /// Called by OpenEditorWindow after construction.
     void SetWindowId(int id)
     {
+        DELTA_ASSERT(id >= 0);
         m_id = id;
         m_imguiTitle = m_title + "##" + std::to_string(id);
     }

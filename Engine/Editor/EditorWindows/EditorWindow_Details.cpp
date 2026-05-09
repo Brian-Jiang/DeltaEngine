@@ -8,6 +8,8 @@
 #include "Editor/EditorCore.h"
 #include "Editor/EditorMain.h"
 #include "Editor/EditorSelectionState.h"
+#include "Editor/EditorWindows/EditorAssetBrowserPaths.h"
+#include "Editor/EditorWindows/EditorDetailsPropertyFormatting.h"
 #include "Editor/Style/EditorTheme.h"
 #include "Editor/UIComponents/PropertyWidgets/PropertyWidgetUtil.h"
 #include "Runtime/Assets/DPrimaryAsset.h"
@@ -44,76 +46,6 @@ using namespace DirectX::SimpleMath;
 
 namespace
 {
-std::string GetPropertyDisplayName(const std::string& propName)
-{
-    if (propName.empty())
-        return {};
-
-    std::string name = propName;
-    if (name.size() >= 2 && name[0] == 'm' && name[1] == '_')
-        name.erase(0, 2);
-
-    if (name.empty())
-        return {};
-
-    std::string result;
-    result.reserve(name.size() + 8);
-    bool prevUpper = false;
-    bool prevLower = false;
-
-    for (size_t i = 0; i < name.size(); ++i)
-    {
-        const char c = name[i];
-        const bool isUpper = std::isupper(static_cast<unsigned char>(c));
-        const bool isLower = std::islower(static_cast<unsigned char>(c));
-
-        if (i == 0)
-        {
-            result += static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
-        }
-        else if (isUpper)
-        {
-            if (prevLower || (!prevUpper && std::isdigit(static_cast<unsigned char>(name[i - 1]))))
-                result += ' ';
-            result += c;
-        }
-        else
-        {
-            result += c;
-        }
-
-        prevUpper = isUpper;
-        prevLower = isLower;
-    }
-
-    return result;
-}
-
-std::string GetAssetDisplayName(const std::filesystem::path& path)
-{
-    return path.stem().stem().string();
-}
-
-bool IsUndoablePropertyType(EPropertyType type)
-{
-    switch (type)
-    {
-    case EPropertyType::Float:
-    case EPropertyType::Int:
-    case EPropertyType::Bool:
-    case EPropertyType::Double:
-    case EPropertyType::String:
-    case EPropertyType::FilesystemPath:
-    case EPropertyType::Vector3:
-    case EPropertyType::Quaternion:
-    case EPropertyType::Float4:
-    case EPropertyType::Float4x4:
-    case EPropertyType::Struct:
-        return true;
-    default:
-        return false;
-    }
-}
 
 void LivePreviewWrite(DObject* obj, DProperty* prop)
 {
@@ -337,7 +269,7 @@ void EditorWindow_Details::RenderAssetDetails(const AssetId& assetId)
     if (theme->GetBoldFont())
         ImGui::PushFont(theme->GetBoldFont());
     ImGui::PushStyleColor(ImGuiCol_Text, c.TBright);
-    ImGui::TextUnformatted(GetAssetDisplayName(assetPath).c_str());
+    ImGui::TextUnformatted(GetAssetDisplayNameForBrowser(assetPath).c_str());
     ImGui::PopStyleColor();
     if (theme->GetBoldFont())
         ImGui::PopFont();
@@ -572,7 +504,7 @@ void EditorWindow_Details::RenderSingleProperty(DObject* instance, DProperty* pr
 {
     ImGui::PushID(prop->GetName().c_str());
 
-    const bool undoable = IsUndoablePropertyType(prop->GetPropertyType());
+    const bool undoable = IsUndoableInspectorPropertyType(prop->GetPropertyType());
 
     nlohmann::json preSnapshot;
     if (undoable && !m_activeEditProp)
@@ -628,7 +560,7 @@ void EditorWindow_Details::RenderSingleProperty(DObject* instance, DProperty* pr
         evt = DrawStructPropertyEditor(instance, static_cast<DStructProperty*>(prop));
         break;
     default:
-        DrawReadOnlyProperty(GetPropertyDisplayName(prop->GetName()),
+        DrawReadOnlyProperty(FormatPropertyInspectorLabel(prop->GetName()),
             prop->ToString(prop->GetValue(instance)));
         break;
     }
@@ -833,13 +765,13 @@ WidgetEditEvent EditorWindow_Details::DrawStructPropertyEditor(DObject* instance
     DStruct* schema = dsp->GetSchema();
     if (!schema)
     {
-        DrawReadOnlyProperty(GetPropertyDisplayName(dsp->GetName()),
+        DrawReadOnlyProperty(FormatPropertyInspectorLabel(dsp->GetName()),
             dsp->ToString(dsp->GetValue(instance)));
         return merged;
     }
 
     void* structBase = dsp->GetValue(instance);
-    const std::string displayName = GetPropertyDisplayName(dsp->GetName());
+    const std::string displayName = FormatPropertyInspectorLabel(dsp->GetName());
 
     if (ImGui::TreeNodeEx(displayName.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
     {
@@ -887,7 +819,7 @@ void EditorWindow_Details::DrawStructSchemaFields(void* structBase, DStruct* ds,
             auto* nested = static_cast<DStructProperty*>(p);
             void* innerBase = nested->GetValue(structBase);
             DStruct* nestedSchema = nested->GetSchema();
-            const std::string nestedLabel = GetPropertyDisplayName(p->GetName());
+            const std::string nestedLabel = FormatPropertyInspectorLabel(p->GetName());
             if (ImGui::TreeNodeEx(nestedLabel.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
             {
                 DrawStructSchemaFields(innerBase, nestedSchema, merged);
@@ -896,7 +828,7 @@ void EditorWindow_Details::DrawStructSchemaFields(void* structBase, DStruct* ds,
             break;
         }
         default:
-            DrawReadOnlyProperty(GetPropertyDisplayName(p->GetName()),
+            DrawReadOnlyProperty(FormatPropertyInspectorLabel(p->GetName()),
                 p->ToString(p->GetValue(structBase)));
             break;
         }
@@ -912,7 +844,7 @@ WidgetEditEvent EditorWindow_Details::DrawIntPropertyAt(void* container, DProper
 
     int* val = static_cast<int*>(prop->GetValue(container));
 
-    const float availW = BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
+    const float availW = BeginPropertyRow(FormatPropertyInspectorLabel(prop->GetName()).c_str(), c);
     ImGui::SetNextItemWidth(availW);
     const bool changed = ImGui::DragInt("##v", val);
     auto evt = WidgetEditFromLastItem(changed);
@@ -924,7 +856,7 @@ WidgetEditEvent EditorWindow_Details::DrawIntPropertyAt(void* container, DProper
 WidgetEditEvent EditorWindow_Details::DrawFloatPropertyAt(void* container, DProperty* prop)
 {
     float* val = static_cast<float*>(prop->GetValue(container));
-    return m_scalarField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), val, 0.1f);
+    return m_scalarField.Draw(FormatPropertyInspectorLabel(prop->GetName()).c_str(), val, 0.1f);
 }
 
 WidgetEditEvent EditorWindow_Details::DrawDoublePropertyAt(void* container, DProperty* prop)
@@ -934,7 +866,7 @@ WidgetEditEvent EditorWindow_Details::DrawDoublePropertyAt(void* container, DPro
 
     double* val = static_cast<double*>(prop->GetValue(container));
 
-    const float availW = BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
+    const float availW = BeginPropertyRow(FormatPropertyInspectorLabel(prop->GetName()).c_str(), c);
     ImGui::SetNextItemWidth(availW);
     const bool changed = ImGui::InputDouble("##v", val, 0.1, 1.0, "%.6f");
     auto evt = WidgetEditFromLastItem(changed);
@@ -950,7 +882,7 @@ WidgetEditEvent EditorWindow_Details::DrawBoolPropertyAt(void* container, DPrope
 
     bool* val = static_cast<bool*>(prop->GetValue(container));
 
-    BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
+    BeginPropertyRow(FormatPropertyInspectorLabel(prop->GetName()).c_str(), c);
     const bool changed = ImGui::Checkbox("##v", val);
     auto evt = WidgetEditFromLastItem(changed);
     EndPropertyRow();
@@ -967,7 +899,7 @@ WidgetEditEvent EditorWindow_Details::DrawStringPropertyAt(void* container, DPro
     buf[len] = '\0';
     buf[sizeof(buf) - 1] = '\0';
 
-    auto evt = m_stringField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), buf, sizeof(buf));
+    auto evt = m_stringField.Draw(FormatPropertyInspectorLabel(prop->GetName()).c_str(), buf, sizeof(buf));
     if (evt.valueChanged)
     {
         const std::string newVal(buf);
@@ -984,7 +916,7 @@ WidgetEditEvent EditorWindow_Details::DrawIntProperty(DObject* instance, DProper
 
     int* val = static_cast<int*>(prop->GetValue(instance));
 
-    const float availW = BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
+    const float availW = BeginPropertyRow(FormatPropertyInspectorLabel(prop->GetName()).c_str(), c);
     ImGui::SetNextItemWidth(availW);
     const bool changed = ImGui::DragInt("##v", val);
     auto evt = WidgetEditFromLastItem(changed);
@@ -996,7 +928,7 @@ WidgetEditEvent EditorWindow_Details::DrawIntProperty(DObject* instance, DProper
 WidgetEditEvent EditorWindow_Details::DrawFloatProperty(DObject* instance, DProperty* prop)
 {
     float* val = static_cast<float*>(prop->GetValue(instance));
-    return m_scalarField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), val, 0.1f);
+    return m_scalarField.Draw(FormatPropertyInspectorLabel(prop->GetName()).c_str(), val, 0.1f);
 }
 
 WidgetEditEvent EditorWindow_Details::DrawDoubleProperty(DObject* instance, DProperty* prop)
@@ -1006,7 +938,7 @@ WidgetEditEvent EditorWindow_Details::DrawDoubleProperty(DObject* instance, DPro
 
     double* val = static_cast<double*>(prop->GetValue(instance));
 
-    const float availW = BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
+    const float availW = BeginPropertyRow(FormatPropertyInspectorLabel(prop->GetName()).c_str(), c);
     ImGui::SetNextItemWidth(availW);
     const bool changed = ImGui::InputDouble("##v", val, 0.1, 1.0, "%.6f");
     auto evt = WidgetEditFromLastItem(changed);
@@ -1022,7 +954,7 @@ WidgetEditEvent EditorWindow_Details::DrawBoolProperty(DObject* instance, DPrope
 
     bool* val = static_cast<bool*>(prop->GetValue(instance));
 
-    BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
+    BeginPropertyRow(FormatPropertyInspectorLabel(prop->GetName()).c_str(), c);
     const bool changed = ImGui::Checkbox("##v", val);
     auto evt = WidgetEditFromLastItem(changed);
     EndPropertyRow();
@@ -1039,7 +971,7 @@ WidgetEditEvent EditorWindow_Details::DrawStringProperty(DObject* instance, DPro
     buf[len] = '\0';
     buf[sizeof(buf) - 1] = '\0';
 
-    auto evt = m_stringField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), buf, sizeof(buf));
+    auto evt = m_stringField.Draw(FormatPropertyInspectorLabel(prop->GetName()).c_str(), buf, sizeof(buf));
     if (evt.valueChanged)
     {
         const std::string newVal(buf);
@@ -1058,7 +990,7 @@ WidgetEditEvent EditorWindow_Details::DrawFilesystemPathPropertyAt(void* contain
     buf[len] = '\0';
     buf[sizeof(buf) - 1] = '\0';
 
-    auto evt = m_stringField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), buf, sizeof(buf));
+    auto evt = m_stringField.Draw(FormatPropertyInspectorLabel(prop->GetName()).c_str(), buf, sizeof(buf));
     if (evt.valueChanged)
     {
         const std::string newVal(buf);
@@ -1076,14 +1008,14 @@ WidgetEditEvent EditorWindow_Details::DrawFilesystemPathProperty(DObject* instan
 bool EditorWindow_Details::DrawWStringProperty(DObject* instance, DProperty* prop)
 {
     const std::wstring& ws = *static_cast<const std::wstring*>(prop->GetValue(instance));
-    DrawReadOnlyProperty(GetPropertyDisplayName(prop->GetName()), StringUtils::WStringToUtf8(ws));
+    DrawReadOnlyProperty(FormatPropertyInspectorLabel(prop->GetName()), StringUtils::WStringToUtf8(ws));
     return false;
 }
 
 WidgetEditEvent EditorWindow_Details::DrawVector3Property(DObject* instance, DProperty* prop)
 {
     Vector3* val = static_cast<Vector3*>(prop->GetValue(instance));
-    return m_vec3Field.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), &val->x, 0.1f);
+    return m_vec3Field.Draw(FormatPropertyInspectorLabel(prop->GetName()).c_str(), &val->x, 0.1f);
 }
 
 WidgetEditEvent EditorWindow_Details::DrawQuaternionProperty(DObject* instance, DProperty* prop)
@@ -1093,7 +1025,7 @@ WidgetEditEvent EditorWindow_Details::DrawQuaternionProperty(DObject* instance, 
 
     Quaternion* val = static_cast<Quaternion*>(prop->GetValue(instance));
 
-    const float availW = BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
+    const float availW = BeginPropertyRow(FormatPropertyInspectorLabel(prop->GetName()).c_str(), c);
     ImGui::SetNextItemWidth(availW);
     const bool changed = ImGui::DragFloat4("##v", &val->x, 0.01f);
     auto evt = WidgetEditFromLastItem(changed);
@@ -1109,7 +1041,7 @@ WidgetEditEvent EditorWindow_Details::DrawFloat4Property(DObject* instance, DPro
     if (prop->GetMeta("UIType") == "Color")
     {
         float* val = static_cast<float*>(addr);
-        return m_colorField.Draw(GetPropertyDisplayName(prop->GetName()).c_str(), val, true);
+        return m_colorField.Draw(FormatPropertyInspectorLabel(prop->GetName()).c_str(), val, true);
     }
 
     EditorTheme* theme = g_editor->GetEditorTheme();
@@ -1117,7 +1049,7 @@ WidgetEditEvent EditorWindow_Details::DrawFloat4Property(DObject* instance, DPro
 
     auto* val = static_cast<DirectX::XMFLOAT4*>(addr);
 
-    const float availW = BeginPropertyRow(GetPropertyDisplayName(prop->GetName()).c_str(), c);
+    const float availW = BeginPropertyRow(FormatPropertyInspectorLabel(prop->GetName()).c_str(), c);
     ImGui::SetNextItemWidth(availW);
     const bool changed = ImGui::DragFloat4("##v", &val->x, 0.01f);
     auto evt = WidgetEditFromLastItem(changed);
@@ -1134,7 +1066,7 @@ WidgetEditEvent EditorWindow_Details::DrawFloat4x4Property(DObject* instance, DP
     auto* mat = static_cast<DirectX::XMFLOAT4X4*>(prop->GetValue(instance));
     WidgetEditEvent evt;
 
-    const std::string displayName = GetPropertyDisplayName(prop->GetName());
+    const std::string displayName = FormatPropertyInspectorLabel(prop->GetName());
     if (ImGui::TreeNodeEx(displayName.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
     {
         float availW = BeginPropertyRow("Row 0", c);
@@ -1176,7 +1108,7 @@ bool EditorWindow_Details::DrawObjectPtrProperty(DObject* instance, DProperty* p
         typeStr.pop_back();
     const DClass* targetClass = GetReflectionRegistry().FindClassByName(typeStr);
 
-    const std::string displayName = GetPropertyDisplayName(prop->GetName());
+    const std::string displayName = FormatPropertyInspectorLabel(prop->GetName());
     const std::string popupId     = std::string("##ObjPick_") + prop->GetName();
 
     ImGui::PushID(prop->GetName().c_str());
@@ -1212,7 +1144,7 @@ bool EditorWindow_Details::DrawObjectPtrProperty(DObject* instance, DProperty* p
 bool EditorWindow_Details::DrawBulkDataProperty(DObject* instance, DProperty* prop)
 {
     const auto* bulk = static_cast<const TBulkData*>(prop->GetValue(instance));
-    DrawReadOnlyProperty(GetPropertyDisplayName(prop->GetName()),
+    DrawReadOnlyProperty(FormatPropertyInspectorLabel(prop->GetName()),
         "BulkData(id=" + std::to_string(bulk->m_bulkId) + ", size=" + std::to_string(bulk->m_size) + " bytes)");
     return false;
 }
@@ -1222,11 +1154,11 @@ bool EditorWindow_Details::DrawVectorProperty(DObject* instance, DProperty* prop
     const auto* vectorProp = dynamic_cast<const DVectorPropertyBase*>(prop);
     if (!vectorProp)
     {
-        DrawReadOnlyProperty(GetPropertyDisplayName(prop->GetName()), prop->ToString(prop->GetValue(instance)));
+        DrawReadOnlyProperty(FormatPropertyInspectorLabel(prop->GetName()), prop->ToString(prop->GetValue(instance)));
         return false;
     }
 
-    const std::string displayName = GetPropertyDisplayName(prop->GetName());
+    const std::string displayName = FormatPropertyInspectorLabel(prop->GetName());
     void* vectorStorage = prop->GetValue(instance);
     const size_t count = vectorProp->GetSize(vectorStorage);
     if (ImGui::TreeNodeEx(displayName.c_str(), ImGuiTreeNodeFlags_DefaultOpen,

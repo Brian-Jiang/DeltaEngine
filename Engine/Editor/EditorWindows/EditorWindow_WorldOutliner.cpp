@@ -1,10 +1,7 @@
 #include "Editor/EditorWindows/EditorWindow_WorldOutliner.h"
 
-#include <algorithm>
-#include <cctype>
 #include <cstdio>
-#include <cstring>
-#include <format>
+#include <vector>
 
 #include "Editor/Commands/EditorCommand_CreateGameObject.h"
 #include "Editor/Commands/EditorCommand_DeleteGameObject.h"
@@ -14,6 +11,8 @@
 #include "Editor/EditorCore.h"
 #include "Editor/EditorMain.h"
 #include "Editor/EditorSelectionState.h"
+#include "Editor/EditorWindows/EditorOutlinerFiltering.h"
+#include "Editor/EditorWindows/EditorWindowsLog.h"
 #include "Editor/Style/EditorTheme.h"
 #include "Runtime/Assets/DPrimaryAsset.h"
 #include "Runtime/EngineMain.h"
@@ -39,32 +38,7 @@ EditorWindow_WorldOutliner::~EditorWindow_WorldOutliner()
 
 void EditorWindow_WorldOutliner::RebuildFilter()
 {
-    m_filtered.clear();
-    m_filtered.reserve(m_entries.size());
-
-    if (m_filterBuf[0] == '\0')
-    {
-        for (const auto& e : m_entries)
-            m_filtered.push_back(&e);
-        return;
-    }
-
-    auto toLower = [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); };
-    std::string needle;
-    needle.reserve(std::strlen(m_filterBuf));
-    for (const char* p = m_filterBuf; *p; ++p)
-        needle += toLower(static_cast<unsigned char>(*p));
-
-    for (const auto& e : m_entries)
-    {
-        std::string haystack;
-        haystack.reserve(e.name.size());
-        for (unsigned char ch : e.name)
-            haystack += toLower(ch);
-
-        if (haystack.find(needle) != std::string::npos)
-            m_filtered.push_back(&e);
-    }
+    BuildOutlinerFilterMatches(m_entries, m_filterBuf, m_filtered);
 }
 
 void EditorWindow_WorldOutliner::Render(bool& open)
@@ -90,9 +64,12 @@ void EditorWindow_WorldOutliner::Render(bool& open)
         return;
     }
 
-    EditorTheme* theme = g_editor->GetEditorTheme();
+    EditorTheme* theme = g_editor ? g_editor->GetEditorTheme() : nullptr;
     if (!theme)
     {
+        DLOG(LogEditorWindows, ELogLevel::Warning,
+            "WorldOutliner skipped draw: EditorTheme missing from EditorMain (expected initialized theme)");
+        ImGui::TextDisabled("Theme unavailable");
         ImGui::End();
         return;
     }

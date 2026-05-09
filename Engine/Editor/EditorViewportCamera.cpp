@@ -1,11 +1,14 @@
 #include "Editor/EditorViewportCamera.h"
 
+#include "Editor/EditorWindows/EditorWindowsLog.h"
+
 #include "Runtime/IO/IOManager.h"
 
 #include <DirectXMath.h>
 
 #include <filesystem>
 #include <fstream>
+#include <exception>
 #include <nlohmann/json.hpp>
 
 using namespace DeltaEngine;
@@ -46,9 +49,9 @@ static std::filesystem::path GetCameraStatePath()
     return IOManager::GetIntermediateFolder() / "EditorState" / "viewport_cameras.json";
 }
 
-void DeltaEngine::SaveViewportCameras(const std::vector<EditorViewportCamera>& cameras)
+void DeltaEngine::SaveViewportCamerasToPath(const std::vector<EditorViewportCamera>& cameras,
+    const std::filesystem::path& path)
 {
-    const auto path = GetCameraStatePath();
     std::filesystem::create_directories(path.parent_path());
 
     nlohmann::json arr = nlohmann::json::array();
@@ -64,12 +67,25 @@ void DeltaEngine::SaveViewportCameras(const std::vector<EditorViewportCamera>& c
     }
 
     std::ofstream file(path);
+    if (!file.is_open())
+    {
+        DLOG(LogEditorWindows, ELogLevel::Error,
+            "SaveViewportCamerasToPath failed: could not open '{}' for write (expected writable parent folders)",
+            path.string());
+        return;
+    }
     file << arr.dump(2);
+    if (!file.good())
+    {
+        DLOG(LogEditorWindows, ELogLevel::Error,
+            "SaveViewportCamerasToPath failed: incomplete write to '{}' (expected full JSON body)",
+            path.string());
+    }
 }
 
-bool DeltaEngine::LoadViewportCameras(std::vector<EditorViewportCamera>& cameras)
+bool DeltaEngine::LoadViewportCamerasFromPath(std::vector<EditorViewportCamera>& cameras,
+    const std::filesystem::path& path)
 {
-    const auto path = GetCameraStatePath();
     if (!std::filesystem::exists(path))
         return false;
 
@@ -78,16 +94,21 @@ bool DeltaEngine::LoadViewportCameras(std::vector<EditorViewportCamera>& cameras
         std::ifstream file(path);
         const nlohmann::json arr = nlohmann::json::parse(file);
         if (!arr.is_array())
+        {
+            DLOG(LogEditorWindows, ELogLevel::Error,
+                "LoadViewportCamerasFromPath failed: root is not JSON array in '{}' (expected camera array)",
+                path.string());
             return false;
+        }
 
         std::vector<EditorViewportCamera> result;
         result.reserve(arr.size());
         for (const auto& entry : arr)
         {
             EditorViewportCamera cam;
-            cam.fov       = entry.value("fov",       cam.fov);
-            cam.nearPlane = entry.value("nearPlane",  cam.nearPlane);
-            cam.farPlane  = entry.value("farPlane",   cam.farPlane);
+            cam.fov       = entry.value("fov", cam.fov);
+            cam.nearPlane = entry.value("nearPlane", cam.nearPlane);
+            cam.farPlane  = entry.value("farPlane", cam.farPlane);
 
             if (entry.contains("position") && entry["position"].is_array() && entry["position"].size() == 3)
             {
@@ -108,8 +129,28 @@ bool DeltaEngine::LoadViewportCameras(std::vector<EditorViewportCamera>& cameras
         cameras = std::move(result);
         return true;
     }
-    catch (...)
+    catch (const std::exception& ex)
     {
+        DLOG(LogEditorWindows, ELogLevel::Error,
+            "LoadViewportCamerasFromPath failed parsing '{}': {} (expected valid JSON camera array)",
+            path.string(), ex.what());
         return false;
     }
+    catch (...)
+    {
+        DLOG(LogEditorWindows, ELogLevel::Error,
+            "LoadViewportCamerasFromPath unknown exception reading '{}' (expected valid JSON)",
+            path.string());
+        return false;
+    }
+}
+
+void DeltaEngine::SaveViewportCameras(const std::vector<EditorViewportCamera>& cameras)
+{
+    SaveViewportCamerasToPath(cameras, GetCameraStatePath());
+}
+
+bool DeltaEngine::LoadViewportCameras(std::vector<EditorViewportCamera>& cameras)
+{
+    return LoadViewportCamerasFromPath(cameras, GetCameraStatePath());
 }
