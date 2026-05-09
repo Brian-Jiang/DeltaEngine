@@ -5,6 +5,8 @@
 #include "Runtime/Serialization/TBulkData.h"
 #include "Runtime/Test/ReflectionTestObject.h"
 
+#include <DirectXCollision.h>
+
 #include <filesystem>
 #include <gtest/gtest.h>
 
@@ -134,6 +136,44 @@ TEST(ReflectionPropertyTests, StructProperty_SerializeJson_RoundTripsNestedField
     const auto& loaded = *static_cast<ReflectionTestNestStruct*>(sv);
     EXPECT_EQ(loaded.m_nestedInt, 9);
     EXPECT_FLOAT_EQ(loaded.m_nestedFloat, 0.25f);
+
+    registry.DestroyObject(obj);
+}
+
+TEST(ReflectionPropertyTests, BoundingBoxField_RoundTripsThroughJson)
+{
+    auto& registry = GetReflectionRegistry();
+    DClass* cls = registry.FindClassByName("ReflectionTestObject");
+    ASSERT_NE(cls, nullptr);
+    ReflectionTestObject* obj =
+        registry.CreateObject<ReflectionTestObject>("ReflectionTestObject");
+    ASSERT_NE(obj, nullptr);
+
+    DProperty* boxProp = cls->FindPropertyByName("m_rBox");
+    ASSERT_NE(boxProp, nullptr);
+    EXPECT_EQ(boxProp->GetPropertyType(), EPropertyType::BoundingBox);
+
+    DirectX::BoundingBox original;
+    original.Center  = DirectX::XMFLOAT3(1.0f, 2.0f, 3.0f);
+    original.Extents = DirectX::XMFLOAT3(4.0f, 5.0f, 6.0f);
+    boxProp->SetValue(obj, &original);
+
+    JsonAssetArchive writer;
+    boxProp->Serialize(writer, obj);
+
+    DirectX::BoundingBox cleared{};
+    boxProp->SetValue(obj, &cleared);
+
+    JsonAssetArchive reader(writer.GetRoot(), {});
+    boxProp->Serialize(reader, obj);
+
+    const auto& loaded = *static_cast<DirectX::BoundingBox*>(boxProp->GetValue(obj));
+    EXPECT_FLOAT_EQ(loaded.Center.x,  1.0f);
+    EXPECT_FLOAT_EQ(loaded.Center.y,  2.0f);
+    EXPECT_FLOAT_EQ(loaded.Center.z,  3.0f);
+    EXPECT_FLOAT_EQ(loaded.Extents.x, 4.0f);
+    EXPECT_FLOAT_EQ(loaded.Extents.y, 5.0f);
+    EXPECT_FLOAT_EQ(loaded.Extents.z, 6.0f);
 
     registry.DestroyObject(obj);
 }

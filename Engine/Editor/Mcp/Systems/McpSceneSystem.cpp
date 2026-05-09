@@ -32,6 +32,7 @@ static const char* PropertyTypeName(EPropertyType t)
     case EPropertyType::Quaternion: return "Quaternion";
     case EPropertyType::Float4:     return "Float4";
     case EPropertyType::Float4x4:   return "Float4x4";
+    case EPropertyType::BoundingBox: return "BoundingBox";
     case EPropertyType::ObjectPtr:  return "ObjectPtr";
     case EPropertyType::BulkData:   return "BulkData";
     case EPropertyType::Vector:     return "Vector";

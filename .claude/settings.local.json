@@ -28,7 +28,9 @@
       "Bash(Tools\\\\Scripts\\\\build-x64-debug-engine-tests.bat --automatic)",
       "PowerShell(.\\\\Tools\\\\Scripts\\\\build-x64-debug-engine-tests.bat --automatic)",
       "PowerShell(& \"Tools\\\\Scripts\\\\run-x64-debug-engine-tests.bat\" --automatic 2>&1)",
-      "PowerShell($out = & \"Tools\\\\Scripts\\\\run-x64-debug-engine-tests.bat\" --automatic 2>&1; $out | Select-Object -Last 80; Write-Output \"EXIT: $LASTEXITCODE\")"
+      "PowerShell($out = & \"Tools\\\\Scripts\\\\run-x64-debug-engine-tests.bat\" --automatic 2>&1; $out | Select-Object -Last 80; Write-Output \"EXIT: $LASTEXITCODE\")",
+      "Bash(Tools\\\\\\\\Scripts\\\\\\\\test-delta-header-tool.bat --automatic)",
+      "PowerShell(Tools\\\\Scripts\\\\test-delta-header-tool.bat --automatic)"
     ]
   }
 }

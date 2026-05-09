@@ -53,6 +53,7 @@ Rules:
 | `FQuaternion` | `DQuaternionProperty` |
 | `DirectX::XMFLOAT4` | `DFloat4Property` |
 | `DirectX::XMFLOAT4X4` | `DFloat4x4Property` |
+| `DirectX::BoundingBox` | `DBoundingBoxProperty` |
 | `T*` (DObject-derived) | `DObjectPtrProperty<T>` |
 | `std::vector<T>` | `DVectorProperty<T>` |
 

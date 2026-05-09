@@ -18,6 +18,7 @@ from type_resolver import TYPE_MAP, resolve_type_from_string
         ("DirectX::SimpleMath::Quaternion", "DQuaternionProperty"),
         ("DirectX::XMMATRIX", "DFloat4x4Property"),
         ("DirectX::XMVECTOR", "DFloat4Property"),
+        ("DirectX::BoundingBox", "DBoundingBoxProperty"),
         ("TBulkData", "DBulkDataProperty"),
         ("DeltaEngine::TBulkData", "DBulkDataProperty"),
     ],

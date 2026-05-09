@@ -8,6 +8,7 @@
 #include "Runtime/Serialization/ScriptPointer.h"
 
 #include "SimpleMath.h"
+#include <DirectXCollision.h>
 #include <DirectXMath.h>
 
 #include <cstdint>
@@ -69,6 +70,7 @@ public:
     virtual void Serialize(const std::string& key, DirectX::SimpleMath::Quaternion& value) = 0;
     virtual void Serialize(const std::string& key, DirectX::XMFLOAT4&               value) = 0;
     virtual void Serialize(const std::string& key, DirectX::XMFLOAT4X4&             value) = 0;
+    virtual void Serialize(const std::string& key, DirectX::BoundingBox&            value) = 0;
 
     virtual void Serialize(const std::string& key, ScriptPointer&  value) = 0;
     virtual void Serialize(const std::string& key, UUID&           value) = 0;
@@ -84,6 +86,7 @@ public:
     virtual void SerializeElement(DirectX::SimpleMath::Quaternion& value) = 0;
     virtual void SerializeElement(DirectX::XMFLOAT4&               value) = 0;
     virtual void SerializeElement(DirectX::XMFLOAT4X4&             value) = 0;
+    virtual void SerializeElement(DirectX::BoundingBox&            value) = 0;
     virtual void SerializeElement(ScriptPointer&                    value) = 0;
 
     /// Serializes a named reflected vector using its inner property serializer.

@@ -2,6 +2,7 @@
 
 #include "EngineIncludes.h"
 
+#include "DirectXCollision.h"
 #include "DirectXMath.h"
 #include "SimpleMath.h"
 
@@ -75,6 +76,9 @@ private:
 
     DPROPERTY()
     DirectX::XMFLOAT4X4 m_rFloat4x4 = {};
+
+    DPROPERTY()
+    DirectX::BoundingBox m_rBox = {};
 
     DPROPERTY()
     DTexture* m_rTexture = nullptr;

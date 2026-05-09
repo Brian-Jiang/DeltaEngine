@@ -28,6 +28,7 @@ enum class EPropertyType
     Quaternion,
     Float4,
     Float4x4,
+    BoundingBox,
     ObjectPtr,
     BulkData,
     Vector,
@@ -241,6 +242,24 @@ class DQuaternionProperty : public DProperty
 {
 public:
     DQuaternionProperty(std::string name, uint32_t offset);
+
+    void InitializeValue(void* address) const override;
+    void DestroyValue(void* address) const override;
+    void SetValue(void* instance, const void* field_value) const override;
+    void* GetValue(const void* instance) const override;
+    void CopyValue(void* dest, const void* src) const override;
+    bool Identical(const void* a, const void* b) const override;
+    std::string ToString(const void* address) const override;
+    EPropertyType GetPropertyType() const override;
+    void Serialize(AssetArchive& ar, void* objectPtr) override;
+    void SerializeElement(AssetArchive& ar, void* elementAddr) override;
+};
+
+
+class DBoundingBoxProperty : public DProperty
+{
+public:
+    DBoundingBoxProperty(std::string name, uint32_t offset);
 
     void InitializeValue(void* address) const override;
     void DestroyValue(void* address) const override;

@@ -23,6 +23,7 @@ TYPE_MAP = {
     "DirectX::XMFLOAT4X4":                "DFloat4x4Property",
     "DirectX::XMVECTOR":                  "DFloat4Property",
     "DirectX::XMFLOAT4":                  "DFloat4Property",
+    "DirectX::BoundingBox":               "DBoundingBoxProperty",
     "TBulkData":                          "DBulkDataProperty",
     "DeltaEngine::TBulkData":             "DBulkDataProperty",
 }
@@ -32,6 +33,7 @@ VECTOR_ELEMENT_PROPERTY_CLASSES = {
     "DStringProperty", "DFilesystemPathProperty",
     "DVector3Property", "DQuaternionProperty",
     "DFloat4Property", "DFloat4x4Property",
+    "DBoundingBoxProperty",
 }
 
 INNER_TYPE_TO_CPP = {
@@ -45,6 +47,7 @@ INNER_TYPE_TO_CPP = {
     "DQuaternionProperty": "DirectX::SimpleMath::Quaternion",
     "DFloat4Property":     "DirectX::XMFLOAT4",
     "DFloat4x4Property":   "DirectX::XMFLOAT4X4",
+    "DBoundingBoxProperty": "DirectX::BoundingBox",
 }
 
 _STRING_RE = re.compile(r"^std::(?:string|basic_string\s*<\s*char\b)")

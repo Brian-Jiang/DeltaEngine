@@ -12,6 +12,7 @@
 #include "Runtime/Reflection/DVectorProperty.h"
 
 #include "SimpleMath.h"
+#include <DirectXCollision.h>
 #include <DirectXMath.h>
 
 #include <filesystem>
@@ -210,6 +211,13 @@ nlohmann::json DeltaEngine::PropertyToJson(const DObject* obj, const DProperty* 
                     arr.push_back(m.m[r][c]);
             return arr;
         }
+        case EPropertyType::BoundingBox:
+        {
+            const auto& b = *static_cast<const DirectX::BoundingBox*>(addr);
+            return nlohmann::json::array({
+                b.Center.x,  b.Center.y,  b.Center.z,
+                b.Extents.x, b.Extents.y, b.Extents.z });
+        }
         default:
             DLOG(LogEditorCommand, ELogLevel::Warning,
                  "[PropertyValueIO] PropertyToJson: unsupported scalar type '{}' (property '{}' on class '{}')",
@@ -318,6 +326,17 @@ bool DeltaEngine::SetPropertyFromJson(DObject* obj, const DProperty* prop, const
             for (int r = 0; r < 4; ++r)
                 for (int c = 0; c < 4; ++c)
                     m.m[r][c] = value.at(static_cast<size_t>(r * 4 + c)).get<float>();
+            break;
+        }
+        case EPropertyType::BoundingBox:
+        {
+            auto& b = *static_cast<DirectX::BoundingBox*>(addr);
+            b.Center.x  = value.at(0).get<float>();
+            b.Center.y  = value.at(1).get<float>();
+            b.Center.z  = value.at(2).get<float>();
+            b.Extents.x = value.at(3).get<float>();
+            b.Extents.y = value.at(4).get<float>();
+            b.Extents.z = value.at(5).get<float>();
             break;
         }
         default:

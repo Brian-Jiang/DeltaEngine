@@ -6,6 +6,7 @@
 #include "Runtime/Serialization/AssetArchive.h"
 #include "Runtime/Utils/StringUtils.h"
 
+#include <DirectXCollision.h>
 #include <DirectXMath.h>
 #include <SimpleMath.h>
 
@@ -345,6 +346,77 @@ void DQuaternionProperty::SerializeElement(AssetArchive& ar, void* elementAddr)
 {
     DELTA_VERIFY(elementAddr != nullptr);
     ar.SerializeElement(*static_cast<Quaternion*>(elementAddr));
+}
+
+// ---------------------------------------------------------------------------
+// DBoundingBoxProperty
+// ---------------------------------------------------------------------------
+
+using BoundingBox = DirectX::BoundingBox;
+
+DBoundingBoxProperty::DBoundingBoxProperty(std::string name, uint32_t offset)
+    : DProperty(std::move(name), "BoundingBox", offset, sizeof(BoundingBox))
+{
+}
+
+void DBoundingBoxProperty::InitializeValue(void* address) const
+{
+    new (address) BoundingBox();
+}
+
+void DBoundingBoxProperty::DestroyValue(void* address) const
+{
+}
+
+void DBoundingBoxProperty::SetValue(void* instance, const void* field_value) const
+{
+    void* addr = static_cast<uint8_t*>(instance) + m_offset;
+    *static_cast<BoundingBox*>(addr) = field_value
+        ? *static_cast<const BoundingBox*>(field_value)
+        : BoundingBox{};
+    static_cast<DObject*>(instance)->MarkDirty();
+}
+
+void* DBoundingBoxProperty::GetValue(const void* instance) const
+{
+    return static_cast<uint8_t*>(const_cast<void*>(instance)) + m_offset;
+}
+
+void DBoundingBoxProperty::CopyValue(void* dest, const void* src) const
+{
+    new (dest) BoundingBox(*static_cast<const BoundingBox*>(src));
+}
+
+bool DBoundingBoxProperty::Identical(const void* a, const void* b) const
+{
+    const auto& ba = *static_cast<const BoundingBox*>(a);
+    const auto& bb = *static_cast<const BoundingBox*>(b);
+    return ba.Center.x  == bb.Center.x  && ba.Center.y  == bb.Center.y  && ba.Center.z  == bb.Center.z
+        && ba.Extents.x == bb.Extents.x && ba.Extents.y == bb.Extents.y && ba.Extents.z == bb.Extents.z;
+}
+
+std::string DBoundingBoxProperty::ToString(const void* address) const
+{
+    const auto& b = *static_cast<const BoundingBox*>(address);
+    return "Center=(" + std::to_string(b.Center.x)  + ", " + std::to_string(b.Center.y)  + ", " + std::to_string(b.Center.z)  + "), "
+           "Extents=(" + std::to_string(b.Extents.x) + ", " + std::to_string(b.Extents.y) + ", " + std::to_string(b.Extents.z) + ")";
+}
+
+EPropertyType DBoundingBoxProperty::GetPropertyType() const
+{
+    return EPropertyType::BoundingBox;
+}
+
+void DBoundingBoxProperty::Serialize(AssetArchive& ar, void* objectPtr)
+{
+    DELTA_VERIFY(objectPtr != nullptr);
+    ar.Serialize(GetName(), *static_cast<BoundingBox*>(GetValue(objectPtr)));
+}
+
+void DBoundingBoxProperty::SerializeElement(AssetArchive& ar, void* elementAddr)
+{
+    DELTA_VERIFY(elementAddr != nullptr);
+    ar.SerializeElement(*static_cast<BoundingBox*>(elementAddr));
 }
 
 // ---------------------------------------------------------------------------

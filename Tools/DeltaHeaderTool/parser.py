@@ -89,6 +89,7 @@ struct XMMATRIX { float m[4][4]; };
 struct __declspec(align(16)) XMVECTOR { float f[4]; };
 typedef XMFLOAT4 XMFLOAT2;
 typedef XMFLOAT4 XMFLOAT3;
+struct BoundingBox { XMFLOAT3 Center; XMFLOAT3 Extents; };
 struct TexMetadata {};
 class ScratchImage {};
 }

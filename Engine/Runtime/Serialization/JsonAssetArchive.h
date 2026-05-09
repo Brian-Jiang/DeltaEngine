@@ -55,6 +55,7 @@ public:
     void Serialize(const std::string& key, DirectX::SimpleMath::Quaternion& value) override;
     void Serialize(const std::string& key, DirectX::XMFLOAT4&               value) override;
     void Serialize(const std::string& key, DirectX::XMFLOAT4X4&             value) override;
+    void Serialize(const std::string& key, DirectX::BoundingBox&            value) override;
 
     void Serialize(const std::string& key, ScriptPointer&  value) override;
     void Serialize(const std::string& key, UUID&           value) override;
@@ -69,6 +70,7 @@ public:
     void SerializeElement(DirectX::SimpleMath::Quaternion& value) override;
     void SerializeElement(DirectX::XMFLOAT4&               value) override;
     void SerializeElement(DirectX::XMFLOAT4X4&             value) override;
+    void SerializeElement(DirectX::BoundingBox&            value) override;
     void SerializeElement(ScriptPointer&                    value) override;
 
     void                 WriteBulkData(uint32_t bulkId, const void* data, uint64_t size) override;

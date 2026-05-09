@@ -500,6 +500,30 @@ void JsonAssetArchive::Serialize(const std::string& key, DirectX::XMFLOAT4X4& va
         });
 }
 
+void JsonAssetArchive::Serialize(const std::string& key, DirectX::BoundingBox& value)
+{
+    auto& cur = CurrentNode(m_stack, "SerializeBoundingBox");
+    StoreOrLoadNode(
+        cur,
+        IsSaving(),
+        key,
+        [&]() -> nlohmann::json
+        {
+            return nlohmann::json::array({
+                value.Center.x,  value.Center.y,  value.Center.z,
+                value.Extents.x, value.Extents.y, value.Extents.z });
+        },
+        [&](const nlohmann::json& node)
+        {
+            value.Center.x  = node[0].get<float>();
+            value.Center.y  = node[1].get<float>();
+            value.Center.z  = node[2].get<float>();
+            value.Extents.x = node[3].get<float>();
+            value.Extents.y = node[4].get<float>();
+            value.Extents.z = node[5].get<float>();
+        });
+}
+
 void JsonAssetArchive::Serialize(const std::string& key, UUID& value)
 {
     auto& cur = CurrentNode(m_stack, "SerializeUUID");
@@ -653,6 +677,30 @@ void JsonAssetArchive::SerializeElement(DirectX::XMFLOAT4X4& value)
             for (int r = 0; r < 4; ++r)
                 for (int c = 0; c < 4; ++c)
                     value.m[r][c] = node[static_cast<size_t>(r * 4 + c)].get<float>();
+        });
+}
+
+void JsonAssetArchive::SerializeElement(DirectX::BoundingBox& value)
+{
+    auto& cur = CurrentNode(m_stack, "SerializeElementBoundingBox");
+    StoreOrLoadElementNode(
+        cur,
+        IsSaving(),
+        m_arrayIndex,
+        [&]() -> nlohmann::json
+        {
+            return nlohmann::json::array({
+                value.Center.x,  value.Center.y,  value.Center.z,
+                value.Extents.x, value.Extents.y, value.Extents.z });
+        },
+        [&](const nlohmann::json& node)
+        {
+            value.Center.x  = node[0].get<float>();
+            value.Center.y  = node[1].get<float>();
+            value.Center.z  = node[2].get<float>();
+            value.Extents.x = node[3].get<float>();
+            value.Extents.y = node[4].get<float>();
+            value.Extents.z = node[5].get<float>();
         });
 }
 
