@@ -20,6 +20,7 @@ DELTA_ENGINE_NS_BEGIN
 class AssetArchive;
 class DObjectPtrPropertyBase;
 class DBulkDataProperty;
+class DStruct;
 
 DCLASS()
 class DELTAENGINE_API DPrimaryAsset : public DObject
@@ -78,6 +79,13 @@ public:
 
     /// Serializes the asset metadata block ({static, dynamic}).
     void SerializeMeta(AssetArchive& ar);
+
+    /// Returns the reflected static-meta schema and the instance to read/write through it.
+    /// Default implementation returns null pair (no static meta); per-type subclasses override.
+    virtual std::pair<DStruct*, void*> GetStaticMetaSchema() { return {nullptr, nullptr}; }
+
+    /// Recomputes static meta from the asset's payload. Default no-op; per-type re-import hook.
+    virtual void RebuildStaticMeta() {}
 
     /// Returns the dynamic metadata JSON (free-form; canonicalized to contain desc/tags).
     const nlohmann::json& GetDynamicMeta() const { return m_dynamicMeta; }

@@ -4,6 +4,7 @@
 #include "Runtime/Reflection/DObjectReferenceTraversal.h"
 #include "Runtime/Reflection/DProperty.h"
 #include "Runtime/Reflection/DBulkDataProperty.h"
+#include "Runtime/Reflection/DStruct.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
 #include "Runtime/Serialization/AssetArchive.h"
 #include "Runtime/Serialization/TBulkData.h"
@@ -310,8 +311,26 @@ void DPrimaryAsset::SerializeBulkData(AssetArchive& ar)
 
 void DPrimaryAsset::SerializeMeta(AssetArchive& ar)
 {
-    nlohmann::json staticBlock = nlohmann::json::object();
-    ar.Serialize("static", staticBlock);
+    auto [schema, instance] = GetStaticMetaSchema();
+    if (schema && instance)
+    {
+        if (ar.IsSaving())
+        {
+            ar.BeginNestedObject("static");
+            schema->SerializeFields(ar, instance);
+            ar.EndNestedObject();
+        }
+        else if (ar.BeginNestedObjectLoad("static"))
+        {
+            schema->SerializeFields(ar, instance);
+            ar.EndNestedObject();
+        }
+    }
+    else if (ar.IsSaving())
+    {
+        nlohmann::json staticBlock = nlohmann::json::object();
+        ar.Serialize("static", staticBlock);
+    }
 
     if (ar.IsSaving())
     {

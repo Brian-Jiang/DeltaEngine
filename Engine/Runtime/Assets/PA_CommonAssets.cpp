@@ -6,6 +6,10 @@
 #include "Runtime/Core/DTexture.h"
 #include "Runtime/Core/Skybox.h"
 #include "Runtime/Core/UUID.h"
+#include "Runtime/Graphics/Structures/Vertex.h"
+#include "Runtime/Reflection/ReflectionRegistry.h"
+
+#include <DirectXMath.h>
 
 using namespace DeltaEngine;
 
@@ -86,12 +90,69 @@ DTexture* PA_Texture::GetTexture() const
 
 PA_StaticMesh* PA_StaticMesh::Create(DMesh* mesh)
 {
-    return CreateTypedPrimaryAsset<PA_StaticMesh>(mesh, "PA_StaticMesh");
+    PA_StaticMesh* asset = CreateTypedPrimaryAsset<PA_StaticMesh>(mesh, "PA_StaticMesh");
+    asset->RebuildStaticMeta();
+    return asset;
 }
 
 DMesh* PA_StaticMesh::GetStaticMesh() const
 {
     return FindTypedObject<DMesh>(this);
+}
+
+std::pair<DStruct*, void*> PA_StaticMesh::GetStaticMetaSchema()
+{
+    return { GetReflectionRegistry().FindStructByName("PA_StaticMesh_StaticMeta"), &m_staticMeta };
+}
+
+void PA_StaticMesh::RebuildStaticMeta()
+{
+    m_staticMeta = PA_StaticMesh_StaticMeta{};
+
+    DMesh* mesh = GetStaticMesh();
+    if (!mesh)
+        return;
+
+    const auto& submeshVertices = mesh->GetVertices();
+    const auto& submeshIndices = mesh->GetIndices();
+
+    size_t totalVertices = 0;
+    size_t totalIndices = 0;
+    for (const auto& sm : submeshVertices)
+        totalVertices += sm.size();
+    for (const auto& sm : submeshIndices)
+        totalIndices += sm.size();
+
+    m_staticMeta.m_vertexCount = static_cast<int>(totalVertices);
+    m_staticMeta.m_indexCount = static_cast<int>(totalIndices);
+
+    bool hasBox = false;
+    DirectX::BoundingBox merged{};
+    for (const auto& sm : submeshVertices)
+    {
+        if (sm.empty())
+            continue;
+
+        DirectX::BoundingBox sub{};
+        DirectX::BoundingBox::CreateFromPoints(
+            sub,
+            sm.size(),
+            reinterpret_cast<const DirectX::XMFLOAT3*>(&sm[0].position),
+            sizeof(Vertex));
+
+        if (!hasBox)
+        {
+            merged = sub;
+            hasBox = true;
+        }
+        else
+        {
+            DirectX::BoundingBox::CreateMerged(merged, merged, sub);
+        }
+    }
+
+    if (hasBox)
+        m_staticMeta.m_aabb = merged;
 }
 
 PA_Skybox* PA_Skybox::Create(Skybox* skybox)

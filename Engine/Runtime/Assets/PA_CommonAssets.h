@@ -4,6 +4,8 @@
 
 #include "Runtime/Assets/DPrimaryAsset.h"
 
+#include <DirectXCollision.h>
+
 #include "PA_CommonAssets.generated.h"
 
 DELTA_ENGINE_NS_BEGIN
@@ -13,6 +15,21 @@ class DMaterial;
 class DTexture;
 class DMesh;
 class Skybox;
+
+DSTRUCT()
+struct DELTAENGINE_API PA_StaticMesh_StaticMeta
+{
+    DGENERATED_BODY_STRUCT(PA_StaticMesh_StaticMeta)
+
+    DPROPERTY()
+    int m_vertexCount = 0;
+
+    DPROPERTY()
+    int m_indexCount = 0;
+
+    DPROPERTY()
+    DirectX::BoundingBox m_aabb = {};
+};
 
 DCLASS()
 class DELTAENGINE_API PA_Shader : public DPrimaryAsset
@@ -52,6 +69,15 @@ class DELTAENGINE_API PA_StaticMesh : public DPrimaryAsset
 public:
     static PA_StaticMesh* Create(DMesh* mesh);
     DMesh* GetStaticMesh() const;
+
+    /// Returns the cached static metadata (vertex/index counts, AABB) for this mesh asset.
+    const PA_StaticMesh_StaticMeta& GetStaticMeta() const { return m_staticMeta; }
+
+    std::pair<DStruct*, void*> GetStaticMetaSchema() override;
+    void RebuildStaticMeta() override;
+
+private:
+    PA_StaticMesh_StaticMeta m_staticMeta;
 };
 
 DCLASS()
