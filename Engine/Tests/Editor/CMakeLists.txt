@@ -1,5 +1,6 @@
 set(DELTA_EDITOR_TEST_SOURCES
     EditorCommandTests_SetProperty.cpp
+    EditorCommandTests_SetAssetDynamicMeta.cpp
     EditorCommandTests_SceneStructure.cpp
     EditorCommandTests_Scene_SaveLoad.cpp
     EditorCommandTests_CommandQueue.cpp
