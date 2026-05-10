@@ -31,6 +31,24 @@ struct DELTAENGINE_API PA_StaticMesh_StaticMeta
     DirectX::BoundingBox m_aabb = {};
 };
 
+DSTRUCT()
+struct DELTAENGINE_API PA_Texture_StaticMeta
+{
+    DGENERATED_BODY_STRUCT(PA_Texture_StaticMeta)
+
+    DPROPERTY()
+    int m_width = 0;
+
+    DPROPERTY()
+    int m_height = 0;
+
+    DPROPERTY()
+    int m_mipCount = 0;
+
+    DPROPERTY()
+    int m_format = 0;
+};
+
 DCLASS()
 class DELTAENGINE_API PA_Shader : public DPrimaryAsset
 {
@@ -59,6 +77,15 @@ class DELTAENGINE_API PA_Texture : public DPrimaryAsset
 public:
     static PA_Texture* Create(DTexture* texture);
     DTexture* GetTexture() const;
+
+    /// Returns the cached static metadata (width/height/mipCount/format) for this texture asset.
+    const PA_Texture_StaticMeta& GetStaticMeta() const { return m_staticMeta; }
+
+    std::pair<DStruct*, void*> GetStaticMetaSchema() override;
+    void RebuildStaticMeta() override;
+
+private:
+    PA_Texture_StaticMeta m_staticMeta;
 };
 
 DCLASS()

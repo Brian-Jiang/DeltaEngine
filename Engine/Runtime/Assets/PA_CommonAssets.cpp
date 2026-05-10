@@ -10,6 +10,7 @@
 #include "Runtime/Reflection/ReflectionRegistry.h"
 
 #include <DirectXMath.h>
+#include <DirectXTex.h>
 
 using namespace DeltaEngine;
 
@@ -80,12 +81,37 @@ DMaterial* PA_Material::GetMaterial() const
 
 PA_Texture* PA_Texture::Create(DTexture* texture)
 {
-    return CreateTypedPrimaryAsset<PA_Texture>(texture, "PA_Texture");
+    PA_Texture* asset = CreateTypedPrimaryAsset<PA_Texture>(texture, "PA_Texture");
+    asset->RebuildStaticMeta();
+    return asset;
 }
 
 DTexture* PA_Texture::GetTexture() const
 {
     return FindTypedObject<DTexture>(this);
+}
+
+std::pair<DStruct*, void*> PA_Texture::GetStaticMetaSchema()
+{
+    return { GetReflectionRegistry().FindStructByName("PA_Texture_StaticMeta"), &m_staticMeta };
+}
+
+void PA_Texture::RebuildStaticMeta()
+{
+    m_staticMeta = PA_Texture_StaticMeta{};
+
+    DTexture* texture = GetTexture();
+    if (!texture)
+        return;
+
+    auto metadata = texture->GetMetadata();
+    if (!metadata)
+        return;
+
+    m_staticMeta.m_width = static_cast<int>(metadata->width);
+    m_staticMeta.m_height = static_cast<int>(metadata->height);
+    m_staticMeta.m_mipCount = static_cast<int>(metadata->mipLevels);
+    m_staticMeta.m_format = static_cast<int>(metadata->format);
 }
 
 PA_StaticMesh* PA_StaticMesh::Create(DMesh* mesh)

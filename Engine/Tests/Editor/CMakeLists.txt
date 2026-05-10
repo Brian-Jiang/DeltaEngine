@@ -39,6 +39,7 @@ set(DELTA_EDITOR_TEST_SOURCES
     Serialization/RoundTrip/TypedPrimaryAssetRoundTripTests.cpp
     Serialization/RoundTrip/DynamicMetaRoundTripTests.cpp
     Serialization/RoundTrip/StaticMetaRoundTripTests.cpp
+    Serialization/RoundTrip/StaticMetaRoundTripTests_Texture.cpp
     Serialization/Compatibility/FallbackAndDefaultsTests.cpp
     Serialization/References/CrossAssetReferenceTests.cpp
     Serialization/BulkData/BulkDataRoundTripTests.cpp
