@@ -6,6 +6,8 @@
 #include "Runtime/Core/UUID.h"
 #include "Runtime/Assets/DPrimaryAsset.h"
 
+#include <nlohmann/json.hpp>
+
 #include <filesystem>
 #include <memory>
 #include <optional>
@@ -31,7 +33,8 @@ public:
         DPrimaryAsset::Header m_header;
         std::filesystem::path m_filePath;
         AssetState m_state = AssetState::HeaderOnly;
-        DPrimaryAsset* m_instance;
+        DPrimaryAsset* m_instance = nullptr;
+        nlohmann::json m_meta;
     };
 
     using IAssetDatabase::LoadAsset;
@@ -45,6 +48,14 @@ public:
     const DPrimaryAsset::Header* GetAssetHeader(const AssetId& id) const;
     std::filesystem::path        GetAssetPath(const AssetId& id) const;
     DPrimaryAsset*               GetLoadedAsset(const AssetId& id) const;
+
+    /// Returns the cached `{static, dynamic}` metadata blob for the asset, or an empty
+    /// object if the id is unknown. Always shape `{static:{}, dynamic:{desc, tags, ...}}`.
+    const nlohmann::json& GetAssetMeta(const AssetId& id) const;
+
+    /// Rebuilds the cached meta blob for an asset from its live in-memory instance.
+    /// No-op if the asset has no loaded instance.
+    void RefreshAssetMetaCache(const AssetId& id);
 
     DPrimaryAsset* LoadAsset(const AssetId& id) override;
 
@@ -87,6 +98,10 @@ private:
 
     static DPrimaryAsset::Header ReadAssetHeaderFromFile(
         const std::filesystem::path& path, bool isJson);
+
+    /// Opens `.dasset.json`, reads only `root["meta"]`, applies dynamic-meta backfill, and
+    /// returns the resulting `{static, dynamic}` blob. Body and bulk are not parsed.
+    static nlohmann::json ReadAssetMetaFromFile(const std::filesystem::path& path);
 
     std::unordered_map<AssetId, AssetEntry> m_assets;
     std::unordered_map<std::filesystem::path, AssetId> m_assetPathMap;

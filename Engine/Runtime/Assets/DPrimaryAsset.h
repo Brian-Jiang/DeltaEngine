@@ -86,6 +86,10 @@ public:
     /// Replaces the dynamic metadata JSON.
     void SetDynamicMeta(nlohmann::json value) { m_dynamicMeta = std::move(value); }
 
+    /// Validates and backfills missing/malformed `desc` and `tags` keys on a dynamic meta blob.
+    /// When `warn` is true, logs warnings for each backfill or replacement.
+    static void EnsureDynamicMetaShape(nlohmann::json& meta, bool warn);
+
 private:
     void DeserializeBody(AssetArchive& ar);
 

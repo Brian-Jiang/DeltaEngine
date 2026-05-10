@@ -15,8 +15,9 @@ using namespace DeltaEngine;
 namespace
 {
 constexpr uint32_t kSupportedPrimaryAssetFileVersion = 1;
+}
 
-void EnsureDynamicMetaShape(nlohmann::json& meta, bool warn)
+void DPrimaryAsset::EnsureDynamicMetaShape(nlohmann::json& meta, bool warn)
 {
     if (!meta.is_object())
     {
@@ -91,7 +92,6 @@ void EnsureDynamicMetaShape(nlohmann::json& meta, bool warn)
             *tagsIt = std::move(cleaned);
         }
     }
-}
 }
 
 void DPrimaryAsset::AddObject(DObject* obj)
@@ -316,13 +316,13 @@ void DPrimaryAsset::SerializeMeta(AssetArchive& ar)
     if (ar.IsSaving())
     {
         nlohmann::json dynamicOut = m_dynamicMeta;
-        EnsureDynamicMetaShape(dynamicOut, /*warn=*/false);
+        DPrimaryAsset::EnsureDynamicMetaShape(dynamicOut, /*warn=*/false);
         ar.Serialize("dynamic", dynamicOut);
     }
     else
     {
         ar.Serialize("dynamic", m_dynamicMeta);
-        EnsureDynamicMetaShape(m_dynamicMeta, /*warn=*/true);
+        DPrimaryAsset::EnsureDynamicMetaShape(m_dynamicMeta, /*warn=*/true);
     }
 }
 

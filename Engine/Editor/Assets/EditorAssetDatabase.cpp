@@ -17,6 +17,30 @@
 
 using namespace DeltaEngine;
 
+namespace
+{
+nlohmann::json BuildMetaFromLiveAsset(DPrimaryAsset* asset)
+{
+    JsonAssetArchive ar;
+    asset->SerializeMeta(ar);
+    return ar.GetRoot();
+}
+
+const nlohmann::json& EmptyMetaBlob()
+{
+    static const nlohmann::json kEmpty = []
+    {
+        nlohmann::json j = nlohmann::json::object();
+        j["static"]  = nlohmann::json::object();
+        j["dynamic"] = nlohmann::json::object();
+        j["dynamic"]["desc"] = std::string();
+        j["dynamic"]["tags"] = nlohmann::json::array();
+        return j;
+    }();
+    return kEmpty;
+}
+} // namespace
+
 // ---------------------------------------------------------------------------
 // ScanAssetsFolder
 // ---------------------------------------------------------------------------
@@ -83,14 +107,19 @@ void EditorAssetDatabase::ScanAssetsFolder(const std::filesystem::path& root)
         {
             existingIt->second.m_header   = header;
             existingIt->second.m_filePath = path;
+            if (existingIt->second.m_state != AssetState::Loaded)
+                existingIt->second.m_meta = isJson ? ReadAssetMetaFromFile(path) : EmptyMetaBlob();
             continue;
         }
+
+        nlohmann::json meta = isJson ? ReadAssetMetaFromFile(path) : EmptyMetaBlob();
 
         m_assets[header.m_persistentId] = AssetEntry{
             .m_header   = header,
             .m_filePath = path,
             .m_state    = AssetState::HeaderOnly,
-            .m_instance = nullptr
+            .m_instance = nullptr,
+            .m_meta     = std::move(meta),
         };
 
         m_assetPathMap[path] = header.m_persistentId;
@@ -166,6 +195,53 @@ DPrimaryAsset::Header EditorAssetDatabase::ReadAssetHeaderFromFile(
     }
 
     return header;
+}
+
+// ---------------------------------------------------------------------------
+// ReadAssetMetaFromFile
+// ---------------------------------------------------------------------------
+
+nlohmann::json EditorAssetDatabase::ReadAssetMetaFromFile(const std::filesystem::path& path)
+{
+    nlohmann::json out = nlohmann::json::object();
+    out["static"]  = nlohmann::json::object();
+    out["dynamic"] = nlohmann::json::object();
+
+    std::ifstream file(path);
+    if (!file.is_open())
+    {
+        DLOG(LogEditorAssets, ELogLevel::Warning,
+             "ReadAssetMetaFromFile: cannot open '{}' (returning empty meta defaults)",
+             path.string());
+        DPrimaryAsset::EnsureDynamicMetaShape(out["dynamic"], /*warn=*/false);
+        return out;
+    }
+
+    nlohmann::json root;
+    try
+    {
+        root = nlohmann::json::parse(file);
+    }
+    catch (const std::exception& e)
+    {
+        DLOG(LogEditorAssets, ELogLevel::Warning,
+             "ReadAssetMetaFromFile: JSON parse failed for '{}': {} (returning empty meta defaults)",
+             path.string(), e.what());
+        DPrimaryAsset::EnsureDynamicMetaShape(out["dynamic"], /*warn=*/false);
+        return out;
+    }
+
+    if (root.contains("meta") && root["meta"].is_object())
+    {
+        const auto& meta = root["meta"];
+        if (meta.contains("static") && meta["static"].is_object())
+            out["static"] = meta["static"];
+        if (meta.contains("dynamic"))
+            out["dynamic"] = meta["dynamic"];
+    }
+
+    DPrimaryAsset::EnsureDynamicMetaShape(out["dynamic"], /*warn=*/true);
+    return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -316,6 +392,8 @@ void EditorAssetDatabase::LoadAssetRecursive(const AssetId& id)
                 callbackReceiver->OnAfterDeserialize();
             }
         }
+
+        entry.m_meta = BuildMetaFromLiveAsset(asset);
     }
     // todo binary loading
 
@@ -462,6 +540,7 @@ void EditorAssetDatabase::SaveAsset(const AssetId& id)
     }
 
     asset->ClearDirty();
+    entry.m_meta = BuildMetaFromLiveAsset(asset);
 }
 
 AssetId EditorAssetDatabase::DuplicateAsset(const AssetId& id)
@@ -557,22 +636,25 @@ AssetId EditorAssetDatabase::DuplicateAsset(const AssetId& id)
     };
     remapScriptPointers(remapScriptPointers, output);
 
-    std::ofstream out(targetPath);
-    if (!out.is_open())
     {
-        DLOG(LogEditorAssets, ELogLevel::Error,
-             "DuplicateAsset: cannot open '{}' for write (expected writable target path)",
-             targetPath.string());
-        return AssetId::Null();
+        std::ofstream out(targetPath);
+        if (!out.is_open())
+        {
+            DLOG(LogEditorAssets, ELogLevel::Error,
+                 "DuplicateAsset: cannot open '{}' for write (expected writable target path)",
+                 targetPath.string());
+            return AssetId::Null();
+        }
+        out << output.dump(2);
     }
-    out << output.dump(2);
 
     DPrimaryAsset::Header header = ReadAssetHeaderFromFile(targetPath, true);
     m_assets[newAssetId] = AssetEntry{
         .m_header   = header,
         .m_filePath = targetPath,
         .m_state    = AssetState::HeaderOnly,
-        .m_instance = nullptr
+        .m_instance = nullptr,
+        .m_meta     = ReadAssetMetaFromFile(targetPath),
     };
 
     m_assetPathMap[targetPath] = newAssetId;
@@ -928,6 +1010,7 @@ void EditorAssetDatabase::CreateAsset(const std::filesystem::path& filePath, DPr
         .m_filePath = filePath,
         .m_state    = AssetState::Loaded,
         .m_instance = asset,
+        .m_meta     = BuildMetaFromLiveAsset(asset),
     };
 
     m_assetPathMap[filePath] = newId;
@@ -975,6 +1058,22 @@ DPrimaryAsset* EditorAssetDatabase::GetLoadedAsset(const AssetId& id) const
     if (it == m_assets.end() || it->second.m_state != AssetState::Loaded)
         return nullptr;
     return it->second.m_instance;
+}
+
+const nlohmann::json& EditorAssetDatabase::GetAssetMeta(const AssetId& id) const
+{
+    auto it = m_assets.find(id);
+    if (it == m_assets.end())
+        return EmptyMetaBlob();
+    return it->second.m_meta;
+}
+
+void EditorAssetDatabase::RefreshAssetMetaCache(const AssetId& id)
+{
+    auto it = m_assets.find(id);
+    if (it == m_assets.end() || !it->second.m_instance)
+        return;
+    it->second.m_meta = BuildMetaFromLiveAsset(it->second.m_instance);
 }
 
 bool EditorAssetDatabase::IsLoaded(const AssetId& id) const

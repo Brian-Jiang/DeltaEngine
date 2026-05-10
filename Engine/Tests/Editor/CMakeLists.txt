@@ -29,6 +29,7 @@ set(DELTA_EDITOR_TEST_SOURCES
     EditorWindows/ViewportPresetTests.cpp
     Assets/Locator/EditorAssetDatabaseLocatorTests.cpp
     Assets/Lifecycle/EditorAssetDatabaseLifecycleTests.cpp
+    Assets/Lifecycle/AssetMetaCacheTests.cpp
     Assets/Importer/AssetImporterTests.cpp
     Core/EditorCoreTests.cpp
     EditorViewportCameraTests.cpp
