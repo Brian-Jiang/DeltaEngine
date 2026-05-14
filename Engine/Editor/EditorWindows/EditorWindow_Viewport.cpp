@@ -427,9 +427,10 @@ void EditorWindow_Viewport::DrawGizmo(const ImVec2& imageMin, const ImVec2& imag
 
     // Build view + projection using the same helper that feeds the runtime camera.
     const CameraCB cb = m_previewCamera.BuildCameraCB(texW, texH);
+    // CameraCB stores matrices pre-transposed for HLSL; ImGuizmo expects row-major, so undo the transpose.
     XMFLOAT4X4 view, proj;
-    XMStoreFloat4x4(&view, cb.viewMatrix);
-    XMStoreFloat4x4(&proj, cb.projectionMatrix);
+    XMStoreFloat4x4(&view, XMMatrixTranspose(cb.viewMatrix));
+    XMStoreFloat4x4(&proj, XMMatrixTranspose(cb.projectionMatrix));
 
     XMFLOAT4X4 worldMat;
     XMStoreFloat4x4(&worldMat, sc->GetWorldTransform());
