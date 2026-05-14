@@ -2,6 +2,7 @@
 
 #include "Mcp/Systems/McpAssetsSystem.h"
 #include "Mcp/Systems/McpCommonSystem.h"
+#include "Mcp/Systems/McpLogSystem.h"
 #include "Mcp/Systems/McpMetaSystem.h"
 #include "Mcp/Systems/McpProjectSystem.h"
 #include "Mcp/Systems/McpReflectionSystem.h"
@@ -43,6 +44,7 @@ void McpRegistry::InitializeAll(EditorCore& core)
     m_systems.push_back(std::make_unique<McpProjectSystem>());
     m_systems.push_back(std::make_unique<McpCommonSystem>());
     m_systems.push_back(std::make_unique<McpMetaSystem>());
+    m_systems.push_back(std::make_unique<McpLogSystem>());
 
     for (auto& system : m_systems)
     {

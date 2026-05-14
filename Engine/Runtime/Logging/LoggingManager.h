@@ -14,7 +14,11 @@ public:
 
     [[nodiscard]] DELTAENGINE_API static bool IsInitialized();
 
+    /** Absolute path of the active log file; empty if not initialized. */
+    [[nodiscard]] DELTAENGINE_API static std::filesystem::path GetCurrentLogFilePath();
+
 private:
     static std::vector<spdlog::sink_ptr> s_sinks;
+    static std::filesystem::path s_logFilePath;
     static bool s_initialized;
 };

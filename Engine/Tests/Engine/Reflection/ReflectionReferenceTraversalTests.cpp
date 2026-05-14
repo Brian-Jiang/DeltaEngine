@@ -10,8 +10,6 @@
 
 using namespace DeltaEngine;
 
-class DTexture;
-
 TEST(ReflectionReferenceTraversalTests, VisitStruct_NullSchema_IsNoOp)
 {
     ReflectionTestObject obj {};

@@ -55,6 +55,7 @@ set(DELTA_EDITOR_TEST_SOURCES
     Mcp/McpReflectionSystemTests.cpp
     Mcp/McpProjectSystemTests.cpp
     Mcp/McpMetaSystemTests.cpp
+    Mcp/McpLogSystemTests.cpp
     Mcp/McpQueryRouterTests.cpp
     Mcp/McpRegistryDispatchTests.cpp
     Mcp/McpQueryRouterTests.cpp

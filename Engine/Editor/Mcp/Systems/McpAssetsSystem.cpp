@@ -793,6 +793,28 @@ nlohmann::json McpAssetsSystem::CommandSetAssetDynamicMetadata(EditorCore& core,
     if (assetId.IsNull())
         return MakeError("invalid asset_id");
 
+    const std::string jsonPath = params["json_path"].get<std::string>();
+
+    if (jsonPath == "/static" || jsonPath.starts_with("/static/"))
+        return MakeError("json_path points to static metadata (read-only): '" + jsonPath + "'");
+
+    const bool isDynamicRoot  = jsonPath.empty() || jsonPath == "/dynamic";
+    const bool isDynamicChild = jsonPath.starts_with("/dynamic/");
+    if (!isDynamicRoot && !isDynamicChild)
+        return MakeError("invalid json_path '" + jsonPath + "' (must be '', '/dynamic', or '/dynamic/...')");
+
+    if (isDynamicChild)
+    {
+        try
+        {
+            (void)nlohmann::json::json_pointer{jsonPath.substr(std::string_view("/dynamic").size())};
+        }
+        catch (const std::exception& e)
+        {
+            return MakeError("invalid json_path '" + jsonPath + "': " + e.what());
+        }
+    }
+
     EditorAssetDatabase* db = core.GetAssetDatabase();
     if (!db)
         return MakeError("no asset database");
@@ -802,7 +824,7 @@ nlohmann::json McpAssetsSystem::CommandSetAssetDynamicMetadata(EditorCore& core,
 
     nlohmann::json data;
     data["assetId"]     = assetIdStr;
-    data["jsonPointer"] = params["json_path"].get<std::string>();
+    data["jsonPointer"] = jsonPath;
     data["valueAfter"]  = params["new_value"];
 
     nlohmann::json envelope;

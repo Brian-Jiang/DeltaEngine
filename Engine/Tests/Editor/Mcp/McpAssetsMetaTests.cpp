@@ -200,6 +200,66 @@ TEST_F(McpAssetsMetaTests, SetAssetDynamicMetadata_MissingNewValue_ReturnsError)
     EXPECT_FALSE(res["ok"].get<bool>());
 }
 
+TEST_F(McpAssetsMetaTests, SetAssetDynamicMetadata_RejectsStaticPath)
+{
+    json params;
+    params["asset_id"]  = m_sceneId.ToString();
+    params["json_path"] = "/static/foo";
+    params["new_value"] = "x";
+    auto res = Dispatch("assets", "set_asset_dynamic_metadata", params);
+    EXPECT_FALSE(res["ok"].get<bool>());
+    EXPECT_NE(res["error"].get<std::string>().find("read-only"), std::string::npos);
+
+    std::vector<std::string> responses;
+    DrainQueue(responses);
+    EXPECT_TRUE(responses.empty());
+}
+
+TEST_F(McpAssetsMetaTests, SetAssetDynamicMetadata_RejectsArbitraryPath)
+{
+    json params;
+    params["asset_id"]  = m_sceneId.ToString();
+    params["json_path"] = "/foo/bar";
+    params["new_value"] = "x";
+    auto res = Dispatch("assets", "set_asset_dynamic_metadata", params);
+    EXPECT_FALSE(res["ok"].get<bool>());
+    EXPECT_NE(res["error"].get<std::string>().find("invalid json_path"), std::string::npos);
+
+    std::vector<std::string> responses;
+    DrainQueue(responses);
+    EXPECT_TRUE(responses.empty());
+}
+
+TEST_F(McpAssetsMetaTests, SetAssetDynamicMetadata_AcceptsDynamicRoot)
+{
+    json params;
+    params["asset_id"]  = m_sceneId.ToString();
+    params["json_path"] = "/dynamic";
+    params["new_value"] = json{{"desc", "root"}, {"tags", json::array({"t"})}};
+    auto res = Dispatch("assets", "set_asset_dynamic_metadata", params);
+    ASSERT_TRUE(res["ok"].get<bool>());
+    EXPECT_TRUE(res["queued"].get<bool>());
+
+    std::vector<std::string> responses;
+    DrainQueue(responses);
+    ASSERT_EQ(responses.size(), 1u);
+}
+
+TEST_F(McpAssetsMetaTests, SetAssetDynamicMetadata_AcceptsDynamicChild)
+{
+    json params;
+    params["asset_id"]  = m_sceneId.ToString();
+    params["json_path"] = "/dynamic/desc";
+    params["new_value"] = "child-ok";
+    auto res = Dispatch("assets", "set_asset_dynamic_metadata", params);
+    ASSERT_TRUE(res["ok"].get<bool>());
+    EXPECT_TRUE(res["queued"].get<bool>());
+
+    std::vector<std::string> responses;
+    DrainQueue(responses);
+    ASSERT_EQ(responses.size(), 1u);
+}
+
 TEST_F(McpAssetsMetaTests, HasStaticMetaSchema_ByClass_TrueForMeshAndTexture)
 {
     auto resMesh = Dispatch("assets", "has_static_meta_schema", {{"class", "PA_StaticMesh"}});

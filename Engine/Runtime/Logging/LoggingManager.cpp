@@ -10,11 +10,17 @@
 #include <system_error>
 
 std::vector<spdlog::sink_ptr> LoggingManager::s_sinks;
+std::filesystem::path LoggingManager::s_logFilePath;
 bool LoggingManager::s_initialized = false;
 
 bool LoggingManager::IsInitialized()
 {
     return s_initialized;
+}
+
+std::filesystem::path LoggingManager::GetCurrentLogFilePath()
+{
+    return s_logFilePath;
 }
 
 // [14:23:01.234] [LogRenderer] [warning] Your message here
@@ -47,6 +53,7 @@ void LoggingManager::Initialize(const std::filesystem::path& logDir)
 
     const auto now = std::chrono::system_clock::now();
     const auto logPath = logDir / std::format("DeltaEngine_{:%Y%m%d_%H%M%S}.log", now);
+    s_logFilePath = logPath;
     auto fileSink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
         logPath.string(), k_maxBytes, k_maxFiles);
     fileSink->set_pattern(k_pattern);
@@ -72,6 +79,7 @@ void LoggingManager::Shutdown()
     DLOG(LogCore, ELogLevel::Display, "LoggingManager shutting down");
     spdlog::shutdown();
     s_sinks.clear();
+    s_logFilePath.clear();
     s_initialized = false;
 }
 

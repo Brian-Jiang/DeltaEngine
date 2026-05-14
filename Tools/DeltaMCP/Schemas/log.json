@@ -1,0 +1,41 @@
+{
+  "system": "log",
+  "description": "Read the editor's active log file. Only the active log file is scanned; older rotations (.1/.2/.3) are not included.",
+  "operations": {
+    "file_location": {
+      "description": "Return absolute path of the active log file plus its existence and size in bytes",
+      "params": {}
+    },
+    "read": {
+      "description": "Return a filtered tail of the active log file (most recent N entries, in chronological order)",
+      "params": {
+        "min_severity": {
+          "type": "string",
+          "required": false,
+          "description": "VeryVerbose|Verbose|Log|Display|Warning|Error|Fatal (default Log)"
+        },
+        "count": {
+          "type": "integer",
+          "required": false,
+          "description": "Max entries 1..5000 (default 200, clamped)"
+        },
+        "text_search": {
+          "type": "string",
+          "required": false,
+          "description": "Case-insensitive substring filter on the full log line"
+        },
+        "category": {
+          "type": "string",
+          "required": false,
+          "description": "Case-insensitive substring filter on the log category name"
+        },
+        "since_seconds": {
+          "type": "integer",
+          "required": false,
+          "description": "Only include entries whose [HH:MM:SS] timestamp is within the last N seconds (wall-clock). Lines with unparseable timestamps are skipped when this is set."
+        }
+      }
+    }
+  },
+  "commands": {}
+}
