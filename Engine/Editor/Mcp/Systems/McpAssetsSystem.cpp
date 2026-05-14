@@ -13,6 +13,7 @@
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DProperty.h"
 #include "Runtime/Reflection/DVectorProperty.h"
+#include "Runtime/Reflection/ReflectionRegistry.h"
 #include "Runtime/Serialization/ScriptPointer.h"
 
 #include <algorithm>
@@ -86,6 +87,29 @@ bool TypeFilterMatches(const std::string& className, const std::string& typeFilt
     if (typeFilter == "any")
         return true;
     return ClassNameToAssetType(className) == typeFilter;
+}
+
+bool ClassHasStaticMetaSchema(const std::string& className)
+{
+    if (className.empty())
+        return false;
+
+    DClass* dclass = GetReflectionRegistry().FindClassByName(className);
+    if (!dclass)
+        return false;
+
+    DObject* obj = GetReflectionRegistry().CreateObject(className);
+    if (!obj)
+        return false;
+
+    bool result = false;
+    if (auto* asset = dynamic_cast<DPrimaryAsset*>(obj))
+    {
+        auto [schema, instance] = asset->GetStaticMetaSchema();
+        result = (schema != nullptr);
+    }
+    GetReflectionRegistry().DestroyObject(obj);
+    return result;
 }
 
 std::filesystem::path GetAssetRootPath()
@@ -196,8 +220,13 @@ void VisitResolvedObjectReferencesInStruct(DStruct* ds, void* basePtr, Fn&& fn)
                 VisitResolvedObjectReferencesInStruct(inner, nested, std::forward<Fn>(fn));
             continue;
         }
-        void* slot = static_cast<uint8_t*>(basePtr) + prop->GetOffset();
-        VisitResolvedObjectReferencesInProperty(prop, slot, std::forward<Fn>(fn));
+        if (dynamic_cast<DObjectPtrPropertyBase*>(prop))
+            VisitResolvedObjectReferencesInProperty(prop, basePtr, std::forward<Fn>(fn));
+        else
+        {
+            void* slot = static_cast<uint8_t*>(basePtr) + prop->GetOffset();
+            VisitResolvedObjectReferencesInProperty(prop, slot, std::forward<Fn>(fn));
+        }
     }
 }
 
@@ -280,6 +309,14 @@ void McpAssetsSystem::RegisterTools(McpRegistry& registry)
         [this](EditorCore& c, const nlohmann::json& p) { return QueryFolderTree(c, p); });
     registry.RegisterOperation("assets", "usages",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryUsages(c, p); });
+    registry.RegisterOperation("assets", "get_asset_metadata",
+        [this](EditorCore& c, const nlohmann::json& p) { return QueryGetAssetMetadata(c, p); });
+    registry.RegisterOperation("assets", "get_assets_metadata",
+        [this](EditorCore& c, const nlohmann::json& p) { return QueryGetAssetsMetadata(c, p); });
+    registry.RegisterOperation("assets", "set_asset_dynamic_metadata",
+        [this](EditorCore& c, const nlohmann::json& p) { return CommandSetAssetDynamicMetadata(c, p); });
+    registry.RegisterOperation("assets", "has_static_meta_schema",
+        [this](EditorCore& c, const nlohmann::json& p) { return QueryHasStaticMetaSchema(c, p); });
 }
 
 nlohmann::json McpAssetsSystem::QueryList(EditorCore& core, const nlohmann::json& params)
@@ -644,4 +681,173 @@ nlohmann::json McpAssetsSystem::QueryUsages(EditorCore& core, const nlohmann::js
     }
 
     return { {"ok", true}, {"usages", std::move(usages)} };
+}
+
+nlohmann::json McpAssetsSystem::QueryGetAssetMetadata(EditorCore& core, const nlohmann::json& params)
+{
+    if (!params.contains("asset_id") || !params["asset_id"].is_string())
+        return MakeError("missing required param: asset_id");
+
+    const AssetId assetId = UUID::FromString(params["asset_id"].get<std::string>());
+    if (assetId.IsNull())
+        return MakeError("invalid asset_id");
+
+    EditorAssetDatabase* db = core.GetAssetDatabase();
+    if (!db)
+        return MakeError("no asset database");
+
+    const auto& allAssets = db->GetAllAssets();
+    auto it = allAssets.find(assetId);
+    if (it == allAssets.end())
+        return MakeError("asset not found");
+
+    nlohmann::json result;
+    result["ok"]                      = true;
+    result["asset_id"]                = assetId.ToString();
+    result["class"]                   = it->second.m_header.m_className;
+    result["meta"]                    = it->second.m_meta;
+    result["has_static_meta_schema"]  = ClassHasStaticMetaSchema(it->second.m_header.m_className);
+    return result;
+}
+
+nlohmann::json McpAssetsSystem::QueryGetAssetsMetadata(EditorCore& core, const nlohmann::json& params)
+{
+    EditorAssetDatabase* db = core.GetAssetDatabase();
+    if (!db)
+        return MakeError("no asset database");
+
+    const std::string typeFilter = params.value("type_filter", "any");
+
+    std::vector<AssetId> requested;
+    bool useRequested = false;
+    if (params.contains("asset_ids") && params["asset_ids"].is_array())
+    {
+        useRequested = true;
+        for (const auto& idJson : params["asset_ids"])
+        {
+            if (!idJson.is_string())
+                continue;
+            AssetId aid = UUID::FromString(idJson.get<std::string>());
+            if (!aid.IsNull())
+                requested.push_back(aid);
+        }
+    }
+
+    std::unordered_map<std::string, bool> staticSchemaCache;
+    auto staticSchemaFor = [&](const std::string& className) -> bool
+    {
+        auto cacheIt = staticSchemaCache.find(className);
+        if (cacheIt != staticSchemaCache.end())
+            return cacheIt->second;
+        const bool present = ClassHasStaticMetaSchema(className);
+        staticSchemaCache.emplace(className, present);
+        return present;
+    };
+
+    nlohmann::json items = nlohmann::json::array();
+
+    auto emit = [&](const AssetId& id, const EditorAssetDatabase::AssetEntry& entry)
+    {
+        if (!TypeFilterMatches(entry.m_header.m_className, typeFilter))
+            return;
+        nlohmann::json row;
+        row["asset_id"]                 = id.ToString();
+        row["class"]                    = entry.m_header.m_className;
+        row["type"]                     = ClassNameToAssetType(entry.m_header.m_className);
+        row["meta"]                     = entry.m_meta;
+        row["has_static_meta_schema"]   = staticSchemaFor(entry.m_header.m_className);
+        items.push_back(std::move(row));
+    };
+
+    const auto& allAssets = db->GetAllAssets();
+    if (useRequested)
+    {
+        for (const AssetId& id : requested)
+        {
+            auto it = allAssets.find(id);
+            if (it == allAssets.end())
+                continue;
+            emit(id, it->second);
+        }
+    }
+    else
+    {
+        for (const auto& [id, entry] : allAssets)
+            emit(id, entry);
+    }
+
+    return { {"ok", true}, {"items", std::move(items)} };
+}
+
+nlohmann::json McpAssetsSystem::CommandSetAssetDynamicMetadata(EditorCore& core, const nlohmann::json& params)
+{
+    if (!params.contains("asset_id") || !params["asset_id"].is_string())
+        return MakeError("missing required param: asset_id");
+    if (!params.contains("json_path") || !params["json_path"].is_string())
+        return MakeError("missing required param: json_path");
+    if (!params.contains("new_value"))
+        return MakeError("missing required param: new_value");
+
+    const std::string assetIdStr = params["asset_id"].get<std::string>();
+    const AssetId assetId = UUID::FromString(assetIdStr);
+    if (assetId.IsNull())
+        return MakeError("invalid asset_id");
+
+    EditorAssetDatabase* db = core.GetAssetDatabase();
+    if (!db)
+        return MakeError("no asset database");
+
+    if (!db->LoadAsset(assetId))
+        return MakeError("asset not found or failed to load");
+
+    nlohmann::json data;
+    data["assetId"]     = assetIdStr;
+    data["jsonPointer"] = params["json_path"].get<std::string>();
+    data["valueAfter"]  = params["new_value"];
+
+    nlohmann::json envelope;
+    envelope["type"]    = "command";
+    envelope["system"]  = "assets";
+    envelope["command"] = "EditorCommand_SetAssetDynamicMeta";
+    envelope["params"]  = std::move(data);
+
+    core.EnqueueSerializedCommand(envelope.dump());
+    return { {"ok", true}, {"queued", true}, {"command", "EditorCommand_SetAssetDynamicMeta"} };
+}
+
+nlohmann::json McpAssetsSystem::QueryHasStaticMetaSchema(EditorCore& core, const nlohmann::json& params)
+{
+    std::string className;
+
+    if (params.contains("asset_id") && params["asset_id"].is_string())
+    {
+        const AssetId assetId = UUID::FromString(params["asset_id"].get<std::string>());
+        if (assetId.IsNull())
+            return MakeError("invalid asset_id");
+
+        EditorAssetDatabase* db = core.GetAssetDatabase();
+        if (!db)
+            return MakeError("no asset database");
+
+        const auto& allAssets = db->GetAllAssets();
+        auto it = allAssets.find(assetId);
+        if (it == allAssets.end())
+            return MakeError("asset not found");
+
+        className = it->second.m_header.m_className;
+    }
+    else if (params.contains("class") && params["class"].is_string())
+    {
+        className = params["class"].get<std::string>();
+    }
+    else
+    {
+        return MakeError("missing required param: asset_id or class");
+    }
+
+    return {
+        {"ok", true},
+        {"class", className},
+        {"has_static_meta_schema", ClassHasStaticMetaSchema(className)}
+    };
 }

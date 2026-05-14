@@ -21,6 +21,10 @@ private:
     nlohmann::json QuerySearch(EditorCore&, const nlohmann::json& params);
     nlohmann::json QueryFolderTree(EditorCore&, const nlohmann::json& params);
     nlohmann::json QueryUsages(EditorCore&, const nlohmann::json& params);
+    nlohmann::json QueryGetAssetMetadata(EditorCore&, const nlohmann::json& params);
+    nlohmann::json QueryGetAssetsMetadata(EditorCore&, const nlohmann::json& params);
+    nlohmann::json CommandSetAssetDynamicMetadata(EditorCore&, const nlohmann::json& params);
+    nlohmann::json QueryHasStaticMetaSchema(EditorCore&, const nlohmann::json& params);
 };
 
 DELTA_ENGINE_NS_END

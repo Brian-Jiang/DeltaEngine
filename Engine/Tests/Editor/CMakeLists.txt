@@ -47,6 +47,7 @@ set(DELTA_EDITOR_TEST_SOURCES
     Serialization/Snapshot/ObjectSnapshotHardeningTests.cpp
     Mcp/McpSceneSystemTests.cpp
     Mcp/McpAssetsSystemTests.cpp
+    Mcp/McpAssetsMetaTests.cpp
     Mcp/McpSelectionSystemTests.cpp
     Mcp/McpUndoSystemTests.cpp
     Mcp/McpViewportSystemTests.cpp

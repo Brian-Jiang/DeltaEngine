@@ -45,6 +45,38 @@
       "params": {
         "asset_id": { "type": "string", "required": true }
       }
+    },
+    "get_asset_metadata": {
+      "description": "Cached static+dynamic meta for a single asset (no asset load)",
+      "params": {
+        "asset_id": { "type": "string", "required": true }
+      }
+    },
+    "get_assets_metadata": {
+      "description": "Bulk variant; sources from AssetEntry meta cache (no asset load)",
+      "params": {
+        "asset_ids":   { "type": "array",  "optional": true,
+                         "items": { "type": "string" } },
+        "type_filter": { "type": "string", "optional": true, "default": "any",
+                         "options": ["mesh","material","texture","scene","shader",
+                                     "animation_clip","skeleton","any"] }
+      }
+    },
+    "set_asset_dynamic_metadata": {
+      "description": "Mutate dynamic meta at a JSON pointer (undoable). Static meta is read-only.",
+      "params": {
+        "asset_id":  { "type": "string", "required": true },
+        "json_path": { "type": "string", "required": true,
+                       "description": "Empty, '/dynamic', or '/dynamic/...'." },
+        "new_value": { "type": "any",    "required": true }
+      }
+    },
+    "has_static_meta_schema": {
+      "description": "Whether the asset's type defines a static-meta DSTRUCT. Type-level only; no asset load.",
+      "params": {
+        "asset_id": { "type": "string", "optional": true },
+        "class":    { "type": "string", "optional": true }
+      }
     }
   }
 }
