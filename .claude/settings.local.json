@@ -43,7 +43,10 @@
       "Bash(\"D:/Projects/DeltaEngine/Tools/Scripts/run-x64-debug-editor-tests.bat\" --automatic \"--gtest_filter=McpAssetsMetaTests.*:McpLogSystemTests.*\")",
       "Bash(\"Build/x64-Debug/bin/DeltaEditorTests.exe\" \"--gtest_filter=McpAssetsMetaTests.*:McpLogSystemTests.*\" --gtest_brief=1)",
       "Bash(git stash *)",
-      "Bash(findstr /C:\"error C\" /C:\"FAILED\" /C:\"stopped\")"
+      "Bash(findstr /C:\"error C\" /C:\"FAILED\" /C:\"stopped\")",
+      "Bash(Tools/Scripts/run-x64-debug-editor-tests.bat --automatic --gtest_filter=McpCommonSystemTests.*)",
+      "Bash(Tools/Scripts/run-x64-debug-editor-tests.bat --automatic \"--gtest_filter=McpCommonSystemTests.*\")",
+      "Bash(\"D:/Projects/DeltaEngine/Build/x64-Debug/bin/DeltaEditorTests.exe\" --gtest_filter=McpCommonSystemTests.*)"
     ]
   }
 }

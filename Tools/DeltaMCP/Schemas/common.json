@@ -14,6 +14,11 @@
         "newName": {
           "type": "string",
           "required": true
+        },
+        "assetId": {
+          "type": "string",
+          "required": false,
+          "description": "Optional. AssetId of the asset that owns the object (loads on demand). Defaults to the active scene asset."
         }
       }
     },
@@ -32,6 +37,11 @@
         "valueAfter": {
           "required": true,
           "description": "float→number, Vec3→[x,y,z], Quat→[x,y,z,w], ref→{objectId,assetId}"
+        },
+        "assetId": {
+          "type": "string",
+          "required": false,
+          "description": "Optional. AssetId of the asset that owns the object (loads on demand). Defaults to the active scene asset."
         }
       }
     },

@@ -44,6 +44,8 @@ nlohmann::json McpCommonSystem::CommandRenameObject(EditorCore& core, const nloh
     nlohmann::json data;
     data["targetObjectId"] = params["objectId"].get<std::string>();
     data["newName"] = params["newName"].get<std::string>();
+    if (params.contains("assetId"))
+        data["assetId"] = params["assetId"].get<std::string>();
     return EnqueueCommand(core, "common", "EditorCommand_RenameObject", std::move(data));
 }
 
@@ -60,6 +62,8 @@ nlohmann::json McpCommonSystem::CommandSetProperty(EditorCore& core, const nlohm
     data["objectId"] = params["objectId"].get<std::string>();
     data["propertyName"] = params["propertyName"].get<std::string>();
     data["valueAfter"] = params["valueAfter"];
+    if (params.contains("assetId"))
+        data["assetId"] = params["assetId"].get<std::string>();
     return EnqueueCommand(core, "common", "EditorCommand_SetProperty", std::move(data));
 }
 

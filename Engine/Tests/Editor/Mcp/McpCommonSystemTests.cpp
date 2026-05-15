@@ -1,9 +1,11 @@
 #include "Editor/Mcp/McpCoreFixture.h"
 
+#include "Editor/Assets/EditorAssetDatabase.h"
 #include "Editor/Commands/PropertyValueIO.h"
 #include "Runtime/Core/DObject.h"
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DProperty.h"
+#include "Runtime/Test/SerializationTestTypes.h"
 
 #include <nlohmann/json.hpp>
 
@@ -80,6 +82,77 @@ TEST_F(McpCommonSystemTests, CommandSetProperty_FloatProperty_ChangesValue)
     EXPECT_TRUE(compRes["ok"].get<bool>());
     const float intensity = compRes["component"]["properties"]["m_intensity"].get<float>();
     EXPECT_NEAR(intensity, 4.5f, 0.001f);
+}
+
+TEST_F(McpCommonSystemTests, CommandRenameObject_WithExplicitAssetId_RenamesObjectInOtherAsset)
+{
+    auto* asset = CreateDObject<PA_TestAsset>();
+    const AssetId otherAssetId = AssetId::Generate();
+    asset->GetHeader().m_persistentId = otherAssetId;
+    asset->GetHeader().m_className = "PA_TestAsset";
+
+    auto* obj = new DTestObjectA();
+    const ObjectId otherObjectId = ObjectId::Generate();
+    obj->SetObjectId(otherObjectId);
+    obj->m_name = "BeforeRename";
+    asset->AddObject(obj);
+
+    const auto path = m_tempDir / "OtherAsset.dasset.json";
+    m_core->GetAssetDatabase()->CreateAsset(path, asset);
+    ASSERT_NE(otherAssetId, GetActiveSceneAssetId());
+
+    auto dispatchRes = Dispatch("common", "RenameObject",
+                                {{"assetId",  otherAssetId.ToString()},
+                                 {"objectId", otherObjectId.ToString()},
+                                 {"newName",  "AfterRename"}});
+    EXPECT_TRUE(dispatchRes["ok"].get<bool>());
+    EXPECT_TRUE(dispatchRes.value("queued", false));
+
+    std::vector<std::string> responses;
+    m_core->DrainCommandQueue(responses);
+    ASSERT_EQ(responses.size(), 1u);
+    EXPECT_TRUE(json::parse(responses[0])["ok"].get<bool>());
+
+    auto* resolved = dynamic_cast<DTestObjectA*>(
+        m_core->ResolveObject(otherAssetId, otherObjectId));
+    ASSERT_NE(resolved, nullptr);
+    EXPECT_EQ(resolved->m_name, "AfterRename");
+}
+
+TEST_F(McpCommonSystemTests, CommandSetProperty_WithExplicitAssetId_MutatesObjectInOtherAsset)
+{
+    auto* asset = CreateDObject<PA_TestAsset>();
+    const AssetId otherAssetId = AssetId::Generate();
+    asset->GetHeader().m_persistentId = otherAssetId;
+    asset->GetHeader().m_className = "PA_TestAsset";
+
+    auto* obj = new DTestObjectA();
+    const ObjectId otherObjectId = ObjectId::Generate();
+    obj->SetObjectId(otherObjectId);
+    obj->m_health = 100.0f;
+    asset->AddObject(obj);
+
+    const auto path = m_tempDir / "OtherAssetForProperty.dasset.json";
+    m_core->GetAssetDatabase()->CreateAsset(path, asset);
+    ASSERT_NE(otherAssetId, GetActiveSceneAssetId());
+
+    auto dispatchRes = Dispatch("common", "SetProperty",
+                                {{"assetId",     otherAssetId.ToString()},
+                                 {"objectId",    otherObjectId.ToString()},
+                                 {"propertyName", "m_health"},
+                                 {"valueAfter",   42.5f}});
+    EXPECT_TRUE(dispatchRes["ok"].get<bool>());
+    EXPECT_TRUE(dispatchRes.value("queued", false));
+
+    std::vector<std::string> responses;
+    m_core->DrainCommandQueue(responses);
+    ASSERT_EQ(responses.size(), 1u);
+    EXPECT_TRUE(json::parse(responses[0])["ok"].get<bool>());
+
+    auto* resolved = dynamic_cast<DTestObjectA*>(
+        m_core->ResolveObject(otherAssetId, otherObjectId));
+    ASSERT_NE(resolved, nullptr);
+    EXPECT_NEAR(resolved->m_health, 42.5f, 0.001f);
 }
 
 TEST_F(McpCommonSystemTests, CommandSaveProject_QueuesAndDrains)
