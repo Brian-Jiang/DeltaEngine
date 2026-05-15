@@ -15,6 +15,28 @@
     "magic": "DLTA",
     "version": 1
   },
+  "meta": {
+    "dynamic": {
+      "desc": "Home architectural mesh — the primary static mesh for the Home scene object.",
+      "tags": [
+        "home",
+        "mesh",
+        "architecture"
+      ]
+    },
+    "static": {
+      "m_aabb": [
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "m_indexCount": 0,
+      "m_vertexCount": 0
+    }
+  },
   "objects": [
     {
       "_class": "DMesh",

@@ -15,6 +15,24 @@
     "magic": "DLTA",
     "version": 1
   },
+  "meta": {
+    "dynamic": {
+      "desc": "",
+      "tags": []
+    },
+    "static": {
+      "m_aabb": [
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "m_indexCount": 0,
+      "m_vertexCount": 0
+    }
+  },
   "objects": [
     {
       "_class": "DMesh",

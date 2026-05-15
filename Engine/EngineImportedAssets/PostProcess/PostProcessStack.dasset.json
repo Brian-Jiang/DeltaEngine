@@ -5,6 +5,13 @@
     "magic": "DLTA",
     "version": 1
   },
+  "meta": {
+    "dynamic": {
+      "desc": "",
+      "tags": []
+    },
+    "static": {}
+  },
   "objects": [
     {
       "_class": "PostProcessStack",

@@ -5,6 +5,16 @@
     "magic": "DLTA",
     "version": 1
   },
+  "meta": {
+    "dynamic": {
+      "desc": "Material slot 4 for the Home mesh.",
+      "tags": [
+        "home",
+        "material"
+      ]
+    },
+    "static": {}
+  },
   "objects": [
     {
       "_class": "DMaterial",
