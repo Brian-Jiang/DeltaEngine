@@ -6,6 +6,10 @@
 
 #include "imgui.h"
 
+#include <chrono>
+#include <fstream>
+#include <string>
+
 namespace DeltaEngine
 {
 
@@ -14,6 +18,7 @@ DELTAEDITOR_API void EditorChrome_CreateTestImGuiContext(ImVec2 displaySize)
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
+    io.IniFilename = nullptr;
     io.DisplaySize = displaySize;
     ImGui::StyleColorsDark();
     unsigned char* fontTex = nullptr;
@@ -24,6 +29,17 @@ DELTAEDITOR_API void EditorChrome_CreateTestImGuiContext(ImVec2 displaySize)
 
 DELTAEDITOR_API void EditorChrome_DestroyTestImGuiContext()
 {
+    // #region agent log
+    if (ImGuiContext* ctx = ImGui::GetCurrentContext())
+    {
+        const char* ini = ImGui::GetIO().IniFilename;
+        std::ofstream dbg("debug-ca8c4f.log", std::ios::app);
+        if (dbg)
+            dbg << "{\"sessionId\":\"ca8c4f\",\"hypothesisId\":\"A\",\"location\":\"EditorChromeTestImGui.cpp:Destroy\",\"message\":\"destroy test imgui\",\"data\":{\"iniFilename\":"
+                << (ini ? ("\"" + std::string(ini) + "\"") : "null") << "},\"timestamp\":"
+                << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "}\n";
+    }
+    // #endregion
     ImGui::DestroyContext();
 }
 

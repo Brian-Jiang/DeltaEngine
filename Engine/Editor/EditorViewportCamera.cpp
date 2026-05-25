@@ -7,6 +7,7 @@
 #include <DirectXMath.h>
 
 #include <cmath>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <exception>
@@ -47,7 +48,7 @@ ActiveRenderCamera EditorViewportCamera::BuildActiveRenderCamera(float w, float 
 
 static std::filesystem::path GetCameraStatePath()
 {
-    return IOManager::GetIntermediateFolder() / "EditorState" / "viewport_cameras.json";
+    return IOManager::GetEditorStateFolder() / "viewport_cameras.json";
 }
 
 void DeltaEngine::SaveViewportCamerasToPath(const std::vector<EditorViewportCamera>& cameras,
@@ -178,7 +179,16 @@ bool DeltaEngine::LoadViewportCamerasFromPath(std::vector<EditorViewportCamera>&
 
 void DeltaEngine::SaveViewportCameras(const std::vector<EditorViewportCamera>& cameras)
 {
-    SaveViewportCamerasToPath(cameras, GetCameraStatePath());
+    const std::filesystem::path path = GetCameraStatePath();
+    // #region agent log
+    {
+        std::ofstream dbg("debug-ca8c4f.log", std::ios::app);
+        if (dbg)
+            dbg << "{\"sessionId\":\"ca8c4f\",\"hypothesisId\":\"B\",\"location\":\"EditorViewportCamera.cpp:SaveViewportCameras\",\"message\":\"save viewport cameras\",\"data\":{\"path\":\""
+                << path.string() << "\"},\"timestamp\":" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "}\n";
+    }
+    // #endregion
+    SaveViewportCamerasToPath(cameras, path);
 }
 
 bool DeltaEngine::LoadViewportCameras(std::vector<EditorViewportCamera>& cameras)

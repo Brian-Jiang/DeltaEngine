@@ -18,6 +18,7 @@
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/DirectX/SwapChain.h"
 #include "Runtime/Graphics/DirectX/CommandQueue.h"
+#include "Runtime/IO/IOManager.h"
 #include <d3d12.h>
 #include <backends/imgui_impl_dx12.h>
 #include <backends/imgui_impl_sdl3.h>
@@ -28,6 +29,8 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
+#include <filesystem>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -37,6 +40,8 @@ EditorMain* DeltaEngine::g_editor = nullptr;
 
 namespace
 {
+std::string g_imguiIniPath;
+
 void ImGuiDescriptorAllocate(ImGui_ImplDX12_InitInfo* info, D3D12_CPU_DESCRIPTOR_HANDLE* outCpu, D3D12_GPU_DESCRIPTOR_HANDLE* outGpu)
 {
     auto* allocator = static_cast<ImGuiSrvDescriptorAllocator*>(info->UserData);
@@ -107,6 +112,16 @@ EditorMain::EditorMain()
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     // io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
     io.ConfigDpiScaleViewports = true;
+
+    {
+        const std::filesystem::path stateFolder = IOManager::GetEditorStateFolder();
+        std::filesystem::create_directories(stateFolder);
+        g_imguiIniPath = (stateFolder / "imgui.ini").string();
+        const std::filesystem::path legacyIni = IOManager::GetProjectRoot() / "imgui.ini";
+        if (!std::filesystem::exists(g_imguiIniPath) && std::filesystem::exists(legacyIni))
+            std::filesystem::copy_file(legacyIni, g_imguiIniPath);
+        io.IniFilename = g_imguiIniPath.c_str();
+    }
 
     m_editorTheme = std::make_unique<EditorTheme>();
     m_editorTheme->ApplyTheme();

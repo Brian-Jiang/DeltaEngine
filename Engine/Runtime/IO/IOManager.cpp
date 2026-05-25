@@ -113,3 +113,30 @@ std::filesystem::path IOManager::GetToolsFolder()
 {
     return GetProjectRoot() / k_toolsRel;
 }
+
+namespace
+{
+std::filesystem::path& EditorStateFolderOverride()
+{
+    static std::filesystem::path s_override;
+    return s_override;
+}
+}
+
+std::filesystem::path IOManager::GetEditorStateFolder()
+{
+    const std::filesystem::path& overridePath = EditorStateFolderOverride();
+    if (!overridePath.empty())
+        return overridePath;
+    return GetIntermediateFolder() / "EditorState";
+}
+
+void IOManager::SetEditorStateFolderOverride(std::filesystem::path path)
+{
+    EditorStateFolderOverride() = std::move(path);
+}
+
+void IOManager::ClearEditorStateFolderOverride()
+{
+    EditorStateFolderOverride().clear();
+}

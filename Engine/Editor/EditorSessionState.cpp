@@ -13,7 +13,7 @@ using namespace DeltaEngine;
 
 static std::filesystem::path GetSessionStatePath()
 {
-    return IOManager::GetIntermediateFolder() / "EditorState" / "editor_session.json";
+    return IOManager::GetEditorStateFolder() / "editor_session.json";
 }
 
 void DeltaEngine::SaveEditorSessionStateToPath(const EditorSessionState& state,

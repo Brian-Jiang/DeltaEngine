@@ -48,6 +48,7 @@ inline void UIComponentsImGuiTestFrameBegin(EditorTheme& theme)
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
+    io.IniFilename = nullptr;
     io.DisplaySize = ImVec2(1280, 720);
     ImGui::StyleColorsDark();
     unsigned char* fontTex = nullptr;
