@@ -263,11 +263,10 @@ void DeltaEngine::DWorld::Clear()
     while (!m_gameObjects.empty())
         DestroyGameObject(m_gameObjects.front());
 
-    if (m_skybox)
-    {
-        GetReflectionRegistry().DestroyObject(m_skybox);
-        m_skybox = nullptr;
-    }
+    // m_skybox is borrowed from the active DScene (which references it cross-asset
+    // by {assetId, objectId} and is owned by PA_Skybox). The asset database owns
+    // its lifetime — null the pointer here but do not destroy the object.
+    m_skybox = nullptr;
 
     m_activeScene = nullptr;
 }
