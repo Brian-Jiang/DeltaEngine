@@ -195,6 +195,9 @@ void EditorCore::LoadScene(const std::filesystem::path& scenePath)
         world->SetActiveScene(nullptr);
     }
 
+    if (m_selectionState)
+        m_selectionState->ClearAll();
+
     m_assetDatabase->ReloadAssetFromDisk(id);
 
     PA_DScene* sceneAsset = m_assetDatabase->LoadAsset<PA_DScene>(id);

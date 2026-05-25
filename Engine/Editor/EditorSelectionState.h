@@ -51,6 +51,7 @@ public:
     DELTAEDITOR_API bool HasFolderSelection() const { return !m_selectedFolder.empty(); }
 
     // --- Helpers ---
+    DELTAEDITOR_API void ClearAll();
     DELTAEDITOR_API GameObject* GetContextGameObject(EditorCore& core);
     DELTAEDITOR_API void NotifyObjectDestroyed(const ObjectId& objectId);
 

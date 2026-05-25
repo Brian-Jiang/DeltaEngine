@@ -143,6 +143,14 @@ bool EditorSelectionState::IsFolderSelected(const std::string& relativePath) con
 
 // --- Helpers ---
 
+void EditorSelectionState::ClearAll()
+{
+    ClearGameObjectSelection();
+    ClearComponentSelection();
+    ClearAssetSelection();
+    ClearFolderSelection();
+}
+
 GameObject* EditorSelectionState::GetContextGameObject(EditorCore& core)
 {
     if (m_selectedGameObjects.empty())
