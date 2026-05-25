@@ -1,0 +1,37 @@
+{
+  "system": "lights",
+  "description": "Animate or set light properties in the active scene",
+  "operations": {},
+  "commands": {
+    "SetIntensity": {
+      "description": "Set or animate the intensity of a light component. With duration_seconds > 0 the value tweens using cubic ease-out; completion commits one undoable SetProperty command. A second call mid-tween preempts, starting from the current interpolated value.",
+      "undoable": true,
+      "params": {
+        "assetId": {
+          "type": "string",
+          "required": true,
+          "description": "UUID of the asset (scene) containing the light"
+        },
+        "objectId": {
+          "type": "string",
+          "required": true,
+          "description": "UUID of the LightComponent object"
+        },
+        "value": {
+          "type": "number",
+          "required": true,
+          "description": "Target intensity value"
+        },
+        "duration_seconds": {
+          "type": "number",
+          "optional": true,
+          "default": 0.0,
+          "description": "Tween duration in seconds. 0 = immediate commit."
+        }
+      },
+      "returns": {
+        "ok": "bool"
+      }
+    }
+  }
+}

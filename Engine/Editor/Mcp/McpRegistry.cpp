@@ -7,6 +7,7 @@
 #include "Mcp/Systems/McpProjectSystem.h"
 #include "Mcp/Systems/McpReflectionSystem.h"
 #include "Mcp/Systems/McpSceneSystem.h"
+#include "Mcp/Systems/McpLightsSystem.h"
 #include "Mcp/Systems/McpSelectionSystem.h"
 #include "Mcp/Systems/McpUndoSystem.h"
 #include "Mcp/Systems/McpViewportSystem.h"
@@ -37,6 +38,7 @@ void McpRegistry::InitializeAll(EditorCore& core)
 
     m_systems.push_back(std::make_unique<McpSceneSystem>());
     m_systems.push_back(std::make_unique<McpSelectionSystem>());
+    m_systems.push_back(std::make_unique<McpLightsSystem>());
     m_systems.push_back(std::make_unique<McpAssetsSystem>());
     m_systems.push_back(std::make_unique<McpViewportSystem>());
     m_systems.push_back(std::make_unique<McpReflectionSystem>());
