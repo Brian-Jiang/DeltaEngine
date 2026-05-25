@@ -61,7 +61,7 @@ TEST_F(AnimationManagerTests, Tick_OnComplete_InstanceIsRemoved)
 }
 
 // On complete with null IDs: no crash (command won't push, that's ok)
-TEST_F(AnimationManagerTests, Tick_OnComplete_NocrashWithNullIds)
+TEST_F(AnimationManagerTests, Tick_OnComplete_NoCrashWithNullIds)
 {
     EditorAnimationManager mgr;
     mgr.StartAnimation(kNullAsset, kNullObject, "m_test", 0.0f, 5.0f, 0.5f,
