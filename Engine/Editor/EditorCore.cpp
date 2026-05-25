@@ -190,10 +190,7 @@ void EditorCore::LoadScene(const std::filesystem::path& scenePath)
     }
 
     if (DWorld* world = m_engine->GetWorld())
-    {
-        world->DestroyAllWorldGameObjects();
-        world->SetActiveScene(nullptr);
-    }
+        world->DetachAllWorldGameObjects();
 
     if (m_selectionState)
         m_selectionState->ClearAll();

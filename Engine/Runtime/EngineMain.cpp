@@ -211,10 +211,7 @@ void EngineMain::LoadScene(const AssetId& sceneAssetId)
 {
     DWorld* world = GetWorld();
     if (world)
-    {
-        world->DestroyAllWorldGameObjects();
-        world->SetActiveScene(nullptr);
-    }
+        world->DetachAllWorldGameObjects();
     else
     {
         DLOG(LogEngine, ELogLevel::Error,

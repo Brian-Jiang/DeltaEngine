@@ -11,6 +11,7 @@
 
 #include "Runtime/Assets/PA_DScene.h"
 #include "Runtime/Core/DWorld.h"
+#include "Runtime/Core/DScene.h"
 #include "Runtime/Core/GameObject.h"
 
 #include <fstream>
@@ -119,4 +120,44 @@ TEST_F(EditorCommandTests_Scene_SaveLoad, LoadScene_SwapsActiveSceneAndTearsDown
     // Scene A's GameObject must be gone (teardown happened before scene B loaded).
     for (GameObject* g : m_core->GetWorld()->GetGameObjects())
         EXPECT_NE(g->GetName(), std::string("OnlyInSceneA"));
+}
+
+TEST_F(EditorCommandTests_Scene_SaveLoad, LoadScene_SwitchThenSave_PreservesPreviousSceneObjects)
+{
+    EditorCommandContext ctx{ *m_core };
+    const AssetId sceneAId = GetActiveSceneAssetId();
+
+    ASSERT_TRUE(m_core->GetCommandManager().Execute(
+        std::make_unique<EditorCommand_CreateGameObject>(sceneAId, "GameObject"), ctx));
+    GameObject* goA = m_core->GetWorld()->GetGameObjects().front();
+    ASSERT_TRUE(m_core->GetCommandManager().Execute(
+        std::make_unique<EditorCommand_RenameObject>(sceneAId, goA->GetObjectId(),
+                                                     std::string("MarkerInA")), ctx));
+    m_core->GetCommandManager().ExecuteAuxiliary(
+        std::make_unique<EditorAuxiliaryCommand_SaveScene>(), ctx);
+
+    const std::filesystem::path sceneBPath =
+        std::filesystem::weakly_canonical(m_tempDir / "SecondScene.dasset.json");
+    PA_DScene* sceneB = PA_DScene::Create("SecondScene");
+    m_core->GetAssetDatabase()->CreateAsset(sceneBPath, sceneB);
+    m_core->GetAssetDatabase()->SaveDirtyAssets();
+
+    m_core->GetCommandManager().ExecuteAuxiliary(
+        std::make_unique<EditorAuxiliaryCommand_LoadScene>(sceneBPath), ctx);
+    m_core->GetCommandManager().ExecuteAuxiliary(
+        std::make_unique<EditorAuxiliaryCommand_SaveScene>(), ctx);
+
+    m_core->GetAssetDatabase()->ReloadAssetFromDisk(sceneAId);
+    PA_DScene* reloadedA = m_core->GetAssetDatabase()->LoadAsset<PA_DScene>(sceneAId);
+    ASSERT_NE(reloadedA, nullptr);
+    DScene* scene = reloadedA->GetScene();
+    ASSERT_NE(scene, nullptr);
+
+    bool found = false;
+    for (GameObject* g : scene->GetGameObjects())
+    {
+        if (g->GetName() == "MarkerInA")
+            found = true;
+    }
+    EXPECT_TRUE(found);
 }

@@ -106,6 +106,8 @@ void GameObject::RemoveComponent(DComponent* component)
     {
         component->MarkForDestroy();
         m_components.erase(it);
+        if (component->HasOwningAsset())
+            component->GetOwningAsset()->RemoveObject(component->GetObjectId());
         GetReflectionRegistry().DestroyObject(component);
         return;
     }
@@ -138,6 +140,8 @@ void GameObject::RemoveComponent(DComponent* component)
             comp->MarkForDestroy();
             comp->SetParent(nullptr);
             std::erase(m_sceneComponents, comp);
+            if (comp->HasOwningAsset())
+                comp->GetOwningAsset()->RemoveObject(comp->GetObjectId());
             GetReflectionRegistry().DestroyObject(comp);
         }
     }
@@ -177,7 +181,7 @@ void GameObject::InsertComponent(DComponent* comp, int index)
     if (!comp)
         return;
 
-    if (HasOwningAsset())
+    if (!comp->HasOwningAsset() && HasOwningAsset())
         GetOwningAsset()->AddObject(comp);
 
     comp->RegisterComponent(this);
@@ -191,7 +195,7 @@ void GameObject::InsertSceneComponent(SceneComponent* sc, int index, SceneCompon
     if (!sc)
         return;
 
-    if (HasOwningAsset())
+    if (!sc->HasOwningAsset() && HasOwningAsset())
         GetOwningAsset()->AddObject(sc);
 
     sc->RegisterComponent(this);

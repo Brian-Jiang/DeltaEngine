@@ -60,6 +60,9 @@ public:
     /// Destroys every GameObject in the world (used before reloading a scene from disk).
     DELTAENGINE_API void DestroyAllWorldGameObjects();
 
+    /// Removes runtime world references to scene-owned GameObjects without destroying them.
+    DELTAENGINE_API void DetachAllWorldGameObjects();
+
     DFUNCTION()
     DELTAENGINE_API const std::vector<GameObject*>& GetGameObjects() const;
     DFUNCTION()

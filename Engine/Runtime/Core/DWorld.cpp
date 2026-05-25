@@ -277,6 +277,20 @@ void DWorld::DestroyAllWorldGameObjects()
         DestroyGameObject(m_gameObjects.front());
 }
 
+void DWorld::DetachAllWorldGameObjects()
+{
+    SetActiveScene(nullptr);
+
+    for (GameObject* go : m_gameObjects)
+    {
+        go->m_currentWorld = nullptr;
+        if (SceneComponent* rootSC = go->GetRootSceneComponent())
+            rootSC->SetParent(nullptr);
+    }
+    m_gameObjects.clear();
+    m_gameObjectsChanged = true;
+}
+
 SceneComponent* DeltaEngine::DWorld::GetRootSceneComponent() const { return m_rootSceneComponent; }
 
 const std::vector<GameObject*>& DeltaEngine::DWorld::GetGameObjects() const { return m_gameObjects; }

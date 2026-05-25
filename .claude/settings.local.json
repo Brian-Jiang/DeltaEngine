@@ -1,17 +1,18 @@
 {
   "permissions": {
     "allow": [
-      "Bash(*Tools/Scripts/*.bat*)",
-      "Bash(*Tools\\Scripts\\*.bat*)",
       "PowerShell(*Tools/Scripts/*.bat*)",
       "PowerShell(*Tools\\Scripts\\*.bat*)",
+      "Bash(*Tools/Scripts/*.bat*)",
+      "Bash(*Tools\\Scripts\\*.bat*)",
       "Bash(*DeltaEngineTests.exe*)",
       "Bash(*DeltaEditorTests.exe*)",
       "Bash(grep:*)",
       "Bash(echo:*)",
       "Bash(findstr:*)",
-      "Bash(git stash:*)",
-      "Bash(ls \"D:/Projects/DeltaEngine/Build/x64-Debug/bin/CMake/DirectXTK12/Shaders/Compiled/\" 2>&1 | head -5; ls \"C:/Program Files \\(x86\\)/Windows Kits/10/bin/\" 2>&1 | head -10)"
+      "Bash(ls:*)",
+      "Bash(head:*)",
+      "Bash(pwd:*)"
     ]
   }
 }
