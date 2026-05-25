@@ -46,8 +46,14 @@ public:
     virtual ~MakeUploadBuffer() { }
 };
 
-std::map<std::string, ID3D12Resource*> CommandList::ms_TextureCache;
+std::map<std::string, Microsoft::WRL::ComPtr<ID3D12Resource>> CommandList::ms_TextureCache;
 std::mutex CommandList::ms_TextureCacheMutex;
+
+void CommandList::ClearTextureCache()
+{
+    std::lock_guard<std::mutex> lock(ms_TextureCacheMutex);
+    ms_TextureCache.clear();
+}
 
 DeltaEngine::CommandList::CommandList(Device& device, D3D12_COMMAND_LIST_TYPE type)
     : m_Device(device), m_d3d12CommandListType(type), m_RootSignature(nullptr), m_PipelineState(nullptr)

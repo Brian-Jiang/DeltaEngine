@@ -115,11 +115,13 @@ void EditorRenderManager::PrepareViewportSceneTexture(CommandList& commandList)
     std::shared_ptr<DirectX12Texture> displayTexture;
     if (sampleCount > 1)
     {
+        const DXGI_FORMAT srcFormat = offscreenColor->GetD3D12ResourceDesc().Format;
         if (!m_viewportDisplayTexture ||
             m_viewportDisplayTexture->GetD3D12ResourceDesc().Width != width ||
-            m_viewportDisplayTexture->GetD3D12ResourceDesc().Height != height)
+            m_viewportDisplayTexture->GetD3D12ResourceDesc().Height != height ||
+            m_viewportDisplayTexture->GetD3D12ResourceDesc().Format != srcFormat)
         {
-            const auto colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, width, height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE);
+            const auto colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(srcFormat, width, height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE);
             m_viewportDisplayTexture = m_device->CreateTexture(colorDesc, nullptr);
             m_viewportDisplayTexture->SetName("Viewport Display Target");
         }
@@ -277,4 +279,28 @@ void EditorRenderManager::SetFullscreen(bool fullscreen)
 
 void EditorRenderManager::OnDestroy()
 {
+    m_activeRenderCamera = {};
+    if (m_sceneRenderer)
+        m_sceneRenderer.reset();
+
+    if (m_viewportDisplayTexture)
+        m_viewportDisplayTexture.reset();
+
+    if (m_offscreenRenderTarget)
+        m_offscreenRenderTarget.reset();
+
+    if (m_appHeader)
+        m_appHeader.reset();
+    
+    if (m_toolbar)
+        m_toolbar.reset();
+        
+    if (m_statusBar)
+        m_statusBar.reset();
+
+    if (m_swapChain)
+        m_swapChain.reset();
+        
+    if (m_device)
+        m_device.reset();
 }

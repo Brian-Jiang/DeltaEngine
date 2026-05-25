@@ -521,6 +521,7 @@ void DXRenderManager::OnDestroy()
     m_shadowPass.Shutdown();
 
     DefaultTextures::Shutdown();
+    CommandList::ClearTextureCache();
 }
 
 std::shared_ptr<DXGraphicsContext> DeltaEngine::DXRenderManager::GetGraphicsContext()

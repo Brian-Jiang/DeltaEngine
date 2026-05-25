@@ -42,6 +42,11 @@ public:
 
     static DELTAENGINE_API void ReportLiveObjects();
 
+    /// Reports live D3D12 child objects (resources, heaps, PSOs, etc.) tied to this device,
+    /// with per-object detail and debug names. Call before releasing the device shared_ptr.
+    /// Also disables break-on-warning so the LIVE_DEVICE warning does not crash the process.
+    DELTAENGINE_API void ReportLiveDeviceObjects();
+
     /**
      * Create a new DX12 device using the provided adapter.
      * If no adapter is specified, then the highest performance adapter will be  chosen.

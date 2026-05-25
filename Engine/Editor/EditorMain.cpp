@@ -361,8 +361,18 @@ void EditorMain::Shutdown()
     m_editorWindows.clear();
     m_editorTheme.reset();
     m_editorCore.reset();
-    m_renderManager.reset();
     m_engine.reset();
+
+    // Report live D3D12 objects with per-object detail while the device is still valid.
+    // After m_renderManager.reset() the device shared_ptr is gone and only DXGI sees a
+    // phantom device with no usable debug interface.
+    if (m_renderManager)
+    {
+        if (auto device = m_renderManager->GetDevice())
+            device->ReportLiveDeviceObjects();
+    }
+
+    m_renderManager.reset();
     m_window.reset();
 
     if (m_sdlInitialized)

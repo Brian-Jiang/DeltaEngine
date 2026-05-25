@@ -42,6 +42,11 @@ public:
     DELTAENGINE_API CommandList(Device& device, D3D12_COMMAND_LIST_TYPE type);
     DELTAENGINE_API ~CommandList();
 
+    /// Releases all ID3D12Resource references held in the static texture cache.
+    /// Must be called on shutdown before releasing the device, otherwise the cached
+    /// resources keep the device alive (LIVE_RESOURCE / LIVE_DEVICE warnings).
+    DELTAENGINE_API static void ClearTextureCache();
+
      /**
      * Transition a resource to a particular state.
      *
@@ -585,7 +590,7 @@ private:
     TrackedObjects m_TrackedObjects;
 
     // Keep track of loaded textures to avoid loading the same texture multiple times.
-    static std::map<std::string, ID3D12Resource*> ms_TextureCache;
+    static std::map<std::string, Microsoft::WRL::ComPtr<ID3D12Resource>> ms_TextureCache;
     static std::mutex ms_TextureCacheMutex;
 };
 

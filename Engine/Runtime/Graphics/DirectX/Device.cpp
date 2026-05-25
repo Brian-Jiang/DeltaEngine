@@ -223,11 +223,34 @@ void Device::EnableDebugLayer()
 
 void Device::ReportLiveObjects()
 {
-    IDXGIDebug1* dxgiDebug;
-    ThrowIfFailed(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug)));
+    ComPtr<IDXGIDebug1> dxgiDebug;
+    if (FAILED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug))))
+        return;
 
-    dxgiDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_IGNORE_INTERNAL);
-    dxgiDebug->Release();
+    dxgiDebug->ReportLiveObjects(
+        DXGI_DEBUG_ALL,
+        static_cast<DXGI_DEBUG_RLO_FLAGS>(DXGI_DEBUG_RLO_DETAIL | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
+}
+
+void Device::ReportLiveDeviceObjects()
+{
+    if (!m_d3d12Device)
+        return;
+
+    // Stop the debug layer from breaking on the LIVE_DEVICE / LIVE_* warnings the report itself emits.
+    ComPtr<ID3D12InfoQueue> infoQueue;
+    if (SUCCEEDED(m_d3d12Device.As(&infoQueue)))
+    {
+        infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, FALSE);
+        infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, FALSE);
+    }
+
+    ComPtr<ID3D12DebugDevice> debugDevice;
+    if (SUCCEEDED(m_d3d12Device.As(&debugDevice)))
+    {
+        debugDevice->ReportLiveDeviceObjects(
+            static_cast<D3D12_RLDO_FLAGS>(D3D12_RLDO_DETAIL | D3D12_RLDO_IGNORE_INTERNAL));
+    }
 }
 
 std::shared_ptr<Device> Device::Create(std::shared_ptr<Adapter> adapter)
