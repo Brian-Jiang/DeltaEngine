@@ -20,6 +20,8 @@ DELTA_ENGINE_NS_BEGIN
 class DELTAEDITOR_API EditorAssetDatabase : public IAssetDatabase
 {
 public:
+    ~EditorAssetDatabase();
+
     enum class AssetState
     {
         Unregistered,

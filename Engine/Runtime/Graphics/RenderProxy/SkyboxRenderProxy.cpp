@@ -5,6 +5,8 @@
 
 #include "Graphics/DXGraphicsContext.h"
 #include "Graphics/DXRenderManager.h"
+#include "Graphics/DefaultTextures.h"
+#include "Graphics/MaterialConstants.h"
 #include "Graphics/DirectX/CommandList.h"
 #include "Graphics/DirectX/Device.h"
 #include "Graphics/DirectX/DirectX12Texture.h"
@@ -149,6 +151,18 @@ void SkyboxRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> rende
         0,
         m_gpuCubemap,
         D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+    // The Texture descriptor table is sized to MaterialTextureSlot::Count; CopyDescriptors
+    // requires every entry to be a valid handle even though the skybox shader only samples
+    // slot 0. Fill the remaining slots with the white fallback so empty-scene draws don't
+    // crash with INVALID_DESCRIPTOR_HANDLE.
+    const uint32_t slotCount = static_cast<uint32_t>(MaterialTextureSlot::Count);
+    const D3D12_CPU_DESCRIPTOR_HANDLE whiteSRV = DefaultTextures::GetWhiteSRV();
+    for (uint32_t slot = 1; slot < slotCount; ++slot)
+    {
+        commandList->SetShaderResourceView(
+            static_cast<uint32_t>(RootParameterType::Texture), slot, whiteSRV);
+    }
 
     // 36 procedural vertices (SV_VertexID), no vertex/index buffer needed.
     commandList->Draw(36, 1, 0, 0);

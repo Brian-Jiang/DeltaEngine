@@ -41,6 +41,26 @@ const nlohmann::json& EmptyMetaBlob()
 }
 } // namespace
 
+EditorAssetDatabase::~EditorAssetDatabase()
+{
+    // Loaded assets own their DObjects as raw pointers, allocated by the reflection
+    // registry. Without an explicit teardown, dropping m_assets leaks the PA and every
+    // object it loaded — including GPU resources held by their render proxies (PSO,
+    // textures, SRV heaps), which keeps the device alive past shutdown.
+    for (auto& [id, entry] : m_assets)
+    {
+        if (!entry.m_instance)
+            continue;
+
+        DPrimaryAsset* pa = entry.m_instance;
+        std::vector<DObject*> owned = pa->GetObjects();
+        for (DObject* obj : owned)
+            GetReflectionRegistry().DestroyObject(obj);
+        GetReflectionRegistry().DestroyObject(pa);
+        entry.m_instance = nullptr;
+    }
+}
+
 // ---------------------------------------------------------------------------
 // ScanAssetsFolder
 // ---------------------------------------------------------------------------
