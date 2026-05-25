@@ -15,7 +15,7 @@ PA_TestAsset* MakeAsset(const AssetId& id, const char* name)
     asset->GetHeader().m_persistentId = id;
     asset->GetHeader().m_className    = "PA_TestAsset";
 
-    auto* objA = new DTestObjectA();
+    auto* objA = CreateDObject<DTestObjectA>();
     objA->SetObjectId(ObjectId::Generate());
     objA->m_name = name;
     asset->AddObject(objA);

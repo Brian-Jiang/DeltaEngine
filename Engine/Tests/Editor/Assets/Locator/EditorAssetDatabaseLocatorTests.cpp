@@ -28,7 +28,7 @@ TEST_F(EditorAssetDatabaseLocatorTests, LocatorReturnsRegisteredEditorDatabase)
     asset->GetHeader().m_persistentId = assetId;
     asset->GetHeader().m_className = "PA_TestAsset";
 
-    auto* object = new DTestObjectA();
+    auto* object = CreateDObject<DTestObjectA>();
     const ObjectId objectId = ObjectId::Generate();
     object->SetObjectId(objectId);
     object->m_name = "LocatorHero";

@@ -20,7 +20,7 @@ TEST_F(BulkDataRoundTripTests, RoundTripsBulkDataAndWritesSidecars)
     asset->GetHeader().m_persistentId = assetId;
     asset->GetHeader().m_className = "PA_TestMesh";
 
-    auto* mesh = new DTestMeshData();
+    auto* mesh = CreateDObject<DTestMeshData>();
     const ObjectId meshId = ObjectId::Generate();
     mesh->SetObjectId(meshId);
     mesh->m_vertexCount = 100;

@@ -18,7 +18,7 @@ TEST_F(SingleAssetRoundTripTests, RoundTripsMixedPropertiesAndObjectReferences)
     asset->GetHeader().m_persistentId = assetId;
     asset->GetHeader().m_className = "PA_TestAsset";
 
-    auto* objectA = new DTestObjectA();
+    auto* objectA = CreateDObject<DTestObjectA>();
     const ObjectId objectAId = ObjectId::Generate();
     objectA->SetObjectId(objectAId);
     objectA->m_health = 75.5f;
@@ -35,7 +35,7 @@ TEST_F(SingleAssetRoundTripTests, RoundTripsMixedPropertiesAndObjectReferences)
     };
     asset->AddObject(objectA);
 
-    auto* objectB = new DTestObjectB();
+    auto* objectB = CreateDObject<DTestObjectB>();
     const ObjectId objectBId = ObjectId::Generate();
     objectB->SetObjectId(objectBId);
     objectB->m_label = "Companion";

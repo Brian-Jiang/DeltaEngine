@@ -18,7 +18,7 @@ TEST_F(EditorAssetDatabaseLifecycleTests, DirtyFlagPropagatesThroughPropertySetV
     asset->GetHeader().m_persistentId = AssetId::Generate();
     asset->GetHeader().m_className = "PA_TestAsset";
 
-    auto* object = new DTestObjectA();
+    auto* object = CreateDObject<DTestObjectA>();
     object->SetObjectId(ObjectId::Generate());
     asset->AddObject(object);
 
@@ -45,7 +45,7 @@ TEST_F(EditorAssetDatabaseLifecycleTests, SaveDirtyAssetsPersistsChangesAndClear
     asset->GetHeader().m_persistentId = AssetId::Generate();
     asset->GetHeader().m_className = "PA_TestAsset";
 
-    auto* object = new DTestObjectA();
+    auto* object = CreateDObject<DTestObjectA>();
     object->SetObjectId(ObjectId::Generate());
     object->m_name = "BeforeSave";
     asset->AddObject(object);
@@ -78,7 +78,7 @@ TEST_F(EditorAssetDatabaseLifecycleTests, DuplicateAssetRemapsInternalRefsAndPre
     externalAsset->GetHeader().m_persistentId = externalAssetId;
     externalAsset->GetHeader().m_className = "PA_TestAsset";
 
-    auto* externalObject = new DTestObjectA();
+    auto* externalObject = CreateDObject<DTestObjectA>();
     const ObjectId externalObjectId = ObjectId::Generate();
     externalObject->SetObjectId(externalObjectId);
     externalObject->m_name = "ExternalTarget";
@@ -90,13 +90,13 @@ TEST_F(EditorAssetDatabaseLifecycleTests, DuplicateAssetRemapsInternalRefsAndPre
     sourceAsset->GetHeader().m_persistentId = sourceAssetId;
     sourceAsset->GetHeader().m_className = "PA_TestAsset";
 
-    auto* internalObject = new DTestObjectA();
+    auto* internalObject = CreateDObject<DTestObjectA>();
     const ObjectId internalObjectId = ObjectId::Generate();
     internalObject->SetObjectId(internalObjectId);
     internalObject->m_name = "InternalTarget";
     sourceAsset->AddObject(internalObject);
 
-    auto* referenceObject = new DTestObjectB();
+    auto* referenceObject = CreateDObject<DTestObjectB>();
     const ObjectId referenceObjectId = ObjectId::Generate();
     referenceObject->SetObjectId(referenceObjectId);
     referenceObject->m_label = "RefHolder";
@@ -105,7 +105,7 @@ TEST_F(EditorAssetDatabaseLifecycleTests, DuplicateAssetRemapsInternalRefsAndPre
     referenceObject->m_refs.push_back(externalObject);
     sourceAsset->AddObject(referenceObject);
 
-    auto* meshObject = new DTestMeshData();
+    auto* meshObject = CreateDObject<DTestMeshData>();
     meshObject->SetObjectId(ObjectId::Generate());
     meshObject->m_vertexCount = 2;
     meshObject->m_indexCount = 3;
@@ -261,7 +261,7 @@ TEST_F(EditorAssetDatabaseLifecycleTests, DeleteAssetRemovesJsonAndBulkFiles)
     asset->GetHeader().m_persistentId = assetId;
     asset->GetHeader().m_className = "PA_TestMesh";
 
-    auto* mesh = new DTestMeshData();
+    auto* mesh = CreateDObject<DTestMeshData>();
     mesh->SetObjectId(ObjectId::Generate());
     const uint8_t bytes[] = { 1, 3, 5, 7 };
     mesh->m_vertexBuffer.Set(bytes, sizeof(bytes));

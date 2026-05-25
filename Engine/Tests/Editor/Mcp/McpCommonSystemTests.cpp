@@ -91,7 +91,7 @@ TEST_F(McpCommonSystemTests, CommandRenameObject_WithExplicitAssetId_RenamesObje
     asset->GetHeader().m_persistentId = otherAssetId;
     asset->GetHeader().m_className = "PA_TestAsset";
 
-    auto* obj = new DTestObjectA();
+    auto* obj = CreateDObject<DTestObjectA>();
     const ObjectId otherObjectId = ObjectId::Generate();
     obj->SetObjectId(otherObjectId);
     obj->m_name = "BeforeRename";
@@ -126,7 +126,7 @@ TEST_F(McpCommonSystemTests, CommandSetProperty_WithExplicitAssetId_MutatesObjec
     asset->GetHeader().m_persistentId = otherAssetId;
     asset->GetHeader().m_className = "PA_TestAsset";
 
-    auto* obj = new DTestObjectA();
+    auto* obj = CreateDObject<DTestObjectA>();
     const ObjectId otherObjectId = ObjectId::Generate();
     obj->SetObjectId(otherObjectId);
     obj->m_health = 100.0f;
