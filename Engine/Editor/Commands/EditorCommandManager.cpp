@@ -1,6 +1,8 @@
 #include "Editor/Commands/EditorCommandManager.h"
 
 #include "Editor/Commands/EditorCommandRegistry.h"
+#include "Editor/EditorCore.h"
+#include "Editor/Animation/EditorAnimationManager.h"
 
 using namespace DeltaEngine;
 
@@ -33,6 +35,15 @@ void EditorCommandManager::ExecuteAuxiliary(std::unique_ptr<EditorAuxiliaryComma
 
 bool EditorCommandManager::Undo(EditorCommandContext& ctx)
 {
+    // If there are in-flight animations, cancel them and revert their values.
+    // This counts as consuming the Undo action — the stack is NOT popped, so a
+    // subsequent Undo will pop the last committed command as normal.
+    if (auto* animMgr = ctx.core.GetAnimationManager())
+    {
+        if (animMgr->CancelInFlightAnimations(ctx.core))
+            return true;
+    }
+
     if (m_undoStack.empty())
     {
         DLOG(LogEditorCommand, ELogLevel::Warning, "[Command Manager] Undo invoked with empty stack (expected undoable command)");

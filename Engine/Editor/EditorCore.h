@@ -24,6 +24,7 @@ class EditorSelectionState;
 class EngineMain;
 class DWorld;
 
+class EditorAnimationManager;
 class EditorCommandManager;
 class EditorCore;
 class McpRegistry;
@@ -74,6 +75,7 @@ public:
     DELTAEDITOR_API void DrainCommandQueue(std::vector<std::string>& outResponses);
 
     DELTAEDITOR_API McpRegistry* GetMcpRegistry() { return m_mcpRegistry.get(); }
+    DELTAEDITOR_API EditorAnimationManager* GetAnimationManager() { return m_animationManager.get(); }
 
 private:
     std::unique_ptr<EditorAssetDatabase> m_assetDatabase;
@@ -85,6 +87,7 @@ private:
     std::mutex m_commandQueueMutex;
     std::vector<std::string> m_pendingCommands;
     std::unique_ptr<McpRegistry> m_mcpRegistry;
+    std::unique_ptr<EditorAnimationManager> m_animationManager;
     bool m_headless = false;
 };
 

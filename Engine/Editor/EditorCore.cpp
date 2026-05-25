@@ -1,5 +1,6 @@
 #include "EditorCore.h"
 
+#include "Editor/Animation/EditorAnimationManager.h"
 #include "Editor/Assets/EditorAssetDatabase.h"
 #include "Editor/Commands/EditorCommand.h"
 #include "Editor/Commands/EditorCommandContext.h"
@@ -113,6 +114,9 @@ void EditorCore::Initialize(EngineMain& engine, bool headless, std::filesystem::
     m_selectionState = std::make_unique<EditorSelectionState>();
     m_commandManager = std::make_unique<EditorCommandManager>();
 
+    if (!m_headless)
+        m_animationManager = std::make_unique<EditorAnimationManager>();
+
     m_mcpRegistry = std::make_unique<McpRegistry>();
     m_mcpRegistry->InitializeAll(*this);
 
@@ -137,6 +141,7 @@ void EditorCore::Shutdown()
     DLOG(LogEditorCore, ELogLevel::Verbose, "EditorCore::Shutdown");
     g_mcpServer.reset();
     m_mcpRegistry.reset();
+    m_animationManager.reset();
     if (m_commandManager)
     {
         m_commandManager->Clear();

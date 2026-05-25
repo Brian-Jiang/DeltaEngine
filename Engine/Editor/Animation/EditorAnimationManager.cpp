@@ -4,6 +4,7 @@
 #include "Editor/EditorCore.h"
 #include "Editor/Commands/EditorCommand_SetProperty.h"
 #include "Editor/Commands/EditorCommandContext.h"
+#include "Editor/Commands/EditorCommandManager.h"
 
 #include <algorithm>
 

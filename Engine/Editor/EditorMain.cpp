@@ -1,5 +1,6 @@
 #include "EditorMain.h"
 
+#include "Editor/Animation/EditorAnimationManager.h"
 #include "Editor/EditorCore.h"
 #include "Editor/EditorMainLog.h"
 #include "Editor/McpSocketServer.h"
@@ -14,6 +15,7 @@
 #include "Editor/EditorWindows/EditorWindow_Viewport.h"
 #include "Editor/EditorWindows/EditorWindow_WorldOutliner.h"
 #include "Editor/Style/EditorTheme.h"
+#include "Runtime/Core/Time.h"
 #include "Runtime/EngineMain.h"
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/DirectX/SwapChain.h"
@@ -219,6 +221,8 @@ int EditorMain::Run()
         }
         m_engine->PreTick();
         m_engine->Tick();
+        if (auto* animMgr = m_editorCore->GetAnimationManager())
+            animMgr->Tick(Time::deltaTime, *m_editorCore);
         m_renderManager->RenderFrame(m_engine.get());
     }
 

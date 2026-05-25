@@ -1,6 +1,7 @@
 #include "Editor/Commands/EditorCommand_SetProperty.h"
 #include "Editor/Commands/PropertyValueIO.h"
 #include "Editor/EditorCore.h"
+#include "Editor/Animation/EditorAnimationManager.h"
 
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DProperty.h"
@@ -67,6 +68,11 @@ bool EditorCommand_SetProperty::ApplyValue(EditorCommandContext& ctx, const nloh
 bool EditorCommand_SetProperty::Execute(EditorCommandContext& ctx)
 {
     DLOG(LogEditorCommand, ELogLevel::Verbose, "[Set Property] Execute: Start");
+
+    // Drop any in-flight animation targeting this property. The incoming SetProperty
+    // value wins; the animation is silently discarded (no revert, no undo entry).
+    if (auto* animMgr = ctx.core.GetAnimationManager())
+        animMgr->DropAnimation(m_assetId, m_objectId, m_propertyName);
 
     if (m_valueBefore.is_null())
     {
