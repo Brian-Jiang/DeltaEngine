@@ -26,6 +26,8 @@ public:
     LightComponent() = default;
 
     virtual RenderProxy* GetRenderProxy() = 0;
+    DELTAENGINE_API virtual void  SetIntensity(float intensity) = 0;
+    DELTAENGINE_API virtual float GetIntensity() const = 0;
 
 protected:
     virtual void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) = 0;

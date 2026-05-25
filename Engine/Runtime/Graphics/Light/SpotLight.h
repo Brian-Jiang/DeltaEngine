@@ -29,6 +29,9 @@ public:
     DELTAENGINE_API void UpdateParameters(DirectX::XMVECTOR color, float intensity, float range,
         float innerConeAngle, float outerConeAngle);
 
+    void SetIntensity(float intensity) override { m_intensity = intensity; }
+    float GetIntensity() const override { return m_intensity; }
+
     /// Uploads the current light data to the graphics context.
     DELTAENGINE_API void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) override;
 
