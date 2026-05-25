@@ -24,7 +24,13 @@ nlohmann::json McpLightsSystem::CommandSetIntensity(EditorCore& core, const nloh
         return {{"ok", false}, {"error", "required params: assetId, objectId, value"}};
 
     const AssetId  assetId  = DeltaEngine::UUID::FromString(params["assetId"].get<std::string>());
+    if (assetId.IsNull())
+        return {{"ok", false}, {"error", "invalid assetId"}};
+
     const ObjectId objectId = DeltaEngine::UUID::FromString(params["objectId"].get<std::string>());
+    if (objectId.IsNull())
+        return {{"ok", false}, {"error", "invalid objectId"}};
+
     const float    target   = params["value"].get<float>();
     const float    duration = params.value("duration_seconds", 0.0f);
 
