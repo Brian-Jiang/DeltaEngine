@@ -7,7 +7,6 @@
 #include <DirectXMath.h>
 
 #include <cmath>
-#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <exception>
@@ -179,16 +178,7 @@ bool DeltaEngine::LoadViewportCamerasFromPath(std::vector<EditorViewportCamera>&
 
 void DeltaEngine::SaveViewportCameras(const std::vector<EditorViewportCamera>& cameras)
 {
-    const std::filesystem::path path = GetCameraStatePath();
-    // #region agent log
-    {
-        std::ofstream dbg("debug-ca8c4f.log", std::ios::app);
-        if (dbg)
-            dbg << "{\"sessionId\":\"ca8c4f\",\"hypothesisId\":\"B\",\"location\":\"EditorViewportCamera.cpp:SaveViewportCameras\",\"message\":\"save viewport cameras\",\"data\":{\"path\":\""
-                << path.string() << "\"},\"timestamp\":" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "}\n";
-    }
-    // #endregion
-    SaveViewportCamerasToPath(cameras, path);
+    SaveViewportCamerasToPath(cameras, GetCameraStatePath());
 }
 
 bool DeltaEngine::LoadViewportCameras(std::vector<EditorViewportCamera>& cameras)
