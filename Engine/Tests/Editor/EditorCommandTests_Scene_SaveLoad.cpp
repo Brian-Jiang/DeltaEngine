@@ -1,5 +1,6 @@
 #include "EditorCoreFixture.h"
 
+#include "Editor/Assets/EditorAssetDatabase.h"
 #include "Editor/Commands/EditorAuxiliarySceneCommands.h"
 #include "Editor/Commands/EditorCommandContext.h"
 #include "Editor/Commands/EditorCommandManager.h"
@@ -8,6 +9,8 @@
 
 #include <nlohmann/json.hpp>
 
+#include "Runtime/Assets/PA_DScene.h"
+#include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/GameObject.h"
 
 #include <fstream>
@@ -78,4 +81,42 @@ TEST_F(EditorCommandTests_Scene_SaveLoad, EditorCommand_LoadScene_RestoresGameOb
         }
     }
     EXPECT_TRUE(found);
+}
+
+TEST_F(EditorCommandTests_Scene_SaveLoad, LoadScene_SwapsActiveSceneAndTearsDownGameObjects)
+{
+    EditorCommandContext ctx{ *m_core };
+
+    // Scene A is the fixture's DefaultScene. Add a GameObject so we can verify teardown.
+    const AssetId sceneAId = GetActiveSceneAssetId();
+    ASSERT_TRUE(m_core->GetCommandManager().Execute(
+        std::make_unique<EditorCommand_CreateGameObject>(sceneAId, "GameObject"), ctx));
+    GameObject* goA = m_core->GetWorld()->GetGameObjects().front();
+    ASSERT_NE(goA, nullptr);
+    ASSERT_TRUE(m_core->GetCommandManager().Execute(
+        std::make_unique<EditorCommand_RenameObject>(sceneAId, goA->GetObjectId(),
+                                                     std::string("OnlyInSceneA")), ctx));
+    m_core->GetCommandManager().ExecuteAuxiliary(
+        std::make_unique<EditorAuxiliaryCommand_SaveScene>(), ctx);
+
+    // Create scene B on disk via the asset database.
+    const std::filesystem::path sceneBPath =
+        std::filesystem::weakly_canonical(m_tempDir / "SecondScene.dasset.json");
+    PA_DScene* sceneB = PA_DScene::Create("SecondScene");
+    m_core->GetAssetDatabase()->CreateAsset(sceneBPath, sceneB);
+    m_core->GetAssetDatabase()->SaveDirtyAssets();
+    ASSERT_TRUE(std::filesystem::exists(sceneBPath));
+
+    // Swap to scene B.
+    m_core->GetCommandManager().ExecuteAuxiliary(
+        std::make_unique<EditorAuxiliaryCommand_LoadScene>(sceneBPath), ctx);
+
+    // Active scene is now B.
+    DPrimaryAsset* active = m_core->GetActiveSceneAsset();
+    ASSERT_NE(active, nullptr);
+    EXPECT_NE(active->GetAssetId(), sceneAId);
+
+    // Scene A's GameObject must be gone (teardown happened before scene B loaded).
+    for (GameObject* g : m_core->GetWorld()->GetGameObjects())
+        EXPECT_NE(g->GetName(), std::string("OnlyInSceneA"));
 }

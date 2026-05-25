@@ -5,16 +5,209 @@
     "magic": "DLTA",
     "version": 1
   },
+  "meta": {
+    "dynamic": {
+      "desc": "",
+      "tags": []
+    },
+    "static": {}
+  },
   "objects": [
     {
       "_class": "DScene",
       "_objectId": "28532ae5-7e07-4037-8ec4-87cd4655785b",
       "m_components": [],
-      "m_gameObjects": [],
+      "m_gameObjects": [
+        {
+          "assetId": "eb094a14-734a-4de3-9c3e-350a3b3080d0",
+          "objectId": "c6997cb6-651e-4da2-89f7-d7f5cb1199bc"
+        },
+        {
+          "assetId": "eb094a14-734a-4de3-9c3e-350a3b3080d0",
+          "objectId": "7d53e9c1-eca1-432f-a298-5d930d5f7bbf"
+        },
+        {
+          "assetId": "eb094a14-734a-4de3-9c3e-350a3b3080d0",
+          "objectId": "fbfe269b-2556-4889-8a01-696a6657dc89"
+        }
+      ],
       "m_name": "NewDScene",
       "m_skybox": {
+        "assetId": "8d7b931f-d6e7-43e8-85ec-e3ab6349ed85",
+        "objectId": "5a26843e-603e-4256-8fac-d4509864161f"
+      }
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "c6997cb6-651e-4da2-89f7-d7f5cb1199bc",
+      "m_components": [],
+      "m_name": "New GameObject",
+      "m_rootSceneComponent": {
+        "assetId": "eb094a14-734a-4de3-9c3e-350a3b3080d0",
+        "objectId": "39c8a85a-1b8c-4119-935c-3353987eff24"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "eb094a14-734a-4de3-9c3e-350a3b3080d0",
+          "objectId": "39c8a85a-1b8c-4119-935c-3353987eff24"
+        }
+      ]
+    },
+    {
+      "_class": "MeshRenderer",
+      "_objectId": "39c8a85a-1b8c-4119-935c-3353987eff24",
+      "m_castShadow": true,
+      "m_children": [],
+      "m_gameObject": {
+        "assetId": "eb094a14-734a-4de3-9c3e-350a3b3080d0",
+        "objectId": "c6997cb6-651e-4da2-89f7-d7f5cb1199bc"
+      },
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_mesh": {
+        "assetId": "9bdff5d8-c0e0-4964-bcec-519fbfef987a",
+        "objectId": "d08c2038-5fd0-4cb7-9845-45fc48452f60"
+      },
+      "m_name": "New MeshRenderer",
+      "m_settings": {}
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "7d53e9c1-eca1-432f-a298-5d930d5f7bbf",
+      "m_components": [],
+      "m_name": "New GameObject",
+      "m_rootSceneComponent": {
+        "assetId": "eb094a14-734a-4de3-9c3e-350a3b3080d0",
+        "objectId": "a32f5e52-3204-4141-a230-1290bb582c00"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "eb094a14-734a-4de3-9c3e-350a3b3080d0",
+          "objectId": "a32f5e52-3204-4141-a230-1290bb582c00"
+        }
+      ]
+    },
+    {
+      "_class": "DirectionalLight",
+      "_objectId": "a32f5e52-3204-4141-a230-1290bb582c00",
+      "m_castShadow": true,
+      "m_children": [],
+      "m_color": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "m_direction": [
+        0.0,
+        -1.0,
+        0.0,
+        0.0
+      ],
+      "m_gameObject": {
+        "assetId": "eb094a14-734a-4de3-9c3e-350a3b3080d0",
+        "objectId": "7d53e9c1-eca1-432f-a298-5d930d5f7bbf"
+      },
+      "m_intensity": 1.0,
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_name": "New DirectionalLight",
+      "m_pcssLightSize": 0.05000000074505806,
+      "m_shadowBias": 0.004999999888241291,
+      "m_shadowCasterDistance": 5000.0,
+      "m_shadowMaxDistance": 100.0,
+      "m_shadowNormalBias": 0.0,
+      "m_shadowOrthoPadding": 5.0,
+      "m_shadowResolution": 1024,
+      "m_shadowSlopeBias": 1.0
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "fbfe269b-2556-4889-8a01-696a6657dc89",
+      "m_components": [],
+      "m_name": "New GameObject",
+      "m_rootSceneComponent": {
+        "assetId": "eb094a14-734a-4de3-9c3e-350a3b3080d0",
+        "objectId": "b041053c-c13a-4bde-812b-52362bdc7185"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "eb094a14-734a-4de3-9c3e-350a3b3080d0",
+          "objectId": "b041053c-c13a-4bde-812b-52362bdc7185"
+        }
+      ]
+    },
+    {
+      "_class": "Camera",
+      "_objectId": "b041053c-c13a-4bde-812b-52362bdc7185",
+      "m_aspectRatio": 1.0,
+      "m_children": [],
+      "m_far": 1000.0,
+      "m_fov": 45.0,
+      "m_gameObject": {
+        "assetId": "eb094a14-734a-4de3-9c3e-350a3b3080d0",
+        "objectId": "fbfe269b-2556-4889-8a01-696a6657dc89"
+      },
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_name": "New Camera",
+      "m_near": 0.10000000149011612,
+      "m_postProcessStack": {
         "assetId": "00000000-0000-0000-0000-000000000000",
         "objectId": "00000000-0000-0000-0000-000000000000"
+      },
+      "m_shadowSettings": {
+        "m_pcssBlockerSamples": 16,
+        "m_pcssPCFSamples": 16,
+        "m_qualityScalar": 1.0
       }
     }
   ]

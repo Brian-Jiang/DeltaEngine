@@ -1,11 +1,14 @@
 #include "Editor/Mcp/McpCoreFixture.h"
 
+#include "Editor/Assets/EditorAssetDatabase.h"
+#include "Runtime/Assets/PA_DScene.h"
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Core/SceneComponent.h"
 
 #include <nlohmann/json.hpp>
 
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -317,4 +320,41 @@ TEST_F(McpSceneSystemTests, CommandSetTransform_SetsPosition)
     m_core->DrainCommandQueue(responses);
     ASSERT_EQ(responses.size(), 1u);
     EXPECT_TRUE(json::parse(responses[0])["ok"].get<bool>());
+}
+
+TEST_F(McpSceneSystemTests, CommandLoadScene_MissingParam_ReturnsError)
+{
+    auto res = Dispatch("scene", "LoadScene");
+    EXPECT_FALSE(res["ok"].get<bool>());
+    EXPECT_TRUE(res.contains("error"));
+}
+
+TEST_F(McpSceneSystemTests, CommandLoadScene_ValidPath_SwapsActiveScene)
+{
+    const AssetId sceneAId = GetActiveSceneAssetId();
+    ASSERT_FALSE(sceneAId.IsNull());
+
+    // Create scene B on disk.
+    const std::filesystem::path sceneBPath =
+        std::filesystem::weakly_canonical(m_tempDir / "McpSecondScene.dasset.json");
+    PA_DScene* sceneB = PA_DScene::Create("McpSecondScene");
+    m_core->GetAssetDatabase()->CreateAsset(sceneBPath, sceneB);
+    m_core->GetAssetDatabase()->SaveDirtyAssets();
+    ASSERT_TRUE(std::filesystem::exists(sceneBPath));
+
+    auto dispatchRes = Dispatch("scene", "LoadScene",
+                                {{"scenePath", sceneBPath.string()}});
+    EXPECT_TRUE(dispatchRes["ok"].get<bool>());
+    EXPECT_TRUE(dispatchRes.value("queued", false));
+
+    std::vector<std::string> responses;
+    m_core->DrainCommandQueue(responses);
+    ASSERT_EQ(responses.size(), 1u);
+    const json reply = json::parse(responses[0]);
+    EXPECT_TRUE(reply["ok"].get<bool>());
+    EXPECT_EQ(reply.value("commandType", std::string{}), "LoadScene");
+
+    DPrimaryAsset* active = m_core->GetActiveSceneAsset();
+    ASSERT_NE(active, nullptr);
+    EXPECT_NE(active->GetAssetId(), sceneAId);
 }

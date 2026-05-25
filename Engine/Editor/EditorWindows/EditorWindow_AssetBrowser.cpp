@@ -1,6 +1,7 @@
 #include "Editor/EditorWindows/EditorWindow_AssetBrowser.h"
 
 #include "Editor/Assets/EditorAssetDatabase.h"
+#include "Editor/Commands/EditorAuxiliarySceneCommands.h"
 #include "Editor/Commands/EditorCommand_RenameAsset.h"
 #include "Editor/Commands/EditorCommandContext.h"
 #include "Editor/Commands/EditorCommandManager.h"
@@ -411,6 +412,17 @@ void EditorWindow_AssetBrowser::RenderAssetLeaf(const AssetId& assetId, EditorAs
                 m_renameAssetId = assetId;
                 m_inlineRename.Begin(GetAssetDisplayNameForBrowser(assetPath));
             }});
+        }
+        if (const DPrimaryAsset::Header* header = assetDatabase->GetAssetHeader(assetId);
+            header && header->m_className == "PA_DScene")
+        {
+            items.push_back({ "Load Scene", [&]()
+                {
+                    const std::filesystem::path scenePath = assetDatabase->GetAssetPath(assetId);
+                    EditorCommandContext ctx{ *g_editorCore };
+                    g_editorCore->GetCommandManager().ExecuteAuxiliary(
+                        std::make_unique<EditorAuxiliaryCommand_LoadScene>(scenePath), ctx);
+                } });
         }
         items.push_back({ "Duplicate", [&]()
             {

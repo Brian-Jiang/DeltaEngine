@@ -466,6 +466,9 @@ std::shared_ptr<DirectX12Texture> CommandList::LoadTexture(DTexture* texture)
         if (texture->IsCubemap())
             dx12texture->CreateCubemapSRV();
 
+        // Add the texture resource to the texture cache.
+        ms_TextureCache[cacheKey] = textureResource.Get();
+
         // Update the global state tracker.
         ResourceStateTracker::AddGlobalResourceState(textureResource.Get(), D3D12_RESOURCE_STATE_COMMON);
 

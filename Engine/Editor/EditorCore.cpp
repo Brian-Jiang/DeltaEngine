@@ -7,6 +7,7 @@
 #include "Editor/Commands/EditorCommandRegistry.h"
 #include "Editor/Commands/EditorAuxiliarySceneCommands.h"
 #include "Editor/EditorSelectionState.h"
+#include "Editor/EditorSessionState.h"
 #include "Runtime/Assets/AssetDatabaseLocator.h"
 #include "Runtime/Assets/DPrimaryAsset.h"
 #include "Runtime/Assets/PA_DScene.h"
@@ -83,13 +84,29 @@ void EditorCore::Initialize(EngineMain& engine, bool headless, std::filesystem::
     {
         m_assetDatabase->ScanAssetsFolder(IOManager::GetEngineImportedAssetsFolder());
 
-        PA_DScene* sceneAsset = m_assetDatabase->LoadAsset<PA_DScene>(
-            m_assetDatabase->FindAssetIdByPath(IOManager::GetEngineImportedAssetFullPath("DefaultScene")));
+        AssetId sceneId;
+        const EditorSessionState session = LoadEditorSessionState();
+        if (!session.lastScenePath.empty())
+        {
+            const std::filesystem::path canonical =
+                std::filesystem::weakly_canonical(std::filesystem::path(session.lastScenePath));
+            sceneId = m_assetDatabase->FindAssetIdByPath(canonical);
+            if (sceneId.IsNull())
+                DLOG(LogEditorCore, ELogLevel::Log,
+                     "Last opened scene '{}' not found in asset database; falling back to DefaultScene",
+                     session.lastScenePath);
+        }
+
+        if (sceneId.IsNull())
+            sceneId = m_assetDatabase->FindAssetIdByPath(
+                IOManager::GetEngineImportedAssetFullPath("DefaultScene"));
+
+        PA_DScene* sceneAsset = m_assetDatabase->LoadAsset<PA_DScene>(sceneId);
         if (sceneAsset)
             m_engine->LoadScene(sceneAsset->GetAssetId());
         else
             DLOG(LogEditorCore, ELogLevel::Error,
-                 "Failed to load DefaultScene from imported assets folder '{}'; expected DefaultScene.dasset.json",
+                 "Failed to load startup scene from imported assets folder '{}'; expected DefaultScene.dasset.json",
                  IOManager::GetEngineImportedAssetsFolder().string());
     }
 
@@ -182,7 +199,15 @@ void EditorCore::LoadScene(const std::filesystem::path& scenePath)
 
     PA_DScene* sceneAsset = m_assetDatabase->LoadAsset<PA_DScene>(id);
     if (sceneAsset)
+    {
         m_engine->LoadScene(sceneAsset->GetAssetId());
+        if (!m_headless)
+        {
+            EditorSessionState session;
+            session.lastScenePath = canonical.string();
+            SaveEditorSessionState(session);
+        }
+    }
 }
 
 DObject* EditorCore::ResolveObject(const AssetId& assetId, const ObjectId& objectId)
@@ -307,6 +332,23 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
                     std::make_unique<EditorAuxiliaryCommand_SaveScene>(), ctx);
                 outResponses.push_back(
                     nlohmann::json{{"ok", true}, {"commandType", "SaveDirtyAssets"}}.dump());
+                continue;
+            }
+            if (name == "LoadScene")
+            {
+                std::string scenePath = envelope.value("scenePath", "");
+                if (scenePath.empty())
+                {
+                    outResponses.push_back(
+                        nlohmann::json{{"ok", false}, {"commandType", "LoadScene"},
+                                       {"error", "Missing 'scenePath' field"}}.dump());
+                    continue;
+                }
+                m_commandManager->ExecuteAuxiliary(
+                    std::make_unique<EditorAuxiliaryCommand_LoadScene>(
+                        std::filesystem::path(scenePath)), ctx);
+                outResponses.push_back(
+                    nlohmann::json{{"ok", true}, {"commandType", "LoadScene"}}.dump());
                 continue;
             }
             outResponses.push_back(
