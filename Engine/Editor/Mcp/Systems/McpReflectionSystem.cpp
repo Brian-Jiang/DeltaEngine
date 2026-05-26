@@ -77,13 +77,13 @@ static nlohmann::json SerializeFunctionSchema(const DFunction* f)
 
 void McpReflectionSystem::RegisterTools(McpRegistry& registry)
 {
-    registry.RegisterOperation("reflection", "classes",
+    registry.RegisterQuery("reflection", "classes",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryClasses(c, p); });
-    registry.RegisterOperation("reflection", "class_schema",
+    registry.RegisterQuery("reflection", "class_schema",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryClassSchema(c, p); });
-    registry.RegisterOperation("reflection", "inheritance_chain",
+    registry.RegisterQuery("reflection", "inheritance_chain",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryInheritanceChain(c, p); });
-    registry.RegisterOperation("reflection", "find_classes_with_property",
+    registry.RegisterQuery("reflection", "find_classes_with_property",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryFindClassesWithProperty(c, p); });
 }
 

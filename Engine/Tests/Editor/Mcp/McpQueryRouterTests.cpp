@@ -20,10 +20,10 @@ TEST_F(McpQueryRouterTests, Route_MetaList_ValidEnvelope_ReturnsOk)
     const McpQueryRouter router(*m_core, *reg);
 
     json env;
-    env["type"]      = "query";
-    env["system"]    = "meta";
-    env["operation"] = "list_operations";
-    env["params"]    = json::object();
+    env["type"]   = "query";
+    env["system"] = "meta";
+    env["query"]  = "list_operations";
+    env["params"] = json::object();
 
     const json out = json::parse(router.Route(env.dump()));
 
@@ -64,9 +64,9 @@ TEST_F(McpQueryRouterTests, Route_QueryMissingSystem_ReturnsErrorPayload)
     const McpQueryRouter router(*m_core, *reg);
 
     json env;
-    env["type"]       = "query";
-    env["operation"]  = "list_operations";
-    env["params"]     = json::object();
+    env["type"]    = "query";
+    env["query"]   = "list_operations";
+    env["params"]  = json::object();
 
     const json out = json::parse(router.Route(env.dump()));
 

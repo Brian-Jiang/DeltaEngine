@@ -1,7 +1,7 @@
 {
   "system": "lights",
   "description": "Animate or set light properties in the active scene",
-  "operations": {},
+  "queries": {},
   "commands": {
     "SetIntensity": {
       "description": "Set or animate the intensity of a light component. With duration_seconds > 0 the value tweens using cubic ease-out; completion commits one undoable SetProperty command. A second call mid-tween preempts, starting from the current interpolated value.",

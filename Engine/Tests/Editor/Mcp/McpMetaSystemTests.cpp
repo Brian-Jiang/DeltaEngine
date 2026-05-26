@@ -21,29 +21,41 @@ TEST_F(McpMetaSystemTests, QueryListOperations_ContainsAllSystems)
     }
 }
 
-TEST_F(McpMetaSystemTests, QueryListOperations_SceneHasExpectedOperations)
+TEST_F(McpMetaSystemTests, QueryListOperations_SceneHasExpectedQueriesAndCommands)
 {
     auto res = Dispatch("meta", "list_operations");
     ASSERT_TRUE(res["ok"].get<bool>());
 
-    const auto& sceneOps = res["systems"]["scene"];
-    ASSERT_TRUE(sceneOps.is_array());
+    const auto& sceneEntry = res["systems"]["scene"];
+    ASSERT_TRUE(sceneEntry.is_object());
+    ASSERT_TRUE(sceneEntry["queries"].is_array());
+    ASSERT_TRUE(sceneEntry["commands"].is_array());
 
-    bool foundGameObjects = false;
-    for (const auto& op : sceneOps)
-        if (op.get<std::string>() == "game_objects")
-            foundGameObjects = true;
-    EXPECT_TRUE(foundGameObjects);
+    bool foundQuery = false;
+    for (const auto& q : sceneEntry["queries"])
+        if (q.get<std::string>() == "game_objects")
+            foundQuery = true;
+    EXPECT_TRUE(foundQuery);
+
+    bool foundCommand = false;
+    for (const auto& c : sceneEntry["commands"])
+        if (c.get<std::string>() == "CreateGameObject")
+            foundCommand = true;
+    EXPECT_TRUE(foundCommand);
 }
 
-TEST_F(McpMetaSystemTests, QueryDescribeOperations_ReturnsOk)
+TEST_F(McpMetaSystemTests, QueryDescribeOperations_ReturnsQueriesAndCommands)
 {
-    json ops = json::array();
-    ops.push_back({{"system", "scene"}, {"operation", "game_objects"}});
+    json targets = json::array();
+    targets.push_back({{"system", "scene"}, {"query", "game_objects"}});
+    targets.push_back({{"system", "scene"}, {"command", "CreateGameObject"}});
 
-    auto res = Dispatch("meta", "describe_operations", {{"operations", ops}});
+    auto res = Dispatch("meta", "describe_operations", {{"targets", targets}});
     EXPECT_TRUE(res["ok"].get<bool>());
-    EXPECT_TRUE(res.contains("operations"));
+    ASSERT_TRUE(res.contains("queries"));
+    ASSERT_TRUE(res.contains("commands"));
+    EXPECT_TRUE(res["queries"].contains("scene/game_objects"));
+    EXPECT_TRUE(res["commands"].contains("scene/CreateGameObject"));
 }
 
 TEST_F(McpMetaSystemTests, QueryCapabilities_ReturnsOk)
@@ -51,5 +63,4 @@ TEST_F(McpMetaSystemTests, QueryCapabilities_ReturnsOk)
     auto res = Dispatch("meta", "capabilities");
     EXPECT_TRUE(res["ok"].get<bool>());
     EXPECT_TRUE(res.contains("systems"));
-    EXPECT_TRUE(res.contains("commands"));
 }

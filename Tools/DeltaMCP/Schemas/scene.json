@@ -1,7 +1,7 @@
 {
   "system": "scene",
   "description": "Active world, GameObjects, and component hierarchy",
-  "operations": {
+  "queries": {
     "game_objects": {
       "description": "List all GameObjects in the active world",
       "params": {

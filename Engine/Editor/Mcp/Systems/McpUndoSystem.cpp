@@ -9,11 +9,11 @@ using namespace DeltaEngine;
 
 void McpUndoSystem::RegisterTools(McpRegistry& registry)
 {
-    registry.RegisterOperation("undo_history", "stack",
+    registry.RegisterQuery("undo_history", "stack",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryStack(c, p); });
-    registry.RegisterOperation("undo_history", "Undo",
+    registry.RegisterCommand("undo_history", "Undo",
         [this](EditorCore& c, const nlohmann::json& p) { return CommandUndo(c, p); });
-    registry.RegisterOperation("undo_history", "Redo",
+    registry.RegisterCommand("undo_history", "Redo",
         [this](EditorCore& c, const nlohmann::json& p) { return CommandRedo(c, p); });
 }
 

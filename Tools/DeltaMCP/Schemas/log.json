@@ -1,7 +1,7 @@
 {
   "system": "log",
   "description": "Read the editor's active log file. Only the active log file is scanned; older rotations (.1/.2/.3) are not included.",
-  "operations": {
+  "queries": {
     "file_location": {
       "description": "Return absolute path of the active log file plus its existence and size in bytes",
       "params": {}

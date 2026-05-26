@@ -25,7 +25,6 @@ private:
     void EnsureSchemasLoaded();
 
     nlohmann::json m_systemSchemas;
-    nlohmann::json m_commandSchemas;
     bool m_schemasLoaded = false;
 };
 

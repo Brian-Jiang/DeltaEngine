@@ -177,9 +177,9 @@ std::optional<std::chrono::seconds> TimeOfDayDeltaSeconds(std::string_view hhmms
 
 void McpLogSystem::RegisterTools(McpRegistry& registry)
 {
-    registry.RegisterOperation("log", "file_location",
+    registry.RegisterQuery("log", "file_location",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryFileLocation(c, p); });
-    registry.RegisterOperation("log", "read",
+    registry.RegisterQuery("log", "read",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryRead(c, p); });
 }
 

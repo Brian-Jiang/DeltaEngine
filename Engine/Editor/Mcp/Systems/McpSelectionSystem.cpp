@@ -16,9 +16,9 @@ using namespace DeltaEngine;
 
 void McpSelectionSystem::RegisterTools(McpRegistry& registry)
 {
-    registry.RegisterOperation("selection", "current",
+    registry.RegisterQuery("selection", "current",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryCurrent(c, p); });
-    registry.RegisterOperation("selection", "SelectObject",
+    registry.RegisterCommand("selection", "SelectObject",
         [this](EditorCore& c, const nlohmann::json& p) { return CommandSelectObject(c, p); });
 }
 

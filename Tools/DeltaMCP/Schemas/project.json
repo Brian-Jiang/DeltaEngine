@@ -1,7 +1,7 @@
 {
   "system": "project",
   "description": "Project-level information, settings, and build state",
-  "operations": {
+  "queries": {
     "info": {
       "description": "Project name, root path, engine version, and configuration",
       "params": {}

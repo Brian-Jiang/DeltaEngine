@@ -1,23 +1,23 @@
 {
   "system": "meta",
-  "description": "MCP server introspection — list and describe available operations and commands",
-  "operations": {
+  "description": "MCP server introspection — list and describe available queries and commands",
+  "queries": {
     "list_operations": {
-      "description": "Lightweight index of all systems and their operation names",
+      "description": "Lightweight index of all systems and their query and command names",
       "params": {}
     },
     "describe_operations": {
-      "description": "Full schemas for specific operations or commands",
+      "description": "Full schemas for specific queries and/or commands",
       "params": {
-        "operations": {
+        "targets": {
           "type": "array",
           "required": true,
-          "description": "Array of {system,operation} or {command} objects to describe"
+          "description": "Array of {system,query} or {system,command} objects to describe"
         }
       }
     },
     "capabilities": {
-      "description": "Full capability dump — all systems, operations, and commands",
+      "description": "Full capability dump — all systems, queries, and commands",
       "params": {
         "system_filter": { "type": "string", "optional": true,
                            "description": "Limit to a single system" }

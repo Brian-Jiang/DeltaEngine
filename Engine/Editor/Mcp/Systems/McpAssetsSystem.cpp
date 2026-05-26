@@ -299,24 +299,25 @@ nlohmann::json FolderNodeToJson(const FolderNode& node, const std::string& virtu
 
 void McpAssetsSystem::RegisterTools(McpRegistry& registry)
 {
-    registry.RegisterOperation("assets", "list",
+    registry.RegisterQuery("assets", "list",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryList(c, p); });
-    registry.RegisterOperation("assets", "get",
+    registry.RegisterQuery("assets", "get",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryGet(c, p); });
-    registry.RegisterOperation("assets", "search",
+    registry.RegisterQuery("assets", "search",
         [this](EditorCore& c, const nlohmann::json& p) { return QuerySearch(c, p); });
-    registry.RegisterOperation("assets", "folder_tree",
+    registry.RegisterQuery("assets", "folder_tree",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryFolderTree(c, p); });
-    registry.RegisterOperation("assets", "usages",
+    registry.RegisterQuery("assets", "usages",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryUsages(c, p); });
-    registry.RegisterOperation("assets", "get_asset_metadata",
+    registry.RegisterQuery("assets", "get_asset_metadata",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryGetAssetMetadata(c, p); });
-    registry.RegisterOperation("assets", "get_assets_metadata",
+    registry.RegisterQuery("assets", "get_assets_metadata",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryGetAssetsMetadata(c, p); });
-    registry.RegisterOperation("assets", "set_asset_dynamic_metadata",
-        [this](EditorCore& c, const nlohmann::json& p) { return CommandSetAssetDynamicMetadata(c, p); });
-    registry.RegisterOperation("assets", "has_static_meta_schema",
+    registry.RegisterQuery("assets", "has_static_meta_schema",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryHasStaticMetaSchema(c, p); });
+
+    registry.RegisterCommand("assets", "set_asset_dynamic_metadata",
+        [this](EditorCore& c, const nlohmann::json& p) { return CommandSetAssetDynamicMetadata(c, p); });
 }
 
 nlohmann::json McpAssetsSystem::QueryList(EditorCore& core, const nlohmann::json& params)

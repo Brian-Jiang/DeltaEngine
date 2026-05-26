@@ -9,10 +9,10 @@ using namespace DeltaEngine::Tests;
 
 class McpRegistryDispatchTests : public McpCoreFixture {};
 
-TEST_F(McpRegistryDispatchTests, Dispatch_UnknownSystem_ReturnsHint)
+TEST_F(McpRegistryDispatchTests, DispatchQuery_UnknownSystem_ReturnsHint)
 {
     const json res =
-        Dispatch("not_a_registered_system_xyz", "any_op", json::object());
+        DispatchQuery("not_a_registered_system_xyz", "any_op", json::object());
 
     ASSERT_TRUE(res.contains("ok"));
     EXPECT_FALSE(res["ok"].get<bool>());
@@ -20,30 +20,49 @@ TEST_F(McpRegistryDispatchTests, Dispatch_UnknownSystem_ReturnsHint)
     ASSERT_TRUE(res["error"].get<std::string>().find("Unknown system") != std::string::npos);
 }
 
-TEST_F(McpRegistryDispatchTests, Dispatch_UnknownOperation_ReturnsHint)
+TEST_F(McpRegistryDispatchTests, DispatchQuery_UnknownQuery_ReturnsHint)
 {
-    const json res = Dispatch("meta", "nonexistent_operation_xyz", json::object());
+    const json res = DispatchQuery("meta", "nonexistent_query_xyz", json::object());
 
     ASSERT_TRUE(res.contains("ok"));
     EXPECT_FALSE(res["ok"].get<bool>());
     ASSERT_TRUE(res.contains("hint"));
 }
 
-TEST_F(McpRegistryDispatchTests, HasOperation_KnownVersusUnknown)
+TEST_F(McpRegistryDispatchTests, DispatchCommand_UnknownCommand_ReturnsHint)
 {
-    auto* reg = m_core->GetMcpRegistry();
-    ASSERT_NE(reg, nullptr);
+    const json res = DispatchCommand("scene", "nonexistent_command_xyz", json::object());
 
-    EXPECT_TRUE(reg->HasOperation("meta", "list_operations"));
-    EXPECT_FALSE(reg->HasOperation("meta", "nonexistent_operation_xyz"));
-    EXPECT_FALSE(reg->HasOperation("not_a_system", "anything"));
+    ASSERT_TRUE(res.contains("ok"));
+    EXPECT_FALSE(res["ok"].get<bool>());
+    ASSERT_TRUE(res.contains("hint"));
 }
 
-TEST_F(McpRegistryDispatchTests, GetOperationNames_UnknownSystem_ReturnsEmpty)
+TEST_F(McpRegistryDispatchTests, HasQuery_KnownVersusUnknown)
 {
     auto* reg = m_core->GetMcpRegistry();
     ASSERT_NE(reg, nullptr);
 
-    const auto names = reg->GetOperationNames("not_a_registered_system_xyz");
-    EXPECT_TRUE(names.empty());
+    EXPECT_TRUE(reg->HasQuery("meta", "list_operations"));
+    EXPECT_FALSE(reg->HasQuery("meta", "nonexistent_query_xyz"));
+    EXPECT_FALSE(reg->HasQuery("not_a_system", "anything"));
+}
+
+TEST_F(McpRegistryDispatchTests, HasCommand_KnownVersusUnknown)
+{
+    auto* reg = m_core->GetMcpRegistry();
+    ASSERT_NE(reg, nullptr);
+
+    EXPECT_TRUE(reg->HasCommand("scene", "CreateGameObject"));
+    EXPECT_FALSE(reg->HasCommand("scene", "nonexistent_command_xyz"));
+    EXPECT_FALSE(reg->HasCommand("not_a_system", "anything"));
+}
+
+TEST_F(McpRegistryDispatchTests, GetQueryNames_UnknownSystem_ReturnsEmpty)
+{
+    auto* reg = m_core->GetMcpRegistry();
+    ASSERT_NE(reg, nullptr);
+
+    EXPECT_TRUE(reg->GetQueryNames("not_a_registered_system_xyz").empty());
+    EXPECT_TRUE(reg->GetCommandNames("not_a_registered_system_xyz").empty());
 }

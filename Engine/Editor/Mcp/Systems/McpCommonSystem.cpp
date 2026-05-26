@@ -26,11 +26,11 @@ static nlohmann::json EnqueueCommand(EditorCore& core, std::string_view system, 
 
 void McpCommonSystem::RegisterTools(McpRegistry& registry)
 {
-    registry.RegisterOperation("common", "RenameObject",
+    registry.RegisterCommand("common", "RenameObject",
         [this](EditorCore& c, const nlohmann::json& p) { return CommandRenameObject(c, p); });
-    registry.RegisterOperation("common", "SetProperty",
+    registry.RegisterCommand("common", "SetProperty",
         [this](EditorCore& c, const nlohmann::json& p) { return CommandSetProperty(c, p); });
-    registry.RegisterOperation("common", "SaveProject",
+    registry.RegisterCommand("common", "SaveProject",
         [this](EditorCore& c, const nlohmann::json& p) { return CommandSaveProject(c, p); });
 }
 

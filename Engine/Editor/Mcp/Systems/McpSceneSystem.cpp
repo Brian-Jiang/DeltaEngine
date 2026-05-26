@@ -163,36 +163,36 @@ static nlohmann::json EnqueueCommand(EditorCore& core, std::string_view system, 
 
 void McpSceneSystem::RegisterTools(McpRegistry& registry)
 {
-    registry.RegisterOperation("scene", "game_objects",
+    registry.RegisterQuery("scene", "game_objects",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryGameObjects(c, p); });
-    registry.RegisterOperation("scene", "game_object",
+    registry.RegisterQuery("scene", "game_object",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryGameObject(c, p); });
-    registry.RegisterOperation("scene", "hierarchy",
+    registry.RegisterQuery("scene", "hierarchy",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryHierarchy(c, p); });
-    registry.RegisterOperation("scene", "component",
+    registry.RegisterQuery("scene", "component",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryComponent(c, p); });
-    registry.RegisterOperation("scene", "components_on_object",
+    registry.RegisterQuery("scene", "components_on_object",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryComponentsOnObject(c, p); });
-    registry.RegisterOperation("scene", "find_by_property",
+    registry.RegisterQuery("scene", "find_by_property",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryFindByProperty(c, p); });
 
-    registry.RegisterOperation("scene", "CreateGameObject",
+    registry.RegisterCommand("scene", "CreateGameObject",
         [this](EditorCore& c, const nlohmann::json& p) { return CommandCreateGameObject(c, p); });
-    registry.RegisterOperation("scene", "DeleteGameObject",
+    registry.RegisterCommand("scene", "DeleteGameObject",
         [this](EditorCore& c, const nlohmann::json& p) { return CommandDeleteGameObject(c, p); });
-    registry.RegisterOperation("scene", "ReparentSceneComponent",
+    registry.RegisterCommand("scene", "ReparentSceneComponent",
         [this](EditorCore& c, const nlohmann::json& p) { return CommandReparentSceneComponent(c, p); });
-    registry.RegisterOperation("scene", "CreateComponent",
+    registry.RegisterCommand("scene", "CreateComponent",
         [this](EditorCore& c, const nlohmann::json& p) { return CommandCreateComponent(c, p); });
-    registry.RegisterOperation("scene", "DeleteComponent",
+    registry.RegisterCommand("scene", "DeleteComponent",
         [this](EditorCore& c, const nlohmann::json& p) { return CommandDeleteComponent(c, p); });
-    registry.RegisterOperation("scene", "SetPosition",
+    registry.RegisterCommand("scene", "SetPosition",
         [this](EditorCore& c, const nlohmann::json& p) { return CommandSetPosition(c, p); });
-    registry.RegisterOperation("scene", "SetRotation",
+    registry.RegisterCommand("scene", "SetRotation",
         [this](EditorCore& c, const nlohmann::json& p) { return CommandSetRotation(c, p); });
-    registry.RegisterOperation("scene", "SetScale",
+    registry.RegisterCommand("scene", "SetScale",
         [this](EditorCore& c, const nlohmann::json& p) { return CommandSetScale(c, p); });
-    registry.RegisterOperation("scene", "LoadScene",
+    registry.RegisterCommand("scene", "LoadScene",
         [this](EditorCore& c, const nlohmann::json& p) { return CommandLoadScene(c, p); });
 }
 

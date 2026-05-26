@@ -33,53 +33,53 @@ def _list_operations() -> dict:
     index = {}
     for name, schema in _SCHEMAS["systems"].items():
         index[name] = {
-            "operations": list(schema.get("operations", {}).keys()),
+            "queries":  list(schema.get("queries",  {}).keys()),
             "commands": list(schema.get("commands", {}).keys()),
         }
     return {"ok": True, "systems": index}
 
 
 def _describe_operations(requested: list[dict]) -> dict:
-    ops_result: dict = {}
-    cmds_result: dict = {}
+    queries_result: dict = {}
+    commands_result: dict = {}
     errors: list[str] = []
     for entry in requested:
         sys_name = entry.get("system", "")
+        sys_schema = _SCHEMAS["systems"].get(sys_name) if sys_name else None
         if "command" in entry:
             cmd_name = entry["command"]
-            key = f"{sys_name}/{cmd_name}" if sys_name else cmd_name
-            sys_schema = _SCHEMAS["systems"].get(sys_name) if sys_name else None
+            key = f"{sys_name}/{cmd_name}"
             schema = sys_schema.get("commands", {}).get(cmd_name) if sys_schema else None
             if schema is not None:
-                cmds_result[key] = schema
+                commands_result[key] = schema
             else:
                 errors.append(f"Unknown command: {key}")
-        elif "operation" in entry:
-            op_name = entry["operation"]
-            key = f"{sys_name}/{op_name}"
-            sys_schema = _SCHEMAS["systems"].get(sys_name)
-            if sys_schema and op_name in sys_schema.get("operations", {}):
-                ops_result[key] = sys_schema["operations"][op_name]
+        elif "query" in entry:
+            q_name = entry["query"]
+            key = f"{sys_name}/{q_name}"
+            schema = sys_schema.get("queries", {}).get(q_name) if sys_schema else None
+            if schema is not None:
+                queries_result[key] = schema
             else:
-                errors.append(f"Unknown operation: {key}")
-    result: dict = {"ok": True, "operations": ops_result, "commands": cmds_result}
+                errors.append(f"Unknown query: {key}")
+    result: dict = {"ok": True, "queries": queries_result, "commands": commands_result}
     if errors:
         result["warnings"] = errors
     return result
 
 
-_LOCAL_META_OPS = {"list_operations", "describe_operations",
-                   "capabilities", "active_systems"}
+_LOCAL_META_QUERIES = {"list_operations", "describe_operations",
+                       "capabilities", "active_systems"}
 
 
 def _handle_local_meta(payload: dict) -> dict:
-    op = payload.get("operation")
+    q = payload.get("query")
     params = payload.get("params", {})
-    if op == "list_operations":
+    if q == "list_operations":
         return _list_operations()
-    if op == "describe_operations":
-        return _describe_operations(params.get("operations", []))
-    if op == "capabilities":
+    if q == "describe_operations":
+        return _describe_operations(params.get("targets", []))
+    if q == "capabilities":
         sf = params.get("system_filter", "")
         if sf:
             sys_schema = _SCHEMAS["systems"].get(sf)
@@ -88,7 +88,7 @@ def _handle_local_meta(payload: dict) -> dict:
                 "systems": {sf: sys_schema} if sys_schema else {},
             }
         return {"ok": True, **_SCHEMAS}
-    if op == "active_systems":
+    if q == "active_systems":
         stub = {"animation", "timeline", "cloth", "physics"}
         all_systems = list(_SCHEMAS["systems"].keys())
         return {
@@ -97,7 +97,7 @@ def _handle_local_meta(payload: dict) -> dict:
             "stub_only": [s for s in all_systems if s in stub],
             "note": "stub_only systems return not-yet-implemented from C++",
         }
-    return {"ok": False, "error": f"Unknown meta operation: {op}"}
+    return {"ok": False, "error": f"Unknown meta query: {q}"}
 
 
 mcp_server = FastMCP("DeltaEditor")
@@ -112,7 +112,7 @@ def _send_command(payload: dict) -> dict:
     if (
         payload.get("type") == "query"
         and payload.get("system") == "meta"
-        and payload.get("operation") in _LOCAL_META_OPS
+        and payload.get("query") in _LOCAL_META_QUERIES
     ):
         return _handle_local_meta(payload)
 
@@ -154,81 +154,92 @@ def _send_command(payload: dict) -> dict:
 @mcp_server.tool()
 def list_operations() -> dict:
     """
-    Returns a lightweight index of all available systems, their query
-    operations, and their commands.
+    Returns a lightweight index of all available systems, their queries,
+    and their commands.
 
     Call this first to discover what the editor exposes. The response has:
       "systems": {
         "<system>": {
-          "operations": ["<operation>", ...],
-          "commands":   ["<command>", ...]
+          "queries":  ["<query>",   ...],
+          "commands": ["<command>", ...]
         },
         ...
       }
 
     Use describe_operations to get full parameter schemas before calling
     execute_batch.
+
+    Terminology:
+      - query:     read-only operation; never mutates project state
+      - command:   mutates project state (may also return data)
+      - operation: umbrella term covering both queries and commands
     """
     return _list_operations()
 
 
 @mcp_server.tool()
-def describe_operations(operations: list[dict]) -> dict:
+def describe_operations(targets: list[dict]) -> dict:
     """
-    Returns full parameter schemas for specific operations or commands.
+    Returns full parameter schemas for specific queries or commands.
 
-    Each entry in `operations` is one of:
-      {"system": "<system>", "operation": "<op>"}      -- for query operations
-      {"system": "<system>", "command": "<command>"}   -- for commands
+    Each entry in `targets` is one of:
+      {"system": "<system>", "query":   "<q>"}    -- for query operations
+      {"system": "<system>", "command": "<cmd>"}  -- for commands
 
     Example:
       [
-        {"system": "scene", "operation": "game_objects"},
+        {"system": "scene", "query":   "game_objects"},
         {"system": "scene", "command": "CreateGameObject"}
       ]
 
     The response contains:
-      "operations": { "<system>/<op>": { description, params }, ... }
-      "commands":   { "<system>/<command>": { description, params, returns }, ... }
+      "queries":  { "<system>/<query>":   { description, params }, ... }
+      "commands": { "<system>/<command>": { description, params, returns }, ... }
     """
-    return _describe_operations(operations)
+    return _describe_operations(targets)
 
 
 @mcp_server.tool()
 def execute_batch(operations: list[dict]) -> dict:
     """
-    Execute one or more operations sequentially and return all results.
+    Execute one or more queries and/or commands sequentially and return all
+    results.
 
-    Each operation is a dict with a "type" field:
+    Each entry is a dict with a "type" field:
 
-    QUERY — read state from the editor:
+    QUERY — read state from the editor (no mutation):
       {
         "type": "query",
         "system": "<system>",
-        "operation": "<op>",
+        "query":  "<q>",
         "params": { ... }
       }
       Example:
-        {"type":"query","system":"scene","operation":"game_objects","params":{}}
+        {"type":"query","system":"scene","query":"game_objects","params":{}}
 
     COMMAND — mutate scene state (each command is its own undo entry):
       {
         "type": "command",
         "system": "<system>",
-        "command": "<command>",
+        "command": "<cmd>",
         "params": { ... }
       }
       Example:
         {"type":"command","system":"scene","command":"CreateGameObject","params":{"name":"Sun"}}
 
+    Terminology:
+      - query     = read-only operation
+      - command   = mutating operation
+      - operation = umbrella term for either
+
     Workflow:
-      1. Call list_operations to discover systems, operations, and commands.
+      1. Call list_operations to discover systems, queries, and commands.
       2. Call describe_operations to get required params for what you need.
       3. Query scene state to obtain objectIds if you need to target existing objects.
       4. Call execute_batch with your queries and/or commands.
 
     Returns:
-      { "ok": <true if all succeeded>, "results": [ <one result per operation> ] }
+      { "ok": <true if all succeeded>, "results": [ <one result per entry> ] }
     """
     results = []
     for op in operations:

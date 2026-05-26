@@ -235,11 +235,17 @@ Commands serialize to/from JSON, enabling undo-stack persistence and replay acro
 
 DeltaEngine ships a full MCP bridge that lets AI agents (Claude Code, etc.) query and manipulate the live editor over a local TCP socket.
 
+**Terminology:** the MCP stack uses three terms consistently:
+- **query** — read-only operation; never mutates project state
+- **command** — mutating operation (may also return data); each command is its own undo entry where `undoable: true`
+- **operation** — umbrella term covering both queries and commands
+
 **C++ side (`Engine/Editor/Mcp/` + `Engine/Editor/McpSocketServer.h`):**
 
-- `McpSocketServer` — async TCP server (Asio); listens on port 57340 by default; dispatches newline-delimited JSON to a command handler or query handler.
+- `McpSocketServer` — async TCP server (Asio); listens on port 57340 by default; dispatches newline-delimited JSON to the router.
 - `IMcpSystem` — interface for a named system that registers tools into `McpRegistry`.
-- `McpQueryRouter` — routes incoming JSON `{ "system", "operation"/"command", "params" }` to the correct registered handler.
+- `McpQueryRouter` — routes incoming JSON envelopes. Queries: `{ "type": "query", "system", "query", "params" }`. Commands: `{ "type": "command", "system", "command", "params" }`.
+- `McpRegistry` — holds separate query and command maps. `RegisterQuery` / `RegisterCommand` register handlers; `DispatchQuery` / `DispatchCommand` invoke them; `HasQuery`, `HasCommand`, `GetQueryNames`, `GetCommandNames` for introspection.
 - **Systems** (`Engine/Editor/Mcp/Systems/`): `McpSceneSystem`, `McpAssetsSystem`, `McpReflectionSystem`, `McpSelectionSystem`, `McpUndoSystem`, `McpViewportSystem`, `McpProjectSystem`, `McpMetaSystem`, `McpCommonSystem`, `McpLightsSystem`.
 - **Transform commands** in `McpSceneSystem` are per-channel: `SetPosition`, `SetRotation`, `SetScale`. Each accepts an optional `duration_seconds` for tweened animation; duration 0 (default) applies immediately. There is no bulk `SetTransform` command.
 - **Light intensity animation** in `McpLightsSystem` uses `SetIntensity` with the same `duration_seconds` / `easing` pattern.
@@ -248,13 +254,13 @@ DeltaEngine ships a full MCP bridge that lets AI agents (Claude Code, etc.) quer
 **Python side (`Tools/DeltaMCP/`):**
 
 - `delta_mcp_server.py` — FastMCP server. Exposes three MCP tools:
-  - `list_operations` — returns all systems with their query operations and commands.
-  - `describe_operations` — returns parameter schemas for requested operations/commands.
-  - `execute_batch` — executes a list of `{ type: "query"|"command", system, operation/command, params }` entries sequentially.
-- Schema JSON files live in `Tools/DeltaMCP/Schemas/` (one per system: `scene.json`, `assets.json`, `reflection.json`, etc.).
+  - `list_operations` — returns `{ systems: { "<system>": { queries: [...], commands: [...] } } }`.
+  - `describe_operations` — takes `targets: [{system, query} | {system, command}, ...]` and returns `{ queries: {...}, commands: {...} }` with full param schemas.
+  - `execute_batch` — executes a list of entries sequentially. Each entry is either a query envelope `{type:"query", system, query, params}` or a command envelope `{type:"command", system, command, params}`.
+- Schema JSON files live in `Tools/DeltaMCP/Schemas/` (one per system). Each file has `"queries": {...}` and `"commands": {...}` top-level keys.
 - MCP tests are in `Engine/Tests/Editor/Mcp/` (one file per system) using `McpCoreFixture`.
 
-**Workflow for AI callers:** `list_operations` → `describe_operations` → query scene state for IDs → `execute_batch` with commands.
+**Workflow for AI callers:** `list_operations` → `describe_operations` → run queries for IDs → `execute_batch` with commands.
 
 ---
 

@@ -52,29 +52,29 @@ std::string McpQueryRouter::Route(const std::string& rawJson) const
             }
 
             return m_registry
-                .Dispatch(system, command, m_core, params)
+                .DispatchCommand(system, command, m_core, params)
                 .dump();
         }
 
-        std::string operation = q.value("operation", q.value("query", ""));
+        std::string query = q.value("query", "");
 
         DLOG(LogMcpRouter, ELogLevel::Log,
-             "Received MCP query: system='{}', operation='{}'", system, operation);
+             "Received MCP query: system='{}', query='{}'", system, query);
         DLOG(LogMcpRouter, ELogLevel::Verbose,
              "Routing MCP query: params={}", params.dump());
 
-        if (system.empty() || operation.empty())
+        if (system.empty() || query.empty())
         {
             return nlohmann::json{
                 {"ok", false},
-                {"error", "Query must include 'system' and 'operation' fields"},
+                {"error", "Query must include 'system' and 'query' fields"},
                 {"hint", "Call editor('meta','list_operations') to see all "
-                         "available systems and operations"}
+                         "available systems, queries, and commands"}
             }.dump();
         }
 
         return m_registry
-            .Dispatch(system, operation, m_core, params)
+            .DispatchQuery(system, query, m_core, params)
             .dump();
     }
     catch (const nlohmann::json::parse_error& e)

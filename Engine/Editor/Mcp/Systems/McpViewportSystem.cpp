@@ -127,13 +127,13 @@ static void MergeCameraParams(EditorViewportCamera& cam, const nlohmann::json& p
 
 void McpViewportSystem::RegisterTools(McpRegistry& registry)
 {
-    registry.RegisterOperation("viewport", "camera",
+    registry.RegisterQuery("viewport", "camera",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryCamera(c, p); });
-    registry.RegisterOperation("viewport", "render_settings",
+    registry.RegisterQuery("viewport", "render_settings",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryRenderSettings(c, p); });
-    registry.RegisterOperation("viewport", "visible_objects",
+    registry.RegisterQuery("viewport", "visible_objects",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryVisibleObjects(c, p); });
-    registry.RegisterOperation("viewport", "SetViewportCamera",
+    registry.RegisterCommand("viewport", "SetViewportCamera",
         [this](EditorCore& c, const nlohmann::json& p) { return CommandSetViewportCamera(c, p); });
 }
 

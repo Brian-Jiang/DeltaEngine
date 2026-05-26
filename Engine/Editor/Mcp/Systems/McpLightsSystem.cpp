@@ -9,7 +9,7 @@ using namespace DeltaEngine;
 
 void McpLightsSystem::RegisterTools(McpRegistry& registry)
 {
-    registry.RegisterOperation("lights", "SetIntensity",
+    registry.RegisterCommand("lights", "SetIntensity",
         [this](EditorCore& c, const nlohmann::json& p) { return CommandSetIntensity(c, p); });
 }
 

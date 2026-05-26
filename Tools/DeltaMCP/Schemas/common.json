@@ -1,7 +1,7 @@
 {
   "system": "common",
   "description": "Cross-cutting editor commands: rename, property edits, save",
-  "operations": {},
+  "queries": {},
   "commands": {
     "RenameObject": {
       "description": "Rename a GameObject or component",

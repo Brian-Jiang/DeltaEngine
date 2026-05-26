@@ -1,7 +1,7 @@
 {
   "system": "reflection",
   "description": "Runtime type information — classes, properties, and inheritance",
-  "operations": {
+  "queries": {
     "classes": {
       "description": "List all registered reflected classes",
       "params": {

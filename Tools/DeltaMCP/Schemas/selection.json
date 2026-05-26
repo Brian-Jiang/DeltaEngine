@@ -1,7 +1,7 @@
 {
   "system": "selection",
   "description": "Current editor selection state",
-  "operations": {
+  "queries": {
     "current": {
       "description": "Currently selected object IDs and their classes",
       "params": {}

@@ -19,7 +19,28 @@ protected:
                             const std::string& op,
                             const nlohmann::json& params = nlohmann::json::object()) const
     {
-        return m_core->GetMcpRegistry()->Dispatch(system, op, *m_core, params);
+        auto* reg = m_core->GetMcpRegistry();
+        if (reg->HasQuery(system, op))
+            return reg->DispatchQuery(system, op, *m_core, params);
+        if (reg->HasCommand(system, op))
+            return reg->DispatchCommand(system, op, *m_core, params);
+        // Match prior behaviour: dispatch as a query so callers get the
+        // unknown-system / unknown-name error envelope.
+        return reg->DispatchQuery(system, op, *m_core, params);
+    }
+
+    nlohmann::json DispatchQuery(const std::string& system,
+                                  const std::string& query,
+                                  const nlohmann::json& params = nlohmann::json::object()) const
+    {
+        return m_core->GetMcpRegistry()->DispatchQuery(system, query, *m_core, params);
+    }
+
+    nlohmann::json DispatchCommand(const std::string& system,
+                                    const std::string& command,
+                                    const nlohmann::json& params = nlohmann::json::object()) const
+    {
+        return m_core->GetMcpRegistry()->DispatchCommand(system, command, *m_core, params);
     }
 
     // Creates a GO via the legacy command path and returns its objectId.

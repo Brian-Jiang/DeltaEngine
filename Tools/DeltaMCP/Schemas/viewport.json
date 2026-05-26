@@ -1,7 +1,7 @@
 {
   "system": "viewport",
   "description": "Editor viewport camera, rendering settings, and picking",
-  "operations": {
+  "queries": {
     "camera": {
       "description": "Current viewport camera position, rotation, and projection settings",
       "params": {}

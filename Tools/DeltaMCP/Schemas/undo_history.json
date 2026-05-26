@@ -1,7 +1,7 @@
 {
   "system": "undo_history",
   "description": "Editor undo/redo stack inspection",
-  "operations": {
+  "queries": {
     "stack": {
       "description": "Current undo and redo stack entries with command types and descriptions",
       "params": {

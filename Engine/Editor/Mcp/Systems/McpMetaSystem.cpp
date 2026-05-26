@@ -1,6 +1,5 @@
 #include "McpMetaSystem.h"
 
-#include "Commands/EditorCommandRegistry.h"
 #include "Editor/EditorCore.h"
 #include "Mcp/McpRegistry.h"
 #include "Runtime/IO/IOManager.h"
@@ -14,11 +13,11 @@ DEFINE_LOG_CATEGORY(DeltaEngine::LogMcpMeta);
 
 void McpMetaSystem::RegisterTools(McpRegistry& registry)
 {
-    registry.RegisterOperation("meta", "list_operations",
+    registry.RegisterQuery("meta", "list_operations",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryListOperations(c, p); });
-    registry.RegisterOperation("meta", "describe_operations",
+    registry.RegisterQuery("meta", "describe_operations",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryDescribeOperations(c, p); });
-    registry.RegisterOperation("meta", "capabilities",
+    registry.RegisterQuery("meta", "capabilities",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryCapabilities(c, p); });
 }
 
@@ -29,7 +28,6 @@ void McpMetaSystem::EnsureSchemasLoaded()
 
     m_schemasLoaded = true;
     m_systemSchemas = nlohmann::json::object();
-    m_commandSchemas = nlohmann::json::object();
 
     namespace fs = std::filesystem;
 
@@ -71,17 +69,11 @@ void McpMetaSystem::EnsureSchemasLoaded()
 
         if (data.contains("system"))
             m_systemSchemas[data["system"].get<std::string>()] = data;
-
-        if (data.contains("commands"))
-        {
-            for (auto& [key, val] : data["commands"].items())
-                m_commandSchemas[key] = val;
-        }
     }
 
     DLOG(LogMcpMeta, ELogLevel::Log,
-         "Loaded MCP schemas: {} systems, {} commands",
-         m_systemSchemas.size(), m_commandSchemas.size());
+         "Loaded MCP schemas: {} systems",
+         m_systemSchemas.size());
 }
 
 nlohmann::json McpMetaSystem::QueryListOperations(EditorCore& c, const nlohmann::json&)
@@ -92,14 +84,16 @@ nlohmann::json McpMetaSystem::QueryListOperations(EditorCore& c, const nlohmann:
 
     nlohmann::json systems = nlohmann::json::object();
     for (auto& sysName : reg->GetSystemNames())
-        systems[sysName] = reg->GetOperationNames(sysName);
-
-    auto commandNames = EditorCommandRegistry::Get().GetCommandNames();
+    {
+        systems[sysName] = {
+            {"queries",  reg->GetQueryNames(sysName)},
+            {"commands", reg->GetCommandNames(sysName)}
+        };
+    }
 
     return {
         {"ok", true},
-        {"systems", systems},
-        {"commands", commandNames}
+        {"systems", systems}
     };
 }
 
@@ -107,44 +101,53 @@ nlohmann::json McpMetaSystem::QueryDescribeOperations(EditorCore&, const nlohman
 {
     EnsureSchemasLoaded();
 
-    nlohmann::json opsResult = nlohmann::json::object();
+    nlohmann::json queriesResult = nlohmann::json::object();
     nlohmann::json cmdsResult = nlohmann::json::object();
     std::vector<std::string> warnings;
 
-    auto requested = params.value("operations", nlohmann::json::array());
+    auto requested = params.value("targets", nlohmann::json::array());
 
     for (auto& entry : requested)
     {
-        if (entry.contains("command"))
-        {
-            std::string name = entry["command"].get<std::string>();
-            if (m_commandSchemas.contains(name))
-                cmdsResult[name] = m_commandSchemas[name];
-            else
-                warnings.push_back("Unknown command: " + name);
-        }
-        else if (entry.contains("system") && entry.contains("operation"))
+        if (entry.contains("system") && entry.contains("command"))
         {
             std::string sys = entry["system"].get<std::string>();
-            std::string op = entry["operation"].get<std::string>();
-            std::string key = sys + "/" + op;
+            std::string cmd = entry["command"].get<std::string>();
+            std::string key = sys + "/" + cmd;
 
             if (m_systemSchemas.contains(sys) &&
-                m_systemSchemas[sys].contains("operations") &&
-                m_systemSchemas[sys]["operations"].contains(op))
+                m_systemSchemas[sys].contains("commands") &&
+                m_systemSchemas[sys]["commands"].contains(cmd))
             {
-                opsResult[key] = m_systemSchemas[sys]["operations"][op];
+                cmdsResult[key] = m_systemSchemas[sys]["commands"][cmd];
             }
             else
             {
-                warnings.push_back("Unknown operation: " + key);
+                warnings.push_back("Unknown command: " + key);
+            }
+        }
+        else if (entry.contains("system") && entry.contains("query"))
+        {
+            std::string sys = entry["system"].get<std::string>();
+            std::string q = entry["query"].get<std::string>();
+            std::string key = sys + "/" + q;
+
+            if (m_systemSchemas.contains(sys) &&
+                m_systemSchemas[sys].contains("queries") &&
+                m_systemSchemas[sys]["queries"].contains(q))
+            {
+                queriesResult[key] = m_systemSchemas[sys]["queries"][q];
+            }
+            else
+            {
+                warnings.push_back("Unknown query: " + key);
             }
         }
     }
 
     nlohmann::json result = {
         {"ok", true},
-        {"operations", opsResult},
+        {"queries", queriesResult},
         {"commands", cmdsResult}
     };
 
@@ -168,14 +171,12 @@ nlohmann::json McpMetaSystem::QueryCapabilities(EditorCore&, const nlohmann::jso
 
         return {
             {"ok", true},
-            {"systems", filtered},
-            {"commands", m_commandSchemas}
+            {"systems", filtered}
         };
     }
 
     return {
         {"ok", true},
-        {"systems", m_systemSchemas},
-        {"commands", m_commandSchemas}
+        {"systems", m_systemSchemas}
     };
 }
