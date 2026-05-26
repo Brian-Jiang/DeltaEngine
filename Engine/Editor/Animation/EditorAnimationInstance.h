@@ -49,13 +49,14 @@ public:
     {
         m_elapsed += dt;
         const float t = (m_duration > 0.0f) ? m_elapsed / m_duration : 1.0f;
-        const float clamped = (t < 1.0f) ? t : 1.0f;
-        const float value = m_fromValue + CubicEaseOut(clamped) * (m_targetValue - m_fromValue);
-        m_setter(value);
         if (t >= 1.0f)
         {
-            m_setter(m_targetValue);  // snap to exact final value
+            m_setter(m_targetValue);
             m_complete = true;
+        }
+        else
+        {
+            m_setter(m_fromValue + CubicEaseOut(t) * (m_targetValue - m_fromValue));
         }
     }
 };

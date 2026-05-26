@@ -1,11 +1,11 @@
-#include "McpLightsSystem.h"
+#include "Editor/Mcp/Systems/McpLightsSystem.h"
 
-#include "EditorCore.h"
-#include "Animation/EditorAnimationManager.h"
-#include "Commands/EditorCommand_SetProperty.h"
-#include "Commands/EditorCommandContext.h"
-#include "Commands/EditorCommandManager.h"
-#include "Mcp/McpRegistry.h"
+#include "Editor/EditorCore.h"
+#include "Editor/Animation/EditorAnimationManager.h"
+#include "Editor/Commands/EditorCommand_SetProperty.h"
+#include "Editor/Commands/EditorCommandContext.h"
+#include "Editor/Commands/EditorCommandManager.h"
+#include "Editor/Mcp/McpRegistry.h"
 
 #include "Runtime/Core/UUID.h"
 #include "Runtime/Graphics/Light/LightComponent.h"
