@@ -240,7 +240,10 @@ DeltaEngine ships a full MCP bridge that lets AI agents (Claude Code, etc.) quer
 - `McpSocketServer` — async TCP server (Asio); listens on port 57340 by default; dispatches newline-delimited JSON to a command handler or query handler.
 - `IMcpSystem` — interface for a named system that registers tools into `McpRegistry`.
 - `McpQueryRouter` — routes incoming JSON `{ "system", "operation"/"command", "params" }` to the correct registered handler.
-- **Systems** (`Engine/Editor/Mcp/Systems/`): `McpSceneSystem`, `McpAssetsSystem`, `McpReflectionSystem`, `McpSelectionSystem`, `McpUndoSystem`, `McpViewportSystem`, `McpProjectSystem`, `McpMetaSystem`, `McpCommonSystem`.
+- **Systems** (`Engine/Editor/Mcp/Systems/`): `McpSceneSystem`, `McpAssetsSystem`, `McpReflectionSystem`, `McpSelectionSystem`, `McpUndoSystem`, `McpViewportSystem`, `McpProjectSystem`, `McpMetaSystem`, `McpCommonSystem`, `McpLightsSystem`.
+- **Transform commands** in `McpSceneSystem` are per-channel: `SetPosition`, `SetRotation`, `SetScale`. Each accepts an optional `duration_seconds` for tweened animation; duration 0 (default) applies immediately. There is no bulk `SetTransform` command.
+- **Light intensity animation** in `McpLightsSystem` uses `SetIntensity` with the same `duration_seconds` / `easing` pattern.
+- **`EditorAnimationManager`** (`Engine/Editor/Animation/`) is owned by `EditorCore` and ticked between `EngineMain::Tick()` and `RenderFrame()`. It manages in-flight tween instances (`EditorAnimationInstance`) and per-object transform sessions (`TransformAnimationSession`). On completion it commits a single `EditorCommand_SetProperty` for `m_localTransform` (transform channels) or the scalar property (intensity / other float channels). Not ticked in headless mode; the auxiliary `StartTransformChannelAnimation` handler applies the target value immediately instead.
 
 **Python side (`Tools/DeltaMCP/`):**
 

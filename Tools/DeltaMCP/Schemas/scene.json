@@ -167,37 +167,6 @@
         }
       }
     },
-    "SetTransform": {
-      "description": "Set position/rotation/scale in one command",
-      "undoable": true,
-      "params": {
-        "objectId": {
-          "type": "string",
-          "required": true
-        },
-        "position": {
-          "type": "array",
-          "optional": true,
-          "description": "[x,y,z]"
-        },
-        "rotation": {
-          "type": "array",
-          "optional": true,
-          "description": "[x,y,z,w]"
-        },
-        "scale": {
-          "type": "array",
-          "optional": true,
-          "description": "[x,y,z]"
-        },
-        "space": {
-          "type": "string",
-          "optional": true,
-          "options": [ "local", "world" ],
-          "default": "world"
-        }
-      }
-    },
     "SetPosition": {
       "description": "Animate or immediately set a SceneComponent's position",
       "undoable": true,

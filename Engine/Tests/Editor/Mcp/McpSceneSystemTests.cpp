@@ -291,37 +291,6 @@ TEST_F(McpSceneSystemTests, CommandReparentSceneComponent_ChangesParent)
     EXPECT_TRUE(json::parse(responses[0])["ok"].get<bool>());
 }
 
-TEST_F(McpSceneSystemTests, CommandSetTransform_SetsPosition)
-{
-    const std::string goId = CreateLegacyGameObject();
-    ASSERT_FALSE(goId.empty());
-
-    json cdata;
-    cdata["sceneAssetId"] = GetActiveSceneAssetId().ToString();
-    cdata["gameObjectId"] = goId;
-    cdata["className"]    = "PointLight";
-    json cenv;
-    cenv["type"] = "EditorCommand_CreateComponent";
-    cenv["data"] = cdata;
-    m_core->EnqueueSerializedCommand(cenv.dump());
-    std::vector<std::string> cr;
-    m_core->DrainCommandQueue(cr);
-    ASSERT_EQ(cr.size(), 1u);
-    const std::string plId = json::parse(cr[0]).value("objectId", std::string{});
-    ASSERT_FALSE(plId.empty());
-
-    auto dispatchRes = Dispatch("scene", "SetTransform",
-                                {{"objectId", plId},
-                                 {"position", json::array({1.0f, 2.0f, 3.0f})},
-                                 {"scale",    json::array({1.0f, 1.0f, 1.0f})}});
-    EXPECT_TRUE(dispatchRes["ok"].get<bool>());
-
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-    ASSERT_EQ(responses.size(), 1u);
-    EXPECT_TRUE(json::parse(responses[0])["ok"].get<bool>());
-}
-
 TEST_F(McpSceneSystemTests, CommandSetPosition_Immediate_SetsLocalPosition)
 {
     const std::string goId = CreateLegacyGameObject();
