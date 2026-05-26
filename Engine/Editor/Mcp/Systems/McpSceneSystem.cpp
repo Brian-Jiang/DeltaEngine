@@ -188,6 +188,12 @@ void McpSceneSystem::RegisterTools(McpRegistry& registry)
         [this](EditorCore& c, const nlohmann::json& p) { return CommandDeleteComponent(c, p); });
     registry.RegisterOperation("scene", "SetTransform",
         [this](EditorCore& c, const nlohmann::json& p) { return CommandSetTransform(c, p); });
+    registry.RegisterOperation("scene", "SetPosition",
+        [this](EditorCore& c, const nlohmann::json& p) { return CommandSetPosition(c, p); });
+    registry.RegisterOperation("scene", "SetRotation",
+        [this](EditorCore& c, const nlohmann::json& p) { return CommandSetRotation(c, p); });
+    registry.RegisterOperation("scene", "SetScale",
+        [this](EditorCore& c, const nlohmann::json& p) { return CommandSetScale(c, p); });
     registry.RegisterOperation("scene", "LoadScene",
         [this](EditorCore& c, const nlohmann::json& p) { return CommandLoadScene(c, p); });
 }
@@ -682,6 +688,223 @@ nlohmann::json McpSceneSystem::CommandSetTransform(EditorCore& core, const nlohm
     data["propertyName"] = "m_localTransform";
     data["valueAfter"] = std::move(matArr);
     return EnqueueCommand(core, "scene", "EditorCommand_SetProperty", std::move(data));
+}
+
+// ─── Shared helper: resolve a SceneComponent from an objectId string ────────
+
+static SceneComponent* ResolveSceneComponent(EditorCore& core, const std::string& objectIdStr)
+{
+    DObject* obj = FindObjectById(core, objectIdStr);
+    if (!obj)
+        return nullptr;
+    if (auto* sc = dynamic_cast<SceneComponent*>(obj))
+        return sc;
+    if (auto* go = dynamic_cast<GameObject*>(obj))
+        return go->GetRootSceneComponent();
+    return nullptr;
+}
+
+// Serialise a local-space XMMATRIX to a 16-element JSON array.
+static nlohmann::json MatrixToJson(DirectX::XMMATRIX mat)
+{
+    DirectX::XMFLOAT4X4 f;
+    DirectX::XMStoreFloat4x4(&f, mat);
+    nlohmann::json arr = nlohmann::json::array();
+    for (int r = 0; r < 4; ++r)
+        for (int c = 0; c < 4; ++c)
+            arr.push_back(f.m[r][c]);
+    return arr;
+}
+
+// ─── Command: SetPosition ────────────────────────────────────────────────────
+
+nlohmann::json McpSceneSystem::CommandSetPosition(EditorCore& core, const nlohmann::json& params)
+{
+    using namespace DirectX;
+    using namespace DirectX::SimpleMath;
+
+    if (!params.contains("objectId"))
+        return MakeError("missing required param: objectId");
+    if (!params.contains("value") || !params["value"].is_array() || params["value"].size() < 3)
+        return MakeError("required param 'value' must be [x,y,z]");
+
+    SceneComponent* sc = ResolveSceneComponent(core, params["objectId"].get<std::string>());
+    if (!sc)
+        return MakeError("object has no SceneComponent: " + params["objectId"].get<std::string>());
+
+    const auto& v     = params["value"];
+    const Vector3 target(v[0].get<float>(), v[1].get<float>(), v[2].get<float>());
+    const std::string space = params.value("space", "local");
+    const bool worldSpace   = (space == "world");
+    const float duration    = params.value("duration_seconds", 0.0f);
+
+    auto [scAssetId, scObjectId] = core.GetIdsForObject(sc);
+
+    if (duration <= 0.0f)
+    {
+        // Immediate: reconstruct local transform with new position, then enqueue SetProperty.
+        const Quaternion rot = worldSpace ? sc->GetWorldRotation() : sc->GetLocalRotation();
+        const Vector3    scl = worldSpace ? sc->GetWorldScale()    : sc->GetLocalScale();
+
+        XMMATRIX localMat;
+        if (worldSpace)
+        {
+            const XMMATRIX world =
+                XMMatrixScalingFromVector(scl) * XMMatrixRotationQuaternion(rot) * XMMatrixTranslationFromVector(target);
+            const SceneComponent* parent = sc->GetParent();
+            const XMMATRIX parentWorldInv = parent
+                ? XMMatrixInverse(nullptr, parent->GetWorldTransform())
+                : XMMatrixIdentity();
+            localMat = world * parentWorldInv;
+        }
+        else
+        {
+            localMat =
+                XMMatrixScalingFromVector(scl) * XMMatrixRotationQuaternion(rot) * XMMatrixTranslationFromVector(target);
+        }
+
+        nlohmann::json data;
+        data["objectId"]      = scObjectId.ToString();
+        data["propertyName"]  = "m_localTransform";
+        data["valueAfter"]    = MatrixToJson(localMat);
+        return EnqueueCommand(core, "scene", "EditorCommand_SetProperty", std::move(data));
+    }
+
+    // Animation path — resolved IDs stored in the auxiliary so DrainCommandQueue can act.
+    nlohmann::json envelope;
+    envelope["type"]      = "auxiliary";
+    envelope["name"]      = "StartTransformChannelAnimation";
+    envelope["scAssetId"] = scAssetId.ToString();
+    envelope["scObjectId"]= scObjectId.ToString();
+    envelope["channel"]   = "position";
+    envelope["targetValue"] = params["value"];
+    envelope["space"]     = space;
+    envelope["duration"]  = duration;
+    core.EnqueueSerializedCommand(envelope.dump());
+    return {{"ok", true}, {"queued", true}};
+}
+
+// ─── Command: SetRotation ────────────────────────────────────────────────────
+
+nlohmann::json McpSceneSystem::CommandSetRotation(EditorCore& core, const nlohmann::json& params)
+{
+    using namespace DirectX;
+    using namespace DirectX::SimpleMath;
+
+    if (!params.contains("objectId"))
+        return MakeError("missing required param: objectId");
+    if (!params.contains("value") || !params["value"].is_array())
+        return MakeError("required param 'value' must be [x,y,z,w] or [x,y,z] (euler)");
+
+    SceneComponent* sc = ResolveSceneComponent(core, params["objectId"].get<std::string>());
+    if (!sc)
+        return MakeError("object has no SceneComponent: " + params["objectId"].get<std::string>());
+
+    const auto& vArr = params["value"];
+    Quaternion target;
+    if (vArr.size() == 4)
+        target = Quaternion(vArr[0].get<float>(), vArr[1].get<float>(), vArr[2].get<float>(), vArr[3].get<float>());
+    else if (vArr.size() == 3)
+        target = Quaternion::CreateFromYawPitchRoll(vArr[1].get<float>(), vArr[0].get<float>(), vArr[2].get<float>());
+    else
+        return MakeError("'value' must have 3 or 4 elements");
+
+    const std::string space = params.value("space", "local");
+    const bool worldSpace   = (space == "world");
+    const float duration    = params.value("duration_seconds", 0.0f);
+
+    auto [scAssetId, scObjectId] = core.GetIdsForObject(sc);
+
+    if (duration <= 0.0f)
+    {
+        const Vector3 pos = worldSpace ? sc->GetWorldPosition() : sc->GetLocalPosition();
+        const Vector3 scl = worldSpace ? sc->GetWorldScale()    : sc->GetLocalScale();
+
+        XMMATRIX localMat;
+        if (worldSpace)
+        {
+            const XMMATRIX world =
+                XMMatrixScalingFromVector(scl) * XMMatrixRotationQuaternion(target) * XMMatrixTranslationFromVector(pos);
+            const SceneComponent* parent = sc->GetParent();
+            const XMMATRIX parentWorldInv = parent
+                ? XMMatrixInverse(nullptr, parent->GetWorldTransform())
+                : XMMatrixIdentity();
+            localMat = world * parentWorldInv;
+        }
+        else
+        {
+            localMat =
+                XMMatrixScalingFromVector(scl) * XMMatrixRotationQuaternion(target) * XMMatrixTranslationFromVector(pos);
+        }
+
+        nlohmann::json data;
+        data["objectId"]     = scObjectId.ToString();
+        data["propertyName"] = "m_localTransform";
+        data["valueAfter"]   = MatrixToJson(localMat);
+        return EnqueueCommand(core, "scene", "EditorCommand_SetProperty", std::move(data));
+    }
+
+    nlohmann::json envelope;
+    envelope["type"]       = "auxiliary";
+    envelope["name"]       = "StartTransformChannelAnimation";
+    envelope["scAssetId"]  = scAssetId.ToString();
+    envelope["scObjectId"] = scObjectId.ToString();
+    envelope["channel"]    = "rotation";
+    envelope["targetValue"]= params["value"];
+    envelope["space"]      = space;
+    envelope["duration"]   = duration;
+    core.EnqueueSerializedCommand(envelope.dump());
+    return {{"ok", true}, {"queued", true}};
+}
+
+// ─── Command: SetScale ───────────────────────────────────────────────────────
+
+nlohmann::json McpSceneSystem::CommandSetScale(EditorCore& core, const nlohmann::json& params)
+{
+    using namespace DirectX;
+    using namespace DirectX::SimpleMath;
+
+    if (!params.contains("objectId"))
+        return MakeError("missing required param: objectId");
+    if (!params.contains("value") || !params["value"].is_array() || params["value"].size() < 3)
+        return MakeError("required param 'value' must be [x,y,z]");
+
+    SceneComponent* sc = ResolveSceneComponent(core, params["objectId"].get<std::string>());
+    if (!sc)
+        return MakeError("object has no SceneComponent: " + params["objectId"].get<std::string>());
+
+    const auto& v      = params["value"];
+    const Vector3 target(v[0].get<float>(), v[1].get<float>(), v[2].get<float>());
+    const float duration = params.value("duration_seconds", 0.0f);
+
+    auto [scAssetId, scObjectId] = core.GetIdsForObject(sc);
+
+    if (duration <= 0.0f)
+    {
+        const Vector3    pos = sc->GetLocalPosition();
+        const Quaternion rot = sc->GetLocalRotation();
+
+        const XMMATRIX localMat =
+            XMMatrixScalingFromVector(target) * XMMatrixRotationQuaternion(rot) * XMMatrixTranslationFromVector(pos);
+
+        nlohmann::json data;
+        data["objectId"]     = scObjectId.ToString();
+        data["propertyName"] = "m_localTransform";
+        data["valueAfter"]   = MatrixToJson(localMat);
+        return EnqueueCommand(core, "scene", "EditorCommand_SetProperty", std::move(data));
+    }
+
+    nlohmann::json envelope;
+    envelope["type"]       = "auxiliary";
+    envelope["name"]       = "StartTransformChannelAnimation";
+    envelope["scAssetId"]  = scAssetId.ToString();
+    envelope["scObjectId"] = scObjectId.ToString();
+    envelope["channel"]    = "scale";
+    envelope["targetValue"]= params["value"];
+    envelope["space"]      = "local";
+    envelope["duration"]   = duration;
+    core.EnqueueSerializedCommand(envelope.dump());
+    return {{"ok", true}, {"queued", true}};
 }
 
 // ─── LoadScene ──────────────────────────────────────────────────────────────

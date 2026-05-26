@@ -8,6 +8,7 @@
 #include "Editor/Commands/EditorCommandRegistry.h"
 #include "Editor/Commands/EditorAuxiliarySceneCommands.h"
 #include "Editor/Commands/EditorCommand_SetProperty.h"
+#include "Editor/Commands/PropertyValueIO.h"
 #include "Editor/EditorSelectionState.h"
 #include "Editor/EditorSessionState.h"
 #include "Runtime/Assets/AssetDatabaseLocator.h"
@@ -16,6 +17,9 @@
 #include "Runtime/Assets/PA_DScene.h"
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/DScene.h"
+#include "Runtime/Core/GameObject.h"
+#include "Runtime/Core/SceneComponent.h"
+#include "Runtime/Reflection/DClass.h"
 #include "Runtime/EngineMain.h"
 #include "Runtime/IO/IOManager.h"
 #include "Editor/Mcp/McpQueryRouter.h"
@@ -28,6 +32,9 @@
 #include "Runtime/Core/Skybox.h"
 #include "Runtime/Graphics/PostProcess/PA_PostProcessStack.h"
 #include "Runtime/Core/DMesh.h"
+
+#include <DirectXMath.h>
+#include <SimpleMath.h>
 #include <nlohmann/json.hpp>
 
 #include <cstdio>
@@ -394,6 +401,132 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
                 }
                 outResponses.push_back(
                     nlohmann::json{{"ok", true}, {"commandType", "StartLightAnimation"}}.dump());
+                continue;
+            }
+            if (name == "StartTransformChannelAnimation")
+            {
+                using namespace DirectX;
+                using namespace DirectX::SimpleMath;
+
+                const AssetId  scAssetId  = UUID::FromString(envelope.value("scAssetId",  ""));
+                const ObjectId scObjectId = UUID::FromString(envelope.value("scObjectId", ""));
+                const std::string channel = envelope.value("channel", "");
+                const std::string space   = envelope.value("space",   "local");
+                const float duration      = envelope.value("duration", 1.0f);
+                const bool worldSpace     = (space == "world");
+
+                if (scAssetId.IsNull() || scObjectId.IsNull() || channel.empty())
+                {
+                    outResponses.push_back(
+                        nlohmann::json{{"ok", false}, {"commandType", "StartTransformChannelAnimation"},
+                                       {"error", "Missing scAssetId, scObjectId, or channel"}}.dump());
+                    continue;
+                }
+
+                SceneComponent* sc = ResolveObject<SceneComponent>(scAssetId, scObjectId);
+                if (!sc)
+                {
+                    outResponses.push_back(
+                        nlohmann::json{{"ok", false}, {"commandType", "StartTransformChannelAnimation"},
+                                       {"error", "SceneComponent not found"}}.dump());
+                    continue;
+                }
+
+                DProperty* transformProp = sc->GetClass()->FindPropertyByName("m_localTransform");
+                if (!transformProp)
+                {
+                    outResponses.push_back(
+                        nlohmann::json{{"ok", false}, {"commandType", "StartTransformChannelAnimation"},
+                                       {"error", "m_localTransform property not found"}}.dump());
+                    continue;
+                }
+
+                const nlohmann::json snapshot = PropertyToJson(sc, transformProp);
+                const auto& tval = envelope["targetValue"];
+
+                if (channel == "position")
+                {
+                    const Vector3 from   = worldSpace ? sc->GetWorldPosition() : sc->GetLocalPosition();
+                    const Vector3 target(tval[0].get<float>(), tval[1].get<float>(), tval[2].get<float>());
+
+                    if (m_animationManager)
+                    {
+                        m_animationManager->StartAnimationVec3(
+                            scAssetId, scObjectId, "position", from, target, duration,
+                            worldSpace
+                                ? std::function<void(Vector3)>([sc](Vector3 p) { sc->SetWorldPosition(p); })
+                                : std::function<void(Vector3)>([sc](Vector3 p) { sc->SetLocalPosition(p); }),
+                            snapshot);
+                    }
+                    else
+                    {
+                        if (worldSpace) sc->SetWorldPosition(target); else sc->SetLocalPosition(target);
+                        auto cmd = std::make_unique<EditorCommand_SetProperty>(
+                            scAssetId, scObjectId, "m_localTransform",
+                            snapshot, PropertyToJson(sc, transformProp));
+                        m_commandManager->Execute(std::move(cmd), ctx);
+                    }
+                }
+                else if (channel == "rotation")
+                {
+                    const Quaternion from = worldSpace ? sc->GetWorldRotation() : sc->GetLocalRotation();
+                    Quaternion target;
+                    if (tval.size() == 4)
+                        target = Quaternion(tval[0].get<float>(), tval[1].get<float>(),
+                                            tval[2].get<float>(), tval[3].get<float>());
+                    else
+                        target = Quaternion::CreateFromYawPitchRoll(
+                            tval[1].get<float>(), tval[0].get<float>(), tval[2].get<float>());
+
+                    if (m_animationManager)
+                    {
+                        m_animationManager->StartAnimationQuat(
+                            scAssetId, scObjectId, "rotation", from, target, duration,
+                            worldSpace
+                                ? std::function<void(Quaternion)>([sc](Quaternion q) { sc->SetWorldRotation(q); })
+                                : std::function<void(Quaternion)>([sc](Quaternion q) { sc->SetLocalRotation(q); }),
+                            snapshot);
+                    }
+                    else
+                    {
+                        if (worldSpace) sc->SetWorldRotation(target); else sc->SetLocalRotation(target);
+                        auto cmd = std::make_unique<EditorCommand_SetProperty>(
+                            scAssetId, scObjectId, "m_localTransform",
+                            snapshot, PropertyToJson(sc, transformProp));
+                        m_commandManager->Execute(std::move(cmd), ctx);
+                    }
+                }
+                else if (channel == "scale")
+                {
+                    const Vector3 from   = sc->GetLocalScale();
+                    const Vector3 target(tval[0].get<float>(), tval[1].get<float>(), tval[2].get<float>());
+
+                    if (m_animationManager)
+                    {
+                        m_animationManager->StartAnimationVec3(
+                            scAssetId, scObjectId, "scale", from, target, duration,
+                            [sc](Vector3 s) { sc->SetLocalScale(s); },
+                            snapshot);
+                    }
+                    else
+                    {
+                        sc->SetLocalScale(target);
+                        auto cmd = std::make_unique<EditorCommand_SetProperty>(
+                            scAssetId, scObjectId, "m_localTransform",
+                            snapshot, PropertyToJson(sc, transformProp));
+                        m_commandManager->Execute(std::move(cmd), ctx);
+                    }
+                }
+                else
+                {
+                    outResponses.push_back(
+                        nlohmann::json{{"ok", false}, {"commandType", "StartTransformChannelAnimation"},
+                                       {"error", "Unknown channel: " + channel}}.dump());
+                    continue;
+                }
+
+                outResponses.push_back(
+                    nlohmann::json{{"ok", true}, {"commandType", "StartTransformChannelAnimation"}}.dump());
                 continue;
             }
             outResponses.push_back(

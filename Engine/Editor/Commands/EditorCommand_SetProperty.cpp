@@ -72,7 +72,12 @@ bool EditorCommand_SetProperty::Execute(EditorCommandContext& ctx)
     // Drop any in-flight animation targeting this property. The incoming SetProperty
     // value wins; the animation is silently discarded (no revert, no undo entry).
     if (auto* animMgr = ctx.core.GetAnimationManager())
+    {
         animMgr->DropAnimation(m_assetId, m_objectId, m_propertyName);
+        // A direct write to m_localTransform also wins over all transform channels.
+        if (m_propertyName == "m_localTransform")
+            animMgr->DropTransformAnimations(m_assetId, m_objectId);
+    }
 
     if (m_valueBefore.is_null())
     {

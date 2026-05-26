@@ -198,6 +198,87 @@
         }
       }
     },
+    "SetPosition": {
+      "description": "Animate or immediately set a SceneComponent's position",
+      "undoable": true,
+      "params": {
+        "objectId": { "type": "string", "required": true },
+        "value": {
+          "type": "array",
+          "required": true,
+          "description": "[x,y,z]"
+        },
+        "space": {
+          "type": "string",
+          "optional": true,
+          "options": [ "local", "world" ],
+          "default": "local"
+        },
+        "duration_seconds": {
+          "type": "float",
+          "optional": true,
+          "default": 0,
+          "description": "Tween duration; 0 = immediate"
+        },
+        "easing": {
+          "type": "string",
+          "optional": true,
+          "default": "ease_out_cubic"
+        }
+      }
+    },
+    "SetRotation": {
+      "description": "Animate or immediately set a SceneComponent's rotation",
+      "undoable": true,
+      "params": {
+        "objectId": { "type": "string", "required": true },
+        "value": {
+          "type": "array",
+          "required": true,
+          "description": "[x,y,z,w] quaternion or [x,y,z] euler angles (radians)"
+        },
+        "space": {
+          "type": "string",
+          "optional": true,
+          "options": [ "local", "world" ],
+          "default": "local"
+        },
+        "duration_seconds": {
+          "type": "float",
+          "optional": true,
+          "default": 0,
+          "description": "Tween duration; 0 = immediate"
+        },
+        "easing": {
+          "type": "string",
+          "optional": true,
+          "default": "ease_out_cubic"
+        }
+      }
+    },
+    "SetScale": {
+      "description": "Animate or immediately set a SceneComponent's local scale",
+      "undoable": true,
+      "params": {
+        "objectId": { "type": "string", "required": true },
+        "value": {
+          "type": "array",
+          "required": true,
+          "description": "[x,y,z]"
+        },
+        "duration_seconds": {
+          "type": "float",
+          "optional": true,
+          "default": 0,
+          "description": "Tween duration; 0 = immediate"
+        },
+        "easing": {
+          "type": "string",
+          "optional": true,
+          "default": "ease_out_cubic"
+        }
+      }
+    },
     "DuplicateGameObject": {
       "description": "Duplicate a GameObject and all its components",
       "undoable": true,

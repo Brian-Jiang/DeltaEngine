@@ -181,7 +181,7 @@
     {
       "_class": "Camera",
       "_objectId": "f06a1959-f14e-459a-813b-f96e6cb30528",
-      "m_aspectRatio": 2.0772159099578857,
+      "m_aspectRatio": 1.3648722171783447,
       "m_children": [],
       "m_far": 1000.0,
       "m_fov": 0.7853981852531433,
@@ -256,7 +256,7 @@
         "assetId": "097992b4-c850-4c69-a612-ec83528b0c30",
         "objectId": "0ebb55c1-3d47-425e-a1f8-71d1679eb8b2"
       },
-      "m_intensity": 2.4000000953674316,
+      "m_intensity": 1.5,
       "m_localTransform": [
         -0.13916729390621185,
         5.066166295364383e-07,

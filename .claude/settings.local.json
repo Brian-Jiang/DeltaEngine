@@ -3,8 +3,10 @@
     "allow": [
       "PowerShell(*Tools/Scripts/*.bat*)",
       "PowerShell(*Tools\\Scripts\\*.bat*)",
+      "PowerShell(*Tools\\\\Scripts\\\\*.bat*)",
       "Bash(*Tools/Scripts/*.bat*)",
       "Bash(*Tools\\Scripts\\*.bat*)",
+      "Bash(*Tools\\\\Scripts\\\\*.bat*)",
       "Bash(*DeltaEngineTests.exe*)",
       "Bash(*DeltaEditorTests.exe*)",
       "Bash(grep:*)",
@@ -12,7 +14,10 @@
       "Bash(findstr:*)",
       "Bash(ls:*)",
       "Bash(head:*)",
-      "Bash(pwd:*)"
+      "Bash(pwd:*)",
+      "Bash(Get-ChildItem:*)",
+      "Bash(Select-Object:*)",
+      "Bash(cd:*)"
     ]
   }
 }

@@ -322,6 +322,145 @@ TEST_F(McpSceneSystemTests, CommandSetTransform_SetsPosition)
     EXPECT_TRUE(json::parse(responses[0])["ok"].get<bool>());
 }
 
+TEST_F(McpSceneSystemTests, CommandSetPosition_Immediate_SetsLocalPosition)
+{
+    const std::string goId = CreateLegacyGameObject();
+    ASSERT_FALSE(goId.empty());
+
+    // Add a PointLight to get a SceneComponent.
+    json data;
+    data["sceneAssetId"] = GetActiveSceneAssetId().ToString();
+    data["gameObjectId"] = goId;
+    data["className"]    = "PointLight";
+    json env;
+    env["type"] = "EditorCommand_CreateComponent";
+    env["data"] = data;
+    m_core->EnqueueSerializedCommand(env.dump());
+    std::vector<std::string> cr;
+    m_core->DrainCommandQueue(cr);
+    const std::string plId = json::parse(cr[0]).value("objectId", std::string{});
+    ASSERT_FALSE(plId.empty());
+
+    auto dispatchRes = Dispatch("scene", "SetPosition",
+        {{"objectId", plId},
+         {"value", json::array({4.0f, 0.0f, 0.0f})},
+         {"space", "local"}});
+    EXPECT_TRUE(dispatchRes["ok"].get<bool>());
+
+    std::vector<std::string> responses;
+    m_core->DrainCommandQueue(responses);
+    ASSERT_GE(responses.size(), 1u);
+    EXPECT_TRUE(json::parse(responses[0])["ok"].get<bool>());
+}
+
+TEST_F(McpSceneSystemTests, CommandSetRotation_Immediate_SetsLocalRotation)
+{
+    const std::string goId = CreateLegacyGameObject();
+    ASSERT_FALSE(goId.empty());
+
+    json data;
+    data["sceneAssetId"] = GetActiveSceneAssetId().ToString();
+    data["gameObjectId"] = goId;
+    data["className"]    = "PointLight";
+    json env;
+    env["type"] = "EditorCommand_CreateComponent";
+    env["data"] = data;
+    m_core->EnqueueSerializedCommand(env.dump());
+    std::vector<std::string> cr;
+    m_core->DrainCommandQueue(cr);
+    const std::string plId = json::parse(cr[0]).value("objectId", std::string{});
+    ASSERT_FALSE(plId.empty());
+
+    auto dispatchRes = Dispatch("scene", "SetRotation",
+        {{"objectId", plId},
+         {"value", json::array({0.0f, 0.0f, 0.0f, 1.0f})}});  // identity quaternion
+    EXPECT_TRUE(dispatchRes["ok"].get<bool>());
+
+    std::vector<std::string> responses;
+    m_core->DrainCommandQueue(responses);
+    ASSERT_GE(responses.size(), 1u);
+    EXPECT_TRUE(json::parse(responses[0])["ok"].get<bool>());
+}
+
+TEST_F(McpSceneSystemTests, CommandSetScale_Immediate_SetsLocalScale)
+{
+    const std::string goId = CreateLegacyGameObject();
+    ASSERT_FALSE(goId.empty());
+
+    json data;
+    data["sceneAssetId"] = GetActiveSceneAssetId().ToString();
+    data["gameObjectId"] = goId;
+    data["className"]    = "PointLight";
+    json env;
+    env["type"] = "EditorCommand_CreateComponent";
+    env["data"] = data;
+    m_core->EnqueueSerializedCommand(env.dump());
+    std::vector<std::string> cr;
+    m_core->DrainCommandQueue(cr);
+    const std::string plId = json::parse(cr[0]).value("objectId", std::string{});
+    ASSERT_FALSE(plId.empty());
+
+    auto dispatchRes = Dispatch("scene", "SetScale",
+        {{"objectId", plId},
+         {"value", json::array({2.0f, 2.0f, 2.0f})}});
+    EXPECT_TRUE(dispatchRes["ok"].get<bool>());
+
+    std::vector<std::string> responses;
+    m_core->DrainCommandQueue(responses);
+    ASSERT_GE(responses.size(), 1u);
+    EXPECT_TRUE(json::parse(responses[0])["ok"].get<bool>());
+}
+
+TEST_F(McpSceneSystemTests, CommandSetPosition_WithDuration_QueuesAnimation)
+{
+    const std::string goId = CreateLegacyGameObject();
+    ASSERT_FALSE(goId.empty());
+
+    json data;
+    data["sceneAssetId"] = GetActiveSceneAssetId().ToString();
+    data["gameObjectId"] = goId;
+    data["className"]    = "PointLight";
+    json env;
+    env["type"] = "EditorCommand_CreateComponent";
+    env["data"] = data;
+    m_core->EnqueueSerializedCommand(env.dump());
+    std::vector<std::string> cr;
+    m_core->DrainCommandQueue(cr);
+    const std::string plId = json::parse(cr[0]).value("objectId", std::string{});
+    ASSERT_FALSE(plId.empty());
+
+    auto dispatchRes = Dispatch("scene", "SetPosition",
+        {{"objectId", plId},
+         {"value", json::array({3.0f, 0.0f, 0.0f})},
+         {"duration_seconds", 1.0f}});
+    EXPECT_TRUE(dispatchRes["ok"].get<bool>());
+    EXPECT_TRUE(dispatchRes.value("queued", false));
+
+    // Drain queues the auxiliary and executes it (headless mode → immediate SetProperty).
+    std::vector<std::string> responses;
+    m_core->DrainCommandQueue(responses);
+    ASSERT_GE(responses.size(), 1u);
+    EXPECT_TRUE(json::parse(responses[0])["ok"].get<bool>());
+}
+
+TEST_F(McpSceneSystemTests, CommandSetPosition_MissingObjectId_ReturnsError)
+{
+    auto res = Dispatch("scene", "SetPosition",
+                        {{"value", json::array({1.0f, 0.0f, 0.0f})}});
+    EXPECT_FALSE(res["ok"].get<bool>());
+    EXPECT_TRUE(res.contains("error"));
+}
+
+TEST_F(McpSceneSystemTests, CommandSetScale_MissingValue_ReturnsError)
+{
+    const std::string goId = CreateLegacyGameObject();
+    ASSERT_FALSE(goId.empty());
+
+    auto res = Dispatch("scene", "SetScale", {{"objectId", goId}});
+    EXPECT_FALSE(res["ok"].get<bool>());
+    EXPECT_TRUE(res.contains("error"));
+}
+
 TEST_F(McpSceneSystemTests, CommandLoadScene_MissingParam_ReturnsError)
 {
     auto res = Dispatch("scene", "LoadScene");

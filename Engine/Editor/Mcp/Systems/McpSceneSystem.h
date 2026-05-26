@@ -29,6 +29,9 @@ private:
     nlohmann::json CommandCreateComponent(EditorCore&, const nlohmann::json& params);
     nlohmann::json CommandDeleteComponent(EditorCore&, const nlohmann::json& params);
     nlohmann::json CommandSetTransform(EditorCore&, const nlohmann::json& params);
+    nlohmann::json CommandSetPosition(EditorCore&, const nlohmann::json& params);
+    nlohmann::json CommandSetRotation(EditorCore&, const nlohmann::json& params);
+    nlohmann::json CommandSetScale(EditorCore&, const nlohmann::json& params);
     nlohmann::json CommandLoadScene(EditorCore&, const nlohmann::json& params);
 };
 

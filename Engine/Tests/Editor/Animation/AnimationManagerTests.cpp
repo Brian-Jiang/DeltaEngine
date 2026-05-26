@@ -7,6 +7,7 @@
 
 using namespace DeltaEngine;
 using namespace DeltaEngine::Tests;
+using DeltaEngine::UUID;
 
 class AnimationManagerTests : public EditorCoreFixture {};
 
