@@ -1,14 +1,9 @@
 #include "Editor/Mcp/Systems/McpLightsSystem.h"
 
 #include "Editor/EditorCore.h"
-#include "Editor/Animation/EditorAnimationManager.h"
-#include "Editor/Commands/EditorCommand_SetProperty.h"
-#include "Editor/Commands/EditorCommandContext.h"
-#include "Editor/Commands/EditorCommandManager.h"
 #include "Editor/Mcp/McpRegistry.h"
 
 #include "Runtime/Core/UUID.h"
-#include "Runtime/Graphics/Light/LightComponent.h"
 
 using namespace DeltaEngine;
 
@@ -31,32 +26,36 @@ nlohmann::json McpLightsSystem::CommandSetIntensity(EditorCore& core, const nloh
     if (objectId.IsNull())
         return {{"ok", false}, {"error", "invalid objectId"}};
 
-    const float    target   = params["value"].get<float>();
-    const float    duration = params.value("duration_seconds", 0.0f);
+    const float target   = params["value"].get<float>();
+    const float duration = params.value("duration_seconds", 0.0f);
 
-    LightComponent* light = core.ResolveObject<LightComponent>(assetId, objectId);
-    if (!light)
-        return {{"ok", false}, {"error", "object not found or not a LightComponent"}};
-
-    EditorAnimationManager* animMgr = core.GetAnimationManager();
-
-    if (animMgr == nullptr || duration <= 0.0f)
+    if (duration <= 0.0f)
     {
-        const float current = light->GetIntensity();
-        EditorCommandContext ctx{core};
-        auto cmd = std::make_unique<EditorCommand_SetProperty>(
-            assetId, objectId, "m_intensity",
-            nlohmann::json(current),
-            nlohmann::json(target));
-        core.GetCommandManager().Execute(std::move(cmd), ctx);
-        return {{"ok", true}};
+        // Immediate path: enqueue EditorCommand_SetProperty for main-thread execution via DrainCommandQueue.
+        nlohmann::json envelope;
+        envelope["type"]    = "command";
+        envelope["command"] = "EditorCommand_SetProperty";
+        envelope["params"]  = {
+            {"assetId",      assetId.ToString()},
+            {"objectId",     objectId.ToString()},
+            {"propertyName", "m_intensity"},
+            {"valueAfter",   target}
+        };
+        core.EnqueueSerializedCommand(envelope.dump());
+    }
+    else
+    {
+        // Animation path: enqueue auxiliary for main-thread execution via DrainCommandQueue.
+        nlohmann::json envelope;
+        envelope["type"]         = "auxiliary";
+        envelope["name"]         = "StartLightAnimation";
+        envelope["assetId"]      = assetId.ToString();
+        envelope["objectId"]     = objectId.ToString();
+        envelope["propertyName"] = "m_intensity";
+        envelope["targetValue"]  = target;
+        envelope["duration"]     = duration;
+        core.EnqueueSerializedCommand(envelope.dump());
     }
 
-    const float current = light->GetIntensity();
-    animMgr->StartAnimation(
-        assetId, objectId, "m_intensity",
-        current, target, duration,
-        [light](float v) { light->SetIntensity(v); });
-
-    return {{"ok", true}};
+    return {{"ok", true}, {"queued", true}};
 }

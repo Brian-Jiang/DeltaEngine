@@ -7,9 +7,11 @@
 #include "Editor/Commands/EditorCommandManager.h"
 #include "Editor/Commands/EditorCommandRegistry.h"
 #include "Editor/Commands/EditorAuxiliarySceneCommands.h"
+#include "Editor/Commands/EditorCommand_SetProperty.h"
 #include "Editor/EditorSelectionState.h"
 #include "Editor/EditorSessionState.h"
 #include "Runtime/Assets/AssetDatabaseLocator.h"
+#include "Runtime/Graphics/Light/LightComponent.h"
 #include "Runtime/Assets/DPrimaryAsset.h"
 #include "Runtime/Assets/PA_DScene.h"
 #include "Runtime/Core/DWorld.h"
@@ -354,6 +356,44 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
                         std::filesystem::path(scenePath)), ctx);
                 outResponses.push_back(
                     nlohmann::json{{"ok", true}, {"commandType", "LoadScene"}}.dump());
+                continue;
+            }
+            if (name == "StartLightAnimation")
+            {
+                const AssetId  animAssetId  = UUID::FromString(envelope.value("assetId", ""));
+                const ObjectId animObjectId = UUID::FromString(envelope.value("objectId", ""));
+                const std::string propName  = envelope.value("propertyName", "m_intensity");
+                const float targetValue     = envelope.value("targetValue", 0.0f);
+                const float duration        = envelope.value("duration", 0.0f);
+
+                LightComponent* light = ResolveObject<LightComponent>(animAssetId, animObjectId);
+                if (!light)
+                {
+                    outResponses.push_back(
+                        nlohmann::json{{"ok", false}, {"commandType", "StartLightAnimation"},
+                                       {"error", "object not found or not a LightComponent"}}.dump());
+                    continue;
+                }
+
+                const float current = light->GetIntensity();
+                if (m_animationManager)
+                {
+                    m_animationManager->StartAnimation(
+                        animAssetId, animObjectId, propName,
+                        current, targetValue, duration,
+                        [light](float v) { light->SetIntensity(v); });
+                }
+                else
+                {
+                    // Headless fallback: apply immediately via SetProperty.
+                    auto cmd = std::make_unique<EditorCommand_SetProperty>(
+                        animAssetId, animObjectId, propName,
+                        nlohmann::json(current),
+                        nlohmann::json(targetValue));
+                    m_commandManager->Execute(std::move(cmd), ctx);
+                }
+                outResponses.push_back(
+                    nlohmann::json{{"ok", true}, {"commandType", "StartLightAnimation"}}.dump());
                 continue;
             }
             outResponses.push_back(

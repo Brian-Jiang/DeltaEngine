@@ -39,23 +39,36 @@ protected:
             return {};
         return json::parse(r[0]).value("objectId", std::string{});
     }
+
+    // Dispatch a lights command and drain the queue; returns the drain response.
+    json DispatchAndDrain(const std::string& op, const json& params = json::object())
+    {
+        Dispatch("lights", op, params);
+        std::vector<std::string> responses;
+        m_core->DrainCommandQueue(responses);
+        if (responses.empty())
+            return {{"ok", false}, {"error", "no response from drain"}};
+        return json::parse(responses[0]);
+    }
 };
 
-// SetIntensity: immediately applies the value in headless mode (no animation manager)
+// SetIntensity: immediately applies the value in headless mode (no animation manager).
+// With duration > 0 but no animation manager, DrainCommandQueue falls back to SetProperty.
 TEST_F(McpLightsSystemTests, SetIntensity_Headless_ImmediatelyAppliesValue)
 {
     const std::string plId = CreatePointLight();
     if (plId.empty())
         GTEST_SKIP() << "Failed to create PointLight";
 
-    const AssetId assetId   = GetActiveSceneAssetId();
+    const AssetId  assetId  = GetActiveSceneAssetId();
     const ObjectId objectId = DeltaEngine::UUID::FromString(plId);
 
-    auto res = Dispatch("lights", "SetIntensity",
+    // Dispatch enqueues; drain executes on "main thread".
+    const auto res = DispatchAndDrain("SetIntensity",
                         {{"assetId",          assetId.ToString()},
                          {"objectId",         plId},
                          {"value",            5.0f},
-                         {"duration_seconds", 2.0f}});  // duration ignored in headless
+                         {"duration_seconds", 2.0f}});  // duration > 0, but headless -> fallback
     EXPECT_TRUE(res["ok"].get<bool>());
 
     LightComponent* light = m_core->ResolveObject<LightComponent>(assetId, objectId);
@@ -71,15 +84,12 @@ TEST_F(McpLightsSystemTests, SetIntensity_PushesCommandToUndoStack)
         GTEST_SKIP() << "Failed to create PointLight";
 
     const AssetId assetId = GetActiveSceneAssetId();
-
-    // Record undo stack depth before
     const size_t undoDepthBefore = m_core->GetCommandManager().GetUndoStackDepth();
 
-    auto res = Dispatch("lights", "SetIntensity",
-                        {{"assetId",  assetId.ToString()},
-                         {"objectId", plId},
-                         {"value",    3.0f}});
-    EXPECT_TRUE(res["ok"].get<bool>());
+    DispatchAndDrain("SetIntensity",
+                     {{"assetId",  assetId.ToString()},
+                      {"objectId", plId},
+                      {"value",    3.0f}});
 
     EXPECT_GT(m_core->GetCommandManager().GetUndoStackDepth(), undoDepthBefore);
 }
@@ -98,11 +108,10 @@ TEST_F(McpLightsSystemTests, SetIntensity_Undo_RevertsIntensity)
     ASSERT_NE(light, nullptr);
     const float originalIntensity = light->GetIntensity();
 
-    auto res = Dispatch("lights", "SetIntensity",
-                        {{"assetId",  assetId.ToString()},
-                         {"objectId", plId},
-                         {"value",    99.0f}});
-    EXPECT_TRUE(res["ok"].get<bool>());
+    DispatchAndDrain("SetIntensity",
+                     {{"assetId",  assetId.ToString()},
+                      {"objectId", plId},
+                      {"value",    99.0f}});
     EXPECT_NEAR(light->GetIntensity(), 99.0f, 0.001f);
 
     auto undoRes = Dispatch("undo_history", "Undo");
@@ -111,10 +120,11 @@ TEST_F(McpLightsSystemTests, SetIntensity_Undo_RevertsIntensity)
     EXPECT_NEAR(light->GetIntensity(), originalIntensity, 0.001f);
 }
 
-// SetIntensity: invalid objectId returns error
+// SetIntensity: null UUID for objectId is caught before enqueue and returns an immediate error
 TEST_F(McpLightsSystemTests, SetIntensity_InvalidObjectId_ReturnsError)
 {
     const AssetId assetId = GetActiveSceneAssetId();
+    // "00000000-..." parses to the null UUID — caught immediately by IsNull() check.
     auto res = Dispatch("lights", "SetIntensity",
                         {{"assetId",  assetId.ToString()},
                          {"objectId", "00000000-0000-0000-0000-000000000000"},
