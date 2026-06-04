@@ -3,6 +3,7 @@
 #include "Runtime/Core/DHandle.h"
 #include "Runtime/Core/DObject.h"
 #include "Runtime/Core/GC/DObjectRegistry.h"
+#include "Runtime/Core/GC/GCManager.h"
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DStruct.h"
 
@@ -190,9 +191,10 @@ DObject* ReflectionRegistry::CreateObject(const std::string& className) const
     obj->SetOwningAsset(nullptr);
 
     GetDObjectRegistry().RegisterObject(obj);
-    // Phase 1: objects start unmarked. When a GCManager exists, a mark-phase guard
-    // here will color objects created mid-mark as reachable to avoid premature sweep.
-    obj->SetGCMarkColor(EGCMarkColor::White);
+    // Objects created mid-mark are colored Black so the in-progress traversal treats
+    // them as reachable; otherwise they start White (unreachable until marked).
+    obj->SetGCMarkColor(GetGCManager().IsMarking() ? EGCMarkColor::Black
+                                                   : EGCMarkColor::White);
 
     return obj;
 }
