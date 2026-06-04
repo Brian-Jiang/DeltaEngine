@@ -35,6 +35,7 @@ set(DELTA_ENGINE_TEST_SOURCES
     Serialization/Core/JsonAssetArchiveHardeningTests.cpp
     Assets/Locator/NullAssetDatabaseTests.cpp
     Core/CoreObjectLifecycleTests.cpp
+    Core/GCObjectRegistryTests.cpp
     Core/SceneComponentTests.cpp
     Core/CoreAssetDataTests.cpp
     Core/CoreUtilityTests.cpp
