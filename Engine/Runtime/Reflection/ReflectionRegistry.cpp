@@ -2,6 +2,7 @@
 
 #include "Runtime/Core/DHandle.h"
 #include "Runtime/Core/DObject.h"
+#include "Runtime/Core/GC/DObjectRegistry.h"
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DStruct.h"
 
@@ -146,8 +147,12 @@ void ReflectionRegistry::DestroyObject(DObject* obj) const
         return;
     }
 
+    const DObjectHandle gcHandle = obj->GetGCHandle();
+
     cls->DestroyObject(obj);
     operator delete(obj, std::align_val_t(cls->GetMinAlignment()));
+
+    GetDObjectRegistry().FreeSlot(gcHandle);
 }
 
 DObject* ReflectionRegistry::CreateObject(const std::string& className) const
@@ -183,6 +188,12 @@ DObject* ReflectionRegistry::CreateObject(const std::string& className) const
     obj->SetHandle(handle);
     obj->SetObjectId(ObjectId::Generate());
     obj->SetOwningAsset(nullptr);
+
+    GetDObjectRegistry().RegisterObject(obj);
+    // Phase 1: objects start unmarked. When a GCManager exists, a mark-phase guard
+    // here will color objects created mid-mark as reachable to avoid premature sweep.
+    obj->SetGCMarkColor(EGCMarkColor::White);
+
     return obj;
 }
 
