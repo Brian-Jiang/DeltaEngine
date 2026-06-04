@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build and test (Windows)
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          lfs: true
+
+      - name: MSVC dev environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Install Ninja
+        run: choco install ninja -y
+
+      - name: Configure and build editor
+        shell: cmd
+        run: Tools\Scripts\rebuild-x64-debug.bat --automatic
+
+      - name: Build engine tests
+        shell: cmd
+        run: Tools\Scripts\build-x64-debug-engine-tests.bat --automatic
+
+      - name: Run engine tests
+        shell: cmd
+        run: Tools\Scripts\run-x64-debug-engine-tests.bat --automatic
+
+      - name: Build editor tests
+        shell: cmd
+        run: Tools\Scripts\build-x64-debug-editor-tests.bat --automatic
+
+      - name: Run editor tests
+        shell: cmd
+        run: Tools\Scripts\run-x64-debug-editor-tests.bat --automatic
