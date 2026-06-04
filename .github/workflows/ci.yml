@@ -15,12 +15,25 @@ jobs:
     name: Build and test (Windows)
     runs-on: windows-2025-vs2026
     timeout-minutes: 90
+    env:
+      CACHE_CMAKE_HASH: ${{ hashFiles('CMakePresets.json', 'CMakeLists.txt', 'Engine/CMakeLists.txt', 'Engine/**/CMakeLists.txt', 'Tools/DeltaHeaderTool/**') }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
         with:
           lfs: true
+
+      - name: Cache build tree
+        uses: actions/cache@v5
+        id: build-cache
+        with:
+          path: |
+            Build/x64-Debug
+            Intermediate/DeltaHeaderTool
+          key: windows-x64-debug-${{ env.CACHE_CMAKE_HASH }}-${{ github.sha }}
+          restore-keys: |
+            windows-x64-debug-${{ env.CACHE_CMAKE_HASH }}-
 
       - name: MSVC dev environment
         uses: ilammy/msvc-dev-cmd@v1
@@ -31,8 +44,14 @@ jobs:
         run: choco install ninja -y
 
       - name: Configure and build editor
+        if: steps.build-cache.outputs.cache-hit != 'true'
         shell: cmd
         run: Tools\Scripts\rebuild-x64-debug.bat --automatic
+
+      - name: Build editor (cached)
+        if: steps.build-cache.outputs.cache-hit == 'true'
+        shell: cmd
+        run: Tools\Scripts\build-x64-debug.bat --automatic
 
       - name: Build engine tests
         shell: cmd
