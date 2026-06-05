@@ -223,6 +223,7 @@ int EditorMain::Run()
         m_engine->Tick();
         if (auto* animMgr = m_editorCore->GetAnimationManager())
             animMgr->Tick(Time::deltaTime, *m_editorCore);
+        m_engine->TickGC();
         m_renderManager->RenderFrame(m_engine.get());
     }
 
