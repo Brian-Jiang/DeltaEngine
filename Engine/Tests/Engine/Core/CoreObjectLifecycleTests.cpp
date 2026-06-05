@@ -44,6 +44,7 @@ TEST(CoreObjectLifecycle, DWorld_Clear_RemovesRegisteredGameObjects)
 {
     DWorld* world = DWorld::CreateWorld();
     ASSERT_NE(world, nullptr);
+    GetDObjectRegistry().AddRoot(world->GetGCHandle());
 
     GameObject* go = world->CreateGameObject("Probe");
     ASSERT_NE(go, nullptr);
@@ -54,6 +55,7 @@ TEST(CoreObjectLifecycle, DWorld_Clear_RemovesRegisteredGameObjects)
     EXPECT_TRUE(world->GetGameObjects().empty());
 
     CollectAllGarbage();
+    GetDObjectRegistry().RemoveRoot(world->GetGCHandle());
     DestroyWorld(world);
 }
 
@@ -139,6 +141,7 @@ TEST(CoreObjectLifecycle, DWorld_DestroyGameObject_UnlinkedUntilGCRedeems)
 {
     DWorld* world = DWorld::CreateWorld();
     ASSERT_NE(world, nullptr);
+    GetDObjectRegistry().AddRoot(world->GetGCHandle());
 
     GameObject* go = world->CreateGameObject("GCProbe");
     ASSERT_NE(go, nullptr);
@@ -158,6 +161,7 @@ TEST(CoreObjectLifecycle, DWorld_DestroyGameObject_UnlinkedUntilGCRedeems)
     EXPECT_LT(GetDObjectRegistry().GetLiveCount(), liveBefore);
     EXPECT_FALSE(weakGo.IsValid());
 
+    GetDObjectRegistry().RemoveRoot(world->GetGCHandle());
     DestroyWorld(world);
 }
 
