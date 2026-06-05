@@ -1,5 +1,6 @@
 set(DELTA_ENGINE_TEST_SOURCES
     Assets/DPrimaryAssetTests.cpp
+    Assets/DPrimaryAssetGCRootingTests.cpp
     Assets/AssetDatabaseLocatorTests.cpp
     Assets/PA_CommonAssetsTests.cpp
     Assets/PA_DSceneTests.cpp
