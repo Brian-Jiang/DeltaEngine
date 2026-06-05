@@ -36,6 +36,10 @@ public:
     /// Releases the slot referenced by the handle, bumping its version.
     DELTAENGINE_API void FreeSlot(const DObjectHandle& handle);
 
+    /// Transitions a live slot to PendingKill: the object stays alive for sweep
+    /// teardown, but weak/strong resolution returns null immediately.
+    DELTAENGINE_API void RequestPendingKill(const DObjectHandle& handle);
+
     /// Returns the live object for the handle, or nullptr if it was freed/reused.
     DELTAENGINE_API DObject* Resolve(const DObjectHandle& handle) const;
 

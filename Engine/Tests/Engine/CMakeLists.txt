@@ -37,6 +37,7 @@ set(DELTA_ENGINE_TEST_SOURCES
     Core/CoreObjectLifecycleTests.cpp
     Core/GCObjectRegistryTests.cpp
     Core/GCMarkTests.cpp
+    Core/GCSweepTests.cpp
     Core/SceneComponentTests.cpp
     Core/CoreAssetDataTests.cpp
     Core/CoreUtilityTests.cpp

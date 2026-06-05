@@ -65,7 +65,12 @@ DObjectHandle DObjectRegistry::RegisterObject(DObject* object)
 void DObjectRegistry::FreeSlot(const DObjectHandle& handle)
 {
     GCSlot* slot = FindSlot(handle);
-    if (!slot || slot->m_state != EGCSlotState::Live)
+    if (!slot)
+        return;
+
+    if (slot->m_state == EGCSlotState::Live)
+        --m_liveCount;
+    else if (slot->m_state != EGCSlotState::PendingKill)
         return;
 
     slot->m_object    = nullptr;
@@ -74,6 +79,16 @@ void DObjectRegistry::FreeSlot(const DObjectHandle& handle)
     ++slot->m_version;
 
     m_freeList.push_back(handle.m_slotIndex);
+}
+
+void DObjectRegistry::RequestPendingKill(const DObjectHandle& handle)
+{
+    GCSlot* slot = FindSlot(handle);
+    if (!slot || slot->m_state != EGCSlotState::Live)
+        return;
+
+    slot->m_state     = EGCSlotState::PendingKill;
+    slot->m_rootCount = 0;
     --m_liveCount;
 }
 

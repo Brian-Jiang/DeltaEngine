@@ -15,6 +15,7 @@ enum class EGCSlotState : uint8_t
 {
     Free,
     Live,
+    PendingKill,
 };
 
 enum class EGCMarkColor : uint8_t

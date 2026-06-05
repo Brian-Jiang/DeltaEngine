@@ -3,6 +3,7 @@
 #include "Runtime/Core/DObject.h"
 #include "Runtime/Core/GC/DObjectRegistry.h"
 #include "Runtime/Reflection/ObjectReferenceWalk.h"
+#include "Runtime/Reflection/ReflectionRegistry.h"
 
 #include <vector>
 
@@ -52,6 +53,93 @@ void GCManager::Mark()
 
     m_marking = false;
     m_state   = EGCState::Idle;
+}
+
+void GCManager::RequestCollect()
+{
+    if (m_state == EGCState::Idle && m_pendingDestroy.empty())
+        m_collectRequested = true;
+}
+
+void GCManager::Tick()
+{
+    switch (m_state)
+    {
+    case EGCState::Idle:
+        if (m_collectRequested)
+        {
+            m_collectRequested = false;
+            Mark();
+            BeginSweep();
+        }
+        break;
+    case EGCState::Sweeping:
+        DrainSweep();
+        break;
+    default:
+        break;
+    }
+}
+
+void GCManager::CollectGarbage()
+{
+    if (m_state != EGCState::Idle || !m_pendingDestroy.empty())
+        return;
+
+    Mark();
+    BeginSweep();
+
+    while (m_state == EGCState::Sweeping)
+    {
+        if (DrainSweep() == 0)
+            break;
+    }
+}
+
+void GCManager::BeginSweep()
+{
+    m_state = EGCState::Sweeping;
+
+    DObjectRegistry& registry = GetDObjectRegistry();
+    for (DObject* obj : registry.GetAllLiveObjects())
+    {
+        if (obj->GetGCMarkColor() != EGCMarkColor::White)
+            continue;
+
+        registry.RequestPendingKill(obj->GetGCHandle());
+        obj->BeginDestroy();
+        m_pendingDestroy.push_back(obj);
+    }
+
+    if (m_pendingDestroy.empty())
+        m_state = EGCState::Idle;
+}
+
+size_t GCManager::DrainSweep()
+{
+    size_t finished = 0;
+
+    auto it = m_pendingDestroy.begin();
+    while (it != m_pendingDestroy.end())
+    {
+        DObject* obj = *it;
+        if (obj->IsReadyForFinishDestroy())
+        {
+            obj->FinishDestroy();
+            GetReflectionRegistry().DestroyObject(obj);
+            it = m_pendingDestroy.erase(it);
+            ++finished;
+        }
+        else
+        {
+            ++it;
+        }
+    }
+
+    if (m_pendingDestroy.empty())
+        m_state = EGCState::Idle;
+
+    return finished;
 }
 
 GCManager& DeltaEngine::GetGCManager()
