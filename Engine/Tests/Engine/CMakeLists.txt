@@ -36,6 +36,7 @@ set(DELTA_ENGINE_TEST_SOURCES
     Assets/Locator/NullAssetDatabaseTests.cpp
     Core/CoreObjectLifecycleTests.cpp
     Core/GCObjectRegistryTests.cpp
+    Core/GCMarkTests.cpp
     Core/SceneComponentTests.cpp
     Core/CoreAssetDataTests.cpp
     Core/CoreUtilityTests.cpp

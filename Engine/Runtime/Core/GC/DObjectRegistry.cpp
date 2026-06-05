@@ -123,6 +123,19 @@ std::vector<DObjectHandle> DObjectRegistry::GetRoots() const
     return roots;
 }
 
+std::vector<DObject*> DObjectRegistry::GetAllLiveObjects() const
+{
+    std::vector<DObject*> objects;
+    objects.reserve(m_liveCount);
+    for (GCSlotIndex index = 0; index < m_capacity; ++index)
+    {
+        const GCSlot& slot = const_cast<DObjectRegistry*>(this)->SlotAt(index);
+        if (slot.m_state == EGCSlotState::Live && slot.m_object)
+            objects.push_back(slot.m_object);
+    }
+    return objects;
+}
+
 size_t DObjectRegistry::GetLiveCount() const
 {
     return m_liveCount;

@@ -51,6 +51,9 @@ public:
     /// Returns the handles of every slot with a non-zero root count.
     DELTAENGINE_API std::vector<DObjectHandle> GetRoots() const;
 
+    /// Returns every currently live object (used by the GC mark phase to reset colors).
+    DELTAENGINE_API std::vector<DObject*> GetAllLiveObjects() const;
+
     /// Number of currently live (allocated) slots.
     DELTAENGINE_API size_t GetLiveCount() const;
 
