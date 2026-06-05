@@ -1,5 +1,8 @@
 #include "Runtime/Core/DObject.h"
 #include "Runtime/Core/DTexture.h"
+#include "Runtime/Core/DWorld.h"
+#include "Runtime/Core/GameObject.h"
+#include "Runtime/Core/Skybox.h"
 #include "Runtime/Core/GC/DObjectGCTypes.h"
 #include "Runtime/Core/GC/DObjectRegistry.h"
 #include "Runtime/Core/GC/GCManager.h"
@@ -134,4 +137,62 @@ TEST(GCMarkTests, UnrootedCycleStaysWhite)
 
     registry.DestroyObject(a);
     registry.DestroyObject(b);
+}
+
+TEST(GCMarkTests, RootedWorldReachesGameObjectsViaReflection)
+{
+    auto& registry = GetReflectionRegistry();
+
+    DClass* worldClass = registry.FindClassByName("DWorld");
+    ASSERT_NE(worldClass, nullptr);
+    EXPECT_NE(worldClass->FindPropertyByName("m_gameObjects"), nullptr);
+    EXPECT_NE(worldClass->FindPropertyByName("m_skybox"), nullptr);
+
+    DWorld* world = DWorld::CreateWorld();
+    GameObject* goA = world->CreateGameObject("GO_A");
+    GameObject* goB = world->CreateGameObject("GO_B");
+    GameObject* orphan = registry.CreateObject<GameObject>("GameObject");
+    ASSERT_NE(world, nullptr);
+    ASSERT_NE(goA, nullptr);
+    ASSERT_NE(goB, nullptr);
+    ASSERT_NE(orphan, nullptr);
+
+    GetDObjectRegistry().AddRoot(world->GetGCHandle());
+
+    GetGCManager().Mark();
+
+    EXPECT_EQ(ColorOf(world), EGCMarkColor::Black);
+    EXPECT_EQ(ColorOf(goA), EGCMarkColor::Black);
+    EXPECT_EQ(ColorOf(goB), EGCMarkColor::Black);
+    EXPECT_EQ(ColorOf(orphan), EGCMarkColor::White);
+
+    GetDObjectRegistry().RemoveRoot(world->GetGCHandle());
+    world->Clear();
+    registry.DestroyObject(orphan);
+    registry.DestroyObject(world);
+}
+
+TEST(GCMarkTests, RootedWorldReachesSkyboxViaReflection)
+{
+    auto& registry = GetReflectionRegistry();
+
+    DWorld* world = DWorld::CreateWorld();
+    Skybox* skybox = registry.CreateObject<Skybox>("Skybox");
+    ASSERT_NE(world, nullptr);
+    ASSERT_NE(skybox, nullptr);
+
+    world->SetSkybox(skybox);
+
+    GetDObjectRegistry().AddRoot(world->GetGCHandle());
+
+    GetGCManager().Mark();
+
+    EXPECT_EQ(ColorOf(world), EGCMarkColor::Black);
+    EXPECT_EQ(ColorOf(skybox), EGCMarkColor::Black);
+
+    GetDObjectRegistry().RemoveRoot(world->GetGCHandle());
+    world->SetSkybox(nullptr);
+    world->Clear();
+    registry.DestroyObject(skybox);
+    registry.DestroyObject(world);
 }
