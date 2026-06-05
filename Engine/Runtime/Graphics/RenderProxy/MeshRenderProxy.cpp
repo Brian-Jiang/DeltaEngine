@@ -51,6 +51,16 @@ DeltaEngine::MeshRenderProxy::~MeshRenderProxy()
 {
 }
 
+bool MeshRenderProxy::HasExclusiveGPUResources() const
+{
+    return !m_VertexBuffers.empty() || !m_IndexBuffers.empty() || !m_pipelineStateObjects.empty();
+}
+
+void MeshRenderProxy::ReleaseSharedReferences()
+{
+    m_textures.clear();
+}
+
 void DeltaEngine::MeshRenderProxy::SetMesh(DMesh* mesh)
 {
     if (mesh != m_mesh)
