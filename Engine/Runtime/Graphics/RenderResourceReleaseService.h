@@ -26,4 +26,6 @@ private:
     RenderResourceReleaseQueue* m_queue = nullptr;
 };
 
+DELTAENGINE_API RenderResourceReleaseService& GetRenderResourceReleaseService();
+
 DELTA_ENGINE_NS_END

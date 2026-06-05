@@ -39,3 +39,8 @@ bool RenderResourceReleaseService::IsComplete(RenderResourceReleaseToken token) 
 
     return m_queue->IsComplete(token);
 }
+
+RenderResourceReleaseService& DeltaEngine::GetRenderResourceReleaseService()
+{
+    return RenderResourceReleaseService::Get();
+}
