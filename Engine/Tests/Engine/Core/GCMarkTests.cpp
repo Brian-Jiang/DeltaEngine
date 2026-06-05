@@ -169,8 +169,6 @@ TEST(GCMarkTests, RootedWorldReachesGameObjectsViaReflection)
     GetDObjectRegistry().RemoveRoot(world->GetGCHandle());
     world->Clear();
     GetGCManager().CollectGarbage();
-    registry.DestroyObject(orphan);
-    registry.DestroyObject(world);
 }
 
 TEST(GCMarkTests, RootedWorldReachesSkyboxViaReflection)
@@ -195,6 +193,4 @@ TEST(GCMarkTests, RootedWorldReachesSkyboxViaReflection)
     world->SetSkybox(nullptr);
     world->Clear();
     GetGCManager().CollectGarbage();
-    registry.DestroyObject(skybox);
-    registry.DestroyObject(world);
 }
