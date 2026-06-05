@@ -26,8 +26,8 @@ class DELTAENGINE_API Renderer : public SceneComponent
 public:
     Renderer();
 
-    DELTAENGINE_API void BeginDestroy() override;
-    DELTAENGINE_API bool IsReadyForFinishDestroy() override;
+    void BeginDestroy() override;
+    bool IsReadyForFinishDestroy() override;
 
     /// Rebuilds the render proxy used by the renderer for draw submission.
     virtual void CreateRenderProxy() = 0;

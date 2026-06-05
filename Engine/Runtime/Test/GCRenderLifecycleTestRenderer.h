@@ -16,9 +16,9 @@ class GCRenderLifecycleTestRenderer : public Renderer
     DGENERATED_BODY(GCRenderLifecycleTestRenderer)
 
 public:
-    DELTAENGINE_API void CreateRenderProxy() override;
+    void CreateRenderProxy() override;
 
-    DELTAENGINE_API void BeginDestroy() override;
+    void BeginDestroy() override;
     DELTAENGINE_API static void Reset();
 
     DELTAENGINE_API static int  s_beginDestroyCount;
@@ -30,7 +30,7 @@ protected:
     void GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) override {}
     std::shared_ptr<RenderProxy> DetachRenderProxyForRelease() override;
 
-    DELTAENGINE_API void FinishDestroy() override;
+    void FinishDestroy() override;
 
 private:
     std::shared_ptr<RenderProxy> m_testProxy;
