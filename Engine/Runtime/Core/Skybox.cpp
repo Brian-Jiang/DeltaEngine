@@ -2,7 +2,9 @@
 
 #include "Runtime/Core/DMaterial.h"
 #include "Runtime/Core/DShader.h"
+#include "Runtime/Graphics/RenderProxy/RenderProxy.h"
 #include "Runtime/Graphics/RenderProxy/SkyboxRenderProxy.h"
+#include "Runtime/Graphics/RenderResourceReleaseService.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
 
 #include <filesystem>
@@ -15,6 +17,29 @@ Skybox::Skybox()
     : m_cubemapTexture(nullptr)
     , m_material(nullptr)
 {
+}
+
+void Skybox::BeginDestroy()
+{
+    if (m_renderReleaseToken.has_value())
+        return;
+
+    std::shared_ptr<RenderProxy> proxy = std::move(m_renderProxy);
+    if (!proxy)
+        return;
+
+    proxy->ReleaseSharedReferences();
+
+    if (proxy->HasExclusiveGPUResources())
+        m_renderReleaseToken = GetRenderResourceReleaseService().DeferRelease(std::move(proxy));
+}
+
+bool Skybox::IsReadyForFinishDestroy()
+{
+    if (!m_renderReleaseToken.has_value())
+        return true;
+
+    return GetRenderResourceReleaseService().IsComplete(*m_renderReleaseToken);
 }
 
 void Skybox::Initialize(std::shared_ptr<DXGraphicsContext> context)
