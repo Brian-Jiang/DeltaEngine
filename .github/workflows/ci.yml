@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - main
+      - "dev/**"
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -25,16 +26,25 @@ jobs:
         with:
           lfs: true
 
-      - name: Cache build tree
-        uses: actions/cache@v5
+      - name: Restore build tree
+        uses: actions/cache/restore@v5
         id: build-cache
         with:
-          path: |
-            Build/x64-Debug
-            Intermediate/DeltaHeaderTool
-          key: windows-x64-debug-${{ hashFiles('CMakePresets.json', 'CMakeLists.txt', 'Engine/CMakeLists.txt', 'Engine/**/CMakeLists.txt', 'Tools/DeltaHeaderTool/**') }}-${{ github.sha }}
+          path: Build/x64-Debug
+          key: windows-x64-debug-${{ replace(github.event.pull_request.base.ref || github.ref_name, '/', '-') }}-${{ hashFiles('CMakePresets.json') }}
           restore-keys: |
-            windows-x64-debug-${{ hashFiles('CMakePresets.json', 'CMakeLists.txt', 'Engine/CMakeLists.txt', 'Engine/**/CMakeLists.txt', 'Tools/DeltaHeaderTool/**') }}-
+            windows-x64-debug-${{ replace(github.event.pull_request.base.ref || github.ref_name, '/', '-') }}-${{ hashFiles('CMakePresets.json') }}-
+            windows-x64-debug-${{ replace(github.event.pull_request.base.ref || github.ref_name, '/', '-') }}-
+
+      - name: Restore DeltaHeaderTool generated output
+        uses: actions/cache/restore@v5
+        id: header-cache
+        with:
+          path: Intermediate/DeltaHeaderTool
+          key: windows-x64-dht-${{ replace(github.event.pull_request.base.ref || github.ref_name, '/', '-') }}-${{ hashFiles('Tools/DeltaHeaderTool/**') }}
+          restore-keys: |
+            windows-x64-dht-${{ replace(github.event.pull_request.base.ref || github.ref_name, '/', '-') }}-${{ hashFiles('Tools/DeltaHeaderTool/**') }}-
+            windows-x64-dht-${{ replace(github.event.pull_request.base.ref || github.ref_name, '/', '-') }}-
 
       - name: MSVC dev environment
         uses: ilammy/msvc-dev-cmd@v1
@@ -44,15 +54,23 @@ jobs:
       - name: Install Ninja
         run: choco install ninja -y
 
-      - name: Configure and build editor
-        if: steps.build-cache.outputs.cache-hit != 'true'
+      - name: Regenerate reflection headers
+        if: steps.header-cache.outputs.cache-matched-key == ''
+        shell: cmd
+        run: Tools\Scripts\delta_header_force_generate.bat --automatic
+
+      - name: Configure and build editor (cold)
+        if: steps.build-cache.outputs.cache-matched-key == ''
         shell: cmd
         run: Tools\Scripts\rebuild-x64-debug.bat --automatic
 
-      - name: Build editor (cached)
-        if: steps.build-cache.outputs.cache-hit == 'true'
+      - name: Configure and build editor (incremental)
+        if: steps.build-cache.outputs.cache-matched-key != ''
         shell: cmd
-        run: Tools\Scripts\build-x64-debug.bat --automatic
+        run: |
+          call Tools\Scripts\configure-x64-debug.bat --automatic
+          if errorlevel 1 exit /b 1
+          call Tools\Scripts\build-x64-debug.bat --automatic
 
       - name: Build engine tests
         shell: cmd
@@ -69,3 +87,17 @@ jobs:
       - name: Run editor tests
         shell: cmd
         run: Tools\Scripts\run-x64-debug-editor-tests.bat --automatic
+
+      - name: Save build tree
+        if: github.event_name == 'push'
+        uses: actions/cache/save@v5
+        with:
+          path: Build/x64-Debug
+          key: windows-x64-debug-${{ replace(github.event.pull_request.base.ref || github.ref_name, '/', '-') }}-${{ hashFiles('CMakePresets.json') }}
+
+      - name: Save DeltaHeaderTool generated output
+        if: github.event_name == 'push'
+        uses: actions/cache/save@v5
+        with:
+          path: Intermediate/DeltaHeaderTool
+          key: windows-x64-dht-${{ replace(github.event.pull_request.base.ref || github.ref_name, '/', '-') }}-${{ hashFiles('Tools/DeltaHeaderTool/**') }}
