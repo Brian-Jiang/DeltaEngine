@@ -31,6 +31,12 @@ public:
     virtual void WriteShadowParams(std::shared_ptr<DXGraphicsContext> ctx, const ShadowAllocation& alloc) {}
 
     virtual void GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> ctx, const ShadowView& view) {}
+
+    /** True when this proxy owns GPU resources that must outlive in-flight command lists. */
+    virtual bool HasExclusiveGPUResources() const { return false; }
+
+    /** Drops non-exclusive references (e.g. cached textures) without waiting on the GPU. */
+    virtual void ReleaseSharedReferences() {}
 };
 
 DELTA_ENGINE_NS_END

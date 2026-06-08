@@ -49,6 +49,9 @@ public:
     /// Returns the number of vertices in the first vertex buffer.
     DELTAENGINE_API size_t GetVertexCount() const;
 
+    DELTAENGINE_API bool HasExclusiveGPUResources() const override;
+    DELTAENGINE_API void ReleaseSharedReferences() override;
+
 private:
     DMesh* m_mesh;
     std::shared_ptr<MeshRendererSettings> m_settings;

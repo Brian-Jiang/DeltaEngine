@@ -27,6 +27,9 @@ public:
     /// Returns the GPU-resident cubemap texture once the proxy has been initialized.
     const std::shared_ptr<DirectX12Texture>& GetGpuCubemap() const { return m_gpuCubemap; }
 
+    DELTAENGINE_API bool HasExclusiveGPUResources() const override;
+    DELTAENGINE_API void ReleaseSharedReferences() override;
+
 private:
     DTexture*  m_cubemapTexture;
     DMaterial* m_material;

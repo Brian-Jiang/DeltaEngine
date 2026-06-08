@@ -2,6 +2,7 @@
 
 #include "Runtime/Core/DMesh.h"
 #include "Runtime/Graphics/RenderProxy/MeshRenderProxy.h"
+#include "Runtime/Graphics/RenderProxy/RenderProxy.h"
 #include "Runtime/Graphics/Shadow/ShadowView.h"
 
 using namespace DeltaEngine;
@@ -71,4 +72,9 @@ void DeltaEngine::MeshRenderer::OnTransformChanged()
 {
     if (m_meshRenderProxy)
         m_meshRenderProxy->UpdateWorldTransform(GetWorldTransform());
+}
+
+std::shared_ptr<RenderProxy> MeshRenderer::DetachRenderProxyForRelease()
+{
+    return std::move(m_meshRenderProxy);
 }

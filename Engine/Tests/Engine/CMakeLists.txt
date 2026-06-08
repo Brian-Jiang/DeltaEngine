@@ -16,6 +16,7 @@ set(DELTA_ENGINE_TEST_SOURCES
     Graphics/LightProxyShadowTests.cpp
     Graphics/MeshRendererTests.cpp
     Graphics/MeshRenderProxyTests.cpp
+    Graphics/RenderResourceReleaseQueueTests.cpp
     Graphics/MeshShadowSubmissionTests.cpp
     Graphics/PostProcessTests_DataModel.cpp
     Graphics/PostProcessStackHardeningTests.cpp
@@ -39,6 +40,7 @@ set(DELTA_ENGINE_TEST_SOURCES
     Core/GCObjectRegistryTests.cpp
     Core/GCMarkTests.cpp
     Core/GCSweepTests.cpp
+    Core/GCRenderSweepTests.cpp
     Core/SceneComponentTests.cpp
     Core/CoreAssetDataTests.cpp
     Core/CoreUtilityTests.cpp

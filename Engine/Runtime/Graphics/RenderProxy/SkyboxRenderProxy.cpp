@@ -25,6 +25,16 @@ SkyboxRenderProxy::SkyboxRenderProxy(DTexture* cubemapTexture, DMaterial* materi
 {
 }
 
+bool SkyboxRenderProxy::HasExclusiveGPUResources() const
+{
+    return m_initialized && m_pso != nullptr;
+}
+
+void SkyboxRenderProxy::ReleaseSharedReferences()
+{
+    m_gpuCubemap.reset();
+}
+
 void SkyboxRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext> renderContext)
 {
     if (m_initialized)

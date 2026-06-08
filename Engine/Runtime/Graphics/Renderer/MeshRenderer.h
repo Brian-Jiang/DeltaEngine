@@ -35,6 +35,7 @@ protected:
     void GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) override;
     void GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> context, const ShadowView& view) override;
     void OnTransformChanged() override;
+    std::shared_ptr<RenderProxy> DetachRenderProxyForRelease() override;
 
 public:
     /// Rebuilds the mesh render proxy from the current mesh and settings.
