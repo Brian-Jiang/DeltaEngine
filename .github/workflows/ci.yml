@@ -33,9 +33,9 @@ jobs:
           path: |
             Build/x64-Debug
             Intermediate/DeltaHeaderTool
-          key: windows-x64-debug-${{ hashFiles('CMakePresets.json', 'CMakeLists.txt', 'Engine/CMakeLists.txt', 'Engine/**/CMakeLists.txt', 'Tools/DeltaHeaderTool/**') }}
+          key: windows-x64-debug-${{ replace(github.event.pull_request.base.ref || github.ref_name, '/', '-') }}-${{ hashFiles('CMakePresets.json', 'CMakeLists.txt', 'Engine/CMakeLists.txt', 'Engine/**/CMakeLists.txt', 'Tools/DeltaHeaderTool/**') }}
           restore-keys: |
-            windows-x64-debug-${{ hashFiles('CMakePresets.json', 'CMakeLists.txt', 'Engine/CMakeLists.txt', 'Engine/**/CMakeLists.txt', 'Tools/DeltaHeaderTool/**') }}-
+            windows-x64-debug-${{ replace(github.event.pull_request.base.ref || github.ref_name, '/', '-') }}-${{ hashFiles('CMakePresets.json', 'CMakeLists.txt', 'Engine/CMakeLists.txt', 'Engine/**/CMakeLists.txt', 'Tools/DeltaHeaderTool/**') }}-
 
       - name: MSVC dev environment
         uses: ilammy/msvc-dev-cmd@v1
@@ -81,4 +81,4 @@ jobs:
           path: |
             Build/x64-Debug
             Intermediate/DeltaHeaderTool
-          key: windows-x64-debug-${{ hashFiles('CMakePresets.json', 'CMakeLists.txt', 'Engine/CMakeLists.txt', 'Engine/**/CMakeLists.txt', 'Tools/DeltaHeaderTool/**') }}
+          key: windows-x64-debug-${{ replace(github.event.pull_request.base.ref || github.ref_name, '/', '-') }}-${{ hashFiles('CMakePresets.json', 'CMakeLists.txt', 'Engine/CMakeLists.txt', 'Engine/**/CMakeLists.txt', 'Tools/DeltaHeaderTool/**') }}
