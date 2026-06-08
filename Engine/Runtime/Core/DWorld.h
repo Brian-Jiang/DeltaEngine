@@ -91,6 +91,7 @@ public:
     DELTAENGINE_API Skybox* GetSkybox() const;
 
 private:
+    DPROPERTY(HideInDetails)
     SceneComponent* m_rootSceneComponent;
 
     DPROPERTY(HideInDetails)

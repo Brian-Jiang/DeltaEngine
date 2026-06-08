@@ -168,3 +168,31 @@ TEST_F(GCSweepTests, FullCycleInvokesLifecycleHooks)
     EXPECT_EQ(GetGCManager().GetState(), EGCState::Idle);
     EXPECT_FALSE(GetGCManager().HasPendingDestroy());
 }
+
+TEST_F(GCSweepTests, CollectAllForShutdownDestroysRootedObjects)
+{
+    auto& registry = GetReflectionRegistry();
+
+    auto* rooted   = registry.CreateObject<DSnapshotTestComponentA>("DSnapshotTestComponentA");
+    auto* unrooted = registry.CreateObject<DSnapshotTestComponentB>("DSnapshotTestComponentB");
+    ASSERT_NE(rooted, nullptr);
+    ASSERT_NE(unrooted, nullptr);
+
+    WeakDObjectPtr<DSnapshotTestComponentA> rootedWeak(rooted);
+    WeakDObjectPtr<DSnapshotTestComponentB> unrootedWeak(unrooted);
+
+    GetDObjectRegistry().AddRoot(rooted->GetGCHandle());
+
+    // A normal collect keeps the rooted object alive.
+    GetGCManager().CollectGarbage();
+    EXPECT_TRUE(rootedWeak.IsValid());
+    EXPECT_FALSE(unrootedWeak.IsValid());
+
+    // Shutdown purge ignores roots and reclaims everything that remains.
+    GetGCManager().CollectAllForShutdown();
+
+    EXPECT_FALSE(rootedWeak.IsValid());
+    EXPECT_EQ(GetDObjectRegistry().GetLiveCount(), 0u);
+    EXPECT_EQ(GetGCManager().GetState(), EGCState::Idle);
+    EXPECT_FALSE(GetGCManager().HasPendingDestroy());
+}

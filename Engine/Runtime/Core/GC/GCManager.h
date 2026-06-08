@@ -36,6 +36,11 @@ public:
     /// Runs a full Mark -> Sweep -> drain cycle synchronously (used by tests).
     DELTAENGINE_API void CollectGarbage();
 
+    /// Destroys every remaining live object regardless of roots. Used at shutdown
+    /// so DObject destructors release their resources (e.g. GPU handles) before the
+    /// owning subsystems (device, etc.) are torn down.
+    DELTAENGINE_API void CollectAllForShutdown();
+
     EGCState GetState() const { return m_state; }
 
     /// True while a mark traversal is in progress (guards mid-mark allocations).

@@ -2,6 +2,7 @@
 #include "Runtime/Core/DTexture.h"
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/GameObject.h"
+#include "Runtime/Core/SceneComponent.h"
 #include "Runtime/Core/Skybox.h"
 #include "Runtime/Core/GC/DObjectGCTypes.h"
 #include "Runtime/Core/GC/DObjectRegistry.h"
@@ -165,6 +166,26 @@ TEST(GCMarkTests, RootedWorldReachesGameObjectsViaReflection)
     EXPECT_EQ(ColorOf(goA), EGCMarkColor::Black);
     EXPECT_EQ(ColorOf(goB), EGCMarkColor::Black);
     EXPECT_EQ(ColorOf(orphan), EGCMarkColor::White);
+
+    GetDObjectRegistry().RemoveRoot(world->GetGCHandle());
+    world->Clear();
+    GetGCManager().CollectGarbage();
+}
+
+TEST(GCMarkTests, RootedWorldReachesRootSceneComponentViaReflection)
+{
+    DWorld* world = DWorld::CreateWorld();
+    ASSERT_NE(world, nullptr);
+
+    SceneComponent* worldRoot = world->GetRootSceneComponent();
+    ASSERT_NE(worldRoot, nullptr);
+
+    GetDObjectRegistry().AddRoot(world->GetGCHandle());
+
+    GetGCManager().Mark();
+
+    EXPECT_EQ(ColorOf(world), EGCMarkColor::Black);
+    EXPECT_EQ(ColorOf(worldRoot), EGCMarkColor::Black);
 
     GetDObjectRegistry().RemoveRoot(world->GetGCHandle());
     world->Clear();
