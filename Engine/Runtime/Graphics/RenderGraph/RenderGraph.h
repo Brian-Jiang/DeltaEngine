@@ -17,6 +17,12 @@ DELTA_ENGINE_NS_BEGIN
 class DELTAENGINE_API RenderGraph
 {
 public:
+    RenderGraph() = default;
+    RenderGraph(const RenderGraph&) = delete;
+    RenderGraph& operator=(const RenderGraph&) = delete;
+    RenderGraph(RenderGraph&&) = default;
+    RenderGraph& operator=(RenderGraph&&) = default;
+
     void AddPass(std::unique_ptr<RenderGraphPass> pass);
     RenderGraphTextureHandle ImportTexture(std::string name, std::shared_ptr<DirectX12Texture> texture,
         RenderGraphTextureUsage usage);
