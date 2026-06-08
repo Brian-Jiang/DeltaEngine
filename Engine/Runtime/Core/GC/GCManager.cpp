@@ -96,6 +96,32 @@ void GCManager::CollectGarbage()
     }
 }
 
+void GCManager::CollectAllForShutdown()
+{
+    // Finish any in-flight sweep so the pending-destroy list starts empty.
+    while (m_state == EGCState::Sweeping)
+    {
+        if (DrainSweep() == 0)
+            break;
+    }
+
+    m_state = EGCState::Idle;
+
+    // Treat every live object as unreachable, then sweep everything. Roots are
+    // intentionally ignored: this is a final teardown, not a reachability collect.
+    DObjectRegistry& registry = GetDObjectRegistry();
+    for (DObject* obj : registry.GetAllLiveObjects())
+        obj->SetGCMarkColor(EGCMarkColor::White);
+
+    BeginSweep();
+
+    while (m_state == EGCState::Sweeping)
+    {
+        if (DrainSweep() == 0)
+            break;
+    }
+}
+
 void GCManager::BeginSweep()
 {
     m_state = EGCState::Sweeping;
