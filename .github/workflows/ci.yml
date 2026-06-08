@@ -26,25 +26,36 @@ jobs:
         with:
           lfs: true
 
+      - name: Resolve cache branch id
+        id: cache-branch
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BRANCH="${{ github.event.pull_request.base.ref }}"
+          else
+            BRANCH="${{ github.ref_name }}"
+          fi
+          echo "id=${BRANCH//\//-}" >> "$GITHUB_OUTPUT"
+
       - name: Restore build tree
         uses: actions/cache/restore@v5
         id: build-cache
         with:
           path: Build/x64-Debug
-          key: windows-x64-debug-${{ replace(github.event.pull_request.base.ref || github.ref_name, '/', '-') }}-${{ hashFiles('CMakePresets.json') }}
+          key: windows-x64-debug-${{ steps.cache-branch.outputs.id }}-${{ hashFiles('CMakePresets.json') }}
           restore-keys: |
-            windows-x64-debug-${{ replace(github.event.pull_request.base.ref || github.ref_name, '/', '-') }}-${{ hashFiles('CMakePresets.json') }}-
-            windows-x64-debug-${{ replace(github.event.pull_request.base.ref || github.ref_name, '/', '-') }}-
+            windows-x64-debug-${{ steps.cache-branch.outputs.id }}-${{ hashFiles('CMakePresets.json') }}-
+            windows-x64-debug-${{ steps.cache-branch.outputs.id }}-
 
       - name: Restore DeltaHeaderTool generated output
         uses: actions/cache/restore@v5
         id: header-cache
         with:
           path: Intermediate/DeltaHeaderTool
-          key: windows-x64-dht-${{ replace(github.event.pull_request.base.ref || github.ref_name, '/', '-') }}-${{ hashFiles('Tools/DeltaHeaderTool/**') }}
+          key: windows-x64-dht-${{ steps.cache-branch.outputs.id }}-${{ hashFiles('Tools/DeltaHeaderTool/**') }}
           restore-keys: |
-            windows-x64-dht-${{ replace(github.event.pull_request.base.ref || github.ref_name, '/', '-') }}-${{ hashFiles('Tools/DeltaHeaderTool/**') }}-
-            windows-x64-dht-${{ replace(github.event.pull_request.base.ref || github.ref_name, '/', '-') }}-
+            windows-x64-dht-${{ steps.cache-branch.outputs.id }}-${{ hashFiles('Tools/DeltaHeaderTool/**') }}-
+            windows-x64-dht-${{ steps.cache-branch.outputs.id }}-
 
       - name: MSVC dev environment
         uses: ilammy/msvc-dev-cmd@v1
@@ -93,11 +104,11 @@ jobs:
         uses: actions/cache/save@v5
         with:
           path: Build/x64-Debug
-          key: windows-x64-debug-${{ replace(github.event.pull_request.base.ref || github.ref_name, '/', '-') }}-${{ hashFiles('CMakePresets.json') }}
+          key: windows-x64-debug-${{ steps.cache-branch.outputs.id }}-${{ hashFiles('CMakePresets.json') }}
 
       - name: Save DeltaHeaderTool generated output
         if: github.event_name == 'push'
         uses: actions/cache/save@v5
         with:
           path: Intermediate/DeltaHeaderTool
-          key: windows-x64-dht-${{ replace(github.event.pull_request.base.ref || github.ref_name, '/', '-') }}-${{ hashFiles('Tools/DeltaHeaderTool/**') }}
+          key: windows-x64-dht-${{ steps.cache-branch.outputs.id }}-${{ hashFiles('Tools/DeltaHeaderTool/**') }}
