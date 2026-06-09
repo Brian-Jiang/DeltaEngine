@@ -247,7 +247,7 @@ void DXRenderManager::SetPendingActiveRenderCamera(std::optional<ActiveRenderCam
     m_pendingActiveRenderCamera = std::move(camera);
 }
 
-void DXRenderManager::FrameGraphBindings::Register(RenderGraphTextureHandle handle,
+void FrameGraphBindings::Register(RenderGraphTextureHandle handle,
     D3D12_CPU_DESCRIPTOR_HANDLE rtv, D3D12_CPU_DESCRIPTOR_HANDLE srv)
 {
     if (!handle.IsValid())
@@ -259,7 +259,7 @@ void DXRenderManager::FrameGraphBindings::Register(RenderGraphTextureHandle hand
     entries[handle.index] = { rtv, srv };
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE DXRenderManager::FrameGraphBindings::RtvFor(RenderGraphTextureHandle handle) const
+D3D12_CPU_DESCRIPTOR_HANDLE FrameGraphBindings::RtvFor(RenderGraphTextureHandle handle) const
 {
     if (!handle.IsValid() || handle.index >= entries.size())
         return {};
@@ -267,7 +267,7 @@ D3D12_CPU_DESCRIPTOR_HANDLE DXRenderManager::FrameGraphBindings::RtvFor(RenderGr
     return entries[handle.index].rtv;
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE DXRenderManager::FrameGraphBindings::SrvFor(RenderGraphTextureHandle handle) const
+D3D12_CPU_DESCRIPTOR_HANDLE FrameGraphBindings::SrvFor(RenderGraphTextureHandle handle) const
 {
     if (!handle.IsValid() || handle.index >= entries.size())
         return {};
