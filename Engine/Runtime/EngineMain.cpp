@@ -20,6 +20,7 @@
 #include "IO/IOManager.h"
 #include "Reflection/ReflectionRegistry.h"
 #include "Runtime/Core/DWorld.h"
+#include "Runtime/Core/GC/GCManager.h"
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Logging/LoggingManager.h"
 
@@ -54,6 +55,18 @@ DWorld* EngineMain::GetWorld() const
     }
 
     return nullptr;
+}
+
+GCManager& EngineMain::GetGCManager() const
+{
+    return DeltaEngine::GetGCManager();
+}
+
+void EngineMain::TickGC()
+{
+    GCManager& gc = DeltaEngine::GetGCManager();
+    gc.RequestCollect();
+    gc.Tick();
 }
 
 void EngineMain::Initialize(std::shared_ptr<DXRenderManager> sceneRenderer)
@@ -149,6 +162,7 @@ void EngineMain::CreateWorld()
         return;
 
     m_worldContextList.push_back(WorldContext { WorldType::Editor, world });
+    m_worldRoot = StrongDObjectPtr<DObject>(world);
     DLOG(LogEngine, ELogLevel::Display, "EngineMain::CreateWorld: editor world={}",
         static_cast<void*>(world));
 }
@@ -290,6 +304,7 @@ void EngineMain::Cleanup()
     if (DWorld* world = GetWorld())
         world->Clear();
 
+    m_worldRoot.Reset();
     m_worldContextList.clear();
 
     if (dxRenderManager)

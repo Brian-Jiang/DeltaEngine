@@ -3,6 +3,7 @@
 #include "EngineIncludes.h"
 
 #include "Core/DObject.h"
+#include "Core/GC/StrongDObjectPtr.h"
 #include "Core/UUID.h"
 #include "Serialization/ScriptPointer.h"
 
@@ -57,6 +58,9 @@ public:
     /// Returns all objects owned by this asset.
     const std::vector<DObject*>& GetObjects() const;
 
+    /// Drops GC roots for all owned objects (used before explicit teardown).
+    void ClearObjectRoots();
+
     /// Serializes the asset header.
     void SerializeHeader(AssetArchive& ar);
     /// Serializes the asset body objects.
@@ -103,6 +107,7 @@ private:
 
     Header m_header;
     std::vector<DObject*> m_objects;
+    std::vector<StrongDObjectPtr<DObject>> m_objectRoots;
     nlohmann::json m_dynamicMeta;
     bool m_dirty = true;
 };

@@ -8,6 +8,7 @@
 
 #include "Runtime/Core/UUID.h"
 #include "Runtime/Core/WorldContext.h"
+#include "Runtime/Core/GC/StrongDObjectPtr.h"
 
 union SDL_Event;
 
@@ -19,6 +20,7 @@ class Camera;
 class DXRenderManager;
 class DWorld;
 class GameObject;
+class GCManager;
 class Time;
 
 enum class GameState
@@ -79,11 +81,18 @@ public:
     /// Returns the editor world, or nullptr if it was not created.
     DELTAENGINE_API DWorld* GetWorld() const;
 
+    /// Returns the global garbage collector driven by the runtime.
+    DELTAENGINE_API GCManager& GetGCManager() const;
+
+    /// Advances the garbage collector one frame (requests + drives the state machine).
+    DELTAENGINE_API void TickGC();
+
 private:
     std::shared_ptr<DXRenderManager> dxRenderManager;
     std::unique_ptr<Time> time;
     std::vector<WorldContext> m_worldContextList;
     GameObject* m_cameraGameObject = nullptr;
+    StrongDObjectPtr<DObject> m_worldRoot;
 };
 
 DELTA_ENGINE_NS_END

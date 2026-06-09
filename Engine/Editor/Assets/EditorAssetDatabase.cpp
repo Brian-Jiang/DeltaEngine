@@ -52,12 +52,13 @@ EditorAssetDatabase::~EditorAssetDatabase()
         if (!entry.m_instance)
             continue;
 
-        DPrimaryAsset* pa = entry.m_instance;
+        DPrimaryAsset* pa = entry.m_instance.Get();
+        pa->ClearObjectRoots();
         std::vector<DObject*> owned = pa->GetObjects();
         for (DObject* obj : owned)
             GetReflectionRegistry().DestroyObject(obj);
+        entry.m_instance.Reset();
         GetReflectionRegistry().DestroyObject(pa);
-        entry.m_instance = nullptr;
     }
 }
 
@@ -81,12 +82,13 @@ void EditorAssetDatabase::ReloadAssetFromDisk(const AssetId& id)
     AssetEntry& entry = it->second;
     if (entry.m_instance)
     {
-        DPrimaryAsset* pa = entry.m_instance;
+        DPrimaryAsset* pa = entry.m_instance.Get();
+        pa->ClearObjectRoots();
         std::vector<DObject*> owned = pa->GetObjects();
         for (DObject* obj : owned)
             GetReflectionRegistry().DestroyObject(obj);
+        entry.m_instance.Reset();
         GetReflectionRegistry().DestroyObject(pa);
-        entry.m_instance = nullptr;
     }
     entry.m_state = AssetState::HeaderOnly;
     LoadAsset(id);
@@ -138,7 +140,6 @@ void EditorAssetDatabase::ScanAssetsFolder(const std::filesystem::path& root)
             .m_header   = header,
             .m_filePath = path,
             .m_state    = AssetState::HeaderOnly,
-            .m_instance = nullptr,
             .m_meta     = std::move(meta),
         };
 
@@ -280,7 +281,7 @@ DPrimaryAsset* EditorAssetDatabase::LoadAsset(const AssetId& id)
     }
 
     if (it->second.m_state == AssetState::Loaded)
-        return it->second.m_instance;
+        return it->second.m_instance.Get();
 
     DLOG(LogEditorAssets, ELogLevel::Verbose, "LoadAsset: id='{}' path='{}'",
          id.ToString(), it->second.m_filePath.string());
@@ -289,7 +290,7 @@ DPrimaryAsset* EditorAssetDatabase::LoadAsset(const AssetId& id)
     LoadAssetRecursive(id);
     ResolvePendingBatch();
 
-    return m_assets[id].m_instance;
+    return m_assets[id].m_instance.Get();
 }
 
 // ---------------------------------------------------------------------------
@@ -438,7 +439,7 @@ void EditorAssetDatabase::ResolvePendingBatch()
             continue;
         }
 
-        auto& asset = it->second.m_instance;
+        DPrimaryAsset* asset = it->second.m_instance.Get();
         for (auto& obj : asset->GetObjects())
         {
             VisitUnresolvedObjectReferencesInStruct(obj->GetClass(), obj,
@@ -462,7 +463,7 @@ DObject* EditorAssetDatabase::FindObject(
     auto it = m_assets.find(assetId);
     if (it == m_assets.end() || !it->second.m_instance)
         return nullptr;
-    return it->second.m_instance->FindObject(objId);
+    return it->second.m_instance.Get()->FindObject(objId);
 }
 
 // ---------------------------------------------------------------------------
@@ -475,7 +476,7 @@ void EditorAssetDatabase::SaveDirtyAssets()
     {
         if (entry.m_state != AssetState::Loaded)
             continue;
-        if (!entry.m_instance || !entry.m_instance->IsDirty())
+        if (!entry.m_instance || !entry.m_instance.Get()->IsDirty())
             continue;
         SaveAsset(id);
     }
@@ -493,7 +494,7 @@ void EditorAssetDatabase::SaveAsset(const AssetId& id)
     }
 
     auto& entry = it->second;
-    auto& asset = entry.m_instance;
+    DPrimaryAsset* asset = entry.m_instance.Get();
     if (!asset)
     {
         DLOG(LogEditorAssets, ELogLevel::Warning,
@@ -673,7 +674,6 @@ AssetId EditorAssetDatabase::DuplicateAsset(const AssetId& id)
         .m_header   = header,
         .m_filePath = targetPath,
         .m_state    = AssetState::HeaderOnly,
-        .m_instance = nullptr,
         .m_meta     = ReadAssetMetaFromFile(targetPath),
     };
 
@@ -1077,7 +1077,7 @@ DPrimaryAsset* EditorAssetDatabase::GetLoadedAsset(const AssetId& id) const
     auto it = m_assets.find(id);
     if (it == m_assets.end() || it->second.m_state != AssetState::Loaded)
         return nullptr;
-    return it->second.m_instance;
+    return it->second.m_instance.Get();
 }
 
 const nlohmann::json& EditorAssetDatabase::GetAssetMeta(const AssetId& id) const
@@ -1093,7 +1093,7 @@ void EditorAssetDatabase::RefreshAssetMetaCache(const AssetId& id)
     auto it = m_assets.find(id);
     if (it == m_assets.end() || !it->second.m_instance)
         return;
-    it->second.m_meta = BuildMetaFromLiveAsset(it->second.m_instance);
+    it->second.m_meta = BuildMetaFromLiveAsset(it->second.m_instance.Get());
 }
 
 bool EditorAssetDatabase::IsLoaded(const AssetId& id) const

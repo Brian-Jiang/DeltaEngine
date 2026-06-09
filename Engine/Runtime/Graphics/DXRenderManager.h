@@ -21,6 +21,7 @@
 #include "Runtime/Graphics/DirectX/DirectX12Texture.h"
 #include "Runtime/Graphics/DirectX/RenderTarget.h"
 #include "Runtime/Graphics/IBL/IBLBaker.h"
+#include "Runtime/Graphics/RenderResourceReleaseQueue.h"
 #include "Runtime/Graphics/Shadow/ShadowPassManager.h"
 
 DELTA_ENGINE_NS_BEGIN
@@ -34,6 +35,7 @@ class DTexture;
 class PostProcessStack;
 class PostProcessPass;
 class ShadowDepthPSO;
+class RenderProxy;
 
 struct PostProcessTarget
 {
@@ -87,6 +89,9 @@ public:
         return m_hasPostProcessedOutput ? m_finalPostProcessTexture : nullptr;
     }
 
+    /// Enqueues a render proxy for deferred GPU release after the last submitted frame fence.
+    DELTAENGINE_API RenderResourceReleaseToken DeferRenderProxyRelease(std::shared_ptr<RenderProxy> proxy);
+
 private:
     void CreatePingPongTargets(UINT width, UINT height);
     void ExecutePostProcessStack(DXGraphicsContext& ctx, PostProcessStack* stack, UINT width, UINT height);
@@ -120,6 +125,9 @@ private:
     DTexture* m_lastSkyboxTexture = nullptr;
     bool m_iblFallbackReady = false;
     DWorld* m_currentWorld = nullptr;
+
+    RenderResourceReleaseQueue m_releaseQueue;
+    uint64_t m_lastSubmittedFence = 0;
 
     UINT m_width;
     UINT m_height;

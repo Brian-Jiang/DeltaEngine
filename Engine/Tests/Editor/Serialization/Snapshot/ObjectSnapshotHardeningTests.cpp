@@ -4,6 +4,7 @@
 #include "Runtime/Core/DScene.h"
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/GameObject.h"
+#include "Runtime/Core/GC/GCManager.h"
 #include "Runtime/Serialization/ObjectSnapshot.h"
 #include "Runtime/Serialization/ObjectSnapshotReader.h"
 #include "Runtime/Serialization/ObjectSnapshotWriter.h"
@@ -107,6 +108,7 @@ TEST_F(ObjectSnapshotHardeningTests, ObjectSnapshotReader_RestoreGameObject_Adds
     ObjectSnapshotWriter writer;
     ObjectSnapshot snapshot = writer.Capture(gameObject);
     sourceWorld.DestroyGameObject(gameObject);
+    GetGCManager().CollectGarbage();
     DWorld targetWorld;
     auto* scene = CreateDObject<DScene>();
     ObjectSnapshotReader reader;

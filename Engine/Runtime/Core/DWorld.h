@@ -91,14 +91,19 @@ public:
     DELTAENGINE_API Skybox* GetSkybox() const;
 
 private:
+    DPROPERTY(HideInDetails)
     SceneComponent* m_rootSceneComponent;
+
+    DPROPERTY(HideInDetails)
     std::vector<GameObject*> m_gameObjects;
+
     bool m_gameObjectsChanged = false;
 
     /// The scene that editor scene-object operations target.
     DScene* m_activeScene = nullptr;
 
     /// Runtime skybox pointer, synced from the active scene.
+    DPROPERTY(HideInDetails)
     Skybox* m_skybox = nullptr;
 };
 

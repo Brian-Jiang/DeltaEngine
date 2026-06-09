@@ -100,6 +100,7 @@ void DPrimaryAsset::AddObject(DObject* obj)
     DELTA_VERIFY_MSG(obj != nullptr, "DPrimaryAsset::AddObject requires non-null object");
     obj->SetOwningAsset(this);
     m_objects.push_back(obj);
+    m_objectRoots.emplace_back(obj);
     MarkDirty();
 }
 
@@ -115,7 +116,9 @@ void DPrimaryAsset::RemoveObject(const ObjectId &id)
         DObject* removed = *it;
         DELTA_VERIFY_MSG(removed != nullptr, "DPrimaryAsset::RemoveObject encountered null slot");
         removed->SetOwningAsset(nullptr);
+        const auto index = static_cast<size_t>(std::distance(m_objects.begin(), it));
         m_objects.erase(it);
+        m_objectRoots.erase(m_objectRoots.begin() + static_cast<std::ptrdiff_t>(index));
         MarkDirty();
     }
 }
@@ -134,6 +137,11 @@ DObject* DPrimaryAsset::FindObject(const ObjectId& id) const
 const std::vector<DObject*>& DPrimaryAsset::GetObjects() const
 {
     return m_objects;
+}
+
+void DPrimaryAsset::ClearObjectRoots()
+{
+    m_objectRoots.clear();
 }
 
 void DPrimaryAsset::SerializeHeader(AssetArchive& ar)
@@ -254,6 +262,7 @@ void DPrimaryAsset::DeserializeBody(AssetArchive& ar)
 
         ar.EndObject();
         m_objects.push_back(obj);
+        m_objectRoots.emplace_back(obj);
     }
     ar.EndArray();
 }

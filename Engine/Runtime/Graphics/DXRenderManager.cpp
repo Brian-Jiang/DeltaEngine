@@ -27,6 +27,8 @@
 #include "Runtime/Graphics/Shadow/ShadowConstants.h"
 #include "Runtime/Graphics/Shadow/ShadowDepthPSO.h"
 #include "Runtime/Graphics/Shadow/ShadowSettings.h"
+#include "Runtime/Graphics/RenderResourceReleaseService.h"
+#include "Runtime/Graphics/RenderProxy/RenderProxy.h"
 
 #include <algorithm>
 
@@ -40,11 +42,21 @@ DXRenderManager::DXRenderManager(std::shared_ptr<Device> device, std::shared_ptr
     m_scissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX))
 {
     m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+
+    m_releaseQueue.SetFenceCompleteChecker([this](uint64_t fenceValue)
+    {
+        return m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT).IsFenceComplete(fenceValue);
+    });
+    GetRenderResourceReleaseService().RegisterQueue(&m_releaseQueue);
+
     LoadPipeline();
     LoadAssets();
 }
 
-DXRenderManager::~DXRenderManager() = default;
+DXRenderManager::~DXRenderManager()
+{
+    GetRenderResourceReleaseService().UnregisterQueue(&m_releaseQueue);
+}
 
 void DXRenderManager::LoadPipeline()
 {
@@ -229,6 +241,7 @@ void DXRenderManager::SetPendingActiveRenderCamera(std::optional<ActiveRenderCam
 
 void DXRenderManager::PrepareFrame()
 {
+    m_releaseQueue.ProcessCompleted();
     m_device->ReleaseStaleDescriptors();
 
     DTexture* skyboxCube = nullptr;
@@ -385,9 +398,15 @@ void DXRenderManager::RenderFrame()
     ExecutePostProcessStack(*ctx, stack, m_width, m_height);
 
     CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
-    directCommandQueue.ExecuteCommandList(m_currentCommandList);
+    m_lastSubmittedFence = directCommandQueue.ExecuteCommandList(m_currentCommandList);
+    m_releaseQueue.SetLastSubmittedFence(m_lastSubmittedFence);
     m_currentCommandList = nullptr;
     m_currentContext.reset();
+}
+
+RenderResourceReleaseToken DXRenderManager::DeferRenderProxyRelease(std::shared_ptr<RenderProxy> proxy)
+{
+    return m_releaseQueue.Enqueue(std::move(proxy), m_lastSubmittedFence);
 }
 
 void DXRenderManager::Resize(UINT width, UINT height)
@@ -508,7 +527,10 @@ void DXRenderManager::CreatePingPongTargets(UINT width, UINT height)
 void DXRenderManager::OnDestroy()
 {
     if (m_device)
+    {
         m_device->Flush();
+        m_releaseQueue.ProcessCompleted();
+    }
     for (PostProcessPass* pass : m_trackedPasses)
     {
         if (pass)

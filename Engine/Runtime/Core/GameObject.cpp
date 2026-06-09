@@ -23,15 +23,12 @@ GameObject::~GameObject()
 
 void GameObject::Destroy()
 {
-    for (DComponent* component : m_components)
-    {
+    const auto components = m_components;
+    for (DComponent* component : components)
         RemoveComponent(component);
-    }
 
     if (m_rootSceneComponent)
-    {
         RemoveComponent(m_rootSceneComponent);
-    }
 }
 
 DComponent* GameObject::AddComponentByClass(const DClass* dclass)
@@ -106,9 +103,6 @@ void GameObject::RemoveComponent(DComponent* component)
     {
         component->MarkForDestroy();
         m_components.erase(it);
-        if (component->HasOwningAsset())
-            component->GetOwningAsset()->RemoveObject(component->GetObjectId());
-        GetReflectionRegistry().DestroyObject(component);
         return;
     }
 
@@ -140,9 +134,6 @@ void GameObject::RemoveComponent(DComponent* component)
             comp->MarkForDestroy();
             comp->SetParent(nullptr);
             std::erase(m_sceneComponents, comp);
-            if (comp->HasOwningAsset())
-                comp->GetOwningAsset()->RemoveObject(comp->GetObjectId());
-            GetReflectionRegistry().DestroyObject(comp);
         }
     }
 }

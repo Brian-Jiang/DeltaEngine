@@ -2,6 +2,7 @@
 
 #include "Core/DWorld.h"
 #include "Core/GameObject.h"
+#include "Core/GC/GCManager.h"
 #include "Serialization/ObjectSnapshotWriter.h"
 #include "Serialization/ObjectSnapshotReader.h"
 
@@ -32,6 +33,7 @@ bool SnapshotTests::RunInternalPtrRoundTrip(DWorld* world)
     ObjectSnapshot snapshot = writer.Capture(go);
 
     world->DestroyGameObject(go);
+    GetGCManager().CollectGarbage();
 
     ObjectSnapshotReader reader;
     DObject* restored = reader.Restore(snapshot, world, nullptr);
@@ -121,6 +123,7 @@ bool SnapshotTests::RunSceneComponentTransformPreservation(DWorld* world)
     ObjectSnapshot snapshot = writer.Capture(go);
 
     world->DestroyGameObject(go);
+    GetGCManager().CollectGarbage();
 
     ObjectSnapshotReader reader;
     DObject* restored = reader.Restore(snapshot, world, nullptr);
