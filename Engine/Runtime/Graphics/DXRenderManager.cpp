@@ -19,6 +19,9 @@
 #include "Runtime/Graphics/DefaultTextures.h"
 #include "Runtime/Graphics/PostProcess/PostProcessStack.h"
 #include "Runtime/Graphics/PostProcess/PostProcessPass.h"
+#include "Runtime/Graphics/RenderGraph/RenderGraph.h"
+#include "Runtime/Graphics/RenderGraph/PostProcessRenderGraphPass.h"
+#include "Runtime/Graphics/RenderGraph/PostProcessFinalizeGraphPass.h"
 #include "Runtime/Graphics/RenderProxy/CameraRenderProxy.h"
 #include "Runtime/Graphics/RenderProxy/SkyboxRenderProxy.h"
 #include "Runtime/Core/DWorld.h"
@@ -425,7 +428,8 @@ void DXRenderManager::ExecutePostProcessStack(DXGraphicsContext& ctx, PostProces
     auto& cl = *m_currentCommandList;
 
     const auto sceneDesc = sceneTex->GetD3D12ResourceDesc();
-    if (sceneDesc.SampleDesc.Count > 1)
+    const bool useResolvedScene = sceneDesc.SampleDesc.Count > 1;
+    if (useResolvedScene)
     {
         if (!m_resolvedScene ||
             m_resolvedScene->GetD3D12ResourceDesc().Width != sceneDesc.Width ||
@@ -440,19 +444,32 @@ void DXRenderManager::ExecutePostProcessStack(DXGraphicsContext& ctx, PostProces
         }
 
         cl.ResolveSubresource(m_resolvedScene, sceneTex);
-        cl.TransitionBarrier(m_resolvedScene, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         sceneSRV = m_resolvedScene->GetShaderResourceView();
     }
-    else
+
+    const RenderGraphTextureUsage colorAndShader =
+        RenderGraphTextureUsage::ColorAttachment | RenderGraphTextureUsage::ShaderResource;
+
+    RenderGraph graph;
+    const RenderGraphTextureHandle sceneColorHandle =
+        graph.ImportTexture("SceneColor", sceneTex, colorAndShader);
+    const RenderGraphTextureHandle pingHandle =
+        graph.ImportTexture("Ping", m_pingPong[0].texture, colorAndShader);
+    const RenderGraphTextureHandle pongHandle =
+        graph.ImportTexture("Pong", m_pingPong[1].texture, colorAndShader);
+
+    RenderGraphTextureHandle resolvedHandle;
+    if (useResolvedScene)
     {
-        cl.TransitionBarrier(sceneTex, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        resolvedHandle =
+            graph.ImportTexture("ResolvedScene", m_resolvedScene, RenderGraphTextureUsage::ShaderResource);
     }
 
+    RenderGraphTextureHandle inputHandle = useResolvedScene ? resolvedHandle : sceneColorHandle;
     D3D12_CPU_DESCRIPTOR_HANDLE readSRV = sceneSRV;
     int writeIdx = 0;
 
     const int passCount = stack->GetPassCount();
-    PIXBeginEvent(cl.GetD3D12CommandList().Get(), PIX_COLOR_DEFAULT, L"PostProcess");
     for (int i = 0; i < passCount; ++i)
     {
         PostProcessPass* pass = stack->GetPass(i);
@@ -462,20 +479,20 @@ void DXRenderManager::ExecutePostProcessStack(DXGraphicsContext& ctx, PostProces
         m_trackedPasses.insert(pass);
 
         auto& dst = m_pingPong[writeIdx];
-        cl.TransitionBarrier(dst.texture, D3D12_RESOURCE_STATE_RENDER_TARGET);
-        cl.FlushResourceBarriers();
+        const RenderGraphTextureHandle outputHandle = writeIdx == 0 ? pingHandle : pongHandle;
+        graph.AddPass(std::make_unique<PostProcessRenderGraphPass>(
+            pass, inputHandle, outputHandle, readSRV, dst.rtv, width, height));
 
-        const float black[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-        cl.GetD3D12CommandList()->ClearRenderTargetView(dst.rtv, black, 0, nullptr);
-        cl.GetD3D12CommandList()->OMSetRenderTargets(1, &dst.rtv, FALSE, nullptr);
-
-        pass->Execute(ctx, readSRV, dst.rtv, width, height);
-
-        cl.TransitionBarrier(dst.texture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
+        inputHandle = outputHandle;
         readSRV = dst.srv;
         writeIdx = 1 - writeIdx;
     }
+
+    graph.AddPass(std::make_unique<PostProcessFinalizeGraphPass>(inputHandle));
+    graph.Compile();
+
+    PIXBeginEvent(cl.GetD3D12CommandList().Get(), PIX_COLOR_DEFAULT, L"PostProcess");
+    graph.Execute({ &cl, &ctx });
     PIXEndEvent(cl.GetD3D12CommandList().Get());
 
     m_finalPostProcessSRV = readSRV;
