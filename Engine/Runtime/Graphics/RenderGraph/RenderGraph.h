@@ -14,6 +14,18 @@
 
 DELTA_ENGINE_NS_BEGIN
 
+struct RenderGraphResourceTransition
+{
+    RenderGraphTextureHandle texture;
+    D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_COMMON;
+};
+
+struct RenderGraphCompiledPass
+{
+    size_t passIndex = 0;
+    std::vector<RenderGraphResourceTransition> transitions;
+};
+
 class DELTAENGINE_API RenderGraph
 {
 public:
@@ -36,9 +48,13 @@ public:
     RenderGraphTextureHandle FindImportedTexture(std::string_view name) const;
     const RenderGraphTexture& GetImportedTexture(RenderGraphTextureHandle handle) const;
 
+    size_t GetCompiledPassCount() const { return m_compiledPasses.size(); }
+    const RenderGraphCompiledPass& GetCompiledPass(size_t index) const;
+
 private:
     std::vector<std::unique_ptr<RenderGraphPass>> m_passes;
     std::vector<RenderGraphTexture> m_importedTextures;
+    std::vector<RenderGraphCompiledPass> m_compiledPasses;
 };
 
 DELTA_ENGINE_NS_END

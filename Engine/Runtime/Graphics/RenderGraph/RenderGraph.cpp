@@ -1,6 +1,10 @@
 #include "Runtime/Graphics/RenderGraph/RenderGraph.h"
 
+#include <map>
 #include <utility>
+
+#include "Runtime/Graphics/DirectX/CommandList.h"
+#include "Runtime/Graphics/RenderGraph/RenderGraphBuilder.h"
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -29,13 +33,136 @@ RenderGraphTextureHandle RenderGraph::ImportTexture(std::string name, std::share
 
 void RenderGraph::Compile()
 {
-    DELTA_NOT_IMPLEMENTED();
+    m_compiledPasses.clear();
+
+    const size_t passCount = m_passes.size();
+    if (passCount == 0)
+    {
+        return;
+    }
+
+    // Gather declared reads/writes by replaying each pass's Setup.
+    RenderGraphBuilder builder(*this);
+    for (size_t i = 0; i < passCount; ++i)
+    {
+        builder.BeginPass(i);
+        m_passes[i]->Setup(builder);
+    }
+    const std::vector<std::vector<RenderGraphResourceAccess>>& accesses = builder.GetPassAccesses();
+
+    // Resolve the writer for each resource (last declared write wins), then build
+    // producer -> consumer edges: a pass that reads a resource depends on the pass
+    // that writes it, independent of declaration order. This lets the topological
+    // sort reorder a consumer declared before its producer, and surfaces cycles.
+    DELTA_ASSERT(accesses.size() == passCount);
+
+    std::map<uint32_t, size_t> writerOf;
+    for (size_t pass = 0; pass < passCount; ++pass)
+    {
+        for (const RenderGraphResourceAccess& access : accesses[pass])
+        {
+            if (access.type == RenderGraphAccessType::Write)
+            {
+                writerOf[access.texture.index] = pass;
+            }
+        }
+    }
+
+    std::vector<std::vector<size_t>> adjacency(passCount);
+    std::vector<uint32_t> inDegree(passCount, 0);
+    for (size_t pass = 0; pass < passCount; ++pass)
+    {
+        for (const RenderGraphResourceAccess& access : accesses[pass])
+        {
+            if (access.type != RenderGraphAccessType::Read)
+            {
+                continue;
+            }
+            const auto writerIt = writerOf.find(access.texture.index);
+            if (writerIt != writerOf.end() && writerIt->second != pass)
+            {
+                adjacency[writerIt->second].push_back(pass);
+                ++inDegree[pass];
+            }
+        }
+    }
+
+    // Kahn's algorithm. Declaration order is preserved as the tiebreak by always
+    // scanning candidate passes in ascending index order.
+    std::vector<size_t> executionOrder;
+    executionOrder.reserve(passCount);
+    std::vector<bool> scheduled(passCount, false);
+
+    while (executionOrder.size() < passCount)
+    {
+        bool progressed = false;
+        for (size_t pass = 0; pass < passCount; ++pass)
+        {
+            if (!scheduled[pass] && inDegree[pass] == 0)
+            {
+                scheduled[pass] = true;
+                executionOrder.push_back(pass);
+                for (size_t consumer : adjacency[pass])
+                {
+                    --inDegree[consumer];
+                }
+                progressed = true;
+            }
+        }
+
+        // No schedulable pass remaining => a dependency cycle exists.
+        DELTA_ASSERT(progressed);
+        if (!progressed)
+        {
+            break;
+        }
+    }
+
+    // Emit a minimal per-pass transition list by tracking each resource's running
+    // state (resources start in COMMON, matching engine resource creation).
+    std::map<uint32_t, D3D12_RESOURCE_STATES> runningState;
+    for (size_t pass : executionOrder)
+    {
+        RenderGraphCompiledPass compiled;
+        compiled.passIndex = pass;
+
+        for (const RenderGraphResourceAccess& access : accesses[pass])
+        {
+            auto stateIt = runningState.find(access.texture.index);
+            const D3D12_RESOURCE_STATES current =
+                stateIt != runningState.end() ? stateIt->second : D3D12_RESOURCE_STATE_COMMON;
+
+            if (current != access.state)
+            {
+                compiled.transitions.push_back({ access.texture, access.state });
+                runningState[access.texture.index] = access.state;
+            }
+        }
+
+        m_compiledPasses.push_back(std::move(compiled));
+    }
 }
 
 void RenderGraph::Execute(const RenderGraphContext& context)
 {
-    (void)context;
-    DELTA_NOT_IMPLEMENTED();
+    DELTA_ASSERT(context.commandList != nullptr);
+
+    for (const RenderGraphCompiledPass& compiled : m_compiledPasses)
+    {
+        for (const RenderGraphResourceTransition& transition : compiled.transitions)
+        {
+            const RenderGraphTexture& texture = GetImportedTexture(transition.texture);
+            context.commandList->TransitionBarrier(texture.texture, transition.stateAfter);
+        }
+
+        m_passes[compiled.passIndex]->Execute(context);
+    }
+}
+
+const RenderGraphCompiledPass& RenderGraph::GetCompiledPass(size_t index) const
+{
+    DELTA_ASSERT(index < m_compiledPasses.size());
+    return m_compiledPasses[index];
 }
 
 const RenderGraphPass& RenderGraph::GetPass(size_t index) const

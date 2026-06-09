@@ -19,6 +19,7 @@ set(DELTA_ENGINE_TEST_SOURCES
     Graphics/PostProcessTests_DataModel.cpp
     Graphics/PostProcessStackHardeningTests.cpp
     Graphics/RenderCoreTests.cpp
+    Graphics/RenderGraphCompileTests.cpp
     Graphics/RenderGraphTests.cpp
     Graphics/ShadowMapAllocatorTests.cpp
     Graphics/DirectionalShadowMatrixTests.cpp
