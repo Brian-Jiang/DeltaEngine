@@ -7,7 +7,7 @@
 
 DELTA_ENGINE_NS_BEGIN
 
-class PostProcessFinalizeGraphPass final : public RenderGraphPass
+class DELTAENGINE_API PostProcessFinalizeGraphPass final : public RenderGraphPass
 {
 public:
     explicit PostProcessFinalizeGraphPass(RenderGraphTextureHandle output);
