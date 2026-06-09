@@ -4,6 +4,7 @@
 #include "Runtime/Graphics/DirectX/CommandList.h"
 #include "Runtime/Graphics/PostProcess/PostProcessPass.h"
 #include "Runtime/Graphics/RenderGraph/RenderGraphBuilder.h"
+#include "Runtime/Graphics/RenderGraph/RenderGraphContext.h"
 
 DELTA_ENGINE_NS_BEGIN
 
