@@ -23,6 +23,7 @@
 #include "Runtime/Graphics/RenderGraph/PostProcessRenderGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/PostProcessFinalizeGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/ShadowRenderGraphPass.h"
+#include "Runtime/Graphics/RenderGraph/SceneRenderGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/SceneShadowReadGraphPass.h"
 #include "Runtime/Graphics/RenderProxy/CameraRenderProxy.h"
 #include "Runtime/Graphics/RenderProxy/SkyboxRenderProxy.h"
@@ -270,18 +271,68 @@ void DXRenderManager::PrepareFrame()
             ExecuteShadowGraph(ctx);
         }
     }
+}
+
+void DXRenderManager::RenderScene(const SceneDrawCallback& drawCallback)
+{
+    auto ctx = GetGraphicsContext();
+    ExecuteSceneGraph(ctx, drawCallback);
+}
+
+void DXRenderManager::ExecuteSceneGraph(const std::shared_ptr<DXGraphicsContext>& ctx,
+    const SceneDrawCallback& drawCallback)
+{
+    if (!ctx || !ctx->commandList)
+        return;
+
+    auto& commandList = *ctx->commandList;
+    auto colorTexture = m_renderTarget->GetTexture(AttachmentPoint::Color0);
+    auto depthTexture = m_renderTarget->GetTexture(AttachmentPoint::DepthStencil);
 
     const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
-    commandList->ClearTexture(m_renderTarget->GetTexture(AttachmentPoint::Color0), clearColor);
-    commandList->ClearDepthStencilTexture(m_renderTarget->GetTexture(AttachmentPoint::DepthStencil), D3D12_CLEAR_FLAG_DEPTH);
 
-    commandList->SetViewport(m_viewport);
-    commandList->SetScissorRect(m_scissorRect);
-    commandList->SetRenderTarget(*m_renderTarget);
-    commandList->SetGraphicsRootSignature(m_rootSignature);
+    if (!colorTexture || !depthTexture)
+    {
+        // Imperative fallback when the offscreen targets are not attached yet.
+        if (colorTexture)
+            commandList.ClearTexture(colorTexture, clearColor);
+        if (depthTexture)
+            commandList.ClearDepthStencilTexture(depthTexture, D3D12_CLEAR_FLAG_DEPTH);
 
-    StageIBLDescriptors(*commandList);
-    StageShadowDescriptors(*commandList);
+        commandList.SetViewport(m_viewport);
+        commandList.SetScissorRect(m_scissorRect);
+        commandList.SetRenderTarget(*m_renderTarget);
+        commandList.SetGraphicsRootSignature(m_rootSignature);
+
+        StageIBLDescriptors(commandList);
+        StageShadowDescriptors(commandList);
+
+        if (drawCallback)
+            drawCallback(ctx);
+        return;
+    }
+
+    RenderGraph graph;
+    const RenderGraphTextureHandle colorHandle = graph.ImportTexture("SceneColor", colorTexture,
+        RenderGraphTextureUsage::ColorAttachment | RenderGraphTextureUsage::ShaderResource);
+    const RenderGraphTextureHandle depthHandle = graph.ImportTexture("SceneDepth", depthTexture,
+        RenderGraphTextureUsage::DepthAttachment);
+
+    graph.AddPass(std::make_unique<SceneRenderGraphPass>(
+        colorHandle, depthHandle,
+        RenderGraphClearValue::Color4(clearColor[0], clearColor[1], clearColor[2], clearColor[3]),
+        RenderGraphClearValue::DepthStencil(1.0f),
+        m_renderTarget.get(), m_rootSignature, m_viewport, m_scissorRect,
+        [this](CommandList& cl)
+        {
+            StageIBLDescriptors(cl);
+            StageShadowDescriptors(cl);
+        },
+        ctx, drawCallback));
+    graph.Compile();
+
+    graph.Execute({ ctx->commandList.get(), ctx.get() });
+    ctx->commandList->FlushResourceBarriers();
 }
 
 void DXRenderManager::ExecuteShadowGraph(const std::shared_ptr<DXGraphicsContext>& ctx)

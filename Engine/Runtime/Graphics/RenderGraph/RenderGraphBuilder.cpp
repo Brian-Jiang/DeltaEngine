@@ -25,4 +25,12 @@ void RenderGraphBuilder::Write(RenderGraphTextureHandle texture, D3D12_RESOURCE_
     m_passAccesses[m_currentPass].push_back({ texture, state, RenderGraphAccessType::Write });
 }
 
+void RenderGraphBuilder::Write(RenderGraphTextureHandle texture, D3D12_RESOURCE_STATES state,
+    const RenderGraphClearValue& clear)
+{
+    DELTA_ASSERT(texture.IsValid());
+    DELTA_ASSERT(m_currentPass < m_passAccesses.size());
+    m_passAccesses[m_currentPass].push_back({ texture, state, RenderGraphAccessType::Write, clear });
+}
+
 DELTA_ENGINE_NS_END

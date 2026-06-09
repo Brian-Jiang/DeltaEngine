@@ -166,6 +166,12 @@ void RenderGraph::Compile()
                 compiled.transitions.push_back({ access.texture, access.state });
                 runningState[access.texture.index] = access.state;
             }
+
+            if (access.type == RenderGraphAccessType::Write &&
+                access.clear.type != RenderGraphClearValue::Type::None)
+            {
+                compiled.clears.push_back({ access.texture, access.clear });
+            }
         }
 
         m_compiledPasses.push_back(std::move(compiled));
@@ -182,6 +188,31 @@ void RenderGraph::Execute(const RenderGraphContext& context)
         {
             const RenderGraphTexture& texture = GetImportedTexture(transition.texture);
             context.commandList->TransitionBarrier(texture.texture, transition.stateAfter);
+        }
+
+        if (!compiled.clears.empty())
+        {
+            context.commandList->FlushResourceBarriers();
+            for (const RenderGraphClearOp& clear : compiled.clears)
+            {
+                const RenderGraphTexture& texture = GetImportedTexture(clear.texture);
+                if (!texture.texture)
+                {
+                    continue;
+                }
+
+                if (clear.value.type == RenderGraphClearValue::Type::Color)
+                {
+                    context.commandList->GetD3D12CommandList()->ClearRenderTargetView(
+                        texture.texture->GetRenderTargetView(), clear.value.color, 0, nullptr);
+                }
+                else if (clear.value.type == RenderGraphClearValue::Type::DepthStencil)
+                {
+                    context.commandList->GetD3D12CommandList()->ClearDepthStencilView(
+                        texture.texture->GetDepthStencilView(), D3D12_CLEAR_FLAG_DEPTH,
+                        clear.value.depth, clear.value.stencil, 0, nullptr);
+                }
+            }
         }
 
         m_passes[compiled.passIndex]->Execute(context);

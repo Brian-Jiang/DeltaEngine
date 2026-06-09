@@ -189,10 +189,10 @@ void EditorRenderManager::RenderFrame(EngineMain* engine)
 
     m_sceneRenderer->SetPendingActiveRenderCamera(m_activeRenderCamera);
     m_sceneRenderer->PrepareFrame();
+    m_sceneRenderer->RenderScene([engine](const std::shared_ptr<DXGraphicsContext>& ctx)
     {
-        auto ctx = m_sceneRenderer->GetGraphicsContext();
         engine->RecordSceneDraws(ctx);
-    }
+    });
     m_sceneRenderer->RenderFrame();
 
     CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);

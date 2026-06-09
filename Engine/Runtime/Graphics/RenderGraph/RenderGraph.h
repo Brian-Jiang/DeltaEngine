@@ -20,10 +20,17 @@ struct RenderGraphResourceTransition
     D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_COMMON;
 };
 
+struct RenderGraphClearOp
+{
+    RenderGraphTextureHandle texture;
+    RenderGraphClearValue value;
+};
+
 struct RenderGraphCompiledPass
 {
     size_t passIndex = 0;
     std::vector<RenderGraphResourceTransition> transitions;
+    std::vector<RenderGraphClearOp> clears;
 };
 
 class DELTAENGINE_API RenderGraph

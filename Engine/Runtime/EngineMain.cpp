@@ -12,7 +12,6 @@
 #include "Graphics/Light/DirectionalLight.h"
 #include "Graphics/Light/PointLight.h"
 #include "Graphics/Light/SpotLight.h"
-#include "Graphics/PostProcess/PostProcessStack.h"
 #include "Graphics/Renderer/MeshRenderer.h"
 #include "Graphics/Renderer/Renderer.h"
 #include "Graphics/RenderProxy/CameraRenderProxy.h"
@@ -135,12 +134,6 @@ void EngineMain::RecordSceneDraws(std::shared_ptr<DXGraphicsContext> context)
         PIXBeginEvent(d3dCL, PIX_COLOR_DEFAULT, L"GatherDrawCalls");
         world->GatherDrawCalls(context);
         PIXEndEvent(d3dCL);
-
-        PostProcessStack* stack = context->camera ? context->camera->GetPostProcessStack() : nullptr;
-        if (stack && stack->GetPassCount() > 0)
-        {
-            // TODO Phase 3: execute passes
-        }
     }
 }
 

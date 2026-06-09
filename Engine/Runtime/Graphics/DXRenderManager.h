@@ -3,6 +3,7 @@
 #include "Runtime/EngineIncludes.h"
 
 #include <chrono>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <unordered_set>
@@ -58,9 +59,17 @@ public:
     /// executes the command list, and waits for the GPU.
     DELTAENGINE_API void InitWorldRenderers(DWorld& world);
 
+    using SceneDrawCallback = std::function<void(const std::shared_ptr<DXGraphicsContext>&)>;
+
     /// Prepares the command list and renders the scene to m_renderTarget.
     /// Caller is responsible for executing the command list and presenting.
     DELTAENGINE_API void PrepareFrame();
+
+    /// Renders the forward scene pass as a render graph node: clears + binds the
+    /// scene render target, stages frame descriptors, then invokes drawCallback
+    /// to record the scene draws. Call between PrepareFrame and RenderFrame.
+    DELTAENGINE_API void RenderScene(const SceneDrawCallback& drawCallback);
+
     DELTAENGINE_API void RenderFrame();
 
     DELTAENGINE_API void SetPendingActiveRenderCamera(std::optional<ActiveRenderCamera> camera);
@@ -96,6 +105,7 @@ private:
     void CreatePingPongTargets(UINT width, UINT height);
     void ExecutePostProcessStack(DXGraphicsContext& ctx, PostProcessStack* stack, UINT width, UINT height);
     void ExecuteShadowGraph(const std::shared_ptr<DXGraphicsContext>& ctx);
+    void ExecuteSceneGraph(const std::shared_ptr<DXGraphicsContext>& ctx, const SceneDrawCallback& drawCallback);
     void UpdateIBL(DTexture* skyboxCubemap);
     void EnsureIBLFallback();
     void StageIBLDescriptors(CommandList& commandList);

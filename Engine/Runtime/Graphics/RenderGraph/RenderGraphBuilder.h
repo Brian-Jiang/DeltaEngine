@@ -23,6 +23,7 @@ struct RenderGraphResourceAccess
     RenderGraphTextureHandle texture;
     D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_COMMON;
     RenderGraphAccessType type = RenderGraphAccessType::Read;
+    RenderGraphClearValue clear;
 };
 
 class DELTAENGINE_API RenderGraphBuilder
@@ -35,6 +36,7 @@ public:
 
     void Read(RenderGraphTextureHandle texture, D3D12_RESOURCE_STATES state);
     void Write(RenderGraphTextureHandle texture, D3D12_RESOURCE_STATES state);
+    void Write(RenderGraphTextureHandle texture, D3D12_RESOURCE_STATES state, const RenderGraphClearValue& clear);
 
     void BeginPass(size_t passIndex);
 
