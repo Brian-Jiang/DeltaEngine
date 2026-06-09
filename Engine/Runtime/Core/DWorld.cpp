@@ -63,21 +63,26 @@ void DWorld::DestroyGameObject(GameObject* gameObject)
     if (!gameObject)
         return;
 
-    // If this GO belongs to the active scene, remove it there too.
     if (m_activeScene)
         m_activeScene->RemoveGameObject(gameObject);
 
     auto it = std::find(m_gameObjects.begin(), m_gameObjects.end(), gameObject);
-    if (it != m_gameObjects.end())
-    {
-        GameObject* obj = *it;
-        obj->Destroy();
-        if (obj->HasOwningAsset())
-            obj->GetOwningAsset()->RemoveObject(obj->GetObjectId());
-        m_gameObjects.erase(it);
-        m_gameObjectsChanged = true;
-        GetReflectionRegistry().DestroyObject(obj);
-    }
+    if (it == m_gameObjects.end())
+        return;
+
+    GameObject* obj = *it;
+
+    if (SceneComponent* rootSC = obj->GetRootSceneComponent())
+        rootSC->SetParent(nullptr);
+
+    obj->m_currentWorld = nullptr;
+    obj->Destroy();
+
+    if (obj->HasOwningAsset())
+        obj->GetOwningAsset()->RemoveObject(obj->GetObjectId());
+
+    m_gameObjects.erase(it);
+    m_gameObjectsChanged = true;
 }
 
 void DeltaEngine::DWorld::InitRenderers(std::shared_ptr<DXGraphicsContext> context) const

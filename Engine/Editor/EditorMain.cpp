@@ -15,6 +15,7 @@
 #include "Editor/EditorWindows/EditorWindow_Viewport.h"
 #include "Editor/EditorWindows/EditorWindow_WorldOutliner.h"
 #include "Editor/Style/EditorTheme.h"
+#include "Runtime/Core/GC/GCManager.h"
 #include "Runtime/Core/Time.h"
 #include "Runtime/EngineMain.h"
 #include "Runtime/Graphics/DirectX/Device.h"
@@ -223,6 +224,7 @@ int EditorMain::Run()
         m_engine->Tick();
         if (auto* animMgr = m_editorCore->GetAnimationManager())
             animMgr->Tick(Time::deltaTime, *m_editorCore);
+        m_engine->TickGC();
         m_renderManager->RenderFrame(m_engine.get());
     }
 
@@ -381,6 +383,11 @@ void EditorMain::Shutdown()
     m_editorTheme.reset();
     m_editorCore.reset();
     m_engine.reset();
+
+    // All GC roots (world, asset database) are now released. Destroy every remaining
+    // DObject while the device is still alive so their destructors release GPU
+    // resources (textures, PSOs, descriptor heaps) instead of leaking past device teardown.
+    GetGCManager().CollectAllForShutdown();
 
     // Report live D3D12 objects with per-object detail while the device is still valid.
     // After m_renderManager.reset() the device shared_ptr is gone and only DXGI sees a

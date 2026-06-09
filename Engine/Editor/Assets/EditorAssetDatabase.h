@@ -3,8 +3,9 @@
 #include "EditorIncludes.h"
 
 #include "Runtime/Assets/IAssetDatabase.h"
-#include "Runtime/Core/UUID.h"
 #include "Runtime/Assets/DPrimaryAsset.h"
+#include "Runtime/Core/GC/StrongDObjectPtr.h"
+#include "Runtime/Core/UUID.h"
 
 #include <nlohmann/json.hpp>
 
@@ -35,7 +36,7 @@ public:
         DPrimaryAsset::Header m_header;
         std::filesystem::path m_filePath;
         AssetState m_state = AssetState::HeaderOnly;
-        DPrimaryAsset* m_instance = nullptr;
+        StrongDObjectPtr<DPrimaryAsset> m_instance;
         nlohmann::json m_meta;
     };
 
