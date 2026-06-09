@@ -50,20 +50,20 @@ void RenderGraph::Compile()
     }
     const std::vector<std::vector<RenderGraphResourceAccess>>& accesses = builder.GetPassAccesses();
 
-    // Resolve the writer for each resource (last declared write wins), then build
-    // producer -> consumer edges: a pass that reads a resource depends on the pass
-    // that writes it, independent of declaration order. This lets the topological
-    // sort reorder a consumer declared before its producer, and surfaces cycles.
+    // Build producer -> consumer edges from reads. Each read depends on the latest
+    // preceding writer for that texture (supports ping-pong multi-write). When a
+    // consumer is declared before its producer, fall back to the earliest future
+    // writer so topo-sort can still reorder out-of-order declarations.
     DELTA_ASSERT(accesses.size() == passCount);
 
-    std::map<uint32_t, size_t> writerOf;
+    std::map<uint32_t, std::vector<size_t>> writersOf;
     for (size_t pass = 0; pass < passCount; ++pass)
     {
         for (const RenderGraphResourceAccess& access : accesses[pass])
         {
             if (access.type == RenderGraphAccessType::Write)
             {
-                writerOf[access.texture.index] = pass;
+                writersOf[access.texture.index].push_back(pass);
             }
         }
     }
@@ -78,10 +78,39 @@ void RenderGraph::Compile()
             {
                 continue;
             }
-            const auto writerIt = writerOf.find(access.texture.index);
-            if (writerIt != writerOf.end() && writerIt->second != pass)
+
+            const auto writersIt = writersOf.find(access.texture.index);
+            if (writersIt == writersOf.end())
             {
-                adjacency[writerIt->second].push_back(pass);
+                continue;
+            }
+
+            const std::vector<size_t>& writers = writersIt->second;
+            size_t producerPass = passCount;
+            for (auto writerIt = writers.rbegin(); writerIt != writers.rend(); ++writerIt)
+            {
+                if (*writerIt < pass)
+                {
+                    producerPass = *writerIt;
+                    break;
+                }
+            }
+
+            if (producerPass == passCount)
+            {
+                for (size_t writerPass : writers)
+                {
+                    if (writerPass > pass)
+                    {
+                        producerPass = writerPass;
+                        break;
+                    }
+                }
+            }
+
+            if (producerPass < passCount && producerPass != pass)
+            {
+                adjacency[producerPass].push_back(pass);
                 ++inDegree[pass];
             }
         }
