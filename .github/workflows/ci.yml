@@ -27,14 +27,15 @@ jobs:
 
       - name: Resolve cache branch id
         id: cache-branch
-        shell: bash
+        shell: powershell
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BRANCH="${{ github.event.pull_request.base.ref }}"
-          else
-            BRANCH="${{ github.ref_name }}"
-          fi
-          echo "id=${BRANCH//\//-}" >> "$GITHUB_OUTPUT"
+          if ('${{ github.event_name }}' -eq 'pull_request') {
+            $branch = '${{ github.event.pull_request.base.ref }}'
+          } else {
+            $branch = '${{ github.ref_name }}'
+          }
+          $id = $branch -replace '/', '-'
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "id=$id"
 
       - name: Restore build tree
         uses: actions/cache/restore@v5
