@@ -67,3 +67,20 @@ TEST(RenderGraphTests, FindImportedTexture_ReturnsHandleByName)
     EXPECT_EQ(found, imported);
     EXPECT_EQ(graph.GetImportedTexture(found).usage, RenderGraphTextureUsage::DepthAttachment);
 }
+
+TEST(RenderGraphTests, Reset_ClearsPassesTexturesAndCompiledOutput)
+{
+    RenderGraph graph;
+    graph.AddPass(std::make_unique<DummyRenderGraphPass>());
+    graph.ImportTexture("SceneColor", nullptr, RenderGraphTextureUsage::ShaderResource);
+    graph.Compile();
+
+    ASSERT_EQ(graph.GetPassCount(), 1u);
+    ASSERT_EQ(graph.GetCompiledPassCount(), 1u);
+
+    graph.Reset();
+
+    EXPECT_EQ(graph.GetPassCount(), 0u);
+    EXPECT_EQ(graph.GetImportedTextureCount(), 0u);
+    EXPECT_EQ(graph.GetCompiledPassCount(), 0u);
+}

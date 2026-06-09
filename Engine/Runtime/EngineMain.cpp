@@ -132,7 +132,7 @@ void EngineMain::RecordSceneDraws(std::shared_ptr<DXGraphicsContext> context)
         context->ApplyLightBuffersToCommandList();
 
         PIXBeginEvent(d3dCL, PIX_COLOR_DEFAULT, L"GatherDrawCalls");
-        world->GatherDrawCalls(context);
+        world->GatherOpaqueDrawCalls(context);
         PIXEndEvent(d3dCL);
     }
 }

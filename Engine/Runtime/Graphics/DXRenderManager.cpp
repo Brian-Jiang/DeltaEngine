@@ -20,11 +20,13 @@
 #include "Runtime/Graphics/PostProcess/PostProcessStack.h"
 #include "Runtime/Graphics/PostProcess/PostProcessPass.h"
 #include "Runtime/Graphics/RenderGraph/RenderGraph.h"
+#include "Runtime/Graphics/RenderGraph/MsaaResolveGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/PostProcessRenderGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/PostProcessFinalizeGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/ShadowRenderGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/SceneRenderGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/SceneShadowReadGraphPass.h"
+#include "Runtime/Graphics/RenderGraph/SkyboxRenderGraphPass.h"
 #include "Runtime/Graphics/RenderProxy/CameraRenderProxy.h"
 #include "Runtime/Graphics/RenderProxy/SkyboxRenderProxy.h"
 #include "Runtime/Core/DWorld.h"
@@ -245,6 +247,34 @@ void DXRenderManager::SetPendingActiveRenderCamera(std::optional<ActiveRenderCam
     m_pendingActiveRenderCamera = std::move(camera);
 }
 
+void DXRenderManager::FrameGraphBindings::Register(RenderGraphTextureHandle handle,
+    D3D12_CPU_DESCRIPTOR_HANDLE rtv, D3D12_CPU_DESCRIPTOR_HANDLE srv)
+{
+    if (!handle.IsValid())
+        return;
+
+    if (entries.size() <= handle.index)
+        entries.resize(handle.index + 1);
+
+    entries[handle.index] = { rtv, srv };
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE DXRenderManager::FrameGraphBindings::RtvFor(RenderGraphTextureHandle handle) const
+{
+    if (!handle.IsValid() || handle.index >= entries.size())
+        return {};
+
+    return entries[handle.index].rtv;
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE DXRenderManager::FrameGraphBindings::SrvFor(RenderGraphTextureHandle handle) const
+{
+    if (!handle.IsValid() || handle.index >= entries.size())
+        return {};
+
+    return entries[handle.index].srv;
+}
+
 void DXRenderManager::PrepareFrame()
 {
     m_releaseQueue.ProcessCompleted();
@@ -261,109 +291,208 @@ void DXRenderManager::PrepareFrame()
     m_currentCommandList = commandList;
     m_currentContext.reset();
     commandList->SetGraphicsRootSignature(m_rootSignature);
-    {
-        auto ctx = GetGraphicsContext();
-        ctx->activeRenderCamera = m_pendingActiveRenderCamera;
-        m_pendingActiveRenderCamera.reset();
-        if (m_currentWorld)
-        {
-            m_currentWorld->PreGatherDrawCalls(ctx);
-            ExecuteShadowGraph(ctx);
-        }
-    }
+
+    auto ctx = GetGraphicsContext();
+    ctx->activeRenderCamera = m_pendingActiveRenderCamera;
+    m_pendingActiveRenderCamera.reset();
+    if (m_currentWorld)
+        m_currentWorld->PreGatherDrawCalls(ctx);
 }
 
 void DXRenderManager::RenderScene(const SceneDrawCallback& drawCallback)
 {
-    auto ctx = GetGraphicsContext();
-    ExecuteSceneGraph(ctx, drawCallback);
+    m_pendingSceneDrawCallback = drawCallback;
 }
 
-void DXRenderManager::ExecuteSceneGraph(const std::shared_ptr<DXGraphicsContext>& ctx,
-    const SceneDrawCallback& drawCallback)
+void DXRenderManager::BuildFrameGraph(const SceneDrawCallback& drawCallback, PostProcessStack* stack)
 {
-    if (!ctx || !ctx->commandList)
-        return;
+    m_frameResources = {};
+    m_frameBindings = {};
 
-    auto& commandList = *ctx->commandList;
     auto colorTexture = m_renderTarget->GetTexture(AttachmentPoint::Color0);
     auto depthTexture = m_renderTarget->GetTexture(AttachmentPoint::DepthStencil);
-
-    const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
-
     if (!colorTexture || !depthTexture)
-    {
-        // Imperative fallback when the offscreen targets are not attached yet.
-        if (colorTexture)
-            commandList.ClearTexture(colorTexture, clearColor);
-        if (depthTexture)
-            commandList.ClearDepthStencilTexture(depthTexture, D3D12_CLEAR_FLAG_DEPTH);
-
-        commandList.SetViewport(m_viewport);
-        commandList.SetScissorRect(m_scissorRect);
-        commandList.SetRenderTarget(*m_renderTarget);
-        commandList.SetGraphicsRootSignature(m_rootSignature);
-
-        StageIBLDescriptors(commandList);
-        StageShadowDescriptors(commandList);
-
-        if (drawCallback)
-            drawCallback(ctx);
         return;
-    }
 
-    RenderGraph graph;
-    const RenderGraphTextureHandle colorHandle = graph.ImportTexture("SceneColor", colorTexture,
-        RenderGraphTextureUsage::ColorAttachment | RenderGraphTextureUsage::ShaderResource);
-    const RenderGraphTextureHandle depthHandle = graph.ImportTexture("SceneDepth", depthTexture,
+    const RenderGraphTextureUsage colorAndShader =
+        RenderGraphTextureUsage::ColorAttachment | RenderGraphTextureUsage::ShaderResource;
+    const RenderGraphTextureUsage depthAndShader =
+        RenderGraphTextureUsage::DepthAttachment | RenderGraphTextureUsage::ShaderResource;
+
+    m_frameResources.sceneColor = m_frameGraph.ImportTexture("SceneColor", colorTexture, colorAndShader);
+    m_frameBindings.Register(m_frameResources.sceneColor,
+        colorTexture->GetRenderTargetView(), colorTexture->GetShaderResourceView());
+
+    m_frameResources.sceneDepth = m_frameGraph.ImportTexture("SceneDepth", depthTexture,
         RenderGraphTextureUsage::DepthAttachment);
+    m_frameBindings.Register(m_frameResources.sceneDepth, depthTexture->GetDepthStencilView(), {});
 
-    graph.AddPass(std::make_unique<SceneRenderGraphPass>(
-        colorHandle, depthHandle,
-        RenderGraphClearValue::Color4(clearColor[0], clearColor[1], clearColor[2], clearColor[3]),
-        RenderGraphClearValue::DepthStencil(1.0f),
-        m_renderTarget.get(), m_rootSignature, m_viewport, m_scissorRect,
+    auto ctx = GetGraphicsContext();
+    const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+    const SceneRenderGraphPass::DescriptorStageCallback stageDescriptors =
         [this](CommandList& cl)
         {
             StageIBLDescriptors(cl);
             StageShadowDescriptors(cl);
-        },
-        ctx, drawCallback));
-    graph.Compile();
+        };
 
-    graph.Execute({ ctx->commandList.get(), ctx.get() });
-    ctx->commandList->FlushResourceBarriers();
-}
-
-void DXRenderManager::ExecuteShadowGraph(const std::shared_ptr<DXGraphicsContext>& ctx)
-{
-    if (!m_currentWorld || !ctx || !ctx->commandList)
-        return;
-
-    if (!m_shadowPass.ShadowResourcesReady())
+    if (m_currentWorld && m_shadowPass.ShadowResourcesReady())
     {
-        m_shadowPass.Render(ctx, *m_currentWorld);
+        m_frameResources.shadowDirectional = m_frameGraph.ImportTexture("ShadowDirectional",
+            m_shadowPass.GetDirectionalAtlasTexture(), depthAndShader);
+        m_frameResources.shadowSpot = m_frameGraph.ImportTexture("ShadowSpot",
+            m_shadowPass.GetSpotAtlasTexture(), depthAndShader);
+        m_frameResources.shadowPoint = m_frameGraph.ImportTexture("ShadowPointCubes",
+            m_shadowPass.GetPointCubeArrayTexture(), depthAndShader);
+
+        m_frameGraph.AddPass(std::make_unique<ShadowRenderGraphPass>(
+            &m_shadowPass, m_currentWorld, ctx,
+            m_frameResources.shadowDirectional, m_frameResources.shadowSpot, m_frameResources.shadowPoint));
+        m_frameGraph.AddPass(std::make_unique<SceneShadowReadGraphPass>(
+            m_frameResources.shadowDirectional, m_frameResources.shadowSpot, m_frameResources.shadowPoint));
+    }
+
+    m_frameGraph.AddPass(std::make_unique<SceneRenderGraphPass>(
+        m_frameResources.sceneColor, m_frameResources.sceneDepth,
+        RenderGraphClearValue::Color4(clearColor[0], clearColor[1], clearColor[2], clearColor[3]),
+        RenderGraphClearValue::DepthStencil(1.0f),
+        m_renderTarget.get(), m_rootSignature, m_viewport, m_scissorRect,
+        stageDescriptors, ctx, drawCallback));
+
+    if (m_currentWorld && m_currentWorld->GetSkybox())
+    {
+        m_frameGraph.AddPass(std::make_unique<SkyboxRenderGraphPass>(
+            m_frameResources.sceneColor, m_frameResources.sceneDepth,
+            m_renderTarget.get(), m_rootSignature, m_viewport, m_scissorRect,
+            stageDescriptors, m_currentWorld, ctx));
+    }
+
+    RenderGraphTextureHandle postInputHandle = m_frameResources.sceneColor;
+
+    if (!stack || stack->GetPassCount() == 0)
+    {
+        m_frameResources.finalOutput = m_frameResources.sceneColor;
+        m_finalPostProcessSRV = m_frameBindings.SrvFor(m_frameResources.sceneColor);
+        m_hasPostProcessedOutput = false;
+        m_finalPostProcessTexture.reset();
         return;
     }
 
-    const RenderGraphTextureUsage depthAndShader =
-        RenderGraphTextureUsage::DepthAttachment | RenderGraphTextureUsage::ShaderResource;
+    const auto sceneDesc = colorTexture->GetD3D12ResourceDesc();
+    const bool useResolvedScene = sceneDesc.SampleDesc.Count > 1;
+    if (useResolvedScene)
+    {
+        if (!m_resolvedScene ||
+            m_resolvedScene->GetD3D12ResourceDesc().Width != sceneDesc.Width ||
+            m_resolvedScene->GetD3D12ResourceDesc().Height != sceneDesc.Height ||
+            m_resolvedScene->GetD3D12ResourceDesc().Format != sceneDesc.Format)
+        {
+            auto resolvedDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+                sceneDesc.Format, sceneDesc.Width, static_cast<UINT>(sceneDesc.Height),
+                1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE);
+            m_resolvedScene = m_device->CreateTexture(resolvedDesc, nullptr);
+            m_resolvedScene->SetName("PostProcess Resolved Scene");
+        }
 
-    RenderGraph graph;
-    const RenderGraphTextureHandle directionalHandle =
-        graph.ImportTexture("ShadowDirectional", m_shadowPass.GetDirectionalAtlasTexture(), depthAndShader);
-    const RenderGraphTextureHandle spotHandle =
-        graph.ImportTexture("ShadowSpot", m_shadowPass.GetSpotAtlasTexture(), depthAndShader);
-    const RenderGraphTextureHandle pointHandle =
-        graph.ImportTexture("ShadowPointCubes", m_shadowPass.GetPointCubeArrayTexture(), depthAndShader);
+        m_frameResources.resolvedScene = m_frameGraph.ImportTexture("ResolvedScene", m_resolvedScene,
+            RenderGraphTextureUsage::ShaderResource);
+        m_frameBindings.Register(m_frameResources.resolvedScene, {}, m_resolvedScene->GetShaderResourceView());
 
-    graph.AddPass(std::make_unique<ShadowRenderGraphPass>(
-        &m_shadowPass, m_currentWorld, ctx, directionalHandle, spotHandle, pointHandle));
-    graph.AddPass(std::make_unique<SceneShadowReadGraphPass>(directionalHandle, spotHandle, pointHandle));
-    graph.Compile();
+        m_frameGraph.AddPass(std::make_unique<MsaaResolveGraphPass>(
+            m_frameResources.sceneColor, m_frameResources.resolvedScene, colorTexture, m_resolvedScene));
+        postInputHandle = m_frameResources.resolvedScene;
+    }
 
-    graph.Execute({ ctx->commandList.get(), ctx.get() });
-    ctx->commandList->FlushResourceBarriers();
+    m_frameResources.ping = m_frameGraph.ImportTexture("Ping", m_pingPong[0].texture, colorAndShader);
+    m_frameResources.pong = m_frameGraph.ImportTexture("Pong", m_pingPong[1].texture, colorAndShader);
+    m_frameBindings.Register(m_frameResources.ping, m_pingPong[0].rtv, m_pingPong[0].srv);
+    m_frameBindings.Register(m_frameResources.pong, m_pingPong[1].rtv, m_pingPong[1].srv);
+
+    RenderGraphTextureHandle inputHandle = postInputHandle;
+    int writeIdx = 0;
+    const int passCount = stack->GetPassCount();
+    for (int i = 0; i < passCount; ++i)
+    {
+        PostProcessPass* pass = stack->GetPass(i);
+        if (!pass)
+            continue;
+
+        m_trackedPasses.insert(pass);
+
+        const RenderGraphTextureHandle outputHandle = writeIdx == 0 ? m_frameResources.ping : m_frameResources.pong;
+        m_frameGraph.AddPass(std::make_unique<PostProcessRenderGraphPass>(
+            pass, inputHandle, outputHandle,
+            m_frameBindings.SrvFor(inputHandle), m_frameBindings.RtvFor(outputHandle),
+            m_width, m_height));
+
+        inputHandle = outputHandle;
+        writeIdx = 1 - writeIdx;
+    }
+
+    m_frameGraph.AddPass(std::make_unique<PostProcessFinalizeGraphPass>(inputHandle));
+    m_frameResources.finalOutput = inputHandle;
+    m_finalPostProcessSRV = m_frameBindings.SrvFor(inputHandle);
+    m_hasPostProcessedOutput = true;
+    m_finalPostProcessTexture = m_frameGraph.GetImportedTexture(inputHandle).texture;
+}
+
+void DXRenderManager::ExecuteBootstrapSceneFallback(DXGraphicsContext& ctx,
+    const SceneDrawCallback& drawCallback)
+{
+    if (!ctx.commandList)
+        return;
+
+    auto& commandList = *ctx.commandList;
+    auto colorTexture = m_renderTarget->GetTexture(AttachmentPoint::Color0);
+    auto depthTexture = m_renderTarget->GetTexture(AttachmentPoint::DepthStencil);
+
+    const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+    if (colorTexture)
+        commandList.ClearTexture(colorTexture, clearColor);
+    if (depthTexture)
+        commandList.ClearDepthStencilTexture(depthTexture, D3D12_CLEAR_FLAG_DEPTH);
+
+    commandList.SetViewport(m_viewport);
+    commandList.SetScissorRect(m_scissorRect);
+    commandList.SetRenderTarget(*m_renderTarget);
+    commandList.SetGraphicsRootSignature(m_rootSignature);
+
+    StageIBLDescriptors(commandList);
+    StageShadowDescriptors(commandList);
+
+    if (drawCallback && m_currentContext)
+        drawCallback(m_currentContext);
+}
+
+void DXRenderManager::ExecuteFrameGraph(DXGraphicsContext& ctx, const SceneDrawCallback& drawCallback)
+{
+    auto colorTexture = m_renderTarget->GetTexture(AttachmentPoint::Color0);
+    auto depthTexture = m_renderTarget->GetTexture(AttachmentPoint::DepthStencil);
+
+    if (!colorTexture || !depthTexture)
+    {
+        if (m_currentWorld && !m_shadowPass.ShadowResourcesReady() && m_currentContext)
+            m_shadowPass.Render(m_currentContext, *m_currentWorld);
+
+        ExecuteBootstrapSceneFallback(ctx, drawCallback);
+
+        auto sceneTex = m_renderTarget->GetTexture(AttachmentPoint::Color0);
+        if (sceneTex)
+            m_finalPostProcessSRV = sceneTex->GetShaderResourceView();
+        m_hasPostProcessedOutput = false;
+        m_finalPostProcessTexture.reset();
+        return;
+    }
+
+    if (m_currentWorld && !m_shadowPass.ShadowResourcesReady() && m_currentContext)
+        m_shadowPass.Render(m_currentContext, *m_currentWorld);
+
+    if (m_frameGraph.GetPassCount() == 0)
+        return;
+
+    PIXBeginEvent(ctx.commandList->GetD3D12CommandList().Get(), PIX_COLOR_DEFAULT, L"FrameGraph");
+    m_frameGraph.Execute({ ctx.commandList.get(), &ctx });
+    PIXEndEvent(ctx.commandList->GetD3D12CommandList().Get());
 }
 
 const ShadowDepthPSO* DXRenderManager::GetShadowDepthPSO() const
@@ -482,7 +611,13 @@ void DXRenderManager::RenderFrame()
 {
     auto ctx = m_currentContext ? m_currentContext : GetGraphicsContext();
     PostProcessStack* stack = ctx->camera ? ctx->camera->GetPostProcessStack() : nullptr;
-    ExecutePostProcessStack(*ctx, stack, m_width, m_height);
+
+    m_frameGraph.Reset();
+    BuildFrameGraph(m_pendingSceneDrawCallback, stack);
+    m_frameGraph.Compile();
+    ExecuteFrameGraph(*ctx, m_pendingSceneDrawCallback);
+    m_pendingSceneDrawCallback = nullptr;
+    m_frameGraphDirty = false;
 
     CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
     m_lastSubmittedFence = directCommandQueue.ExecuteCommandList(m_currentCommandList);
@@ -513,94 +648,7 @@ void DXRenderManager::Resize(UINT width, UINT height)
     m_resolvedScene.reset();
     m_finalPostProcessSRV = {};
     m_finalPostProcessTexture.reset();
-}
-
-void DXRenderManager::ExecutePostProcessStack(DXGraphicsContext& ctx, PostProcessStack* stack, UINT width, UINT height)
-{
-    auto sceneTex = m_renderTarget->GetTexture(AttachmentPoint::Color0);
-    D3D12_CPU_DESCRIPTOR_HANDLE sceneSRV = sceneTex->GetShaderResourceView();
-
-    if (!stack || stack->GetPassCount() == 0)
-    {
-        m_finalPostProcessSRV = sceneSRV;
-        m_hasPostProcessedOutput = false;
-        m_finalPostProcessTexture.reset();
-        return;
-    }
-
-    auto& cl = *m_currentCommandList;
-
-    const auto sceneDesc = sceneTex->GetD3D12ResourceDesc();
-    const bool useResolvedScene = sceneDesc.SampleDesc.Count > 1;
-    if (useResolvedScene)
-    {
-        if (!m_resolvedScene ||
-            m_resolvedScene->GetD3D12ResourceDesc().Width != sceneDesc.Width ||
-            m_resolvedScene->GetD3D12ResourceDesc().Height != sceneDesc.Height ||
-            m_resolvedScene->GetD3D12ResourceDesc().Format != sceneDesc.Format)
-        {
-            auto resolvedDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-                sceneDesc.Format, sceneDesc.Width, static_cast<UINT>(sceneDesc.Height),
-                1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE);
-            m_resolvedScene = m_device->CreateTexture(resolvedDesc, nullptr);
-            m_resolvedScene->SetName("PostProcess Resolved Scene");
-        }
-
-        cl.ResolveSubresource(m_resolvedScene, sceneTex);
-        sceneSRV = m_resolvedScene->GetShaderResourceView();
-    }
-
-    const RenderGraphTextureUsage colorAndShader =
-        RenderGraphTextureUsage::ColorAttachment | RenderGraphTextureUsage::ShaderResource;
-
-    RenderGraph graph;
-    const RenderGraphTextureHandle sceneColorHandle =
-        graph.ImportTexture("SceneColor", sceneTex, colorAndShader);
-    const RenderGraphTextureHandle pingHandle =
-        graph.ImportTexture("Ping", m_pingPong[0].texture, colorAndShader);
-    const RenderGraphTextureHandle pongHandle =
-        graph.ImportTexture("Pong", m_pingPong[1].texture, colorAndShader);
-
-    RenderGraphTextureHandle resolvedHandle;
-    if (useResolvedScene)
-    {
-        resolvedHandle =
-            graph.ImportTexture("ResolvedScene", m_resolvedScene, RenderGraphTextureUsage::ShaderResource);
-    }
-
-    RenderGraphTextureHandle inputHandle = useResolvedScene ? resolvedHandle : sceneColorHandle;
-    D3D12_CPU_DESCRIPTOR_HANDLE readSRV = sceneSRV;
-    int writeIdx = 0;
-
-    const int passCount = stack->GetPassCount();
-    for (int i = 0; i < passCount; ++i)
-    {
-        PostProcessPass* pass = stack->GetPass(i);
-        if (!pass)
-            continue;
-
-        m_trackedPasses.insert(pass);
-
-        auto& dst = m_pingPong[writeIdx];
-        const RenderGraphTextureHandle outputHandle = writeIdx == 0 ? pingHandle : pongHandle;
-        graph.AddPass(std::make_unique<PostProcessRenderGraphPass>(
-            pass, inputHandle, outputHandle, readSRV, dst.rtv, width, height));
-
-        inputHandle = outputHandle;
-        readSRV = dst.srv;
-        writeIdx = 1 - writeIdx;
-    }
-
-    graph.AddPass(std::make_unique<PostProcessFinalizeGraphPass>(inputHandle));
-    graph.Compile();
-
-    PIXBeginEvent(cl.GetD3D12CommandList().Get(), PIX_COLOR_DEFAULT, L"PostProcess");
-    graph.Execute({ &cl, &ctx });
-    PIXEndEvent(cl.GetD3D12CommandList().Get());
-
-    m_finalPostProcessSRV = readSRV;
-    m_hasPostProcessedOutput = true;
-    m_finalPostProcessTexture = m_pingPong[1 - writeIdx].texture;
+    m_frameGraphDirty = true;
 }
 
 void DXRenderManager::CreatePingPongTargets(UINT width, UINT height)

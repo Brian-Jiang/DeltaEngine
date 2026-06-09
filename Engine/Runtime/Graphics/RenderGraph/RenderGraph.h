@@ -46,6 +46,7 @@ public:
     RenderGraphTextureHandle ImportTexture(std::string name, std::shared_ptr<DirectX12Texture> texture,
         RenderGraphTextureUsage usage);
 
+    void Reset();
     void Compile();
     void Execute(const RenderGraphContext& context);
 

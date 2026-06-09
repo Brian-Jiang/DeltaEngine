@@ -33,7 +33,8 @@ const char* PostProcessRenderGraphPass::GetName() const
 void PostProcessRenderGraphPass::Setup(RenderGraphBuilder& builder)
 {
     builder.Read(m_input, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    builder.Write(m_output, D3D12_RESOURCE_STATE_RENDER_TARGET);
+    builder.Write(m_output, D3D12_RESOURCE_STATE_RENDER_TARGET,
+        RenderGraphClearValue::Color4(0.0f, 0.0f, 0.0f, 1.0f));
 }
 
 void PostProcessRenderGraphPass::Execute(const RenderGraphContext& context) const
@@ -44,10 +45,6 @@ void PostProcessRenderGraphPass::Execute(const RenderGraphContext& context) cons
     }
 
     CommandList& commandList = *context.commandList;
-    commandList.FlushResourceBarriers();
-
-    const float black[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-    commandList.GetD3D12CommandList()->ClearRenderTargetView(m_outputRTV, black, 0, nullptr);
     commandList.GetD3D12CommandList()->OMSetRenderTargets(1, &m_outputRTV, FALSE, nullptr);
 
     m_pass->Execute(*context.graphicsContext, m_inputSRV, m_outputRTV, m_width, m_height);

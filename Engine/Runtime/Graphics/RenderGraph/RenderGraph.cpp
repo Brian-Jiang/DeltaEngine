@@ -31,6 +31,13 @@ RenderGraphTextureHandle RenderGraph::ImportTexture(std::string name, std::share
     return handle;
 }
 
+void RenderGraph::Reset()
+{
+    m_passes.clear();
+    m_importedTextures.clear();
+    m_compiledPasses.clear();
+}
+
 void RenderGraph::Compile()
 {
     m_compiledPasses.clear();
