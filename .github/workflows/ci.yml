@@ -59,9 +59,6 @@ jobs:
         with:
           arch: x64
 
-      - name: Install Ninja
-        run: choco install ninja -y
-
       - name: Regenerate reflection headers
         if: steps.header-cache.outputs.cache-matched-key == ''
         shell: cmd
