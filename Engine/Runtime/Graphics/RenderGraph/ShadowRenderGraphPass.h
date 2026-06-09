@@ -11,7 +11,7 @@ DELTA_ENGINE_NS_BEGIN
 
 class ShadowPassManager;
 class DWorld;
-class DXGraphicsContext;
+struct DXGraphicsContext;
 
 class DELTAENGINE_API ShadowRenderGraphPass final : public RenderGraphPass
 {
