@@ -25,7 +25,7 @@ struct RenderGraphResourceAccess
     RenderGraphAccessType type = RenderGraphAccessType::Read;
 };
 
-class RenderGraphBuilder
+class DELTAENGINE_API RenderGraphBuilder
 {
 public:
     explicit RenderGraphBuilder(RenderGraph& graph) : m_graph(graph) {}
