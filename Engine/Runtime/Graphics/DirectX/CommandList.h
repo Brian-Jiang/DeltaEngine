@@ -103,6 +103,8 @@ public:
      */
     DELTAENGINE_API void ResolveSubresource(const std::shared_ptr<Resource>&, const std::shared_ptr<Resource>&,
         uint32_t dstSubresource = 0, uint32_t srcSubresource = 0);
+    DELTAENGINE_API void ResolveSubresourceNoBarrier(const std::shared_ptr<Resource>& dstRes,
+        const std::shared_ptr<Resource>& srcRes, uint32_t dstSubresource = 0, uint32_t srcSubresource = 0);
 
     /**
      * Copy the contents to a vertex buffer in GPU memory.
@@ -415,6 +417,7 @@ public:
      * Set the render targets for the graphics rendering pipeline.
      */
     DELTAENGINE_API void SetRenderTarget(const RenderTarget& renderTarget);
+    DELTAENGINE_API void BindRenderTarget(const RenderTarget& renderTarget);
 
 
     // ============================ Draw/Dispatch ============================

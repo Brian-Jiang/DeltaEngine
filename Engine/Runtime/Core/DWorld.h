@@ -40,7 +40,10 @@ public:
 
     DELTAENGINE_API void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const;
 
-    /// Walk the scene tree and call GatherDrawCalls on every Renderer.
+    /// Walk the scene tree and call GatherDrawCalls on every Renderer (excludes skybox).
+    DELTAENGINE_API void GatherOpaqueDrawCalls(std::shared_ptr<DXGraphicsContext> context) const;
+
+    /// Walk the scene tree and call GatherDrawCalls on every Renderer, then skybox last.
     DELTAENGINE_API void GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const;
 
     DELTAENGINE_API void GatherShadowViews(std::shared_ptr<DXGraphicsContext> context, std::vector<ShadowView>& outViews) const;

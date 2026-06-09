@@ -167,7 +167,7 @@ void DWorld::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) cons
             cameraBindCount);
 }
 
-void DWorld::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const
+void DWorld::GatherOpaqueDrawCalls(std::shared_ptr<DXGraphicsContext> context) const
 {
     if (!DELTA_ENSURE(context != nullptr))
         return;
@@ -176,7 +176,7 @@ void DWorld::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const
 
     std::stack<SceneComponent*> stack;
     stack.push(m_rootSceneComponent);
-    
+
     while (!stack.empty())
     {
         SceneComponent* current = stack.top();
@@ -194,6 +194,11 @@ void DWorld::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const
             stack.push(child);
         }
     }
+}
+
+void DWorld::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const
+{
+    GatherOpaqueDrawCalls(context);
 
     // Skybox draws last: LESS_EQUAL depth test lets it fill pixels the scene didn't touch.
     if (m_skybox)
