@@ -11,7 +11,7 @@ DELTA_ENGINE_NS_BEGIN
 
 class PostProcessPass;
 
-class PostProcessRenderGraphPass final : public RenderGraphPass
+class DELTAENGINE_API PostProcessRenderGraphPass final : public RenderGraphPass
 {
 public:
     PostProcessRenderGraphPass(PostProcessPass* pass,
