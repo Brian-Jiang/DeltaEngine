@@ -258,7 +258,7 @@ std::pair<AssetId, ObjectId> EditorCore::GetIdsForObject(DObject* obj)
 
     for (const auto& [id, entry] : m_assetDatabase->GetAllAssets())
     {
-        DPrimaryAsset* asset = entry.m_instance;
+        DPrimaryAsset* asset = entry.m_instance.Get();
         if (!asset)
             continue;
 

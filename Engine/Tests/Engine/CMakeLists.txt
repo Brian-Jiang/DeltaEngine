@@ -1,5 +1,6 @@
 set(DELTA_ENGINE_TEST_SOURCES
     Assets/DPrimaryAssetTests.cpp
+    Assets/DPrimaryAssetGCRootingTests.cpp
     Assets/AssetDatabaseLocatorTests.cpp
     Assets/PA_CommonAssetsTests.cpp
     Assets/PA_DSceneTests.cpp
@@ -15,6 +16,7 @@ set(DELTA_ENGINE_TEST_SOURCES
     Graphics/LightProxyShadowTests.cpp
     Graphics/MeshRendererTests.cpp
     Graphics/MeshRenderProxyTests.cpp
+    Graphics/RenderResourceReleaseQueueTests.cpp
     Graphics/MeshShadowSubmissionTests.cpp
     Graphics/PostProcessTests_DataModel.cpp
     Graphics/PostProcessStackHardeningTests.cpp
@@ -38,6 +40,10 @@ set(DELTA_ENGINE_TEST_SOURCES
     Serialization/Core/JsonAssetArchiveHardeningTests.cpp
     Assets/Locator/NullAssetDatabaseTests.cpp
     Core/CoreObjectLifecycleTests.cpp
+    Core/GCObjectRegistryTests.cpp
+    Core/GCMarkTests.cpp
+    Core/GCSweepTests.cpp
+    Core/GCRenderSweepTests.cpp
     Core/SceneComponentTests.cpp
     Core/CoreAssetDataTests.cpp
     Core/CoreUtilityTests.cpp

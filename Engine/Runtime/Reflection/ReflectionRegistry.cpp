@@ -2,6 +2,8 @@
 
 #include "Runtime/Core/DHandle.h"
 #include "Runtime/Core/DObject.h"
+#include "Runtime/Core/GC/DObjectRegistry.h"
+#include "Runtime/Core/GC/GCManager.h"
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DStruct.h"
 
@@ -146,8 +148,12 @@ void ReflectionRegistry::DestroyObject(DObject* obj) const
         return;
     }
 
+    const DObjectHandle gcHandle = obj->GetGCHandle();
+
     cls->DestroyObject(obj);
     operator delete(obj, std::align_val_t(cls->GetMinAlignment()));
+
+    GetDObjectRegistry().FreeSlot(gcHandle);
 }
 
 DObject* ReflectionRegistry::CreateObject(const std::string& className) const
@@ -183,6 +189,13 @@ DObject* ReflectionRegistry::CreateObject(const std::string& className) const
     obj->SetHandle(handle);
     obj->SetObjectId(ObjectId::Generate());
     obj->SetOwningAsset(nullptr);
+
+    GetDObjectRegistry().RegisterObject(obj);
+    // Objects created mid-mark are colored Black so the in-progress traversal treats
+    // them as reachable; otherwise they start White (unreachable until marked).
+    obj->SetGCMarkColor(GetGCManager().IsMarking() ? EGCMarkColor::Black
+                                                   : EGCMarkColor::White);
+
     return obj;
 }
 

@@ -77,7 +77,7 @@ public:
     /// Creates and attaches a reflected component instance.
     DELTAENGINE_API DComponent* AddComponentByClass(const DClass* dclass);
 
-    /// Removes and destroys a component owned by this game object.
+    /// Unlinks a component from this game object (GC reclaims later).
     DELTAENGINE_API void RemoveComponent(DComponent* component);
 
     /// Removes a component from this game object's lists without destroying it.
@@ -89,7 +89,7 @@ public:
     /// Inserts a pre-allocated scene component at the given index with optional parent.
     DELTAENGINE_API void InsertSceneComponent(SceneComponent* sc, int index, SceneComponent* parent);
 
-    /// Destroys this game object and its owned components.
+    /// Unlinks this game object and all owned components.
     DFUNCTION()
     DELTAENGINE_API void Destroy();
 

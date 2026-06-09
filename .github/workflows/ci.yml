@@ -8,7 +8,6 @@ on:
   push:
     branches:
       - main
-      - "dev/**"
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -17,7 +16,7 @@ concurrency:
 jobs:
   build-and-test:
     name: Build and test (Windows)
-    runs-on: windows-2025-vs2026
+    runs-on: self-hosted
     timeout-minutes: 90
 
     steps:

@@ -3,8 +3,10 @@
 #include "EngineIncludes.h"
 
 #include "Runtime/Core/DObject.h"
+#include "Runtime/Graphics/RenderResourceReleaseQueue.h"
 
 #include <memory>
+#include <optional>
 
 #include "Skybox.generated.h"
 
@@ -22,6 +24,9 @@ class Skybox : public DObject
 
 public:
     DELTAENGINE_API Skybox();
+
+    DELTAENGINE_API void BeginDestroy() override;
+    DELTAENGINE_API bool IsReadyForFinishDestroy() override;
 
     /// Compiles the skybox shader, constructs the render proxy, and eagerly uploads the
     /// cubemap + builds the PSO so the GPU cubemap is ready before the first frame.
@@ -44,6 +49,7 @@ public:
 
 private:
     std::shared_ptr<SkyboxRenderProxy> m_renderProxy;
+    std::optional<RenderResourceReleaseToken> m_renderReleaseToken;
 };
 
 DELTA_ENGINE_NS_END
