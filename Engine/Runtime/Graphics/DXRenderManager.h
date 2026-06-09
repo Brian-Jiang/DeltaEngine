@@ -95,6 +95,7 @@ public:
 private:
     void CreatePingPongTargets(UINT width, UINT height);
     void ExecutePostProcessStack(DXGraphicsContext& ctx, PostProcessStack* stack, UINT width, UINT height);
+    void ExecuteShadowGraph(const std::shared_ptr<DXGraphicsContext>& ctx);
     void UpdateIBL(DTexture* skyboxCubemap);
     void EnsureIBLFallback();
     void StageIBLDescriptors(CommandList& commandList);

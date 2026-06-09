@@ -1,0 +1,27 @@
+#pragma once
+
+#include "EngineIncludes.h"
+
+#include "Runtime/Graphics/RenderGraph/RenderGraphPass.h"
+#include "Runtime/Graphics/RenderGraph/RenderGraphResourceHandle.h"
+
+DELTA_ENGINE_NS_BEGIN
+
+class DELTAENGINE_API SceneShadowReadGraphPass final : public RenderGraphPass
+{
+public:
+    SceneShadowReadGraphPass(RenderGraphTextureHandle directionalAtlas,
+        RenderGraphTextureHandle spotAtlas,
+        RenderGraphTextureHandle pointCubeArray);
+
+    const char* GetName() const override;
+    void Setup(RenderGraphBuilder& builder) override;
+    void Execute(const RenderGraphContext& context) const override;
+
+private:
+    RenderGraphTextureHandle m_directionalAtlas;
+    RenderGraphTextureHandle m_spotAtlas;
+    RenderGraphTextureHandle m_pointCubeArray;
+};
+
+DELTA_ENGINE_NS_END

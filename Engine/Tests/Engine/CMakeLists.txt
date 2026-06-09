@@ -25,6 +25,7 @@ set(DELTA_ENGINE_TEST_SOURCES
     Graphics/RenderGraphCompileTests.cpp
     Graphics/RenderGraphTests.cpp
     Graphics/ShadowMapAllocatorTests.cpp
+    Graphics/ShadowRenderGraphCompileTests.cpp
     Graphics/DirectionalShadowMatrixTests.cpp
     Graphics/SkyboxRenderProxyTests.cpp
     Reflection/ReflectionRegistryTests.cpp

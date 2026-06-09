@@ -22,6 +22,8 @@
 #include "Runtime/Graphics/RenderGraph/RenderGraph.h"
 #include "Runtime/Graphics/RenderGraph/PostProcessRenderGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/PostProcessFinalizeGraphPass.h"
+#include "Runtime/Graphics/RenderGraph/ShadowRenderGraphPass.h"
+#include "Runtime/Graphics/RenderGraph/SceneShadowReadGraphPass.h"
 #include "Runtime/Graphics/RenderProxy/CameraRenderProxy.h"
 #include "Runtime/Graphics/RenderProxy/SkyboxRenderProxy.h"
 #include "Runtime/Core/DWorld.h"
@@ -265,7 +267,7 @@ void DXRenderManager::PrepareFrame()
         if (m_currentWorld)
         {
             m_currentWorld->PreGatherDrawCalls(ctx);
-            m_shadowPass.Render(ctx, *m_currentWorld);
+            ExecuteShadowGraph(ctx);
         }
     }
 
@@ -280,6 +282,37 @@ void DXRenderManager::PrepareFrame()
 
     StageIBLDescriptors(*commandList);
     StageShadowDescriptors(*commandList);
+}
+
+void DXRenderManager::ExecuteShadowGraph(const std::shared_ptr<DXGraphicsContext>& ctx)
+{
+    if (!m_currentWorld || !ctx || !ctx->commandList)
+        return;
+
+    if (!m_shadowPass.ShadowResourcesReady())
+    {
+        m_shadowPass.Render(ctx, *m_currentWorld);
+        return;
+    }
+
+    const RenderGraphTextureUsage depthAndShader =
+        RenderGraphTextureUsage::DepthAttachment | RenderGraphTextureUsage::ShaderResource;
+
+    RenderGraph graph;
+    const RenderGraphTextureHandle directionalHandle =
+        graph.ImportTexture("ShadowDirectional", m_shadowPass.GetDirectionalAtlasTexture(), depthAndShader);
+    const RenderGraphTextureHandle spotHandle =
+        graph.ImportTexture("ShadowSpot", m_shadowPass.GetSpotAtlasTexture(), depthAndShader);
+    const RenderGraphTextureHandle pointHandle =
+        graph.ImportTexture("ShadowPointCubes", m_shadowPass.GetPointCubeArrayTexture(), depthAndShader);
+
+    graph.AddPass(std::make_unique<ShadowRenderGraphPass>(
+        &m_shadowPass, m_currentWorld, ctx, directionalHandle, spotHandle, pointHandle));
+    graph.AddPass(std::make_unique<SceneShadowReadGraphPass>(directionalHandle, spotHandle, pointHandle));
+    graph.Compile();
+
+    graph.Execute({ ctx->commandList.get(), ctx.get() });
+    ctx->commandList->FlushResourceBarriers();
 }
 
 const ShadowDepthPSO* DXRenderManager::GetShadowDepthPSO() const
