@@ -3,6 +3,8 @@
 #include "EngineIncludes.h"
 
 #include <wrl.h>
+#include <atomic>
+#include <cstdint>
 #include <memory>
 #include <vector>
 #include <d3d12.h>
@@ -180,9 +182,17 @@ public:
     DELTAENGINE_API void Flush();
 
     /**
-     * Release stale descriptors. This should only be called with a completed frame counter.
+     * Release stale descriptors that were freed during frames whose fence value is
+     * <= completedFenceValue. Pass UINT64_MAX to drain everything (GPU must be idle).
      */
-    DELTAENGINE_API void ReleaseStaleDescriptors();
+    DELTAENGINE_API void ReleaseStaleDescriptors(uint64_t completedFenceValue);
+
+    /**
+     * Record the most recently submitted frame fence value. Descriptors freed after
+     * this point are stamped with it and only released once it has completed.
+     */
+    DELTAENGINE_API void SetFrameFenceValue(uint64_t fenceValue);
+    DELTAENGINE_API uint64_t GetFrameFenceValue() const { return m_FrameFenceValue.load(std::memory_order_relaxed); }
 
     /**
      * Create a shader-visible CBV_SRV_UAV descriptor heap for external use (e.g., ImGui).
@@ -247,6 +257,9 @@ private:
 
     // Descriptor allocators.
     std::unique_ptr<DescriptorAllocator> m_DescriptorAllocators[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
+
+    // Last submitted frame fence value; stamps stale descriptors when they are freed.
+    std::atomic<uint64_t> m_FrameFenceValue { 0 };
 
     D3D_ROOT_SIGNATURE_VERSION m_HighestRootSignatureVersion;
 };

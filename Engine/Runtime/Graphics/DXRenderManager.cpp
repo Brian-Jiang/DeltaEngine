@@ -57,6 +57,16 @@ DXRenderManager::DXRenderManager(std::shared_ptr<Device> device, std::shared_ptr
     });
     GetRenderResourceReleaseService().RegisterQueue(&m_releaseQueue);
 
+    m_transientPool.SetTextureFactory(
+        [this](const D3D12_RESOURCE_DESC& desc, const std::string& name)
+        {
+            auto texture = m_device->CreateTexture(desc, nullptr);
+            if (texture)
+                texture->SetName(name);
+            return texture;
+        });
+    m_frameGraph.SetTransientPool(&m_transientPool);
+
     LoadPipeline();
     LoadAssets();
 }
@@ -278,7 +288,11 @@ D3D12_CPU_DESCRIPTOR_HANDLE FrameGraphBindings::SrvFor(RenderGraphTextureHandle 
 void DXRenderManager::PrepareFrame()
 {
     m_releaseQueue.ProcessCompleted();
-    m_device->ReleaseStaleDescriptors();
+
+    CommandQueue& frameQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+    const uint64_t completedFence = frameQueue.GetCompletedFenceValue();
+    m_transientPool.BeginFrame(completedFence);
+    m_device->ReleaseStaleDescriptors(completedFence);
 
     DTexture* skyboxCube = nullptr;
     if (m_currentWorld && m_currentWorld->GetSkybox())
@@ -382,25 +396,19 @@ void DXRenderManager::BuildFrameGraph(const SceneDrawCallback& drawCallback, Pos
     const bool useResolvedScene = sceneDesc.SampleDesc.Count > 1;
     if (useResolvedScene)
     {
-        if (!m_resolvedScene ||
-            m_resolvedScene->GetD3D12ResourceDesc().Width != sceneDesc.Width ||
-            m_resolvedScene->GetD3D12ResourceDesc().Height != sceneDesc.Height ||
-            m_resolvedScene->GetD3D12ResourceDesc().Format != sceneDesc.Format)
-        {
-            auto resolvedDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-                sceneDesc.Format, sceneDesc.Width, static_cast<UINT>(sceneDesc.Height),
-                1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE);
-            m_resolvedScene = m_device->CreateTexture(resolvedDesc, nullptr);
-            m_resolvedScene->SetName("PostProcess Resolved Scene");
-        }
-
-        m_frameResources.resolvedScene = m_frameGraph.ImportTexture("ResolvedScene", m_resolvedScene,
+        const auto resolvedDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+            sceneDesc.Format, sceneDesc.Width, static_cast<UINT>(sceneDesc.Height),
+            1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE);
+        m_frameResources.resolvedScene = m_frameGraph.CreateTexture("ResolvedScene", resolvedDesc,
             RenderGraphTextureUsage::ShaderResource);
-        m_frameBindings.Register(m_frameResources.resolvedScene, {}, m_resolvedScene->GetShaderResourceView());
-
-        m_frameGraph.AddPass(std::make_unique<MsaaResolveGraphPass>(
-            m_frameResources.sceneColor, m_frameResources.resolvedScene, colorTexture, m_resolvedScene));
-        postInputHandle = m_frameResources.resolvedScene;
+        auto resolvedScene = m_frameGraph.GetImportedTexture(m_frameResources.resolvedScene).texture;
+        if (resolvedScene)
+        {
+            m_frameBindings.Register(m_frameResources.resolvedScene, {}, resolvedScene->GetShaderResourceView());
+            m_frameGraph.AddPass(std::make_unique<MsaaResolveGraphPass>(
+                m_frameResources.sceneColor, m_frameResources.resolvedScene, colorTexture, resolvedScene));
+            postInputHandle = m_frameResources.resolvedScene;
+        }
     }
 
     m_frameResources.ping = m_frameGraph.ImportTexture("Ping", m_pingPong[0].texture, colorAndShader);
@@ -622,6 +630,8 @@ void DXRenderManager::RenderFrame()
     CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
     m_lastSubmittedFence = directCommandQueue.ExecuteCommandList(m_currentCommandList);
     m_releaseQueue.SetLastSubmittedFence(m_lastSubmittedFence);
+    m_device->SetFrameFenceValue(m_lastSubmittedFence);
+    m_transientPool.RetireFrame(m_lastSubmittedFence);
     m_currentCommandList = nullptr;
     m_currentContext.reset();
 }
@@ -645,7 +655,6 @@ void DXRenderManager::Resize(UINT width, UINT height)
     m_viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, static_cast<float>(m_width), static_cast<float>(m_height));
     m_renderTarget->Resize(m_width, m_height);
     CreatePingPongTargets(m_width, m_height);
-    m_resolvedScene.reset();
     m_finalPostProcessSRV = {};
     m_finalPostProcessTexture.reset();
     m_frameGraphDirty = true;
@@ -680,6 +689,7 @@ void DXRenderManager::OnDestroy()
         m_device->Flush();
         m_releaseQueue.ProcessCompleted();
     }
+    m_transientPool.Clear();
     for (PostProcessPass* pass : m_trackedPasses)
     {
         if (pass)

@@ -24,6 +24,7 @@
 #include "Runtime/Graphics/IBL/IBLBaker.h"
 #include "Runtime/Graphics/RenderGraph/RenderGraph.h"
 #include "Runtime/Graphics/RenderGraph/RenderGraphResourceHandle.h"
+#include "Runtime/Graphics/RenderGraph/TransientTexturePool.h"
 #include "Runtime/Graphics/RenderResourceReleaseQueue.h"
 #include "Runtime/Graphics/Shadow/ShadowPassManager.h"
 
@@ -131,6 +132,9 @@ public:
     /// Enqueues a render proxy for deferred GPU release after the last submitted frame fence.
     DELTAENGINE_API RenderResourceReleaseToken DeferRenderProxyRelease(std::shared_ptr<RenderProxy> proxy);
 
+    /// Frame-scoped texture pool shared by the render graph and the editor display path.
+    DELTAENGINE_API TransientTexturePool& GetTransientPool() { return m_transientPool; }
+
 private:
     void CreatePingPongTargets(UINT width, UINT height);
     void BuildFrameGraph(const SceneDrawCallback& drawCallback, PostProcessStack* stack);
@@ -150,7 +154,6 @@ private:
 	std::shared_ptr<CommandList> m_currentCommandList;
 
     PostProcessTarget m_pingPong[2];
-    std::shared_ptr<DirectX12Texture> m_resolvedScene;
     std::unordered_set<PostProcessPass*> m_trackedPasses;
     D3D12_CPU_DESCRIPTOR_HANDLE m_finalPostProcessSRV{};
     bool m_hasPostProcessedOutput = false;
@@ -159,6 +162,7 @@ private:
     std::shared_ptr<DXGraphicsContext> m_currentContext;
 
     RenderGraph m_frameGraph;
+    TransientTexturePool m_transientPool;
     FrameGraphResources m_frameResources;
     FrameGraphBindings m_frameBindings;
     bool m_frameGraphDirty = true;

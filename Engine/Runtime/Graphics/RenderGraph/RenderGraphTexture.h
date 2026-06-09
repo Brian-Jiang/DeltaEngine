@@ -46,6 +46,8 @@ struct RenderGraphTexture
     std::string name;
     std::shared_ptr<DirectX12Texture> texture;
     RenderGraphTextureUsage usage = RenderGraphTextureUsage::None;
+    /// True when the texture is frame-scoped and owned by the graph's TransientTexturePool.
+    bool transient = false;
 };
 
 DELTA_ENGINE_NS_END

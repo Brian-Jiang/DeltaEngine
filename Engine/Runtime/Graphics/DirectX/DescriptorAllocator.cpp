@@ -56,13 +56,13 @@ DescriptorAllocation DescriptorAllocator::Allocate(uint32_t numDescriptors)
     return allocation;
 }
 
-void DescriptorAllocator::ReleaseStaleDescriptors() {
+void DescriptorAllocator::ReleaseStaleDescriptors(uint64_t completedFenceValue) {
     std::lock_guard<std::mutex> lock(m_AllocationMutex);
 
     for (size_t i = 0; i < m_HeapPool.size(); ++i) {
         auto page = m_HeapPool[i];
 
-        page->ReleaseStaleDescriptors();
+        page->ReleaseStaleDescriptors(completedFenceValue);
 
         if (page->NumFreeHandles() > 0) {
             m_AvailableHeaps.insert(i);

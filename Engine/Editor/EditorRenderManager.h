@@ -91,7 +91,6 @@ private:
     std::shared_ptr<DXRenderManager> m_sceneRenderer;
     ImGuiSrvDescriptorAllocator m_imGuiSrvAllocator;
 
-    std::shared_ptr<DirectX12Texture> m_viewportDisplayTexture;
     std::optional<ActiveRenderCamera> m_activeRenderCamera;
 
     D3D12_CPU_DESCRIPTOR_HANDLE m_imguiSrvCpuHandle;

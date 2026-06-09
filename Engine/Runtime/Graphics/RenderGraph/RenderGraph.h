@@ -14,6 +14,8 @@
 
 DELTA_ENGINE_NS_BEGIN
 
+class TransientTexturePool;
+
 struct RenderGraphResourceTransition
 {
     RenderGraphTextureHandle texture;
@@ -46,6 +48,16 @@ public:
     RenderGraphTextureHandle ImportTexture(std::string name, std::shared_ptr<DirectX12Texture> texture,
         RenderGraphTextureUsage usage);
 
+    /// Pool used by CreateTexture; must outlive the graph. The pool owns transient
+    /// textures and recycles them by fence — Reset() only drops graph references.
+    void SetTransientPool(TransientTexturePool* pool) { m_transientPool = pool; }
+    TransientTexturePool* GetTransientPool() const { return m_transientPool; }
+
+    /// Acquires a frame-scoped texture from the transient pool and registers it
+    /// under the same handle/lookup path as imported textures.
+    RenderGraphTextureHandle CreateTexture(std::string name, const D3D12_RESOURCE_DESC& desc,
+        RenderGraphTextureUsage usage);
+
     void Reset();
     void Compile();
     void Execute(const RenderGraphContext& context);
@@ -63,6 +75,7 @@ private:
     std::vector<std::unique_ptr<RenderGraphPass>> m_passes;
     std::vector<RenderGraphTexture> m_importedTextures;
     std::vector<RenderGraphCompiledPass> m_compiledPasses;
+    TransientTexturePool* m_transientPool = nullptr;
 };
 
 DELTA_ENGINE_NS_END

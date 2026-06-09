@@ -365,6 +365,9 @@ void Device::Flush() {
     m_DirectCommandQueue->Flush();
     m_ComputeCommandQueue->Flush();
     m_CopyCommandQueue->Flush();
+
+    // All queues are idle, so every stale descriptor can be reclaimed.
+    ReleaseStaleDescriptors(UINT64_MAX);
 }
 
 DescriptorAllocation Device::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors)
@@ -372,11 +375,20 @@ DescriptorAllocation Device::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type
     return m_DescriptorAllocators[type]->Allocate(numDescriptors);
 }
 
-void Device::ReleaseStaleDescriptors()
+void Device::ReleaseStaleDescriptors(uint64_t completedFenceValue)
 {
     for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
     {
-        m_DescriptorAllocators[i]->ReleaseStaleDescriptors();
+        m_DescriptorAllocators[i]->ReleaseStaleDescriptors(completedFenceValue);
+    }
+}
+
+void Device::SetFrameFenceValue(uint64_t fenceValue)
+{
+    uint64_t current = m_FrameFenceValue.load(std::memory_order_relaxed);
+    while (fenceValue > current &&
+        !m_FrameFenceValue.compare_exchange_weak(current, fenceValue, std::memory_order_relaxed))
+    {
     }
 }
 

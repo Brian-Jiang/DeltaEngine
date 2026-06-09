@@ -101,8 +101,9 @@ void DescriptorAllocatorPage::Free(DescriptorAllocation&& descriptor) {
     auto offset = ComputeOffset(descriptor.GetDescriptorHandle());
 
     std::lock_guard<std::mutex> lock(m_AllocationMutex);
-    // Don't add the block directly to the free list until the frame has completed.
-    m_StaleDescriptors.emplace(offset, descriptor.GetNumHandles());
+    // Don't add the block directly to the free list until the frame it was freed
+    // in has completed on the GPU; stamp it with the current frame fence value.
+    m_StaleDescriptors.emplace(offset, descriptor.GetNumHandles(), m_Device.GetFrameFenceValue());
 }
 
 void DescriptorAllocatorPage::FreeBlock(uint32_t offset, uint32_t numDescriptors) {
@@ -164,10 +165,11 @@ void DescriptorAllocatorPage::FreeBlock(uint32_t offset, uint32_t numDescriptors
     AddNewBlock(offset, numDescriptors);
 }
 
-void DescriptorAllocatorPage::ReleaseStaleDescriptors() {
+void DescriptorAllocatorPage::ReleaseStaleDescriptors(uint64_t completedFenceValue) {
     std::lock_guard<std::mutex> lock(m_AllocationMutex);
 
-    while (!m_StaleDescriptors.empty()) {
+    // Fence stamps are monotonically non-decreasing, so the queue stays FIFO-ordered.
+    while (!m_StaleDescriptors.empty() && m_StaleDescriptors.front().FenceValue <= completedFenceValue) {
         auto& staleDescriptor = m_StaleDescriptors.front();
 
         // The offset of the descriptor in the heap.
