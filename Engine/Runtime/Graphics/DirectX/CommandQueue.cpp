@@ -79,6 +79,11 @@ bool CommandQueue::IsFenceComplete(uint64_t fenceValue)
     return m_d3d12Fence->GetCompletedValue() >= fenceValue;
 }
 
+uint64_t CommandQueue::GetCompletedFenceValue() const
+{
+    return m_d3d12Fence->GetCompletedValue();
+}
+
 void CommandQueue::WaitForFenceValue(uint64_t fenceValue) {
     if (!IsFenceComplete(fenceValue)) {
         auto event = ::CreateEvent(NULL, FALSE, FALSE, NULL);

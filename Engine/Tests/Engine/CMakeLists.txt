@@ -30,6 +30,7 @@ set(DELTA_ENGINE_TEST_SOURCES
     Graphics/ShadowRenderGraphCompileTests.cpp
     Graphics/DirectionalShadowMatrixTests.cpp
     Graphics/SkyboxRenderProxyTests.cpp
+    Graphics/TransientTexturePoolTests.cpp
     Reflection/ReflectionRegistryTests.cpp
     Reflection/ReflectionRegistryHardeningTests.cpp
     Reflection/ReflectionStructClassTests.cpp

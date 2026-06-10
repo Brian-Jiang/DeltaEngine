@@ -5,6 +5,7 @@
 
 #include "Runtime/Graphics/DirectX/CommandList.h"
 #include "Runtime/Graphics/RenderGraph/RenderGraphBuilder.h"
+#include "Runtime/Graphics/RenderGraph/TransientTexturePool.h"
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -27,6 +28,31 @@ RenderGraphTextureHandle RenderGraph::ImportTexture(std::string name, std::share
     importedTexture.texture = std::move(texture);
     importedTexture.usage = usage;
     m_importedTextures.push_back(std::move(importedTexture));
+
+    return handle;
+}
+
+RenderGraphTextureHandle RenderGraph::CreateTexture(std::string name, const D3D12_RESOURCE_DESC& desc,
+    RenderGraphTextureUsage usage)
+{
+    DELTA_ASSERT(m_transientPool != nullptr);
+    DELTA_ASSERT(FindImportedTexture(name).index == RenderGraphTextureHandle::kInvalid);
+    if (!m_transientPool)
+    {
+        return {};
+    }
+
+    std::shared_ptr<DirectX12Texture> texture = m_transientPool->Acquire(desc, name);
+
+    RenderGraphTextureHandle handle;
+    handle.index = static_cast<uint32_t>(m_importedTextures.size());
+
+    RenderGraphTexture transientTexture;
+    transientTexture.name = std::move(name);
+    transientTexture.texture = std::move(texture);
+    transientTexture.usage = usage;
+    transientTexture.transient = true;
+    m_importedTextures.push_back(std::move(transientTexture));
 
     return handle;
 }
