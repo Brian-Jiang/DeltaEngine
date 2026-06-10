@@ -355,9 +355,13 @@ void EditorMain::ProcessEvents()
 
 void EditorMain::Shutdown()
 {
+    // Keep the device alive across teardown: EditorRenderManager::OnDestroy nulls its
+    // device pointer, but the live-object report below needs a valid device.
+    std::shared_ptr<Device> device;
     if (m_renderManager)
     {
-        m_renderManager->GetDevice()->Flush();
+        device = m_renderManager->GetDevice();
+        device->Flush();
         m_renderManager->OnDestroy();
     }
 
@@ -389,17 +393,17 @@ void EditorMain::Shutdown()
     // resources (textures, PSOs, descriptor heaps) instead of leaking past device teardown.
     GetGCManager().CollectAllForShutdown();
 
-    // Report live D3D12 objects with per-object detail while the device is still valid.
-    // After m_renderManager.reset() the device shared_ptr is gone and only DXGI sees a
-    // phantom device with no usable debug interface.
-    if (m_renderManager)
-    {
-        if (auto device = m_renderManager->GetDevice())
-            device->ReportLiveDeviceObjects();
-    }
-
     m_renderManager.reset();
     m_window.reset();
+
+    // Report live D3D12 objects with per-object detail while the device is still valid.
+    // This also disables break-on-warning so the LIVE_* warnings emitted by the reports
+    // (including the final DXGI report) do not crash the process.
+    if (device)
+    {
+        device->ReportLiveDeviceObjects();
+        device.reset();
+    }
 
     if (m_sdlInitialized)
     {

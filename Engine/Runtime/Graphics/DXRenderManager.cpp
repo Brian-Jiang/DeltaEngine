@@ -689,6 +689,13 @@ void DXRenderManager::OnDestroy()
         m_device->Flush();
         m_releaseQueue.ProcessCompleted();
     }
+
+    // Drop last frame's passes: they hold DXGraphicsContexts whose renderManager
+    // shared_ptr points back at us — without this the manager (and device) leak.
+    m_frameGraph.Reset();
+    m_currentContext.reset();
+    m_pendingSceneDrawCallback = nullptr;
+
     m_transientPool.Clear();
     for (PostProcessPass* pass : m_trackedPasses)
     {

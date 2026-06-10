@@ -223,9 +223,13 @@ void RenderGraph::Execute(const RenderGraphContext& context)
             context.commandList->TransitionBarrier(texture.texture, transition.stateAfter);
         }
 
+        // Flush before Execute: passes may record GPU work that bypasses the state
+        // tracker (e.g. ResolveSubresourceNoBarrier), so queued transitions must be
+        // on the command list before the pass runs.
+        context.commandList->FlushResourceBarriers();
+
         if (!compiled.clears.empty())
         {
-            context.commandList->FlushResourceBarriers();
             for (const RenderGraphClearOp& clear : compiled.clears)
             {
                 const RenderGraphTexture& texture = GetImportedTexture(clear.texture);
