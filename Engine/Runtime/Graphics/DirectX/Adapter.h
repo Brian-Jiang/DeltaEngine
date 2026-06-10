@@ -46,7 +46,7 @@ DELTA_ENGINE_NS_BEGIN
 class Adapter;
 using AdapterList = std::vector<std::shared_ptr<Adapter>>;
 
-class Adapter {
+class DELTAENGINE_API Adapter {
 public:
     /**
      * Get a list of DX12 compatible hardware adapters sorted by the GPU preference.
