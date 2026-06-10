@@ -1,5 +1,7 @@
 #include "Shared/GpuGraphicsFixture.h"
 
+#include "Runtime/Graphics/DXRenderManager.h"
+
 #include <d3dx12.h>
 
 namespace DeltaEngine::Tests
@@ -71,6 +73,26 @@ uint64_t GpuGraphicsFixture::SubmitAndWait(std::shared_ptr<CommandList> commandL
     s_directQueue->WaitForFenceValue(fenceValue);
     AssertGpuValidationClean(s_device->GetD3D12Device().Get());
     return fenceValue;
+}
+
+std::shared_ptr<DXRenderManager> GpuGraphicsFixture::CreateRenderManager()
+{
+    auto manager = std::make_shared<DXRenderManager>(s_device, s_renderTarget, 64u, 64u);
+    manager->LoadPipeline();
+    manager->LoadAssets();
+    return manager;
+}
+
+void GpuGraphicsFixture::DestroyRenderManager(std::shared_ptr<DXRenderManager>& manager)
+{
+    if (manager)
+    {
+        manager->OnDestroy();
+        manager.reset();
+    }
+
+    if (s_device)
+        s_device->Flush();
 }
 
 } // namespace DeltaEngine::Tests

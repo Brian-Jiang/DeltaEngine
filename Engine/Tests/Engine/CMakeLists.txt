@@ -25,6 +25,8 @@ set(DELTA_ENGINE_TEST_SOURCES
     Graphics/FullFrameRenderGraphCompileTests.cpp
     Graphics/Gpu/GpuDeviceSmokeTests.cpp
     Graphics/Gpu/GpuDefaultTexturesTests.cpp
+    Graphics/Gpu/GpuIBLBakerTests.cpp
+    Graphics/Gpu/GpuRenderManagerInitTests.cpp
     Graphics/Gpu/GpuShadowInfrastructureTests.cpp
     Graphics/Gpu/GpuShaderCompileTests.cpp
     Graphics/RenderGraphCompileTests.cpp
