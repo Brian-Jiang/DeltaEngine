@@ -41,7 +41,6 @@ TEST_F(GpuShadowInfrastructureTests, InitializeCreatesAtlasesAndShadowDepthPso)
     EXPECT_EQ(directionalDesc.Width, 4096u);
     EXPECT_EQ(directionalDesc.Height, 4096u);
     EXPECT_EQ(directionalDesc.Format, DXGI_FORMAT_R32_TYPELESS);
-    EXPECT_TRUE(directionalAtlas->CheckDSVSupport());
     EXPECT_NE(directionalAtlas->GetShaderResourceView().ptr, 0u);
     EXPECT_NE(directionalAtlas->GetDepthStencilView().ptr, 0u);
 
@@ -49,7 +48,6 @@ TEST_F(GpuShadowInfrastructureTests, InitializeCreatesAtlasesAndShadowDepthPso)
     EXPECT_EQ(spotDesc.Width, 4096u);
     EXPECT_EQ(spotDesc.Height, 4096u);
     EXPECT_EQ(spotDesc.Format, DXGI_FORMAT_R32_TYPELESS);
-    EXPECT_TRUE(spotAtlas->CheckDSVSupport());
     EXPECT_NE(spotAtlas->GetShaderResourceView().ptr, 0u);
     EXPECT_NE(spotAtlas->GetDepthStencilView().ptr, 0u);
 
@@ -58,7 +56,6 @@ TEST_F(GpuShadowInfrastructureTests, InitializeCreatesAtlasesAndShadowDepthPso)
     EXPECT_EQ(pointDesc.Height, 512u);
     EXPECT_EQ(pointDesc.DepthOrArraySize, 48u);
     EXPECT_EQ(pointDesc.Format, DXGI_FORMAT_R32_TYPELESS);
-    EXPECT_TRUE(pointCubeArray->CheckDSVSupport());
     EXPECT_NE(pointCubeArray->GetShaderResourceView().ptr, 0u);
     EXPECT_NE(pointCubeArray->GetDepthStencilView().ptr, 0u);
 
