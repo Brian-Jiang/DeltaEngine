@@ -25,7 +25,7 @@ bool IsWarpAdapterAvailable()
     createFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
 #endif
 
-    if (FAILED(::CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(&dxgiFactory6)))
+    if (FAILED(::CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(&dxgiFactory6))))
         return false;
 
     return SUCCEEDED(dxgiFactory6->EnumWarpAdapter(IID_PPV_ARGS(&dxgiAdapter)));
