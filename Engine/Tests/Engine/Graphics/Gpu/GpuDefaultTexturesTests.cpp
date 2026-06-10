@@ -110,6 +110,8 @@ TEST_F(GpuDefaultTexturesTests, ShutdownClearsTexturesAndAllowsReinitialize)
     EXPECT_EQ(DefaultTextures::GetShadowCubeArrayFallback(), nullptr);
     EXPECT_EQ(DefaultTextures::GetShadowCubeArrayFallbackSRV().ptr, 0u);
 
+    commandList = GetDirectQueue().GetCommandList();
+    ASSERT_NE(commandList, nullptr);
     DefaultTextures::Initialize(*GetDevice(), *commandList);
     SubmitAndWait(commandList);
 
