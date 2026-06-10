@@ -1,5 +1,7 @@
 #include "Shared/GpuGraphicsFixture.h"
 
+#include "Runtime/Graphics/DirectX/DescriptorAllocation.h"
+
 #include <d3dx12.h>
 #include <gtest/gtest.h>
 
