@@ -78,7 +78,8 @@ void EditorRenderManager::PrepareViewportSceneTexture(CommandList& commandList)
 
     // Post-process produced output on a different command list. The ping-pong texture
     // is not tracked by this (imgui) command list, so copy it into a display texture
-    // owned and tracked here. This guarantees correct resource lifetime and state.
+    // acquired from the scene renderer's transient pool. The pool recycles it only
+    // after this frame's editor fence completes, so lifetime stays correct.
     if (m_sceneRenderer->HasPostProcessedOutput())
     {
         auto finalTex = m_sceneRenderer->GetFinalPostProcessTexture();
@@ -87,20 +88,16 @@ void EditorRenderManager::PrepareViewportSceneTexture(CommandList& commandList)
             const UINT ppWidth = m_offscreenRenderTarget->GetWidth();
             const UINT ppHeight = m_offscreenRenderTarget->GetHeight();
             const DXGI_FORMAT ppFormat = finalTex->GetD3D12ResourceDesc().Format;
-            if (!m_viewportDisplayTexture ||
-                m_viewportDisplayTexture->GetD3D12ResourceDesc().Width != ppWidth ||
-                m_viewportDisplayTexture->GetD3D12ResourceDesc().Height != ppHeight ||
-                m_viewportDisplayTexture->GetD3D12ResourceDesc().Format != ppFormat)
-            {
-                const auto colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-                    ppFormat, ppWidth, ppHeight, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE);
-                m_viewportDisplayTexture = m_device->CreateTexture(colorDesc, nullptr);
-                m_viewportDisplayTexture->SetName("Viewport Display Target");
-            }
-            commandList.CopyResource(m_viewportDisplayTexture, finalTex);
-            commandList.TransitionBarrier(m_viewportDisplayTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+            const auto colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+                ppFormat, ppWidth, ppHeight, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE);
+            auto displayTexture = m_sceneRenderer->GetTransientPool().Acquire(
+                colorDesc, "Viewport Display Target");
+            if (!displayTexture)
+                return;
+            commandList.CopyResource(displayTexture, finalTex);
+            commandList.TransitionBarrier(displayTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
             commandList.FlushResourceBarriers();
-            const D3D12_CPU_DESCRIPTOR_HANDLE srv = m_viewportDisplayTexture->GetShaderResourceView();
+            const D3D12_CPU_DESCRIPTOR_HANDLE srv = displayTexture->GetShaderResourceView();
             if (srv.ptr != 0)
                 m_device->GetD3D12Device()->CopyDescriptorsSimple(1, m_imguiSrvCpuHandle, srv, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
             return;
@@ -116,20 +113,14 @@ void EditorRenderManager::PrepareViewportSceneTexture(CommandList& commandList)
     if (sampleCount > 1)
     {
         const DXGI_FORMAT srcFormat = offscreenColor->GetD3D12ResourceDesc().Format;
-        if (!m_viewportDisplayTexture ||
-            m_viewportDisplayTexture->GetD3D12ResourceDesc().Width != width ||
-            m_viewportDisplayTexture->GetD3D12ResourceDesc().Height != height ||
-            m_viewportDisplayTexture->GetD3D12ResourceDesc().Format != srcFormat)
-        {
-            const auto colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(srcFormat, width, height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE);
-            m_viewportDisplayTexture = m_device->CreateTexture(colorDesc, nullptr);
-            m_viewportDisplayTexture->SetName("Viewport Display Target");
-        }
+        const auto colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(srcFormat, width, height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE);
+        displayTexture = m_sceneRenderer->GetTransientPool().Acquire(colorDesc, "Viewport Display Target");
+        if (!displayTexture)
+            return;
 
-        commandList.ResolveSubresource(m_viewportDisplayTexture, offscreenColor);
-        commandList.TransitionBarrier(m_viewportDisplayTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        commandList.ResolveSubresource(displayTexture, offscreenColor);
+        commandList.TransitionBarrier(displayTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         commandList.FlushResourceBarriers();
-        displayTexture = m_viewportDisplayTexture;
     }
     else
     {
@@ -189,10 +180,10 @@ void EditorRenderManager::RenderFrame(EngineMain* engine)
 
     m_sceneRenderer->SetPendingActiveRenderCamera(m_activeRenderCamera);
     m_sceneRenderer->PrepareFrame();
+    m_sceneRenderer->RenderScene([engine](const std::shared_ptr<DXGraphicsContext>& ctx)
     {
-        auto ctx = m_sceneRenderer->GetGraphicsContext();
         engine->RecordSceneDraws(ctx);
-    }
+    });
     m_sceneRenderer->RenderFrame();
 
     CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
@@ -212,7 +203,11 @@ void EditorRenderManager::RenderFrame(EngineMain* engine)
     ImGui::Render();
     ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList->GetD3D12CommandList().Get());
 
-    directCommandQueue.ExecuteCommandList(commandList);
+    const uint64_t editorFence = directCommandQueue.ExecuteCommandList(commandList);
+    m_device->SetFrameFenceValue(editorFence);
+    // Retire textures acquired for the editor display path (e.g. viewport display
+    // target) so the pool recycles them only after this submission completes.
+    m_sceneRenderer->GetTransientPool().RetireFrame(editorFence);
     m_swapChain->Present();
 }
 
@@ -282,9 +277,6 @@ void EditorRenderManager::OnDestroy()
     m_activeRenderCamera = {};
     if (m_sceneRenderer)
         m_sceneRenderer.reset();
-
-    if (m_viewportDisplayTexture)
-        m_viewportDisplayTexture.reset();
 
     if (m_offscreenRenderTarget)
         m_offscreenRenderTarget.reset();

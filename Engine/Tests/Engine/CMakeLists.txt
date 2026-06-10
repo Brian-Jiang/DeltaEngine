@@ -20,10 +20,17 @@ set(DELTA_ENGINE_TEST_SOURCES
     Graphics/MeshShadowSubmissionTests.cpp
     Graphics/PostProcessTests_DataModel.cpp
     Graphics/PostProcessStackHardeningTests.cpp
+    Graphics/PostProcessRenderGraphCompileTests.cpp
     Graphics/RenderCoreTests.cpp
+    Graphics/FullFrameRenderGraphCompileTests.cpp
+    Graphics/RenderGraphCompileTests.cpp
+    Graphics/RenderGraphTests.cpp
+    Graphics/SceneRenderGraphCompileTests.cpp
     Graphics/ShadowMapAllocatorTests.cpp
+    Graphics/ShadowRenderGraphCompileTests.cpp
     Graphics/DirectionalShadowMatrixTests.cpp
     Graphics/SkyboxRenderProxyTests.cpp
+    Graphics/TransientTexturePoolTests.cpp
     Reflection/ReflectionRegistryTests.cpp
     Reflection/ReflectionRegistryHardeningTests.cpp
     Reflection/ReflectionStructClassTests.cpp

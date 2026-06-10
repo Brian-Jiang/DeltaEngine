@@ -193,6 +193,19 @@ void CommandList::ResolveSubresource(const std::shared_ptr<Resource>& dstRes, co
     TrackResource(dstRes);
 }
 
+void CommandList::ResolveSubresourceNoBarrier(const std::shared_ptr<Resource>& dstRes,
+    const std::shared_ptr<Resource>& srcRes, uint32_t dstSubresource, uint32_t srcSubresource)
+{
+    assert(dstRes && srcRes);
+
+    m_d3d12CommandList->ResolveSubresource(dstRes->GetD3D12Resource().Get(), dstSubresource,
+        srcRes->GetD3D12Resource().Get(), srcSubresource,
+        dstRes->GetD3D12ResourceDesc().Format);
+
+    TrackResource(srcRes);
+    TrackResource(dstRes);
+}
+
 ComPtr<ID3D12Resource> CommandList::CopyBuffer(size_t bufferSize, const void* bufferData, D3D12_RESOURCE_FLAGS flags)
 {
     ComPtr<ID3D12Resource> d3d12Resource;
@@ -1264,6 +1277,39 @@ void CommandList::SetShaderResourceView(uint32_t rootParameterIndex, uint32_t de
 
 
 // ============================  ============================
+
+void CommandList::BindRenderTarget(const RenderTarget& renderTarget)
+{
+    std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> renderTargetDescriptors;
+    renderTargetDescriptors.reserve(AttachmentPoint::NumAttachmentPoints);
+
+    const auto& textures = renderTarget.GetTextures();
+
+    for (int i = 0; i < 8; ++i)
+    {
+        auto texture = textures[i];
+
+        if (texture)
+        {
+            renderTargetDescriptors.push_back(texture->GetRenderTargetView());
+            TrackResource(texture);
+        }
+    }
+
+    auto depthTexture = renderTarget.GetTexture(AttachmentPoint::DepthStencil);
+
+    CD3DX12_CPU_DESCRIPTOR_HANDLE depthStencilDescriptor(D3D12_DEFAULT);
+    if (depthTexture)
+    {
+        depthStencilDescriptor = depthTexture->GetDepthStencilView();
+        TrackResource(depthTexture);
+    }
+
+    D3D12_CPU_DESCRIPTOR_HANDLE* pDSV = depthStencilDescriptor.ptr != 0 ? &depthStencilDescriptor : nullptr;
+
+    m_d3d12CommandList->OMSetRenderTargets(static_cast<UINT>(renderTargetDescriptors.size()),
+        renderTargetDescriptors.data(), FALSE, pDSV);
+}
 
 void CommandList::SetRenderTarget(const RenderTarget& renderTarget)
 {

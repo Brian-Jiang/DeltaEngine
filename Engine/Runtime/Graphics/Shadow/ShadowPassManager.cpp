@@ -316,14 +316,6 @@ void ShadowPassManager::Render(std::shared_ptr<DXGraphicsContext> ctx, DWorld& w
         }
     }
 
-    commandList.TransitionBarrier(m_directionalAtlas.GetTexture(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-        D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, true);
-    commandList.TransitionBarrier(m_spotAtlas.GetTexture(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-        D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, true);
-    commandList.TransitionBarrier(m_pointCubes.GetTexture(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-        D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, true);
-    commandList.FlushResourceBarriers();
-
     for (const DirJob& job : dirJobs)
     {
         ShadowAllocation alloc {};

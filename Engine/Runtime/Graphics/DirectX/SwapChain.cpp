@@ -191,13 +191,16 @@ UINT SwapChain::Present(const std::shared_ptr<DirectX12Texture>& texture)
     ThrowIfFailed( m_dxgiSwapChain->Present( syncInterval, presentFlags ) );
 
     m_FenceValues[m_CurrentBackBufferIndex] = m_CommandQueue.Signal();
+    m_Device.SetFrameFenceValue( m_FenceValues[m_CurrentBackBufferIndex] );
 
     m_CurrentBackBufferIndex = m_dxgiSwapChain->GetCurrentBackBufferIndex();
 
+    // The fence for the back buffer we are about to reuse has been waited on,
+    // so descriptors freed up to that frame are safe to release.
     auto fenceValue = m_FenceValues[m_CurrentBackBufferIndex];
     m_CommandQueue.WaitForFenceValue( fenceValue );
 
-    m_Device.ReleaseStaleDescriptors();
+    m_Device.ReleaseStaleDescriptors( fenceValue );
 
     return m_CurrentBackBufferIndex;
 }

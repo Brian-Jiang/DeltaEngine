@@ -28,9 +28,9 @@ public:
     DescriptorAllocation Allocate(uint32_t numDescriptors = 1);
 
     /**
-     * When the frame has completed, the stale descriptors can be released.
+     * Release stale descriptors stamped with a frame fence value <= completedFenceValue.
      */
-    void ReleaseStaleDescriptors();
+    void ReleaseStaleDescriptors(uint64_t completedFenceValue);
 
 //protected:
     friend struct std::default_delete<DescriptorAllocator>;

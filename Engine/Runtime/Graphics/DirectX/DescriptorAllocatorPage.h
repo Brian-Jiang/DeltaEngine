@@ -47,9 +47,10 @@ public:
     void Free(DescriptorAllocation&& descriptorHandle);
 
     /**
-     * Returned the stale descriptors back to the descriptor heap.
+     * Return stale descriptors stamped with a frame fence value <= completedFenceValue
+     * back to the descriptor heap.
      */
-    void ReleaseStaleDescriptors();
+    void ReleaseStaleDescriptors(uint64_t completedFenceValue);
 
 
     DescriptorAllocatorPage(Device& device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors);
@@ -89,14 +90,17 @@ private:
     };
 
     struct StaleDescriptorInfo {
-        StaleDescriptorInfo(OffsetType offset, SizeType size)
+        StaleDescriptorInfo(OffsetType offset, SizeType size, uint64_t fenceValue)
             : Offset(offset)
-            , Size(size) {}
+            , Size(size)
+            , FenceValue(fenceValue) {}
 
         // The offset within the descriptor heap.
         OffsetType Offset;
         // The number of descriptors
         SizeType Size;
+        // Frame fence value that must complete before the block can be reused.
+        uint64_t FenceValue;
     };
 
     // Device that was used to create the descriptor heap.

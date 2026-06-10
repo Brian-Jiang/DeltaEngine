@@ -29,6 +29,7 @@ public:
 
     DELTAENGINE_API uint64_t Signal();
     DELTAENGINE_API bool     IsFenceComplete(uint64_t fenceValue);
+    DELTAENGINE_API uint64_t GetCompletedFenceValue() const;
     DELTAENGINE_API void     WaitForFenceValue(uint64_t fenceValue);
     DELTAENGINE_API void     Flush();
 

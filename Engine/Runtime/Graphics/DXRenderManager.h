@@ -3,6 +3,7 @@
 #include "Runtime/EngineIncludes.h"
 
 #include <chrono>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <unordered_set>
@@ -21,6 +22,9 @@
 #include "Runtime/Graphics/DirectX/DirectX12Texture.h"
 #include "Runtime/Graphics/DirectX/RenderTarget.h"
 #include "Runtime/Graphics/IBL/IBLBaker.h"
+#include "Runtime/Graphics/RenderGraph/RenderGraph.h"
+#include "Runtime/Graphics/RenderGraph/RenderGraphResourceHandle.h"
+#include "Runtime/Graphics/RenderGraph/TransientTexturePool.h"
 #include "Runtime/Graphics/RenderResourceReleaseQueue.h"
 #include "Runtime/Graphics/Shadow/ShadowPassManager.h"
 
@@ -44,6 +48,34 @@ struct PostProcessTarget
     D3D12_CPU_DESCRIPTOR_HANDLE srv{};
 };
 
+struct FrameGraphBinding
+{
+    D3D12_CPU_DESCRIPTOR_HANDLE rtv{};
+    D3D12_CPU_DESCRIPTOR_HANDLE srv{};
+};
+
+struct FrameGraphBindings
+{
+    std::vector<FrameGraphBinding> entries;
+
+    void Register(RenderGraphTextureHandle handle, D3D12_CPU_DESCRIPTOR_HANDLE rtv, D3D12_CPU_DESCRIPTOR_HANDLE srv);
+    D3D12_CPU_DESCRIPTOR_HANDLE RtvFor(RenderGraphTextureHandle handle) const;
+    D3D12_CPU_DESCRIPTOR_HANDLE SrvFor(RenderGraphTextureHandle handle) const;
+};
+
+struct FrameGraphResources
+{
+    RenderGraphTextureHandle sceneColor;
+    RenderGraphTextureHandle sceneDepth;
+    RenderGraphTextureHandle shadowDirectional;
+    RenderGraphTextureHandle shadowSpot;
+    RenderGraphTextureHandle shadowPoint;
+    RenderGraphTextureHandle ping;
+    RenderGraphTextureHandle pong;
+    RenderGraphTextureHandle resolvedScene;
+    RenderGraphTextureHandle finalOutput;
+};
+
 /// Renders the scene to an offscreen render target. Does not own swap chain or window.
 /// Device and RenderTarget are provided externally (e.g. by Editor or game launcher).
 class DXRenderManager : public std::enable_shared_from_this<DXRenderManager>
@@ -58,9 +90,17 @@ public:
     /// executes the command list, and waits for the GPU.
     DELTAENGINE_API void InitWorldRenderers(DWorld& world);
 
+    using SceneDrawCallback = std::function<void(const std::shared_ptr<DXGraphicsContext>&)>;
+
     /// Prepares the command list and renders the scene to m_renderTarget.
     /// Caller is responsible for executing the command list and presenting.
     DELTAENGINE_API void PrepareFrame();
+
+    /// Renders the forward scene pass as a render graph node: clears + binds the
+    /// scene render target, stages frame descriptors, then invokes drawCallback
+    /// to record the scene draws. Call between PrepareFrame and RenderFrame.
+    DELTAENGINE_API void RenderScene(const SceneDrawCallback& drawCallback);
+
     DELTAENGINE_API void RenderFrame();
 
     DELTAENGINE_API void SetPendingActiveRenderCamera(std::optional<ActiveRenderCamera> camera);
@@ -92,9 +132,14 @@ public:
     /// Enqueues a render proxy for deferred GPU release after the last submitted frame fence.
     DELTAENGINE_API RenderResourceReleaseToken DeferRenderProxyRelease(std::shared_ptr<RenderProxy> proxy);
 
+    /// Frame-scoped texture pool shared by the render graph and the editor display path.
+    DELTAENGINE_API TransientTexturePool& GetTransientPool() { return m_transientPool; }
+
 private:
     void CreatePingPongTargets(UINT width, UINT height);
-    void ExecutePostProcessStack(DXGraphicsContext& ctx, PostProcessStack* stack, UINT width, UINT height);
+    void BuildFrameGraph(const SceneDrawCallback& drawCallback, PostProcessStack* stack);
+    void ExecuteFrameGraph(DXGraphicsContext& ctx, const SceneDrawCallback& drawCallback);
+    void ExecuteBootstrapSceneFallback(DXGraphicsContext& ctx, const SceneDrawCallback& drawCallback);
     void UpdateIBL(DTexture* skyboxCubemap);
     void EnsureIBLFallback();
     void StageIBLDescriptors(CommandList& commandList);
@@ -109,13 +154,19 @@ private:
 	std::shared_ptr<CommandList> m_currentCommandList;
 
     PostProcessTarget m_pingPong[2];
-    std::shared_ptr<DirectX12Texture> m_resolvedScene;
     std::unordered_set<PostProcessPass*> m_trackedPasses;
     D3D12_CPU_DESCRIPTOR_HANDLE m_finalPostProcessSRV{};
     bool m_hasPostProcessedOutput = false;
     std::shared_ptr<DirectX12Texture> m_finalPostProcessTexture;
 
     std::shared_ptr<DXGraphicsContext> m_currentContext;
+
+    RenderGraph m_frameGraph;
+    TransientTexturePool m_transientPool;
+    FrameGraphResources m_frameResources;
+    FrameGraphBindings m_frameBindings;
+    bool m_frameGraphDirty = true;
+    SceneDrawCallback m_pendingSceneDrawCallback;
 
     std::optional<ActiveRenderCamera> m_pendingActiveRenderCamera;
 
