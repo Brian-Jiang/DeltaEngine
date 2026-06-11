@@ -44,8 +44,14 @@ using namespace Microsoft::WRL;
 using namespace DeltaEngine;
 using namespace DirectX;
 
+namespace
+{
+constexpr RenderPath kActiveRenderPath = RenderPath::Forward;
+}
+
 DXRenderManager::DXRenderManager(std::shared_ptr<Device> device, std::shared_ptr<RenderTarget> renderTarget, UINT width, UINT height)
-    : m_device(std::move(device)), m_renderTarget(std::move(renderTarget)), m_width(width), m_height(height),
+    : m_device(std::move(device)), m_renderTarget(std::move(renderTarget)), m_renderPath(kActiveRenderPath),
+    m_width(width), m_height(height),
     m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
     m_scissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX))
 {
@@ -204,7 +210,11 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
     DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT;
 
     // Check the best multisample quality level that can be used for the given back buffer format.
-    DXGI_SAMPLE_DESC sampleDesc = m_device->GetMultisampleQualityLevels(backBufferFormat);
+    DXGI_SAMPLE_DESC sampleDesc{};
+    if (m_renderPath == RenderPath::Forward)
+        sampleDesc = m_device->GetMultisampleQualityLevels(backBufferFormat);
+    else
+        sampleDesc = { 1, 0 };
 
     // Create an off-screen render target with a single color buffer and a depth buffer.
     auto colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(backBufferFormat, m_width, m_height, 1, 1, sampleDesc.Count,
@@ -320,18 +330,27 @@ void DXRenderManager::RenderScene(const SceneDrawCallback& drawCallback)
 
 void DXRenderManager::BuildFrameGraph(const SceneDrawCallback& drawCallback, PostProcessStack* stack)
 {
+    switch (m_renderPath)
+    {
+    case RenderPath::Forward:
+        BuildForwardFrameGraph(drawCallback, stack);
+        break;
+    case RenderPath::Deferred:
+        BuildDeferredFrameGraph(drawCallback, stack);
+        break;
+    }
+}
+
+bool DXRenderManager::ImportSceneTargets(RenderGraphTextureUsage colorAndShader,
+    std::shared_ptr<DirectX12Texture>& colorTexture, std::shared_ptr<DirectX12Texture>& depthTexture)
+{
     m_frameResources = {};
     m_frameBindings = {};
 
-    auto colorTexture = m_renderTarget->GetTexture(AttachmentPoint::Color0);
-    auto depthTexture = m_renderTarget->GetTexture(AttachmentPoint::DepthStencil);
+    colorTexture = m_renderTarget->GetTexture(AttachmentPoint::Color0);
+    depthTexture = m_renderTarget->GetTexture(AttachmentPoint::DepthStencil);
     if (!colorTexture || !depthTexture)
-        return;
-
-    const RenderGraphTextureUsage colorAndShader =
-        RenderGraphTextureUsage::ColorAttachment | RenderGraphTextureUsage::ShaderResource;
-    const RenderGraphTextureUsage depthAndShader =
-        RenderGraphTextureUsage::DepthAttachment | RenderGraphTextureUsage::ShaderResource;
+        return false;
 
     m_frameResources.sceneColor = m_frameGraph.ImportTexture("SceneColor", colorTexture, colorAndShader);
     m_frameBindings.Register(m_frameResources.sceneColor,
@@ -341,8 +360,13 @@ void DXRenderManager::BuildFrameGraph(const SceneDrawCallback& drawCallback, Pos
         RenderGraphTextureUsage::DepthAttachment);
     m_frameBindings.Register(m_frameResources.sceneDepth, depthTexture->GetDepthStencilView(), {});
 
+    return true;
+}
+
+void DXRenderManager::AddShadowSceneSkyboxPasses(const SceneDrawCallback& drawCallback, const float clearColor[4],
+    RenderGraphTextureUsage depthAndShader)
+{
     auto ctx = GetGraphicsContext();
-    const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
     const SceneRenderGraphPass::DescriptorStageCallback stageDescriptors =
         [this](CommandList& cl)
         {
@@ -380,37 +404,20 @@ void DXRenderManager::BuildFrameGraph(const SceneDrawCallback& drawCallback, Pos
             m_renderTarget.get(), m_rootSignature, m_viewport, m_scissorRect,
             stageDescriptors, m_currentWorld, ctx));
     }
+}
 
-    RenderGraphTextureHandle postInputHandle = m_frameResources.sceneColor;
+void DXRenderManager::FinalizeNoPostProcessOutput()
+{
+    m_frameGraph.AddPass(std::make_unique<PostProcessFinalizeGraphPass>(m_frameResources.sceneColor));
+    m_frameResources.finalOutput = m_frameResources.sceneColor;
+    m_finalPostProcessSRV = m_frameBindings.SrvFor(m_frameResources.sceneColor);
+    m_hasPostProcessedOutput = false;
+    m_finalPostProcessTexture.reset();
+}
 
-    if (!stack || stack->GetPassCount() == 0)
-    {
-        m_frameResources.finalOutput = m_frameResources.sceneColor;
-        m_finalPostProcessSRV = m_frameBindings.SrvFor(m_frameResources.sceneColor);
-        m_hasPostProcessedOutput = false;
-        m_finalPostProcessTexture.reset();
-        return;
-    }
-
-    const auto sceneDesc = colorTexture->GetD3D12ResourceDesc();
-    const bool useResolvedScene = sceneDesc.SampleDesc.Count > 1;
-    if (useResolvedScene)
-    {
-        const auto resolvedDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-            sceneDesc.Format, sceneDesc.Width, static_cast<UINT>(sceneDesc.Height),
-            1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE);
-        m_frameResources.resolvedScene = m_frameGraph.CreateTexture("ResolvedScene", resolvedDesc,
-            RenderGraphTextureUsage::ShaderResource);
-        auto resolvedScene = m_frameGraph.GetImportedTexture(m_frameResources.resolvedScene).texture;
-        if (resolvedScene)
-        {
-            m_frameBindings.Register(m_frameResources.resolvedScene, {}, resolvedScene->GetShaderResourceView());
-            m_frameGraph.AddPass(std::make_unique<MsaaResolveGraphPass>(
-                m_frameResources.sceneColor, m_frameResources.resolvedScene, colorTexture, resolvedScene));
-            postInputHandle = m_frameResources.resolvedScene;
-        }
-    }
-
+void DXRenderManager::AppendPostProcessChain(PostProcessStack* stack, RenderGraphTextureHandle postInputHandle,
+    RenderGraphTextureUsage colorAndShader)
+{
     m_frameResources.ping = m_frameGraph.ImportTexture("Ping", m_pingPong[0].texture, colorAndShader);
     m_frameResources.pong = m_frameGraph.ImportTexture("Pong", m_pingPong[1].texture, colorAndShader);
     m_frameBindings.Register(m_frameResources.ping, m_pingPong[0].rtv, m_pingPong[0].srv);
@@ -442,6 +449,75 @@ void DXRenderManager::BuildFrameGraph(const SceneDrawCallback& drawCallback, Pos
     m_finalPostProcessSRV = m_frameBindings.SrvFor(inputHandle);
     m_hasPostProcessedOutput = true;
     m_finalPostProcessTexture = m_frameGraph.GetImportedTexture(inputHandle).texture;
+}
+
+void DXRenderManager::BuildForwardFrameGraph(const SceneDrawCallback& drawCallback, PostProcessStack* stack)
+{
+    const RenderGraphTextureUsage colorAndShader =
+        RenderGraphTextureUsage::ColorAttachment | RenderGraphTextureUsage::ShaderResource;
+    const RenderGraphTextureUsage depthAndShader =
+        RenderGraphTextureUsage::DepthAttachment | RenderGraphTextureUsage::ShaderResource;
+
+    std::shared_ptr<DirectX12Texture> colorTexture;
+    std::shared_ptr<DirectX12Texture> depthTexture;
+    if (!ImportSceneTargets(colorAndShader, colorTexture, depthTexture))
+        return;
+
+    const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+    AddShadowSceneSkyboxPasses(drawCallback, clearColor, depthAndShader);
+
+    if (!stack || stack->GetPassCount() == 0)
+    {
+        FinalizeNoPostProcessOutput();
+        return;
+    }
+
+    RenderGraphTextureHandle postInputHandle = m_frameResources.sceneColor;
+
+    const auto sceneDesc = colorTexture->GetD3D12ResourceDesc();
+    const bool useResolvedScene = sceneDesc.SampleDesc.Count > 1;
+    if (useResolvedScene)
+    {
+        const auto resolvedDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+            sceneDesc.Format, sceneDesc.Width, static_cast<UINT>(sceneDesc.Height),
+            1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE);
+        m_frameResources.resolvedScene = m_frameGraph.CreateTexture("ResolvedScene", resolvedDesc,
+            RenderGraphTextureUsage::ShaderResource);
+        auto resolvedScene = m_frameGraph.GetImportedTexture(m_frameResources.resolvedScene).texture;
+        if (resolvedScene)
+        {
+            m_frameBindings.Register(m_frameResources.resolvedScene, {}, resolvedScene->GetShaderResourceView());
+            m_frameGraph.AddPass(std::make_unique<MsaaResolveGraphPass>(
+                m_frameResources.sceneColor, m_frameResources.resolvedScene, colorTexture, resolvedScene));
+            postInputHandle = m_frameResources.resolvedScene;
+        }
+    }
+
+    AppendPostProcessChain(stack, postInputHandle, colorAndShader);
+}
+
+void DXRenderManager::BuildDeferredFrameGraph(const SceneDrawCallback& drawCallback, PostProcessStack* stack)
+{
+    const RenderGraphTextureUsage colorAndShader =
+        RenderGraphTextureUsage::ColorAttachment | RenderGraphTextureUsage::ShaderResource;
+    const RenderGraphTextureUsage depthAndShader =
+        RenderGraphTextureUsage::DepthAttachment | RenderGraphTextureUsage::ShaderResource;
+
+    std::shared_ptr<DirectX12Texture> colorTexture;
+    std::shared_ptr<DirectX12Texture> depthTexture;
+    if (!ImportSceneTargets(colorAndShader, colorTexture, depthTexture))
+        return;
+
+    const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+    AddShadowSceneSkyboxPasses(drawCallback, clearColor, depthAndShader);
+
+    if (!stack || stack->GetPassCount() == 0)
+    {
+        FinalizeNoPostProcessOutput();
+        return;
+    }
+
+    AppendPostProcessChain(stack, m_frameResources.sceneColor, colorAndShader);
 }
 
 void DXRenderManager::ExecuteBootstrapSceneFallback(DXGraphicsContext& ctx,

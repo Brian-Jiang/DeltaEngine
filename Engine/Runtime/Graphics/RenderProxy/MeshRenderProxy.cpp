@@ -14,6 +14,7 @@
 #include "Graphics/DirectX/IndexBuffer.h"
 #include "Graphics/DirectX/PipelineStateObject.h"
 #include "Graphics/DirectX/RootSignature.h"
+#include "Graphics/DirectX/RenderTarget.h"
 #include "Graphics/DirectX/VertexBuffer.h"
 #include "Graphics/MaterialConstants.h"
 #include "Graphics/Structures/RootParameterType.h"
@@ -126,7 +127,7 @@ void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext>
 
     DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
     DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT;
-    DXGI_SAMPLE_DESC sampleDesc = device->GetMultisampleQualityLevels(backBufferFormat);
+    DXGI_SAMPLE_DESC sampleDesc = renderContext->renderManager->GetRenderTarget()->GetSampleDesc();
 
     D3D12_RT_FORMAT_ARRAY rtvFormats = {};
     rtvFormats.NumRenderTargets = 1;

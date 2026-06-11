@@ -26,6 +26,7 @@
 #include "Runtime/Graphics/RenderGraph/RenderGraphResourceHandle.h"
 #include "Runtime/Graphics/RenderGraph/TransientTexturePool.h"
 #include "Runtime/Graphics/RenderResourceReleaseQueue.h"
+#include "Runtime/Graphics/RenderPath.h"
 #include "Runtime/Graphics/Shadow/ShadowPassManager.h"
 
 DELTA_ENGINE_NS_BEGIN
@@ -138,6 +139,15 @@ public:
 private:
     void CreatePingPongTargets(UINT width, UINT height);
     void BuildFrameGraph(const SceneDrawCallback& drawCallback, PostProcessStack* stack);
+    void BuildForwardFrameGraph(const SceneDrawCallback& drawCallback, PostProcessStack* stack);
+    void BuildDeferredFrameGraph(const SceneDrawCallback& drawCallback, PostProcessStack* stack);
+    bool ImportSceneTargets(RenderGraphTextureUsage colorAndShader, std::shared_ptr<DirectX12Texture>& colorTexture,
+        std::shared_ptr<DirectX12Texture>& depthTexture);
+    void AddShadowSceneSkyboxPasses(const SceneDrawCallback& drawCallback, const float clearColor[4],
+        RenderGraphTextureUsage depthAndShader);
+    void FinalizeNoPostProcessOutput();
+    void AppendPostProcessChain(PostProcessStack* stack, RenderGraphTextureHandle postInputHandle,
+        RenderGraphTextureUsage colorAndShader);
     void ExecuteFrameGraph(DXGraphicsContext& ctx, const SceneDrawCallback& drawCallback);
     void ExecuteBootstrapSceneFallback(DXGraphicsContext& ctx, const SceneDrawCallback& drawCallback);
     void UpdateIBL(DTexture* skyboxCubemap);
@@ -180,6 +190,7 @@ private:
     RenderResourceReleaseQueue m_releaseQueue;
     uint64_t m_lastSubmittedFence = 0;
 
+    RenderPath m_renderPath;
     UINT m_width;
     UINT m_height;
     float m_aspectRatio;
