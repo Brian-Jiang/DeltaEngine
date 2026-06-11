@@ -23,6 +23,7 @@ set(DELTA_ENGINE_TEST_SOURCES
     Graphics/PostProcessRenderGraphCompileTests.cpp
     Graphics/RenderCoreTests.cpp
     Graphics/FullFrameRenderGraphCompileTests.cpp
+    Graphics/GBufferRenderGraphCompileTests.cpp
     Graphics/RenderGraphCompileTests.cpp
     Graphics/RenderGraphTests.cpp
     Graphics/SceneRenderGraphCompileTests.cpp

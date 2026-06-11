@@ -42,6 +42,7 @@ public:
     DELTAENGINE_API void GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext, const ShadowView& view) override;
 
     DELTAENGINE_API static bool SubmeshContributesToShadowMap(const DMaterial* material);
+    DELTAENGINE_API static bool SubmeshContributesToGBuffer(const DMaterial* material);
 
     /// Returns the number of indices in the first index buffer.
     DELTAENGINE_API size_t GetIndexCount() const;
@@ -65,6 +66,7 @@ private:
     // todo: use a pso manager to manage PSOs and avoid creating a PSO for each mesh render proxy.
     // maybe similar to srp batcher, we can have a pso batcher that batches mesh render proxies with the same settings and creates a PSO for each batch.
     std::vector<std::shared_ptr<PipelineStateObject>> m_pipelineStateObjects;
+    std::vector<std::shared_ptr<PipelineStateObject>> m_gbufferPipelineStateObjects;
 
     bool m_meshDirty;
 };

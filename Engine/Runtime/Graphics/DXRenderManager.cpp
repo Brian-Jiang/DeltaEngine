@@ -27,6 +27,11 @@
 #include "Runtime/Graphics/RenderGraph/SceneRenderGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/SceneShadowReadGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/SkyboxRenderGraphPass.h"
+#include "Runtime/Graphics/RenderGraph/GBufferRenderGraphPass.h"
+#include "Runtime/Graphics/RenderGraph/GBufferAlbedoBlitGraphPass.h"
+#include "Runtime/Graphics/ShaderCompile.h"
+#include "Runtime/Graphics/Structures/GBufferRootParameterType.h"
+#include "Runtime/Graphics/DirectX/PipelineStateObject.h"
 #include "Runtime/Graphics/RenderProxy/CameraRenderProxy.h"
 #include "Runtime/Graphics/RenderProxy/SkyboxRenderProxy.h"
 #include "Runtime/Core/DWorld.h"
@@ -39,6 +44,7 @@
 #include "Runtime/Graphics/RenderProxy/RenderProxy.h"
 
 #include <algorithm>
+#include <filesystem>
 
 using namespace Microsoft::WRL;
 using namespace DeltaEngine;
@@ -46,7 +52,7 @@ using namespace DirectX;
 
 namespace
 {
-constexpr RenderPath kActiveRenderPath = RenderPath::Forward;
+constexpr RenderPath kActiveRenderPath = RenderPath::Deferred;
 }
 
 DXRenderManager::DXRenderManager(std::shared_ptr<Device> device, std::shared_ptr<RenderTarget> renderTarget, UINT width, UINT height)
@@ -195,8 +201,184 @@ void DXRenderManager::LoadAssets()
     m_rootSignature = m_device->CreateRootSignature(rootSignatureDescription.Desc_1_1);
     m_rootSignature->GetD3D12RootSignature()->SetName(L"RootSignature Scene");
 
+    InitGBufferPipeline();
+
     m_iblBaker.Initialize(*m_device);
     m_shadowPass.Initialize(*m_device);
+}
+
+void DXRenderManager::InitGBufferPipeline()
+{
+    m_gbufferVertexShaderBlob = CompileSlangStage(
+        std::filesystem::path("Shaders/GBuffer.slang"), "VSMain", "vs_6_6", "GBuffer VS");
+    m_gbufferPixelShaderBlob = CompileSlangStage(
+        std::filesystem::path("Shaders/GBuffer.slang"), "PSMain", "ps_6_6", "GBuffer PS");
+
+    if (!m_gbufferVertexShaderBlob || !m_gbufferPixelShaderBlob)
+        return;
+
+    D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
+        D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
+
+    CD3DX12_ROOT_PARAMETER1 rootParameters[static_cast<UINT>(GBufferRootParameterType::NumRootParameterTypes)] {};
+    rootParameters[static_cast<UINT>(GBufferRootParameterType::CameraCB)].InitAsConstantBufferView(0);
+    rootParameters[static_cast<UINT>(GBufferRootParameterType::ObjectCB)].InitAsConstantBufferView(1);
+    rootParameters[static_cast<UINT>(GBufferRootParameterType::MaterialCB)].InitAsConstantBufferView(3);
+
+    CD3DX12_DESCRIPTOR_RANGE1 textureRange {};
+    textureRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, static_cast<UINT>(MaterialTextureSlot::Count), 0, 1,
+        D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
+    rootParameters[static_cast<UINT>(GBufferRootParameterType::Texture)].InitAsDescriptorTable(
+        1, &textureRange, D3D12_SHADER_VISIBILITY_PIXEL);
+
+    CD3DX12_STATIC_SAMPLER_DESC materialSampler(
+        1,
+        D3D12_FILTER_ANISOTROPIC,
+        D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+        D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+        D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+        0.0f,
+        16u,
+        D3D12_COMPARISON_FUNC_LESS_EQUAL,
+        D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+        0.0f,
+        D3D12_FLOAT32_MAX,
+        D3D12_SHADER_VISIBILITY_PIXEL);
+
+    CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
+    rootSignatureDescription.Init_1_1(
+        static_cast<UINT>(GBufferRootParameterType::NumRootParameterTypes),
+        rootParameters,
+        1,
+        &materialSampler,
+        rootSignatureFlags);
+
+    m_gbufferRootSignature = m_device->CreateRootSignature(rootSignatureDescription.Desc_1_1);
+    if (m_gbufferRootSignature)
+        m_gbufferRootSignature->GetD3D12RootSignature()->SetName(L"RootSignature GBuffer");
+}
+
+ISlangBlob* DXRenderManager::GetGBufferVertexShaderBlob() const
+{
+    return m_gbufferVertexShaderBlob.get();
+}
+
+ISlangBlob* DXRenderManager::GetGBufferPixelShaderBlob() const
+{
+    return m_gbufferPixelShaderBlob.get();
+}
+
+D3D12_RT_FORMAT_ARRAY DXRenderManager::GetGBufferRTVFormats() const
+{
+    D3D12_RT_FORMAT_ARRAY formats {};
+    formats.NumRenderTargets = 4;
+    formats.RTFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+    formats.RTFormats[1] = DXGI_FORMAT_R16G16B16A16_FLOAT;
+    formats.RTFormats[2] = DXGI_FORMAT_R8G8B8A8_UNORM;
+    formats.RTFormats[3] = DXGI_FORMAT_R11G11B10_FLOAT;
+    return formats;
+}
+
+bool DXRenderManager::EnsureGBufferAlbedoBlitPipeline()
+{
+    if (m_gbufferAlbedoBlitReady)
+        return true;
+
+    return InitGBufferAlbedoBlitPipeline();
+}
+
+bool DXRenderManager::InitGBufferAlbedoBlitPipeline()
+{
+    if (!m_device)
+        return false;
+
+    Slang::ComPtr<ISlangBlob> vsBlob = CompileSlangStage(
+        std::filesystem::path("Shaders/GBufferAlbedoBlit.slang"), "VSMain", "vs_6_6", "GBufferAlbedoBlit VS");
+    Slang::ComPtr<ISlangBlob> psBlob = CompileSlangStage(
+        std::filesystem::path("Shaders/GBufferAlbedoBlit.slang"), "PSMain", "ps_6_6", "GBufferAlbedoBlit PS");
+    if (!vsBlob || !psBlob)
+        return false;
+
+    CD3DX12_DESCRIPTOR_RANGE1 srvRange {};
+    srvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
+
+    CD3DX12_ROOT_PARAMETER1 rootParam {};
+    rootParam.InitAsDescriptorTable(1, &srvRange, D3D12_SHADER_VISIBILITY_PIXEL);
+
+    CD3DX12_STATIC_SAMPLER_DESC linearSampler(
+        0,
+        D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+        D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+        D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+        D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
+    linearSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+    D3D12_ROOT_SIGNATURE_FLAGS flags =
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS |
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
+
+    CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rsDesc;
+    rsDesc.Init_1_1(1, &rootParam, 1, &linearSampler, flags);
+
+    m_gbufferAlbedoBlitRootSignature = m_device->CreateRootSignature(rsDesc.Desc_1_1);
+    if (!m_gbufferAlbedoBlitRootSignature)
+        return false;
+
+    m_gbufferAlbedoBlitRootSignature->GetD3D12RootSignature()->SetName(L"RootSignature GBufferAlbedoBlit");
+
+    struct PipelineStateStream
+    {
+        CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
+        CD3DX12_PIPELINE_STATE_STREAM_VS VS;
+        CD3DX12_PIPELINE_STATE_STREAM_PS PS;
+        CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER RasterizerState;
+        CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC BlendState;
+        CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL DepthStencilState;
+        CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT InputLayout;
+        CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY PrimitiveTopologyType;
+        CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT DSVFormat;
+        CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS RTVFormats;
+        CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_DESC SampleDesc;
+    } pss {};
+
+    CD3DX12_RASTERIZER_DESC rasterizerState(D3D12_DEFAULT);
+    rasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+
+    CD3DX12_DEPTH_STENCIL_DESC depthStencilState(D3D12_DEFAULT);
+    depthStencilState.DepthEnable = FALSE;
+    depthStencilState.StencilEnable = FALSE;
+
+    D3D12_RT_FORMAT_ARRAY rtvFormats {};
+    rtvFormats.NumRenderTargets = 1;
+    rtvFormats.RTFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT;
+
+    D3D12_SHADER_BYTECODE vsBytecode { vsBlob->getBufferPointer(), vsBlob->getBufferSize() };
+    D3D12_SHADER_BYTECODE psBytecode { psBlob->getBufferPointer(), psBlob->getBufferSize() };
+
+    pss.pRootSignature = m_gbufferAlbedoBlitRootSignature->GetD3D12RootSignature().Get();
+    pss.VS = vsBytecode;
+    pss.PS = psBytecode;
+    pss.RasterizerState = rasterizerState;
+    pss.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+    pss.DepthStencilState = depthStencilState;
+    pss.InputLayout = { nullptr, 0 };
+    pss.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    pss.DSVFormat = DXGI_FORMAT_UNKNOWN;
+    pss.RTVFormats = rtvFormats;
+    pss.SampleDesc = { 1, 0 };
+
+    m_gbufferAlbedoBlitPSO = m_device->CreatePipelineStateObject(pss);
+    if (!m_gbufferAlbedoBlitPSO)
+        return false;
+
+    m_gbufferAlbedoBlitPSO->GetD3D12PipelineState()->SetName(L"PSO GBufferAlbedoBlit");
+    m_gbufferAlbedoBlitReady = true;
+    return true;
 }
 
 void DXRenderManager::InitWorldRenderers(DWorld& world)
@@ -363,6 +545,61 @@ bool DXRenderManager::ImportSceneTargets(RenderGraphTextureUsage colorAndShader,
     return true;
 }
 
+void DXRenderManager::AddShadowPasses(RenderGraphTextureUsage depthAndShader)
+{
+    if (!m_currentWorld || !m_shadowPass.ShadowResourcesReady())
+        return;
+
+    auto ctx = GetGraphicsContext();
+
+    m_frameResources.shadowDirectional = m_frameGraph.ImportTexture("ShadowDirectional",
+        m_shadowPass.GetDirectionalAtlasTexture(), depthAndShader);
+    m_frameResources.shadowSpot = m_frameGraph.ImportTexture("ShadowSpot",
+        m_shadowPass.GetSpotAtlasTexture(), depthAndShader);
+    m_frameResources.shadowPoint = m_frameGraph.ImportTexture("ShadowPointCubes",
+        m_shadowPass.GetPointCubeArrayTexture(), depthAndShader);
+
+    m_frameGraph.AddPass(std::make_unique<ShadowRenderGraphPass>(
+        &m_shadowPass, m_currentWorld, ctx,
+        m_frameResources.shadowDirectional, m_frameResources.shadowSpot, m_frameResources.shadowPoint));
+    m_frameGraph.AddPass(std::make_unique<SceneShadowReadGraphPass>(
+        m_frameResources.shadowDirectional, m_frameResources.shadowSpot, m_frameResources.shadowPoint));
+}
+
+void DXRenderManager::CreateGBufferTextures(RenderGraphTextureUsage gbufferUsage)
+{
+    const auto makeDesc = [this](DXGI_FORMAT format)
+    {
+        return CD3DX12_RESOURCE_DESC::Tex2D(
+            format,
+            m_width,
+            m_height,
+            1,
+            1,
+            1,
+            0,
+            D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+    };
+
+    auto registerTexture = [this, gbufferUsage](const char* name, const D3D12_RESOURCE_DESC& desc)
+    {
+        const RenderGraphTextureHandle handle = m_frameGraph.CreateTexture(name, desc, gbufferUsage);
+        auto texture = m_frameGraph.GetImportedTexture(handle).texture;
+        if (texture)
+            m_frameBindings.Register(handle, texture->GetRenderTargetView(), texture->GetShaderResourceView());
+        return handle;
+    };
+
+    m_frameResources.gbufferAlbedo = registerTexture("GBufferAlbedo",
+        makeDesc(DXGI_FORMAT_R8G8B8A8_UNORM));
+    m_frameResources.gbufferNormal = registerTexture("GBufferNormal",
+        makeDesc(DXGI_FORMAT_R16G16B16A16_FLOAT));
+    m_frameResources.gbufferMaterial = registerTexture("GBufferMaterial",
+        makeDesc(DXGI_FORMAT_R8G8B8A8_UNORM));
+    m_frameResources.gbufferEmissive = registerTexture("GBufferEmissive",
+        makeDesc(DXGI_FORMAT_R11G11B10_FLOAT));
+}
+
 void DXRenderManager::AddShadowSceneSkyboxPasses(const SceneDrawCallback& drawCallback, const float clearColor[4],
     RenderGraphTextureUsage depthAndShader)
 {
@@ -374,21 +611,7 @@ void DXRenderManager::AddShadowSceneSkyboxPasses(const SceneDrawCallback& drawCa
             StageShadowDescriptors(cl);
         };
 
-    if (m_currentWorld && m_shadowPass.ShadowResourcesReady())
-    {
-        m_frameResources.shadowDirectional = m_frameGraph.ImportTexture("ShadowDirectional",
-            m_shadowPass.GetDirectionalAtlasTexture(), depthAndShader);
-        m_frameResources.shadowSpot = m_frameGraph.ImportTexture("ShadowSpot",
-            m_shadowPass.GetSpotAtlasTexture(), depthAndShader);
-        m_frameResources.shadowPoint = m_frameGraph.ImportTexture("ShadowPointCubes",
-            m_shadowPass.GetPointCubeArrayTexture(), depthAndShader);
-
-        m_frameGraph.AddPass(std::make_unique<ShadowRenderGraphPass>(
-            &m_shadowPass, m_currentWorld, ctx,
-            m_frameResources.shadowDirectional, m_frameResources.shadowSpot, m_frameResources.shadowPoint));
-        m_frameGraph.AddPass(std::make_unique<SceneShadowReadGraphPass>(
-            m_frameResources.shadowDirectional, m_frameResources.shadowSpot, m_frameResources.shadowPoint));
-    }
+    AddShadowPasses(depthAndShader);
 
     m_frameGraph.AddPass(std::make_unique<SceneRenderGraphPass>(
         m_frameResources.sceneColor, m_frameResources.sceneDepth,
@@ -502,14 +725,44 @@ void DXRenderManager::BuildDeferredFrameGraph(const SceneDrawCallback& drawCallb
         RenderGraphTextureUsage::ColorAttachment | RenderGraphTextureUsage::ShaderResource;
     const RenderGraphTextureUsage depthAndShader =
         RenderGraphTextureUsage::DepthAttachment | RenderGraphTextureUsage::ShaderResource;
+    const RenderGraphTextureUsage gbufferUsage =
+        RenderGraphTextureUsage::ColorAttachment | RenderGraphTextureUsage::ShaderResource;
 
     std::shared_ptr<DirectX12Texture> colorTexture;
     std::shared_ptr<DirectX12Texture> depthTexture;
     if (!ImportSceneTargets(colorAndShader, colorTexture, depthTexture))
         return;
 
-    const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
-    AddShadowSceneSkyboxPasses(drawCallback, clearColor, depthAndShader);
+    auto ctx = GetGraphicsContext();
+
+    AddShadowPasses(depthAndShader);
+    CreateGBufferTextures(gbufferUsage);
+
+    m_frameGraph.AddPass(std::make_unique<GBufferRenderGraphPass>(
+        m_frameResources.gbufferAlbedo,
+        m_frameResources.gbufferNormal,
+        m_frameResources.gbufferMaterial,
+        m_frameResources.gbufferEmissive,
+        m_frameResources.sceneDepth,
+        m_frameBindings.RtvFor(m_frameResources.gbufferAlbedo),
+        m_frameBindings.RtvFor(m_frameResources.gbufferNormal),
+        m_frameBindings.RtvFor(m_frameResources.gbufferMaterial),
+        m_frameBindings.RtvFor(m_frameResources.gbufferEmissive),
+        depthTexture ? depthTexture->GetDepthStencilView() : D3D12_CPU_DESCRIPTOR_HANDLE {},
+        m_gbufferRootSignature,
+        m_viewport,
+        m_scissorRect,
+        ctx,
+        drawCallback));
+
+    m_frameGraph.AddPass(std::make_unique<GBufferAlbedoBlitGraphPass>(
+        m_frameResources.gbufferAlbedo,
+        m_frameResources.sceneColor,
+        m_frameBindings.SrvFor(m_frameResources.gbufferAlbedo),
+        m_frameBindings.RtvFor(m_frameResources.sceneColor),
+        m_viewport,
+        m_scissorRect,
+        this));
 
     if (!stack || stack->GetPassCount() == 0)
     {

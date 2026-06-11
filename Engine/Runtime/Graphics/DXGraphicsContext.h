@@ -20,6 +20,12 @@ class RootSignature;
 class DXRenderManager;
 class CameraRenderProxy;
 
+enum class ScenePassType : uint8_t
+{
+    Forward,
+    GBuffer
+};
+
 /// Passed to every renderer's InitGraphicState / GatherDrawCalls.
 /// Camera data (view, projection, position) is constant for the frame;
 /// each renderer uses this plus its own model matrix for per-draw MVP.
@@ -55,6 +61,9 @@ struct DXGraphicsContext
 
     /// Global shadow quality multiplier sourced from ShadowPassManager settings.
     float shadowQualityScalar = 1.0f;
+
+    /// Active scene geometry pass; MeshRenderProxy selects PSO/root bindings from this.
+    ScenePassType activePass = ScenePassType::Forward;
 };
 
 DELTA_ENGINE_NS_END

@@ -29,6 +29,8 @@
 #include "Runtime/Graphics/RenderPath.h"
 #include "Runtime/Graphics/Shadow/ShadowPassManager.h"
 
+#include <slang-com-ptr.h>
+
 DELTA_ENGINE_NS_BEGIN
 
 class Device;
@@ -41,6 +43,7 @@ class PostProcessStack;
 class PostProcessPass;
 class ShadowDepthPSO;
 class RenderProxy;
+class PipelineStateObject;
 
 struct PostProcessTarget
 {
@@ -75,6 +78,10 @@ struct FrameGraphResources
     RenderGraphTextureHandle pong;
     RenderGraphTextureHandle resolvedScene;
     RenderGraphTextureHandle finalOutput;
+    RenderGraphTextureHandle gbufferAlbedo;
+    RenderGraphTextureHandle gbufferNormal;
+    RenderGraphTextureHandle gbufferMaterial;
+    RenderGraphTextureHandle gbufferEmissive;
 };
 
 /// Renders the scene to an offscreen render target. Does not own swap chain or window.
@@ -117,6 +124,17 @@ public:
     inline float GetAspectRatio() const { return m_aspectRatio; }
 
 	inline std::shared_ptr<RootSignature> GetRootSignature() const { return m_rootSignature; }
+    inline std::shared_ptr<RootSignature> GetGBufferRootSignature() const { return m_gbufferRootSignature; }
+    inline RenderPath GetRenderPath() const { return m_renderPath; }
+    DELTAENGINE_API ISlangBlob* GetGBufferVertexShaderBlob() const;
+    DELTAENGINE_API ISlangBlob* GetGBufferPixelShaderBlob() const;
+    DELTAENGINE_API D3D12_RT_FORMAT_ARRAY GetGBufferRTVFormats() const;
+    DELTAENGINE_API bool EnsureGBufferAlbedoBlitPipeline();
+    DELTAENGINE_API std::shared_ptr<RootSignature> GetGBufferAlbedoBlitRootSignature() const
+    {
+        return m_gbufferAlbedoBlitRootSignature;
+    }
+    DELTAENGINE_API std::shared_ptr<PipelineStateObject> GetGBufferAlbedoBlitPSO() const { return m_gbufferAlbedoBlitPSO; }
     inline std::shared_ptr<Device> GetDevice() const { return m_device; }
     inline std::shared_ptr<RenderTarget> GetRenderTarget() const { return m_renderTarget; }
     inline std::shared_ptr<CommandList> GetCurrentCommandList() const { return m_currentCommandList; }
@@ -145,6 +163,10 @@ private:
         std::shared_ptr<DirectX12Texture>& depthTexture);
     void AddShadowSceneSkyboxPasses(const SceneDrawCallback& drawCallback, const float clearColor[4],
         RenderGraphTextureUsage depthAndShader);
+    void AddShadowPasses(RenderGraphTextureUsage depthAndShader);
+    void CreateGBufferTextures(RenderGraphTextureUsage gbufferUsage);
+    void InitGBufferPipeline();
+    bool InitGBufferAlbedoBlitPipeline();
     void FinalizeNoPostProcessOutput();
     void AppendPostProcessChain(PostProcessStack* stack, RenderGraphTextureHandle postInputHandle,
         RenderGraphTextureUsage colorAndShader);
@@ -161,6 +183,12 @@ private:
 	std::shared_ptr<Device> m_device;
     std::shared_ptr<RenderTarget> m_renderTarget;
     std::shared_ptr<RootSignature> m_rootSignature;
+    std::shared_ptr<RootSignature> m_gbufferRootSignature;
+    Slang::ComPtr<ISlangBlob> m_gbufferVertexShaderBlob;
+    Slang::ComPtr<ISlangBlob> m_gbufferPixelShaderBlob;
+    std::shared_ptr<RootSignature> m_gbufferAlbedoBlitRootSignature;
+    std::shared_ptr<PipelineStateObject> m_gbufferAlbedoBlitPSO;
+    bool m_gbufferAlbedoBlitReady = false;
 	std::shared_ptr<CommandList> m_currentCommandList;
 
     PostProcessTarget m_pingPong[2];
