@@ -2,6 +2,7 @@
 #include "Shared/GpuTestAssetFixture.h"
 
 #include "Runtime/Core/Camera.h"
+#include "Runtime/Core/DScene.h"
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Core/Skybox.h"
