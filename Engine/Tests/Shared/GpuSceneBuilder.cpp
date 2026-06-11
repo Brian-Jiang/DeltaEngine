@@ -5,6 +5,7 @@
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Graphics/DXRenderManager.h"
+#include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/Light/DirectionalLight.h"
 #include "Runtime/Graphics/Light/PointLight.h"
 #include "Runtime/Graphics/Light/SpotLight.h"
@@ -140,8 +141,13 @@ void GpuSceneBuilder::InitGpuResources()
     if (!m_world)
         return;
 
-    if (std::shared_ptr<DXRenderManager> renderManager = m_engine.GetRenderManager())
-        renderManager->InitWorldRenderers(*m_world);
+    std::shared_ptr<DXRenderManager> renderManager = m_engine.GetRenderManager();
+    if (!renderManager)
+        return;
+
+    renderManager->InitWorldRenderers(*m_world);
+    if (std::shared_ptr<Device> device = renderManager->GetDevice())
+        device->Flush();
 }
 
 } // namespace DeltaEngine::Tests
