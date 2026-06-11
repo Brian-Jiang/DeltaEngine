@@ -1,10 +1,82 @@
 #include "Shared/GpuTestAssetFixture.h"
 
+#include "Runtime/Core/Camera.h"
+#include "Runtime/Core/DScene.h"
+#include "Runtime/Core/DWorld.h"
+#include "Runtime/Core/GameObject.h"
 #include "Runtime/Graphics/DXGraphicsContext.h"
 #include "Runtime/Graphics/DirectX/RenderTarget.h"
+#include "Runtime/Graphics/Structures/Camera.h"
+#include "Runtime/Reflection/DClass.h"
+#include "Runtime/Reflection/DProperty.h"
+
+#include <DirectXMath.h>
 
 namespace DeltaEngine::Tests
 {
+namespace
+{
+float ReadFloatProperty(const DObject& obj, const char* name)
+{
+    DClass* cls = obj.GetClass();
+    if (!cls)
+        return 0.0f;
+
+    DProperty* prop = cls->FindPropertyByName(name);
+    if (!prop)
+        return 0.0f;
+
+    void* value = prop->GetValue(const_cast<DObject*>(&obj));
+    return value ? *static_cast<float*>(value) : 0.0f;
+}
+
+Camera* FindFirstSceneCamera(DWorld* world)
+{
+    if (!world)
+        return nullptr;
+
+    DScene* scene = world->GetActiveScene();
+    if (!scene)
+        return nullptr;
+
+    for (GameObject* gameObject : scene->GetGameObjects())
+    {
+        if (gameObject)
+        {
+            if (Camera* camera = gameObject->GetRootSceneComponent<Camera>())
+                return camera;
+        }
+    }
+
+    return nullptr;
+}
+
+ActiveRenderCamera BuildActiveRenderCamera(const Camera& camera, const float renderWidth, const float renderHeight)
+{
+    using namespace DirectX;
+
+    const float aspectRatio = renderHeight > 0.0f ? renderWidth / renderHeight : 1.0f;
+    const float fov = ReadFloatProperty(camera, "m_fov");
+    const float nearPlane = ReadFloatProperty(camera, "m_near");
+    const float farPlane = ReadFloatProperty(camera, "m_far");
+
+    const XMMATRIX worldMatrix = camera.GetWorldTransform();
+    const XMVECTOR forward = worldMatrix.r[2];
+    const XMVECTOR up = worldMatrix.r[1];
+    const XMVECTOR position = worldMatrix.r[3];
+
+    ActiveRenderCamera arc{};
+    arc.fovY = fov;
+    arc.nearPlane = nearPlane;
+    arc.farPlane = farPlane;
+    arc.aspectRatio = aspectRatio;
+    arc.cb.viewMatrix = XMMatrixTranspose(XMMatrixLookToLH(position, forward, up));
+    arc.cb.projectionMatrix =
+        XMMatrixTranspose(XMMatrixPerspectiveFovLH(fov, aspectRatio, nearPlane, farPlane));
+    arc.cb.position = position;
+    return arc;
+}
+} // namespace
 
 DXRenderManager& GpuTestAssetFixture::GetRenderManager()
 {
@@ -91,6 +163,14 @@ void GpuTestAssetFixture::ReinitializeRenderPipeline()
 void GpuTestAssetFixture::RenderSceneFrame()
 {
     DXRenderManager& renderManager = GetRenderManager();
+
+    if (Camera* sceneCamera = FindFirstSceneCamera(m_engine->GetWorld()))
+    {
+        const ActiveRenderCamera arc = BuildActiveRenderCamera(
+            *sceneCamera, static_cast<float>(renderManager.GetWidth()), static_cast<float>(renderManager.GetHeight()));
+        renderManager.SetPendingActiveRenderCamera(arc);
+    }
+
     renderManager.PrepareFrame();
     AssertGpuValidationClean(GetDevice()->GetD3D12Device().Get());
 
