@@ -29,6 +29,7 @@ set(DELTA_ENGINE_TEST_SOURCES
     Graphics/Gpu/GpuRenderManagerInitTests.cpp
     Graphics/Gpu/GpuShadowInfrastructureTests.cpp
     Graphics/Gpu/GpuShaderCompileTests.cpp
+    Graphics/Gpu/GpuFrameSmokeTests.cpp
     Graphics/RenderGraphCompileTests.cpp
     Graphics/RenderGraphTests.cpp
     Graphics/SceneRenderGraphCompileTests.cpp
@@ -68,6 +69,7 @@ add_executable(DeltaEngineTests
     ${DELTA_ENGINE_TEST_SOURCES}
     $<TARGET_OBJECTS:DeltaTestEnvironmentSupport>
     $<TARGET_OBJECTS:DeltaGpuTestSupport>
+    $<TARGET_OBJECTS:DeltaGpuAssetTestSupport>
 )
 set_target_properties(DeltaEngineTests PROPERTIES
     CXX_STANDARD 23
@@ -78,7 +80,7 @@ target_include_directories(DeltaEngineTests PRIVATE
     "${CMAKE_SOURCE_DIR}/Engine"
     "${CMAKE_SOURCE_DIR}/Engine/Tests"
 )
-target_link_libraries(DeltaEngineTests PRIVATE DeltaEngine ThirdParty::gtest_main)
+target_link_libraries(DeltaEngineTests PRIVATE DeltaEditor DeltaEngine ThirdParty::gtest_main)
 target_compile_options(DeltaEngineTests PRIVATE
     "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->"
     "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/WX->"

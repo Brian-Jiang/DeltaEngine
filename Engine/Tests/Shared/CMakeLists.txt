@@ -61,3 +61,22 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES
     GpuGraphicsFixture.cpp
     GpuGraphicsFixture.h
 )
+
+add_library(DeltaGpuAssetTestSupport OBJECT
+    GpuTestAssetFixture.cpp
+    GpuTestAssetFixture.h
+)
+set_target_properties(DeltaGpuAssetTestSupport PROPERTIES
+    CXX_STANDARD 23
+    FOLDER "Tests/Shared"
+)
+target_include_directories(DeltaGpuAssetTestSupport PRIVATE ${DELTA_TEST_INCLUDE_DIRS})
+target_link_libraries(DeltaGpuAssetTestSupport PRIVATE DeltaEditor DeltaEngine ThirdParty::gtest)
+target_compile_options(DeltaGpuAssetTestSupport PRIVATE
+    "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->"
+    "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/WX->"
+)
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES
+    GpuTestAssetFixture.cpp
+    GpuTestAssetFixture.h
+)
