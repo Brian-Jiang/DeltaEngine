@@ -1,6 +1,7 @@
 #include "Shared/GpuTestAssetFixture.h"
 
 #include "Runtime/Graphics/DXGraphicsContext.h"
+#include "Runtime/Graphics/DirectX/RenderTarget.h"
 
 namespace DeltaEngine::Tests
 {
@@ -24,6 +25,54 @@ void GpuTestAssetFixture::SubmitAndFlush()
     const uint64_t fenceValue = GetDevice()->GetFrameFenceValue();
     GetDirectQueue().WaitForFenceValue(fenceValue);
     AssertGpuValidationClean(GetDevice()->GetD3D12Device().Get());
+}
+
+PA_DScene* GpuTestAssetFixture::LoadImportedScene(const std::string_view relativePath)
+{
+    const AssetId sceneId = FindImportedAssetId(relativePath);
+    if (sceneId.IsNull())
+    {
+        ADD_FAILURE() << "Imported scene not found: " << relativePath;
+        return nullptr;
+    }
+
+    PA_DScene* sceneAsset = m_assetDatabase->LoadAsset<PA_DScene>(sceneId);
+    if (!sceneAsset)
+    {
+        ADD_FAILURE() << "Failed to load imported scene asset: " << relativePath;
+        return nullptr;
+    }
+
+    m_engine->LoadScene(sceneAsset->GetAssetId());
+
+    GetDevice()->Flush();
+    AssertGpuValidationClean(GetDevice()->GetD3D12Device().Get());
+    return sceneAsset;
+}
+
+void GpuTestAssetFixture::RenderSceneFrames(const uint32_t count)
+{
+    for (uint32_t i = 0; i < count; ++i)
+    {
+        RenderSceneFrame();
+        AssertGpuValidationClean(GetDevice()->GetD3D12Device().Get());
+    }
+}
+
+std::shared_ptr<DirectX12Texture> GpuTestAssetFixture::GetFinalColorTexture() const
+{
+    const DXRenderManager* renderManager = m_engine ? m_engine->GetRenderManager().get() : nullptr;
+    if (!renderManager)
+        return nullptr;
+
+    if (std::shared_ptr<DirectX12Texture> postProcessTexture = renderManager->GetFinalPostProcessTexture())
+        return postProcessTexture;
+
+    const std::shared_ptr<RenderTarget> renderTarget = GetRenderTarget();
+    if (!renderTarget)
+        return nullptr;
+
+    return renderTarget->GetTexture(AttachmentPoint::Color0);
 }
 
 void GpuTestAssetFixture::RenderSceneFrame()
