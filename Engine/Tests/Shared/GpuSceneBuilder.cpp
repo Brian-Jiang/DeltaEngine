@@ -81,7 +81,20 @@ Camera* GpuSceneBuilder::AddCamera(const float aspectRatio)
     if (!camera)
         return nullptr;
 
-    camera->SetLocalPosition(0.0f, 2.0f, -8.0f);
+    const Vector3 eye(0.0f, 2.0f, -8.0f);
+    const Vector3 target(0.0f, 0.0f, 0.0f);
+    const Vector3 worldUp(0.0f, 1.0f, 0.0f);
+    const Vector3 forward = Vector3::Normalize(target - eye);
+    const Vector3 right = Vector3::Normalize(Vector3::Cross(worldUp, forward));
+    const Vector3 up = Vector3::Normalize(Vector3::Cross(forward, right));
+
+    Matrix rotationMatrix = Matrix::Identity;
+    rotationMatrix.r[0] = right;
+    rotationMatrix.r[1] = up;
+    rotationMatrix.r[2] = forward;
+
+    camera->SetLocalPosition(eye.x, eye.y, eye.z);
+    camera->SetLocalRotation(Quaternion::CreateFromRotationMatrix(rotationMatrix));
     camera->UpdateParameters(XM_PIDIV4, aspectRatio, 0.1f, 100.0f);
     return camera;
 }
