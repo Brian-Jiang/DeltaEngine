@@ -84,9 +84,12 @@ Camera* GpuSceneBuilder::AddCamera(const float aspectRatio)
     const Vector3 eye(0.0f, 2.0f, -8.0f);
     const Vector3 target(0.0f, 0.0f, 0.0f);
     const Vector3 worldUp(0.0f, 1.0f, 0.0f);
-    const Vector3 forward = Vector3::Normalize(target - eye);
-    const Vector3 right = Vector3::Normalize(Vector3::Cross(worldUp, forward));
-    const Vector3 up = Vector3::Normalize(Vector3::Cross(forward, right));
+    Vector3 forward = target - eye;
+    forward.Normalize();
+    Vector3 right = worldUp.Cross(forward);
+    right.Normalize();
+    Vector3 up = forward.Cross(right);
+    up.Normalize();
     const Matrix rotationMatrix(right, up, forward);
 
     camera->SetLocalPosition(eye.x, eye.y, eye.z);
