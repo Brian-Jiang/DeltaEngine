@@ -42,8 +42,11 @@ TEST_F(GpuPostProcessTests, PassthroughAndTonemap_RendersFinalOutput_WithNonClea
 
     GpuReadbackPixel centerPixel{};
     ASSERT_TRUE(ReadTextureCenterPixel(*GetDevice(), GetDirectQueue(), finalTexture, centerPixel));
+    // The ping-pong output texture is cleared to (0,0,0,1) before each pass.
+    // Verifying any channel is nonzero confirms the passthrough+tonemap chain
+    // actually executed and wrote scene content to the final texture.
     EXPECT_TRUE(
-        std::fabs(centerPixel.r - 0.0f) > 0.01f || std::fabs(centerPixel.g - 0.2f) > 0.01f
-        || std::fabs(centerPixel.b - 0.4f) > 0.01f);
+        std::fabs(centerPixel.r) > 0.01f || std::fabs(centerPixel.g) > 0.01f
+        || std::fabs(centerPixel.b) > 0.01f);
     EXPECT_GPU_VALIDATION_CLEAN(GetDevice()->GetD3D12Device().Get());
 }
