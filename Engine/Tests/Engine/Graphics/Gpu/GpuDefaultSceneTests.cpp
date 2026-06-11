@@ -72,7 +72,10 @@ uint32_t CountShadowCastingLights(const DScene* scene)
     uint32_t count = 0;
     for (GameObject* gameObject : scene->GetGameObjects())
     {
-        if (auto* light = gameObject->GetRootSceneComponent<TLight>())
+        if (!gameObject)
+            continue;
+
+        if (auto* light = dynamic_cast<TLight*>(gameObject->GetRootSceneComponent()))
         {
             if (GetCastShadowFlag(light))
                 ++count;
