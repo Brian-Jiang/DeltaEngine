@@ -63,6 +63,8 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES
 )
 
 add_library(DeltaGpuAssetTestSupport OBJECT
+    GpuSceneBuilder.cpp
+    GpuSceneBuilder.h
     GpuTestAssetFixture.cpp
     GpuTestAssetFixture.h
 )
@@ -77,6 +79,8 @@ target_compile_options(DeltaGpuAssetTestSupport PRIVATE
     "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/WX->"
 )
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES
+    GpuSceneBuilder.cpp
+    GpuSceneBuilder.h
     GpuTestAssetFixture.cpp
     GpuTestAssetFixture.h
 )
