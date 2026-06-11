@@ -7,7 +7,7 @@
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/DirectX/DirectX12Texture.h"
 
-#include <DirectXMath.h>
+#include <DirectXPackedVector.h>
 #include <d3dx12.h>
 #include <wrl.h>
 
@@ -23,7 +23,7 @@ namespace
 {
 float HalfToFloat(const uint16_t value)
 {
-    return DirectX::XMConvertHalfToFloat(value);
+    return DirectX::PackedVector::XMConvertHalfToFloat(value);
 }
 } // namespace
 
