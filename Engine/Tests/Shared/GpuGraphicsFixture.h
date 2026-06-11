@@ -11,10 +11,13 @@
 #include <gtest/gtest.h>
 #include <memory>
 
+namespace DeltaEngine
+{
+class DXRenderManager;
+}
+
 namespace DeltaEngine::Tests
 {
-
-class DXRenderManager;
 
 class GpuGraphicsFixture : public ::testing::Test
 {
@@ -27,8 +30,8 @@ protected:
     static std::shared_ptr<RenderTarget> GetRenderTarget() { return s_renderTarget; }
     static CommandQueue& GetDirectQueue() { return *s_directQueue; }
     static uint64_t SubmitAndWait(std::shared_ptr<CommandList> commandList);
-    static std::shared_ptr<DXRenderManager> CreateRenderManager();
-    static void DestroyRenderManager(std::shared_ptr<DXRenderManager>& manager);
+    static std::shared_ptr<DeltaEngine::DXRenderManager> CreateRenderManager();
+    static void DestroyRenderManager(std::shared_ptr<DeltaEngine::DXRenderManager>& manager);
 
     static std::shared_ptr<Adapter> s_adapter;
     static std::shared_ptr<Device> s_device;

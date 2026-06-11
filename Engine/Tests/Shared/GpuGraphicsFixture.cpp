@@ -75,15 +75,15 @@ uint64_t GpuGraphicsFixture::SubmitAndWait(std::shared_ptr<CommandList> commandL
     return fenceValue;
 }
 
-std::shared_ptr<DXRenderManager> GpuGraphicsFixture::CreateRenderManager()
+std::shared_ptr<DeltaEngine::DXRenderManager> GpuGraphicsFixture::CreateRenderManager()
 {
-    auto manager = std::make_shared<DXRenderManager>(s_device, s_renderTarget, 64u, 64u);
+    auto manager = std::make_shared<DeltaEngine::DXRenderManager>(s_device, s_renderTarget, 64u, 64u);
     manager->LoadPipeline();
     manager->LoadAssets();
     return manager;
 }
 
-void GpuGraphicsFixture::DestroyRenderManager(std::shared_ptr<DXRenderManager>& manager)
+void GpuGraphicsFixture::DestroyRenderManager(std::shared_ptr<DeltaEngine::DXRenderManager>& manager)
 {
     if (manager)
     {
