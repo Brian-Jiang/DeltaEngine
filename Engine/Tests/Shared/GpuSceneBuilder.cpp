@@ -42,7 +42,7 @@ PA_StaticMesh* GpuSceneBuilder::LoadSphereMesh()
 
 MeshRenderer* GpuSceneBuilder::AddSphereMesh(const char* name, const float x, const float y, const float z)
 {
-    if (!m_world || !m_scene)
+    if (!m_world)
         return nullptr;
 
     PA_StaticMesh* paStaticMesh = LoadSphereMesh();
@@ -64,7 +64,7 @@ MeshRenderer* GpuSceneBuilder::AddSphereMesh(const char* name, const float x, co
 
 Camera* GpuSceneBuilder::AddCamera(const float aspectRatio)
 {
-    if (!m_world || !m_scene)
+    if (!m_world)
         return nullptr;
 
     GameObject* cameraGo = m_world->CreateGameObjectInScene(m_scene, "Camera");
@@ -82,7 +82,7 @@ Camera* GpuSceneBuilder::AddCamera(const float aspectRatio)
 
 DirectionalLight* GpuSceneBuilder::AddDirectionalLightWithShadows()
 {
-    if (!m_world || !m_scene)
+    if (!m_world)
         return nullptr;
 
     GameObject* lightGo = m_world->CreateGameObjectInScene(m_scene, "DirectionalLight");
@@ -100,7 +100,7 @@ DirectionalLight* GpuSceneBuilder::AddDirectionalLightWithShadows()
 
 PointLight* GpuSceneBuilder::AddPointLightWithShadows()
 {
-    if (!m_world || !m_scene)
+    if (!m_world)
         return nullptr;
 
     GameObject* lightGo = m_world->CreateGameObjectInScene(m_scene, "PointLight");
@@ -118,7 +118,7 @@ PointLight* GpuSceneBuilder::AddPointLightWithShadows()
 
 SpotLight* GpuSceneBuilder::AddSpotLightWithShadows()
 {
-    if (!m_world || !m_scene)
+    if (!m_world)
         return nullptr;
 
     GameObject* lightGo = m_world->CreateGameObjectInScene(m_scene, "SpotLight");
@@ -145,8 +145,13 @@ void GpuSceneBuilder::InitGpuResources()
     if (!renderManager)
         return;
 
+    std::shared_ptr<Device> device = renderManager->GetDevice();
+    if (device)
+        device->Flush();
+
     renderManager->InitWorldRenderers(*m_world);
-    if (std::shared_ptr<Device> device = renderManager->GetDevice())
+
+    if (device)
         device->Flush();
 }
 
