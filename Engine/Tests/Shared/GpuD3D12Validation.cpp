@@ -1,5 +1,7 @@
 #include "Shared/GpuD3D12Validation.h"
 
+#include "Runtime/Graphics/DefaultTextures.h"
+#include "Runtime/Graphics/DirectX/CommandList.h"
 #include "Runtime/Graphics/DirectX/Device.h"
 
 #include <dxgi1_6.h>
@@ -96,6 +98,17 @@ void AssertGpuValidationClean(ID3D12Device* device)
             ADD_FAILURE() << "D3D12 validation " << message.text;
         }
     }
+}
+
+void AssertGpuTeardownClean(Device& device)
+{
+    device.Flush();
+    device.ReleaseStaleDescriptors(UINT64_MAX);
+    DefaultTextures::Shutdown();
+    CommandList::ClearTextureCache();
+    AssertGpuValidationClean(device.GetD3D12Device().Get());
+    device.ReportLiveDeviceObjects();
+    Device::ReportLiveObjects();
 }
 
 } // namespace DeltaEngine::Tests

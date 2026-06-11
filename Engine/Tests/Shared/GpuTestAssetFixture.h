@@ -33,6 +33,7 @@ protected:
     void RenderSceneFrame();
     void RenderSceneFrames(uint32_t count);
     void SubmitAndFlush();
+    void ReinitializeRenderPipeline();
     std::shared_ptr<DirectX12Texture> GetFinalColorTexture() const;
 
 private:

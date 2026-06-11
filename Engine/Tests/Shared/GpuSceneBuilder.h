@@ -12,6 +12,7 @@ class DirectionalLight;
 class MeshRenderer;
 class PA_StaticMesh;
 class PointLight;
+class PostProcessStack;
 class SpotLight;
 } // namespace DeltaEngine
 
@@ -28,6 +29,8 @@ public:
     DirectionalLight* AddDirectionalLightWithShadows();
     PointLight* AddPointLightWithShadows();
     SpotLight* AddSpotLightWithShadows();
+    PostProcessStack* CreatePassthroughTonemapStack();
+    void AttachPostProcessStack(Camera* camera, PostProcessStack* stack);
 
     void InitGpuResources();
 

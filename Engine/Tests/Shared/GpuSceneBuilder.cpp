@@ -9,8 +9,14 @@
 #include "Runtime/Graphics/Light/DirectionalLight.h"
 #include "Runtime/Graphics/Light/PointLight.h"
 #include "Runtime/Graphics/Light/SpotLight.h"
+#include "Runtime/Graphics/PostProcess/PassthroughPass.h"
+#include "Runtime/Graphics/PostProcess/PostProcessStack.h"
+#include "Runtime/Graphics/PostProcess/TonemapPass.h"
 #include "Runtime/Graphics/Renderer/MeshRenderer.h"
 #include "Runtime/IO/IOManager.h"
+#include "Runtime/Reflection/DClass.h"
+#include "Runtime/Reflection/DProperty.h"
+#include "Runtime/Reflection/ReflectionRegistry.h"
 
 #include <filesystem>
 
@@ -134,6 +140,42 @@ SpotLight* GpuSceneBuilder::AddSpotLightWithShadows()
     light->UpdateParameters(
         XMVectorSet(0.2f, 0.8f, 1.0f, 1.0f), 3.0f, 20.0f, XM_PI / 6.0f, XM_PI / 3.0f);
     return light;
+}
+
+PostProcessStack* GpuSceneBuilder::CreatePassthroughTonemapStack()
+{
+    PostProcessStack* stack = CreateDObject<PostProcessStack>();
+    if (!stack)
+        return nullptr;
+
+    PostProcessPass* passthrough = CreateDObject<PassthroughPass>();
+    PostProcessPass* tonemap = CreateDObject<TonemapPass>();
+    if (!passthrough || !tonemap)
+        return stack;
+
+    stack->m_passes.push_back(passthrough);
+    stack->m_passes.push_back(tonemap);
+    return stack;
+}
+
+void GpuSceneBuilder::AttachPostProcessStack(Camera* camera, PostProcessStack* stack)
+{
+    if (!camera)
+        return;
+
+    DClass* cls = camera->GetClass();
+    if (!cls)
+        return;
+
+    DProperty* prop = cls->FindPropertyByName("m_postProcessStack");
+    if (!prop)
+        return;
+
+    auto* ptrProp = dynamic_cast<DObjectPtrPropertyBase*>(prop);
+    if (!ptrProp)
+        return;
+
+    ptrProp->ResolvePointer(ptrProp->GetValue(camera), stack);
 }
 
 void GpuSceneBuilder::InitGpuResources()

@@ -1,4 +1,4 @@
-#include "Shared/GpuFramebufferReadback.h"
+#include "Shared/GpuReadback.h"
 
 #include "Shared/GpuD3D12Validation.h"
 
@@ -13,7 +13,6 @@
 
 #include <cmath>
 #include <cstdint>
-#include <vector>
 
 using Microsoft::WRL::ComPtr;
 
@@ -25,16 +24,55 @@ float HalfToFloat(const uint16_t value)
 {
     return DirectX::PackedVector::XMConvertHalfToFloat(value);
 }
+
+bool DecodeCenterPixel(const uint8_t* mappedData,
+    const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& footprint,
+    GpuReadbackPixel& outPixel)
+{
+    const uint32_t width = footprint.Footprint.Width;
+    const uint32_t height = footprint.Footprint.Height;
+    if (width == 0 || height == 0)
+        return false;
+
+    const uint32_t centerX = width / 2u;
+    const uint32_t centerY = height / 2u;
+    const uint32_t rowPitch = footprint.Footprint.RowPitch;
+    const DXGI_FORMAT format = footprint.Footprint.Format;
+
+    if (format == DXGI_FORMAT_R16G16B16A16_FLOAT)
+    {
+        const auto* row = reinterpret_cast<const uint16_t*>(mappedData + static_cast<size_t>(centerY) * rowPitch);
+        const uint32_t pixelIndex = centerX * 4u;
+        outPixel.r = HalfToFloat(row[pixelIndex + 0]);
+        outPixel.g = HalfToFloat(row[pixelIndex + 1]);
+        outPixel.b = HalfToFloat(row[pixelIndex + 2]);
+        outPixel.a = HalfToFloat(row[pixelIndex + 3]);
+        return true;
+    }
+
+    if (format == DXGI_FORMAT_R8G8B8A8_UNORM || format == DXGI_FORMAT_B8G8R8A8_UNORM)
+    {
+        const float scale = 1.0f / 255.0f;
+        const auto* row = mappedData + static_cast<size_t>(centerY) * rowPitch;
+        const uint32_t pixelIndex = centerX * 4u;
+        outPixel.r = static_cast<float>(row[pixelIndex + 0]) * scale;
+        outPixel.g = static_cast<float>(row[pixelIndex + 1]) * scale;
+        outPixel.b = static_cast<float>(row[pixelIndex + 2]) * scale;
+        outPixel.a = static_cast<float>(row[pixelIndex + 3]) * scale;
+        return true;
+    }
+
+    return false;
+}
 } // namespace
 
-bool TextureHasNonClearContent(Device& device,
+bool ReadTextureCenterPixel(Device& device,
     CommandQueue& queue,
     const std::shared_ptr<DirectX12Texture>& texture,
-    const float clearR,
-    const float clearG,
-    const float clearB,
-    const float epsilon)
+    GpuReadbackPixel& outPixel)
 {
+    outPixel = {};
+
     if (!texture)
         return false;
 
@@ -102,56 +140,25 @@ bool TextureHasNonClearContent(Device& device,
     if (FAILED(readbackResource->Map(0, &readRange, reinterpret_cast<void**>(&mappedData))) || !mappedData)
         return false;
 
-    bool hasNonClearContent = false;
-    const uint32_t height = footprint.Footprint.Height;
-    const uint32_t width = footprint.Footprint.Width;
-    const uint32_t rowPitch = footprint.Footprint.RowPitch;
-    const DXGI_FORMAT format = footprint.Footprint.Format;
-
-    if (format == DXGI_FORMAT_R16G16B16A16_FLOAT)
-    {
-        for (uint32_t y = 0; y < height && !hasNonClearContent; ++y)
-        {
-            const auto* row = reinterpret_cast<const uint16_t*>(mappedData + static_cast<size_t>(y) * rowPitch);
-            for (uint32_t x = 0; x < width; ++x)
-            {
-                const uint32_t pixelIndex = x * 4u;
-                const float r = HalfToFloat(row[pixelIndex + 0]);
-                const float g = HalfToFloat(row[pixelIndex + 1]);
-                const float b = HalfToFloat(row[pixelIndex + 2]);
-
-                if (std::fabs(r - clearR) > epsilon || std::fabs(g - clearG) > epsilon || std::fabs(b - clearB) > epsilon)
-                {
-                    hasNonClearContent = true;
-                    break;
-                }
-            }
-        }
-    }
-    else if (format == DXGI_FORMAT_R8G8B8A8_UNORM || format == DXGI_FORMAT_B8G8R8A8_UNORM)
-    {
-        const float scale = 1.0f / 255.0f;
-        for (uint32_t y = 0; y < height && !hasNonClearContent; ++y)
-        {
-            const auto* row = mappedData + static_cast<size_t>(y) * rowPitch;
-            for (uint32_t x = 0; x < width; ++x)
-            {
-                const uint32_t pixelIndex = x * 4u;
-                const float r = static_cast<float>(row[pixelIndex + 0]) * scale;
-                const float g = static_cast<float>(row[pixelIndex + 1]) * scale;
-                const float b = static_cast<float>(row[pixelIndex + 2]) * scale;
-
-                if (std::fabs(r - clearR) > epsilon || std::fabs(g - clearG) > epsilon || std::fabs(b - clearB) > epsilon)
-                {
-                    hasNonClearContent = true;
-                    break;
-                }
-            }
-        }
-    }
-
+    const bool decoded = DecodeCenterPixel(mappedData, footprint, outPixel);
     readbackResource->Unmap(0, nullptr);
-    return hasNonClearContent;
+    return decoded;
+}
+
+bool TextureHasNonClearContent(Device& device,
+    CommandQueue& queue,
+    const std::shared_ptr<DirectX12Texture>& texture,
+    const float clearR,
+    const float clearG,
+    const float clearB,
+    const float epsilon)
+{
+    GpuReadbackPixel pixel{};
+    if (!ReadTextureCenterPixel(device, queue, texture, pixel))
+        return false;
+
+    return std::fabs(pixel.r - clearR) > epsilon || std::fabs(pixel.g - clearG) > epsilon
+        || std::fabs(pixel.b - clearB) > epsilon;
 }
 
 } // namespace DeltaEngine::Tests

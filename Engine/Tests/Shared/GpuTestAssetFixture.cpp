@@ -75,6 +75,19 @@ std::shared_ptr<DirectX12Texture> GpuTestAssetFixture::GetFinalColorTexture() co
     return renderTarget->GetTexture(AttachmentPoint::Color0);
 }
 
+void GpuTestAssetFixture::ReinitializeRenderPipeline()
+{
+    m_engine->Cleanup();
+    m_engine->CreateWorld();
+
+    auto renderManager = CreateRenderManager();
+    m_engine->Initialize(renderManager);
+    m_engine->GetRenderManager()->InitWorldRenderers(*m_engine->GetWorld());
+
+    GetDevice()->Flush();
+    AssertGpuValidationClean(GetDevice()->GetD3D12Device().Get());
+}
+
 void GpuTestAssetFixture::RenderSceneFrame()
 {
     DXRenderManager& renderManager = GetRenderManager();

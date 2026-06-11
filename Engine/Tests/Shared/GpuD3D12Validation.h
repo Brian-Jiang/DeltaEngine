@@ -4,6 +4,11 @@
 #include <string>
 #include <vector>
 
+namespace DeltaEngine
+{
+class Device;
+}
+
 namespace DeltaEngine::Tests
 {
 
@@ -20,6 +25,7 @@ void EnableDebugLayerForTests();
 void DisableBreakOnSeverity(ID3D12Device* device);
 std::vector<GpuValidationMessage> DrainD3D12InfoQueue(ID3D12Device* device);
 void AssertGpuValidationClean(ID3D12Device* device);
+void AssertGpuTeardownClean(Device& device);
 
 #define EXPECT_GPU_VALIDATION_CLEAN(device) \
     ::DeltaEngine::Tests::AssertGpuValidationClean((device))

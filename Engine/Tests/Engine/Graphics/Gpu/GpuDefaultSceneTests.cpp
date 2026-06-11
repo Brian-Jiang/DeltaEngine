@@ -1,4 +1,4 @@
-#include "Shared/GpuFramebufferReadback.h"
+#include "Shared/GpuReadback.h"
 #include "Shared/GpuTestAssetFixture.h"
 
 #include "Runtime/Core/Camera.h"
