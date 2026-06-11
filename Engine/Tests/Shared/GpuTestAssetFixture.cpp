@@ -35,20 +35,26 @@ Camera* FindFirstSceneCamera(DWorld* world)
     if (!world)
         return nullptr;
 
-    DScene* scene = world->GetActiveScene();
-    if (!scene)
-        return nullptr;
-
-    for (GameObject* gameObject : scene->GetGameObjects())
+    auto findInGameObjects = [](const std::vector<GameObject*>& gameObjects) -> Camera*
     {
-        if (gameObject)
+        for (GameObject* gameObject : gameObjects)
         {
-            if (Camera* camera = gameObject->GetRootSceneComponent<Camera>())
-                return camera;
+            if (gameObject)
+            {
+                if (Camera* camera = gameObject->GetRootSceneComponent<Camera>())
+                    return camera;
+            }
         }
+        return nullptr;
+    };
+
+    if (DScene* scene = world->GetActiveScene())
+    {
+        if (Camera* camera = findInGameObjects(scene->GetGameObjects()))
+            return camera;
     }
 
-    return nullptr;
+    return findInGameObjects(world->GetGameObjects());
 }
 
 ActiveRenderCamera BuildActiveRenderCamera(const Camera& camera, const float renderWidth, const float renderHeight)
