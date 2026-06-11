@@ -8,7 +8,7 @@ namespace DeltaEngine::Tests
 DXRenderManager& GpuTestAssetFixture::GetRenderManager()
 {
     auto manager = m_engine->GetRenderManager();
-    ASSERT_NE(manager, nullptr);
+    EXPECT_NE(manager, nullptr);
     return *manager;
 }
 
