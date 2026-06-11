@@ -11,6 +11,8 @@
 #include "Runtime/Graphics/Renderer/MeshRenderer.h"
 #include "Runtime/IO/IOManager.h"
 
+#include <filesystem>
+
 using namespace DirectX;
 using namespace DirectX::SimpleMath;
 
@@ -28,8 +30,9 @@ GpuSceneBuilder::GpuSceneBuilder(EngineMain& engine, EditorAssetDatabase& assetD
 
 PA_StaticMesh* GpuSceneBuilder::LoadSphereMesh()
 {
-    const AssetId id = m_assetDatabase.FindAssetIdByPath(
+    const std::filesystem::path assetPath = std::filesystem::weakly_canonical(
         IOManager::GetEngineImportedAssetFullPath("Sphere/SphereMesh"));
+    const AssetId id = m_assetDatabase.FindAssetIdByPath(assetPath);
     if (id.IsNull())
         return nullptr;
 
