@@ -1,4 +1,4 @@
-#include "Runtime/Graphics/RenderGraph/GBufferAlbedoBlitGraphPass.h"
+#include "Runtime/Graphics/RenderGraph/DeferredLightingGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/GBufferRenderGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/RenderGraph.h"
 
@@ -61,30 +61,41 @@ TEST(GBufferRenderGraphCompileTests, GBufferPass_EmitsFourColorDepthTransitionsA
     EXPECT_EQ(graph.GetCompiledPass(0).clears.size(), 5u);
 }
 
-TEST(GBufferRenderGraphCompileTests, AlbedoBlitPass_TransitionsAlbedoToSrvAndSceneColorToRtv)
+TEST(GBufferRenderGraphCompileTests, DeferredLightingPass_ReadsGBufferAndDepthWritesSceneColor)
 {
     RenderGraph graph;
     const RenderGraphTextureUsage colorAndShader =
         RenderGraphTextureUsage::ColorAttachment | RenderGraphTextureUsage::ShaderResource;
+    const RenderGraphTextureUsage depthAndShader =
+        RenderGraphTextureUsage::DepthAttachment | RenderGraphTextureUsage::ShaderResource;
 
     const RenderGraphTextureHandle albedo = graph.ImportTexture("GBufferAlbedo", nullptr, colorAndShader);
+    const RenderGraphTextureHandle normal = graph.ImportTexture("GBufferNormal", nullptr, colorAndShader);
+    const RenderGraphTextureHandle material = graph.ImportTexture("GBufferMaterial", nullptr, colorAndShader);
+    const RenderGraphTextureHandle emissive = graph.ImportTexture("GBufferEmissive", nullptr, colorAndShader);
+    const RenderGraphTextureHandle depth = graph.ImportTexture("SceneDepth", nullptr, depthAndShader);
     const RenderGraphTextureHandle sceneColor = graph.ImportTexture("SceneColor", nullptr, colorAndShader);
 
-    graph.AddPass(std::make_unique<GBufferAlbedoBlitGraphPass>(
-        albedo, sceneColor, MakeDummyHandle(0), MakeDummyHandle(1),
+    graph.AddPass(std::make_unique<DeferredLightingGraphPass>(
+        albedo, normal, material, emissive, depth, sceneColor,
+        MakeDummyHandle(0), MakeDummyHandle(1), MakeDummyHandle(2), MakeDummyHandle(3), MakeDummyHandle(4),
+        MakeDummyHandle(5),
         CD3DX12_VIEWPORT(0.0f, 0.0f, 1920.0f, 1080.0f),
         CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX),
+        nullptr,
         nullptr));
 
     graph.Compile();
 
     ASSERT_EQ(graph.GetCompiledPassCount(), 1u);
-    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(0).passIndex).GetName(), "GBufferAlbedoBlit");
+    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(0).passIndex).GetName(), "DeferredLighting");
 
     const auto& transitions = graph.GetCompiledPass(0).transitions;
-    ASSERT_EQ(transitions.size(), 2u);
+    ASSERT_EQ(transitions.size(), 6u);
     EXPECT_EQ(transitions[0].texture, albedo);
     EXPECT_EQ(transitions[0].stateAfter, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    EXPECT_EQ(transitions[1].texture, sceneColor);
-    EXPECT_EQ(transitions[1].stateAfter, D3D12_RESOURCE_STATE_RENDER_TARGET);
+    EXPECT_EQ(transitions[4].texture, depth);
+    EXPECT_EQ(transitions[4].stateAfter, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    EXPECT_EQ(transitions[5].texture, sceneColor);
+    EXPECT_EQ(transitions[5].stateAfter, D3D12_RESOURCE_STATE_RENDER_TARGET);
 }
