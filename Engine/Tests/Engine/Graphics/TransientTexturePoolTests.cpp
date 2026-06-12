@@ -360,9 +360,13 @@ TEST(RenderGraphTransientTests, GBufferTransientLifetime_FourFormatsPerFrame_Res
     EXPECT_EQ(factory.callCount, callsAfterWarmup);
 
     const int callsBeforeResize = factory.callCount;
+    runFrame(1280, 720, false);
+    EXPECT_EQ(factory.callCount, callsBeforeResize + 4);
+
     for (uint32_t i = 0; i < TransientTexturePool::kMaxIdleFrames + 6; ++i)
         runFrame(1280, 720, false);
 
-    EXPECT_GT(factory.callCount, callsBeforeResize);
-    EXPECT_EQ(pool.GetTotalCount(), 4u);
+    // Three unique G-buffer formats (albedo and material share R8G8B8A8_UNORM); two-frame
+    // GPU lag keeps two pooled entries per unique description at steady state.
+    EXPECT_EQ(pool.GetTotalCount(), 6u);
 }

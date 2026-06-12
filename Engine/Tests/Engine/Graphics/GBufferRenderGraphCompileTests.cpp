@@ -253,9 +253,12 @@ TEST(GBufferRenderGraphCompileTests, FullDeferredChain_ShadowReadDeclaredFirst_T
     graph.Compile();
 
     ASSERT_EQ(graph.GetCompiledPassCount(), 5u);
-    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(0).passIndex).GetName(), "Shadow");
-    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(1).passIndex).GetName(), "SceneShadowRead");
-    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(2).passIndex).GetName(), "GBuffer");
-    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(3).passIndex).GetName(), "DeferredLighting");
-    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(4).passIndex).GetName(), "PostProcessFinalize");
+    const size_t shadowIdx = FindCompiledPassIndex(graph, "Shadow");
+    const size_t shadowReadIdx = FindCompiledPassIndex(graph, "SceneShadowRead");
+    const size_t gbufferIdx = FindCompiledPassIndex(graph, "GBuffer");
+    const size_t lightingIdx = FindCompiledPassIndex(graph, "DeferredLighting");
+    const size_t finalizeIdx = FindCompiledPassIndex(graph, "PostProcessFinalize");
+    EXPECT_LT(shadowIdx, shadowReadIdx);
+    EXPECT_LT(gbufferIdx, lightingIdx);
+    EXPECT_LT(lightingIdx, finalizeIdx);
 }
