@@ -203,6 +203,8 @@ void DXRenderManager::LoadAssets()
     m_rootSignature->GetD3D12RootSignature()->SetName(L"RootSignature Scene");
 
     InitGBufferPipeline();
+    if (m_renderPath == RenderPath::Deferred)
+        InitDeferredLightingPipeline();
 
     m_iblBaker.Initialize(*m_device);
     m_shadowPass.Initialize(*m_device);

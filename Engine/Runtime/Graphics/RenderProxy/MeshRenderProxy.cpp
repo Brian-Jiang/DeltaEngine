@@ -129,8 +129,9 @@ void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext>
     } pipelineStateStream;
 
     DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
-    DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT;
-    DXGI_SAMPLE_DESC sampleDesc = renderContext->renderManager->GetRenderTarget()->GetSampleDesc();
+    const std::shared_ptr<RenderTarget> renderTarget = renderContext->renderManager->GetRenderTarget();
+    DXGI_FORMAT depthBufferFormat = renderTarget ? renderTarget->GetDepthStencilFormat() : DXGI_FORMAT_D32_FLOAT;
+    DXGI_SAMPLE_DESC sampleDesc = renderTarget ? renderTarget->GetSampleDesc() : DXGI_SAMPLE_DESC { 1, 0 };
 
     D3D12_RT_FORMAT_ARRAY rtvFormats = {};
     rtvFormats.NumRenderTargets = 1;
@@ -229,9 +230,17 @@ void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext>
             CD3DX12_SHADER_BYTECODE gbufferPsBytecode {
                 const_cast<void*>(gbufferPixelShader->getBufferPointer()), gbufferPixelShader->getBufferSize() };
 
+            CD3DX12_DEPTH_STENCIL_DESC gbufferDepthStencilState(D3D12_DEFAULT);
+            gbufferDepthStencilState.DepthEnable = TRUE;
+            gbufferDepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+            gbufferDepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+
             pipelineStateStream.pRootSignature = gbufferRootSignature->GetD3D12RootSignature().Get();
             pipelineStateStream.VS = gbufferVsBytecode;
             pipelineStateStream.PS = gbufferPsBytecode;
+            pipelineStateStream.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+            pipelineStateStream.DepthStencilState = gbufferDepthStencilState;
+            pipelineStateStream.DSVFormat = depthBufferFormat;
             pipelineStateStream.RTVFormats = gbufferRtvFormats;
             pipelineStateStream.SampleDesc = gbufferSampleDesc;
 
