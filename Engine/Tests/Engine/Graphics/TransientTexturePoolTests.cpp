@@ -46,23 +46,6 @@ D3D12_RESOURCE_DESC MakeGBufferDesc(UINT width, UINT height, DXGI_FORMAT format)
     return CD3DX12_RESOURCE_DESC::Tex2D(
         format, width, height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
 }
-
-void SimulateGBufferFrame(RenderGraph& graph, TransientTexturePool& pool, uint64_t completedFence, uint64_t submittedFence,
-    UINT width, UINT height)
-{
-    pool.BeginFrame(completedFence);
-
-    const RenderGraphTextureUsage gbufferUsage =
-        RenderGraphTextureUsage::ColorAttachment | RenderGraphTextureUsage::ShaderResource;
-
-    graph.CreateTexture("GBufferAlbedo", MakeGBufferDesc(width, height, DXGI_FORMAT_R8G8B8A8_UNORM), gbufferUsage);
-    graph.CreateTexture("GBufferNormal", MakeGBufferDesc(width, height, DXGI_FORMAT_R16G16B16A16_FLOAT), gbufferUsage);
-    graph.CreateTexture("GBufferMaterial", MakeGBufferDesc(width, height, DXGI_FORMAT_R8G8B8A8_UNORM), gbufferUsage);
-    graph.CreateTexture("GBufferEmissive", MakeGBufferDesc(width, height, DXGI_FORMAT_R11G11B10_FLOAT), gbufferUsage);
-
-    graph.Reset();
-    pool.RetireFrame(submittedFence);
-}
 } // namespace
 
 TEST(TransientTexturePoolTests, Acquire_CreatesViaFactoryAndTracksActive)
@@ -341,38 +324,44 @@ TEST(RenderGraphTransientTests, GBufferTransientLifetime_FourFormatsPerFrame_Res
         RenderGraphTextureUsage::ColorAttachment | RenderGraphTextureUsage::ShaderResource;
 
     uint64_t fence = 0;
-    auto runFrame = [&](UINT width, UINT height)
+    auto runFrame = [&](UINT width, UINT height, bool verifyTransient)
     {
         ++fence;
-        SimulateGBufferFrame(graph, pool, fence >= 2 ? fence - 2 : 0, fence, width, height);
+        pool.BeginFrame(fence >= 2 ? fence - 2 : 0);
+
+        const RenderGraphTextureHandle albedoHandle = graph.CreateTexture(
+            "GBufferAlbedo", MakeGBufferDesc(width, height, DXGI_FORMAT_R8G8B8A8_UNORM), gbufferUsage);
+        const RenderGraphTextureHandle normalHandle = graph.CreateTexture(
+            "GBufferNormal", MakeGBufferDesc(width, height, DXGI_FORMAT_R16G16B16A16_FLOAT), gbufferUsage);
+        const RenderGraphTextureHandle materialHandle = graph.CreateTexture(
+            "GBufferMaterial", MakeGBufferDesc(width, height, DXGI_FORMAT_R8G8B8A8_UNORM), gbufferUsage);
+        const RenderGraphTextureHandle emissiveHandle = graph.CreateTexture(
+            "GBufferEmissive", MakeGBufferDesc(width, height, DXGI_FORMAT_R11G11B10_FLOAT), gbufferUsage);
+
+        if (verifyTransient)
+        {
+            EXPECT_TRUE(graph.GetImportedTexture(albedoHandle).transient);
+            EXPECT_TRUE(graph.GetImportedTexture(normalHandle).transient);
+            EXPECT_TRUE(graph.GetImportedTexture(materialHandle).transient);
+            EXPECT_TRUE(graph.GetImportedTexture(emissiveHandle).transient);
+        }
+
+        graph.Reset();
+        pool.RetireFrame(fence);
     };
 
-    for (uint32_t i = 0; i < 4; ++i)
-        runFrame(1920, 1080);
+    // Two-frame GPU lag: first two frames allocate all four formats before reuse begins.
+    runFrame(1920, 1080, false);
+    runFrame(1920, 1080, false);
+    const int callsAfterWarmup = factory.callCount;
+    EXPECT_EQ(callsAfterWarmup, 8);
 
-    const int callsAfterSteadyState = factory.callCount;
-    EXPECT_EQ(callsAfterSteadyState, 4);
-
-    runFrame(1920, 1080);
-    EXPECT_EQ(factory.callCount, callsAfterSteadyState);
-
-    const RenderGraphTextureHandle albedoHandle = graph.CreateTexture(
-        "GBufferAlbedo", MakeGBufferDesc(1920, 1080, DXGI_FORMAT_R8G8B8A8_UNORM), gbufferUsage);
-    const RenderGraphTextureHandle normalHandle = graph.CreateTexture(
-        "GBufferNormal", MakeGBufferDesc(1920, 1080, DXGI_FORMAT_R16G16B16A16_FLOAT), gbufferUsage);
-    const RenderGraphTextureHandle materialHandle = graph.CreateTexture(
-        "GBufferMaterial", MakeGBufferDesc(1920, 1080, DXGI_FORMAT_R8G8B8A8_UNORM), gbufferUsage);
-    const RenderGraphTextureHandle emissiveHandle = graph.CreateTexture(
-        "GBufferEmissive", MakeGBufferDesc(1920, 1080, DXGI_FORMAT_R11G11B10_FLOAT), gbufferUsage);
-
-    EXPECT_TRUE(graph.GetImportedTexture(albedoHandle).transient);
-    EXPECT_TRUE(graph.GetImportedTexture(normalHandle).transient);
-    EXPECT_TRUE(graph.GetImportedTexture(materialHandle).transient);
-    EXPECT_TRUE(graph.GetImportedTexture(emissiveHandle).transient);
+    runFrame(1920, 1080, true);
+    EXPECT_EQ(factory.callCount, callsAfterWarmup);
 
     const int callsBeforeResize = factory.callCount;
     for (uint32_t i = 0; i < TransientTexturePool::kMaxIdleFrames + 6; ++i)
-        runFrame(1280, 720);
+        runFrame(1280, 720, false);
 
     EXPECT_GT(factory.callCount, callsBeforeResize);
     EXPECT_EQ(pool.GetTotalCount(), 4u);
