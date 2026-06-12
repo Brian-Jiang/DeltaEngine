@@ -126,6 +126,7 @@ public:
 	inline std::shared_ptr<RootSignature> GetRootSignature() const { return m_rootSignature; }
     inline std::shared_ptr<RootSignature> GetGBufferRootSignature() const { return m_gbufferRootSignature; }
     inline RenderPath GetRenderPath() const { return m_renderPath; }
+    DELTAENGINE_API void SetRenderPath(RenderPath path) { m_renderPath = path; }
     DELTAENGINE_API ISlangBlob* GetGBufferVertexShaderBlob() const;
     DELTAENGINE_API ISlangBlob* GetGBufferPixelShaderBlob() const;
     DELTAENGINE_API D3D12_RT_FORMAT_ARRAY GetGBufferRTVFormats() const;
