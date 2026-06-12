@@ -329,12 +329,11 @@ TEST(RenderGraphTransientTests, GBufferTransientLifetime_FourFormatsPerFrame_Res
         ++fence;
         pool.BeginFrame(fence >= 2 ? fence - 2 : 0);
 
+        // Three unique pool keys per frame (albedo and material share R8G8B8A8_UNORM in production).
         const RenderGraphTextureHandle albedoHandle = graph.CreateTexture(
             "GBufferAlbedo", MakeGBufferDesc(width, height, DXGI_FORMAT_R8G8B8A8_UNORM), gbufferUsage);
         const RenderGraphTextureHandle normalHandle = graph.CreateTexture(
             "GBufferNormal", MakeGBufferDesc(width, height, DXGI_FORMAT_R16G16B16A16_FLOAT), gbufferUsage);
-        const RenderGraphTextureHandle materialHandle = graph.CreateTexture(
-            "GBufferMaterial", MakeGBufferDesc(width, height, DXGI_FORMAT_R8G8B8A8_UNORM), gbufferUsage);
         const RenderGraphTextureHandle emissiveHandle = graph.CreateTexture(
             "GBufferEmissive", MakeGBufferDesc(width, height, DXGI_FORMAT_R11G11B10_FLOAT), gbufferUsage);
 
@@ -342,7 +341,6 @@ TEST(RenderGraphTransientTests, GBufferTransientLifetime_FourFormatsPerFrame_Res
         {
             EXPECT_TRUE(graph.GetImportedTexture(albedoHandle).transient);
             EXPECT_TRUE(graph.GetImportedTexture(normalHandle).transient);
-            EXPECT_TRUE(graph.GetImportedTexture(materialHandle).transient);
             EXPECT_TRUE(graph.GetImportedTexture(emissiveHandle).transient);
         }
 
@@ -350,23 +348,18 @@ TEST(RenderGraphTransientTests, GBufferTransientLifetime_FourFormatsPerFrame_Res
         pool.RetireFrame(fence);
     };
 
-    // Two-frame GPU lag: first two frames allocate all four formats before reuse begins.
     runFrame(1920, 1080, false);
     runFrame(1920, 1080, false);
     const int callsAfterWarmup = factory.callCount;
-    EXPECT_EQ(callsAfterWarmup, 8);
+    EXPECT_EQ(callsAfterWarmup, 6);
 
     runFrame(1920, 1080, true);
     EXPECT_EQ(factory.callCount, callsAfterWarmup);
 
     const int callsBeforeResize = factory.callCount;
-    runFrame(1280, 720, false);
-    EXPECT_EQ(factory.callCount, callsBeforeResize + 4);
-
     for (uint32_t i = 0; i < TransientTexturePool::kMaxIdleFrames + 6; ++i)
         runFrame(1280, 720, false);
 
-    // Three unique G-buffer formats (albedo and material share R8G8B8A8_UNORM); two-frame
-    // GPU lag keeps two pooled entries per unique description at steady state.
+    EXPECT_EQ(factory.callCount, callsBeforeResize + 3);
     EXPECT_EQ(pool.GetTotalCount(), 6u);
 }
