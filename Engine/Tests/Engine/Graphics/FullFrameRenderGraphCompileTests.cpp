@@ -88,13 +88,6 @@ void AddDeferredGeometryPasses(RenderGraph& graph,
         nullptr));
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE MakeDummyHandle(UINT index)
-{
-    D3D12_CPU_DESCRIPTOR_HANDLE handle{};
-    handle.ptr = static_cast<SIZE_T>(index);
-    return handle;
-}
-
 void AddPostProcessPass(RenderGraph& graph, RenderGraphTextureHandle input, RenderGraphTextureHandle output,
     UINT inputSrvIndex, UINT outputRtvIndex)
 {
