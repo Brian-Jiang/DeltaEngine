@@ -448,7 +448,9 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
 
     // Typeless depth gets both a D32_FLOAT DSV and an R32_FLOAT SRV (needed by the deferred
     // graph to sample scene depth); CreateViews only supports typeless depth for non-MSAA.
-    DXGI_FORMAT depthBufferFormat = sampleDesc.Count == 1 ? DXGI_FORMAT_R32_TYPELESS : DXGI_FORMAT_D32_FLOAT;
+    DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT;
+    if (m_renderPath == RenderPath::Deferred && sampleDesc.Count == 1)
+        depthBufferFormat = DXGI_FORMAT_R32_TYPELESS;
 
     // Create an off-screen render target with a single color buffer and a depth buffer.
     auto colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(backBufferFormat, m_width, m_height, 1, 1, sampleDesc.Count,
