@@ -593,8 +593,14 @@ bool DXRenderManager::ImportSceneTargets(RenderGraphTextureUsage colorAndShader,
         colorTexture->GetRenderTargetView(), colorTexture->GetShaderResourceView());
 
     m_frameResources.sceneDepth = m_frameGraph.ImportTexture("SceneDepth", depthTexture, depthUsage);
-    m_frameBindings.Register(m_frameResources.sceneDepth, depthTexture->GetDepthStencilView(),
-        depthTexture->GetShaderResourceView());
+    D3D12_CPU_DESCRIPTOR_HANDLE depthSrv {};
+    if ((depthUsage & RenderGraphTextureUsage::ShaderResource) != RenderGraphTextureUsage::None)
+    {
+        const D3D12_CPU_DESCRIPTOR_HANDLE srv = depthTexture->GetShaderResourceView();
+        if (srv.ptr != 0)
+            depthSrv = srv;
+    }
+    m_frameBindings.Register(m_frameResources.sceneDepth, depthTexture->GetDepthStencilView(), depthSrv);
 
     return true;
 }
