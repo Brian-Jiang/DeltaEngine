@@ -14,9 +14,7 @@ class EditorAssetDatabaseGCRootingTests : public EditorSerializationTest
 protected:
     void TearDown() override
     {
-        GCManager& gc = GetGCManager();
-        while (gc.HasPendingDestroy())
-            gc.Tick();
+        GetGCManager().DrainPendingDestroyWithTimeout();
     }
 };
 

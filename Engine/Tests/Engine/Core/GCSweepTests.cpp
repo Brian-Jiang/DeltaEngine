@@ -22,9 +22,7 @@ protected:
     {
         // Drain anything left pending so global registry state is clean.
         GCLifecycleTestComponent::s_readyForFinishDestroy = true;
-        GCManager& gc = GetGCManager();
-        while (gc.HasPendingDestroy())
-            gc.Tick();
+        GetGCManager().DrainPendingDestroyWithTimeout();
         GCLifecycleTestComponent::Reset();
     }
 };
@@ -167,6 +165,27 @@ TEST_F(GCSweepTests, FullCycleInvokesLifecycleHooks)
     EXPECT_FALSE(weak.IsValid());
     EXPECT_EQ(GetGCManager().GetState(), EGCState::Idle);
     EXPECT_FALSE(GetGCManager().HasPendingDestroy());
+}
+
+TEST_F(GCSweepTests, DrainPendingDestroyWithTimeoutForceFinishesStuckObjects)
+{
+    auto& registry = GetReflectionRegistry();
+
+    auto* obj = registry.CreateObject<GCLifecycleTestComponent>("GCLifecycleTestComponent");
+    ASSERT_NE(obj, nullptr);
+
+    GCLifecycleTestComponent::s_readyForFinishDestroy = false;
+    GetGCManager().RequestCollect();
+    GetGCManager().Tick();
+
+    ASSERT_TRUE(GetGCManager().HasPendingDestroy());
+    ASSERT_EQ(GCLifecycleTestComponent::s_finishDestroyCount, 0);
+
+    GetGCManager().DrainPendingDestroyWithTimeout(0.1);
+
+    EXPECT_FALSE(GetGCManager().HasPendingDestroy());
+    EXPECT_EQ(GetGCManager().GetState(), EGCState::Idle);
+    EXPECT_EQ(GCLifecycleTestComponent::s_finishDestroyCount, 1);
 }
 
 TEST_F(GCSweepTests, CollectAllForShutdownDestroysRootedObjects)
