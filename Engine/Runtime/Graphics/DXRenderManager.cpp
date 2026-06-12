@@ -743,7 +743,7 @@ void DXRenderManager::BuildForwardFrameGraph(const SceneDrawCallback& drawCallba
 
     std::shared_ptr<DirectX12Texture> colorTexture;
     std::shared_ptr<DirectX12Texture> depthTexture;
-    if (!ImportSceneTargets(colorAndShader, depthAndShader, colorTexture, depthTexture))
+    if (!ImportSceneTargets(colorAndShader, RenderGraphTextureUsage::DepthAttachment, colorTexture, depthTexture))
         return;
 
     const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };

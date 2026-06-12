@@ -210,10 +210,25 @@ void DirectX12Texture::CreateTextureCubeArraySRV()
         m_ShaderResourceView.GetDescriptorHandle());
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE DirectX12Texture::GetRenderTargetView() const { return m_RenderTargetView.GetDescriptorHandle(); }
-D3D12_CPU_DESCRIPTOR_HANDLE DirectX12Texture::GetDepthStencilView() const { return m_DepthStencilView.GetDescriptorHandle(); }
-D3D12_CPU_DESCRIPTOR_HANDLE DirectX12Texture::GetShaderResourceView() const { return m_ShaderResourceView.GetDescriptorHandle(); }
-D3D12_CPU_DESCRIPTOR_HANDLE DirectX12Texture::GetUnorderedAccessView(uint32_t mip) const { return m_UnorderedAccessView.GetDescriptorHandle(mip); }
+D3D12_CPU_DESCRIPTOR_HANDLE DirectX12Texture::GetRenderTargetView() const
+{
+    return m_RenderTargetView.IsNull() ? D3D12_CPU_DESCRIPTOR_HANDLE {} : m_RenderTargetView.GetDescriptorHandle();
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE DirectX12Texture::GetDepthStencilView() const
+{
+    return m_DepthStencilView.IsNull() ? D3D12_CPU_DESCRIPTOR_HANDLE {} : m_DepthStencilView.GetDescriptorHandle();
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE DirectX12Texture::GetShaderResourceView() const
+{
+    return m_ShaderResourceView.IsNull() ? D3D12_CPU_DESCRIPTOR_HANDLE {} : m_ShaderResourceView.GetDescriptorHandle();
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE DirectX12Texture::GetUnorderedAccessView(uint32_t mip) const
+{
+    return m_UnorderedAccessView.IsNull() ? D3D12_CPU_DESCRIPTOR_HANDLE {} : m_UnorderedAccessView.GetDescriptorHandle(mip);
+}
 
 bool DirectX12Texture::HasAlpha() const
 {
