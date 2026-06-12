@@ -103,6 +103,9 @@ void DeferredLightingGraphPass::Execute(const RenderGraphContext& context) const
 
     m_renderManager->StageIBLDescriptors(commandList,
         static_cast<int32_t>(DeferredLightingRootParameterType::IBLTextures));
+    m_renderManager->StageShadowDescriptors(commandList,
+        static_cast<int32_t>(DeferredLightingRootParameterType::ShadowMaps),
+        static_cast<int32_t>(DeferredLightingRootParameterType::ShadowCB));
 
     commandList.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     commandList.Draw(3u, 1u, 0u, 0u);

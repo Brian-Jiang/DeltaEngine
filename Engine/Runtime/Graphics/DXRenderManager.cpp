@@ -985,6 +985,14 @@ void DXRenderManager::StageIBLDescriptors(CommandList& commandList, int32_t iblR
 
 void DXRenderManager::StageShadowDescriptors(CommandList& commandList)
 {
+    StageShadowDescriptors(commandList,
+        static_cast<int32_t>(RootParameterType::ShadowMaps),
+        static_cast<int32_t>(RootParameterType::ShadowCB));
+}
+
+void DXRenderManager::StageShadowDescriptors(CommandList& commandList, int32_t shadowMapsRootParameter,
+    int32_t shadowCbRootParameter)
+{
     const bool shadowsOk = m_shadowPass.ShadowResourcesReady();
     auto mapDir = shadowsOk ? m_shadowPass.GetDirectionalAtlasTexture() : nullptr;
     auto mapSpot = shadowsOk ? m_shadowPass.GetSpotAtlasTexture() : nullptr;
@@ -1006,17 +1014,16 @@ void DXRenderManager::StageShadowDescriptors(CommandList& commandList)
         cubeAr = fbCube;
     }
 
-    const int32_t rp = static_cast<int32_t>(RootParameterType::ShadowMaps);
-    commandList.SetShaderResourceView(rp, 0, mapDir, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    commandList.SetShaderResourceView(rp, 1, mapSpot, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    commandList.SetShaderResourceView(rp, 2, cubeAr, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    commandList.SetShaderResourceView(shadowMapsRootParameter, 0, mapDir, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    commandList.SetShaderResourceView(shadowMapsRootParameter, 1, mapSpot, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    commandList.SetShaderResourceView(shadowMapsRootParameter, 2, cubeAr, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
     const ShadowSettings& settings = m_shadowPass.GetSettings();
     ShadowCBGPU shadowCb {};
     shadowCb.m_pcssBlockerSamples = (std::clamp)(settings.m_pcssBlockerSamples, 1, 32);
     shadowCb.m_pcssPCFSamples = (std::clamp)(settings.m_pcssPCFSamples, 1, 32);
     shadowCb.m_qualityScalar = (std::max)(0.05f, settings.m_qualityScalar);
-    commandList.SetGraphicsDynamicConstantBuffer(static_cast<UINT>(RootParameterType::ShadowCB), shadowCb);
+    commandList.SetGraphicsDynamicConstantBuffer(static_cast<UINT>(shadowCbRootParameter), shadowCb);
 }
 
 void DXRenderManager::RenderFrame()

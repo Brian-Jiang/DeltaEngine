@@ -52,46 +52,13 @@ float4 PSMain(VSOut input) : SV_Target
     float3 Lo = float3(0, 0, 0);
 
     for (uint i = 0; i < LightCB.numDirectionalLights; ++i)
-    {
-        DirectionalLight light = DirectionalLights[i];
-        float3 L = normalize(-light.direction.xyz);
-        Lo += EvaluateDirectLight(N, V, L, light.color.rgb, light.intensity, baseColor, metallic, roughness);
-    }
+        Lo += EvaluateDirectionalPBR(DirectionalLights[i], P, N, V, baseColor, metallic, roughness);
 
     for (uint j = 0; j < LightCB.numPointLights; ++j)
-    {
-        PointLight light = PointLights[j];
-        float3 toLight = light.position.xyz - P;
-        float distance = length(toLight);
-        if (distance > light.range)
-            continue;
-
-        float3 L = normalize(toLight);
-        float dr = distance / light.range;
-        float falloff = saturate(1.0 - dr * dr);
-        float attenuate = falloff * light.intensity;
-        Lo += EvaluateDirectLight(N, V, L, light.color.rgb, attenuate, baseColor, metallic, roughness);
-    }
+        Lo += EvaluatePointPBR(PointLights[j], P, N, V, baseColor, metallic, roughness);
 
     for (uint k = 0; k < LightCB.numSpotLights; ++k)
-    {
-        SpotLight light = SpotLights[k];
-        float3 toLight = light.position.xyz - P;
-        float distance = length(toLight);
-        if (distance > light.range)
-            continue;
-
-        float3 L = normalize(toLight);
-        float theta = dot(-L, normalize(light.direction.xyz));
-        float spotFactor = smoothstep(cos(light.outerConeAngle), cos(light.innerConeAngle), theta);
-        if (spotFactor <= 0.0)
-            continue;
-
-        float dr = distance / light.range;
-        float distFall = saturate(1.0 - dr * dr);
-        float attenuate = spotFactor * distFall * light.intensity;
-        Lo += EvaluateDirectLight(N, V, L, light.color.rgb, attenuate, baseColor, metallic, roughness);
-    }
+        Lo += EvaluateSpotPBR(SpotLights[k], P, N, V, baseColor, metallic, roughness);
 
     float NdotV = max(dot(N, V), 0.0);
     float3 R = reflect(-V, N);

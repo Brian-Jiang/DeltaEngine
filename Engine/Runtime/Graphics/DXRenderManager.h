@@ -155,6 +155,8 @@ public:
     DELTAENGINE_API TransientTexturePool& GetTransientPool() { return m_transientPool; }
 
     DELTAENGINE_API void StageIBLDescriptors(CommandList& commandList, int32_t iblRootParameterIndex);
+    DELTAENGINE_API void StageShadowDescriptors(CommandList& commandList, int32_t shadowMapsRootParameter,
+        int32_t shadowCbRootParameter);
 
 private:
     void CreatePingPongTargets(UINT width, UINT height);
