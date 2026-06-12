@@ -8,6 +8,7 @@ cbuffer CameraCB : register(b0)
 {
     float4x4 ViewMatrix;
     float4x4 ProjectionMatrix;
+    float4x4 InvViewProjectionMatrix;
     float4 CameraPosition;
 }
 

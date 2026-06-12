@@ -31,6 +31,7 @@ CameraCB EditorViewportCamera::BuildCameraCB(float w, float h) const
         nearPlane,
         farPlane));
     cb.position = pos;
+    PopulateInvViewProjection(cb);
     return cb;
 }
 

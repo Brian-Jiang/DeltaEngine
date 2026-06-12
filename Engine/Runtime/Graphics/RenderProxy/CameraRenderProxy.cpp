@@ -83,6 +83,7 @@ void CameraRenderProxy::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> re
     cameraData.viewMatrix = XMMatrixTranspose(m_viewMatrix);
     cameraData.projectionMatrix = XMMatrixTranspose(m_projectionMatrix);
     cameraData.position = m_worldMatrix.r[3];
+    PopulateInvViewProjection(cameraData);
 
     renderContext->commandList->SetGraphicsDynamicConstantBuffer(0, cameraData);
 }

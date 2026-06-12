@@ -51,6 +51,10 @@ struct DXGraphicsContext
 
     /// Uploads the gathered light buffers to the command list.
     DELTAENGINE_API void ApplyLightBuffersToCommandList();
+    DELTAENGINE_API void ApplyLightBuffersToCommandList(uint32_t lightCbSlot,
+        uint32_t directionalLightsSlot,
+        uint32_t pointLightsSlot,
+        uint32_t spotLightsSlot);
 
     /// When set, full active camera (GPU CB + lens) for this frame—editor viewport or override path.
     /// Filled before PrepareFrame shadow pass when pending; used for scene draws and directional shadow frustum.

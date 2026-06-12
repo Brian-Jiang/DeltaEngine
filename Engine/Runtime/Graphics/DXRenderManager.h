@@ -129,12 +129,12 @@ public:
     DELTAENGINE_API ISlangBlob* GetGBufferVertexShaderBlob() const;
     DELTAENGINE_API ISlangBlob* GetGBufferPixelShaderBlob() const;
     DELTAENGINE_API D3D12_RT_FORMAT_ARRAY GetGBufferRTVFormats() const;
-    DELTAENGINE_API bool EnsureGBufferAlbedoBlitPipeline();
-    DELTAENGINE_API std::shared_ptr<RootSignature> GetGBufferAlbedoBlitRootSignature() const
+    DELTAENGINE_API bool EnsureDeferredLightingPipeline();
+    DELTAENGINE_API std::shared_ptr<RootSignature> GetDeferredLightingRootSignature() const
     {
-        return m_gbufferAlbedoBlitRootSignature;
+        return m_deferredLightingRootSignature;
     }
-    DELTAENGINE_API std::shared_ptr<PipelineStateObject> GetGBufferAlbedoBlitPSO() const { return m_gbufferAlbedoBlitPSO; }
+    DELTAENGINE_API std::shared_ptr<PipelineStateObject> GetDeferredLightingPSO() const { return m_deferredLightingPSO; }
     inline std::shared_ptr<Device> GetDevice() const { return m_device; }
     inline std::shared_ptr<RenderTarget> GetRenderTarget() const { return m_renderTarget; }
     inline std::shared_ptr<CommandList> GetCurrentCommandList() const { return m_currentCommandList; }
@@ -154,19 +154,21 @@ public:
     /// Frame-scoped texture pool shared by the render graph and the editor display path.
     DELTAENGINE_API TransientTexturePool& GetTransientPool() { return m_transientPool; }
 
+    DELTAENGINE_API void StageIBLDescriptors(CommandList& commandList, int32_t iblRootParameterIndex);
+
 private:
     void CreatePingPongTargets(UINT width, UINT height);
     void BuildFrameGraph(const SceneDrawCallback& drawCallback, PostProcessStack* stack);
     void BuildForwardFrameGraph(const SceneDrawCallback& drawCallback, PostProcessStack* stack);
     void BuildDeferredFrameGraph(const SceneDrawCallback& drawCallback, PostProcessStack* stack);
-    bool ImportSceneTargets(RenderGraphTextureUsage colorAndShader, std::shared_ptr<DirectX12Texture>& colorTexture,
-        std::shared_ptr<DirectX12Texture>& depthTexture);
+    bool ImportSceneTargets(RenderGraphTextureUsage colorAndShader, RenderGraphTextureUsage depthUsage,
+        std::shared_ptr<DirectX12Texture>& colorTexture, std::shared_ptr<DirectX12Texture>& depthTexture);
     void AddShadowSceneSkyboxPasses(const SceneDrawCallback& drawCallback, const float clearColor[4],
         RenderGraphTextureUsage depthAndShader);
     void AddShadowPasses(RenderGraphTextureUsage depthAndShader);
     void CreateGBufferTextures(RenderGraphTextureUsage gbufferUsage);
     void InitGBufferPipeline();
-    bool InitGBufferAlbedoBlitPipeline();
+    bool InitDeferredLightingPipeline();
     void FinalizeNoPostProcessOutput();
     void AppendPostProcessChain(PostProcessStack* stack, RenderGraphTextureHandle postInputHandle,
         RenderGraphTextureUsage colorAndShader);
@@ -186,9 +188,9 @@ private:
     std::shared_ptr<RootSignature> m_gbufferRootSignature;
     Slang::ComPtr<ISlangBlob> m_gbufferVertexShaderBlob;
     Slang::ComPtr<ISlangBlob> m_gbufferPixelShaderBlob;
-    std::shared_ptr<RootSignature> m_gbufferAlbedoBlitRootSignature;
-    std::shared_ptr<PipelineStateObject> m_gbufferAlbedoBlitPSO;
-    bool m_gbufferAlbedoBlitReady = false;
+    std::shared_ptr<RootSignature> m_deferredLightingRootSignature;
+    std::shared_ptr<PipelineStateObject> m_deferredLightingPSO;
+    bool m_deferredLightingReady = false;
 	std::shared_ptr<CommandList> m_currentCommandList;
 
     PostProcessTarget m_pingPong[2];

@@ -28,9 +28,10 @@
 #include "Runtime/Graphics/RenderGraph/SceneShadowReadGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/SkyboxRenderGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/GBufferRenderGraphPass.h"
-#include "Runtime/Graphics/RenderGraph/GBufferAlbedoBlitGraphPass.h"
+#include "Runtime/Graphics/RenderGraph/DeferredLightingGraphPass.h"
 #include "Runtime/Graphics/ShaderCompile.h"
 #include "Runtime/Graphics/Structures/GBufferRootParameterType.h"
+#include "Runtime/Graphics/Structures/DeferredLightingRootParameterType.h"
 #include "Runtime/Graphics/DirectX/PipelineStateObject.h"
 #include "Runtime/Graphics/RenderProxy/CameraRenderProxy.h"
 #include "Runtime/Graphics/RenderProxy/SkyboxRenderProxy.h"
@@ -282,39 +283,84 @@ D3D12_RT_FORMAT_ARRAY DXRenderManager::GetGBufferRTVFormats() const
     return formats;
 }
 
-bool DXRenderManager::EnsureGBufferAlbedoBlitPipeline()
+bool DXRenderManager::EnsureDeferredLightingPipeline()
 {
-    if (m_gbufferAlbedoBlitReady)
+    if (m_deferredLightingReady)
         return true;
 
-    return InitGBufferAlbedoBlitPipeline();
+    return InitDeferredLightingPipeline();
 }
 
-bool DXRenderManager::InitGBufferAlbedoBlitPipeline()
+bool DXRenderManager::InitDeferredLightingPipeline()
 {
     if (!m_device)
         return false;
 
     Slang::ComPtr<ISlangBlob> vsBlob = CompileSlangStage(
-        std::filesystem::path("Shaders/GBufferAlbedoBlit.slang"), "VSMain", "vs_6_6", "GBufferAlbedoBlit VS");
+        std::filesystem::path("Shaders/DeferredLighting.slang"), "VSMain", "vs_6_6", "DeferredLighting VS");
     Slang::ComPtr<ISlangBlob> psBlob = CompileSlangStage(
-        std::filesystem::path("Shaders/GBufferAlbedoBlit.slang"), "PSMain", "ps_6_6", "GBufferAlbedoBlit PS");
+        std::filesystem::path("Shaders/DeferredLighting.slang"), "PSMain", "ps_6_6", "DeferredLighting PS");
     if (!vsBlob || !psBlob)
         return false;
 
-    CD3DX12_DESCRIPTOR_RANGE1 srvRange {};
-    srvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
+    CD3DX12_DESCRIPTOR_RANGE1 gbufferRange {};
+    gbufferRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 0, 4, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
 
-    CD3DX12_ROOT_PARAMETER1 rootParam {};
-    rootParam.InitAsDescriptorTable(1, &srvRange, D3D12_SHADER_VISIBILITY_PIXEL);
+    CD3DX12_DESCRIPTOR_RANGE1 iblRange {};
+    iblRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3u, 0, 2, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 
-    CD3DX12_STATIC_SAMPLER_DESC linearSampler(
+    CD3DX12_DESCRIPTOR_RANGE1 shadowRange {};
+    shadowRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3u, 0, 3, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+
+    CD3DX12_ROOT_PARAMETER1 rootParameters[static_cast<UINT>(DeferredLightingRootParameterType::NumRootParameterTypes)] {};
+    rootParameters[static_cast<UINT>(DeferredLightingRootParameterType::GBufferTextures)].InitAsDescriptorTable(
+        1, &gbufferRange, D3D12_SHADER_VISIBILITY_PIXEL);
+    rootParameters[static_cast<UINT>(DeferredLightingRootParameterType::CameraCB)].InitAsConstantBufferView(0);
+    rootParameters[static_cast<UINT>(DeferredLightingRootParameterType::LightCB)].InitAsConstantBufferView(2);
+    rootParameters[static_cast<UINT>(DeferredLightingRootParameterType::PointLights)].InitAsShaderResourceView(0);
+    rootParameters[static_cast<UINT>(DeferredLightingRootParameterType::SpotLights)].InitAsShaderResourceView(1);
+    rootParameters[static_cast<UINT>(DeferredLightingRootParameterType::DirectionalLights)].InitAsShaderResourceView(2);
+    rootParameters[static_cast<UINT>(DeferredLightingRootParameterType::IBLTextures)].InitAsDescriptorTable(
+        1, &iblRange, D3D12_SHADER_VISIBILITY_PIXEL);
+    rootParameters[static_cast<UINT>(DeferredLightingRootParameterType::ShadowMaps)].InitAsDescriptorTable(
+        1, &shadowRange, D3D12_SHADER_VISIBILITY_PIXEL);
+    rootParameters[static_cast<UINT>(DeferredLightingRootParameterType::ShadowCB)].InitAsConstantBufferView(
+        4, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
+
+    CD3DX12_STATIC_SAMPLER_DESC staticSamplers[3] {};
+    staticSamplers[0] = CD3DX12_STATIC_SAMPLER_DESC(
         0,
         D3D12_FILTER_MIN_MAG_MIP_LINEAR,
         D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
         D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
         D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
-    linearSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    staticSamplers[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    staticSamplers[1] = CD3DX12_STATIC_SAMPLER_DESC(
+        2,
+        D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+        D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+        D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+        D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+        0.0f,
+        0u,
+        D3D12_COMPARISON_FUNC_LESS_EQUAL,
+        D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK,
+        0.0f,
+        D3D12_FLOAT32_MAX,
+        D3D12_SHADER_VISIBILITY_PIXEL);
+    staticSamplers[2] = CD3DX12_STATIC_SAMPLER_DESC(
+        3,
+        D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT,
+        D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+        D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+        D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+        0.0f,
+        0u,
+        D3D12_COMPARISON_FUNC_LESS,
+        D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+        0.0f,
+        D3D12_FLOAT32_MAX,
+        D3D12_SHADER_VISIBILITY_PIXEL);
 
     D3D12_ROOT_SIGNATURE_FLAGS flags =
         D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS |
@@ -323,13 +369,14 @@ bool DXRenderManager::InitGBufferAlbedoBlitPipeline()
         D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 
     CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rsDesc;
-    rsDesc.Init_1_1(1, &rootParam, 1, &linearSampler, flags);
+    rsDesc.Init_1_1(static_cast<UINT>(DeferredLightingRootParameterType::NumRootParameterTypes), rootParameters,
+        _countof(staticSamplers), staticSamplers, flags);
 
-    m_gbufferAlbedoBlitRootSignature = m_device->CreateRootSignature(rsDesc.Desc_1_1);
-    if (!m_gbufferAlbedoBlitRootSignature)
+    m_deferredLightingRootSignature = m_device->CreateRootSignature(rsDesc.Desc_1_1);
+    if (!m_deferredLightingRootSignature)
         return false;
 
-    m_gbufferAlbedoBlitRootSignature->GetD3D12RootSignature()->SetName(L"RootSignature GBufferAlbedoBlit");
+    m_deferredLightingRootSignature->GetD3D12RootSignature()->SetName(L"RootSignature DeferredLighting");
 
     struct PipelineStateStream
     {
@@ -360,7 +407,7 @@ bool DXRenderManager::InitGBufferAlbedoBlitPipeline()
     D3D12_SHADER_BYTECODE vsBytecode { vsBlob->getBufferPointer(), vsBlob->getBufferSize() };
     D3D12_SHADER_BYTECODE psBytecode { psBlob->getBufferPointer(), psBlob->getBufferSize() };
 
-    pss.pRootSignature = m_gbufferAlbedoBlitRootSignature->GetD3D12RootSignature().Get();
+    pss.pRootSignature = m_deferredLightingRootSignature->GetD3D12RootSignature().Get();
     pss.VS = vsBytecode;
     pss.PS = psBytecode;
     pss.RasterizerState = rasterizerState;
@@ -372,12 +419,12 @@ bool DXRenderManager::InitGBufferAlbedoBlitPipeline()
     pss.RTVFormats = rtvFormats;
     pss.SampleDesc = { 1, 0 };
 
-    m_gbufferAlbedoBlitPSO = m_device->CreatePipelineStateObject(pss);
-    if (!m_gbufferAlbedoBlitPSO)
+    m_deferredLightingPSO = m_device->CreatePipelineStateObject(pss);
+    if (!m_deferredLightingPSO)
         return false;
 
-    m_gbufferAlbedoBlitPSO->GetD3D12PipelineState()->SetName(L"PSO GBufferAlbedoBlit");
-    m_gbufferAlbedoBlitReady = true;
+    m_deferredLightingPSO->GetD3D12PipelineState()->SetName(L"PSO DeferredLighting");
+    m_deferredLightingReady = true;
     return true;
 }
 
@@ -523,7 +570,7 @@ void DXRenderManager::BuildFrameGraph(const SceneDrawCallback& drawCallback, Pos
     }
 }
 
-bool DXRenderManager::ImportSceneTargets(RenderGraphTextureUsage colorAndShader,
+bool DXRenderManager::ImportSceneTargets(RenderGraphTextureUsage colorAndShader, RenderGraphTextureUsage depthUsage,
     std::shared_ptr<DirectX12Texture>& colorTexture, std::shared_ptr<DirectX12Texture>& depthTexture)
 {
     m_frameResources = {};
@@ -538,9 +585,9 @@ bool DXRenderManager::ImportSceneTargets(RenderGraphTextureUsage colorAndShader,
     m_frameBindings.Register(m_frameResources.sceneColor,
         colorTexture->GetRenderTargetView(), colorTexture->GetShaderResourceView());
 
-    m_frameResources.sceneDepth = m_frameGraph.ImportTexture("SceneDepth", depthTexture,
-        RenderGraphTextureUsage::DepthAttachment);
-    m_frameBindings.Register(m_frameResources.sceneDepth, depthTexture->GetDepthStencilView(), {});
+    m_frameResources.sceneDepth = m_frameGraph.ImportTexture("SceneDepth", depthTexture, depthUsage);
+    m_frameBindings.Register(m_frameResources.sceneDepth, depthTexture->GetDepthStencilView(),
+        depthTexture->GetShaderResourceView());
 
     return true;
 }
@@ -683,7 +730,7 @@ void DXRenderManager::BuildForwardFrameGraph(const SceneDrawCallback& drawCallba
 
     std::shared_ptr<DirectX12Texture> colorTexture;
     std::shared_ptr<DirectX12Texture> depthTexture;
-    if (!ImportSceneTargets(colorAndShader, colorTexture, depthTexture))
+    if (!ImportSceneTargets(colorAndShader, depthAndShader, colorTexture, depthTexture))
         return;
 
     const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
@@ -730,7 +777,7 @@ void DXRenderManager::BuildDeferredFrameGraph(const SceneDrawCallback& drawCallb
 
     std::shared_ptr<DirectX12Texture> colorTexture;
     std::shared_ptr<DirectX12Texture> depthTexture;
-    if (!ImportSceneTargets(colorAndShader, colorTexture, depthTexture))
+    if (!ImportSceneTargets(colorAndShader, depthAndShader, colorTexture, depthTexture))
         return;
 
     auto ctx = GetGraphicsContext();
@@ -755,14 +802,38 @@ void DXRenderManager::BuildDeferredFrameGraph(const SceneDrawCallback& drawCallb
         ctx,
         drawCallback));
 
-    m_frameGraph.AddPass(std::make_unique<GBufferAlbedoBlitGraphPass>(
+    m_frameGraph.AddPass(std::make_unique<DeferredLightingGraphPass>(
         m_frameResources.gbufferAlbedo,
+        m_frameResources.gbufferNormal,
+        m_frameResources.gbufferMaterial,
+        m_frameResources.gbufferEmissive,
+        m_frameResources.sceneDepth,
         m_frameResources.sceneColor,
         m_frameBindings.SrvFor(m_frameResources.gbufferAlbedo),
+        m_frameBindings.SrvFor(m_frameResources.gbufferNormal),
+        m_frameBindings.SrvFor(m_frameResources.gbufferMaterial),
+        m_frameBindings.SrvFor(m_frameResources.gbufferEmissive),
+        m_frameBindings.SrvFor(m_frameResources.sceneDepth),
         m_frameBindings.RtvFor(m_frameResources.sceneColor),
         m_viewport,
         m_scissorRect,
-        this));
+        this,
+        ctx));
+
+    if (m_currentWorld && m_currentWorld->GetSkybox())
+    {
+        const SkyboxRenderGraphPass::DescriptorStageCallback stageDescriptors =
+            [this](CommandList& cl)
+            {
+                StageIBLDescriptors(cl);
+                StageShadowDescriptors(cl);
+            };
+
+        m_frameGraph.AddPass(std::make_unique<SkyboxRenderGraphPass>(
+            m_frameResources.sceneColor, m_frameResources.sceneDepth,
+            m_renderTarget.get(), m_rootSignature, m_viewport, m_scissorRect,
+            stageDescriptors, m_currentWorld, ctx));
+    }
 
     if (!stack || stack->GetPassCount() == 0)
     {
@@ -890,6 +961,11 @@ void DXRenderManager::UpdateIBL(DTexture* skyboxCubemap)
 
 void DXRenderManager::StageIBLDescriptors(CommandList& commandList)
 {
+    StageIBLDescriptors(commandList, static_cast<int32_t>(RootParameterType::IBLTextures));
+}
+
+void DXRenderManager::StageIBLDescriptors(CommandList& commandList, int32_t iblRootParameterIndex)
+{
     if (!m_iblResources.irradianceCube || !m_iblResources.specularCube || !m_iblResources.brdfLut)
     {
         DLOG(LogRenderer, ELogLevel::Verbose,
@@ -899,12 +975,11 @@ void DXRenderManager::StageIBLDescriptors(CommandList& commandList)
         return;
     }
 
-    const int32_t rp = static_cast<int32_t>(RootParameterType::IBLTextures);
-    commandList.SetShaderResourceView(rp, 0, m_iblResources.irradianceCube,
+    commandList.SetShaderResourceView(iblRootParameterIndex, 0, m_iblResources.irradianceCube,
         D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    commandList.SetShaderResourceView(rp, 1, m_iblResources.specularCube,
+    commandList.SetShaderResourceView(iblRootParameterIndex, 1, m_iblResources.specularCube,
         D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    commandList.SetShaderResourceView(rp, 2, m_iblResources.brdfLut,
+    commandList.SetShaderResourceView(iblRootParameterIndex, 2, m_iblResources.brdfLut,
         D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 }
 
