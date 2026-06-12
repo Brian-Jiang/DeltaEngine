@@ -58,6 +58,13 @@ void AddSkyboxPass(RenderGraph& graph, RenderGraphTextureHandle color, RenderGra
         nullptr, nullptr, nullptr));
 }
 
+D3D12_CPU_DESCRIPTOR_HANDLE MakeDummyHandle(UINT index)
+{
+    D3D12_CPU_DESCRIPTOR_HANDLE handle{};
+    handle.ptr = static_cast<SIZE_T>(index);
+    return handle;
+}
+
 void AddDeferredGeometryPasses(RenderGraph& graph,
     RenderGraphTextureHandle albedo,
     RenderGraphTextureHandle normal,
