@@ -6,7 +6,6 @@ Texture2D g_gbufferNormal : register(t1, space4);
 Texture2D g_gbufferMaterial : register(t2, space4);
 Texture2D g_gbufferEmissive : register(t3, space4);
 Texture2D g_gbufferDepth : register(t4, space4);
-SamplerState g_linearSampler : register(s0);
 
 struct VSOut
 {
@@ -34,11 +33,11 @@ float3 ReconstructWorldPosition(float2 texCoord, float depth)
 [shader("fragment")]
 float4 PSMain(VSOut input) : SV_Target
 {
-    float4 albedoAo = g_gbufferAlbedo.Sample(g_linearSampler, input.texCoord);
-    float4 normalData = g_gbufferNormal.Sample(g_linearSampler, input.texCoord);
-    float4 materialData = g_gbufferMaterial.Sample(g_linearSampler, input.texCoord);
-    float3 emissive = g_gbufferEmissive.Sample(g_linearSampler, input.texCoord).rgb;
-    float depth = g_gbufferDepth.Sample(g_linearSampler, input.texCoord).r;
+    float4 albedoAo = g_gbufferAlbedo.Sample(g_sampler, input.texCoord);
+    float4 normalData = g_gbufferNormal.Sample(g_sampler, input.texCoord);
+    float4 materialData = g_gbufferMaterial.Sample(g_sampler, input.texCoord);
+    float3 emissive = g_gbufferEmissive.Sample(g_sampler, input.texCoord).rgb;
+    float depth = g_gbufferDepth.Sample(g_sampler, input.texCoord).r;
 
     float3 baseColor = albedoAo.rgb;
     float ao = albedoAo.a;

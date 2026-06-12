@@ -436,7 +436,6 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
 
     // Create a color buffer with sRGB for gamma correction.
     DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
-    DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT;
 
     // Check the best multisample quality level that can be used for the given back buffer format.
     DXGI_SAMPLE_DESC sampleDesc{};
@@ -444,6 +443,10 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
         sampleDesc = m_device->GetMultisampleQualityLevels(backBufferFormat);
     else
         sampleDesc = { 1, 0 };
+
+    // Typeless depth gets both a D32_FLOAT DSV and an R32_FLOAT SRV (needed by the deferred
+    // graph to sample scene depth); CreateViews only supports typeless depth for non-MSAA.
+    DXGI_FORMAT depthBufferFormat = sampleDesc.Count == 1 ? DXGI_FORMAT_R32_TYPELESS : DXGI_FORMAT_D32_FLOAT;
 
     // Create an off-screen render target with a single color buffer and a depth buffer.
     auto colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(backBufferFormat, m_width, m_height, 1, 1, sampleDesc.Count,
@@ -464,7 +467,7 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
         sampleDesc.Quality, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
 
     D3D12_CLEAR_VALUE depthClearValue;
-    depthClearValue.Format = depthDesc.Format;
+    depthClearValue.Format = DXGI_FORMAT_D32_FLOAT;
     depthClearValue.DepthStencil = { 1.0f, 0 };
 
     auto depthTexture = m_device->CreateTexture(depthDesc, &depthClearValue);
