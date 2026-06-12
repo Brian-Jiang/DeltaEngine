@@ -9,7 +9,7 @@ DELTA_ENGINE_NS_BEGIN
 
 class DescriptorAllocatorPage;
 
-class DescriptorAllocation {
+class DELTAENGINE_API DescriptorAllocation {
 public:
     // Creates a NULL descriptor.
     DescriptorAllocation();
