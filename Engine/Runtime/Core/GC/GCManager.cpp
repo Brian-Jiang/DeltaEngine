@@ -2,9 +2,11 @@
 
 #include "Runtime/Core/DObject.h"
 #include "Runtime/Core/GC/DObjectRegistry.h"
+#include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/ObjectReferenceWalk.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
 
+#include <chrono>
 #include <vector>
 
 using namespace DeltaEngine;
@@ -88,24 +90,13 @@ void GCManager::CollectGarbage()
 
     Mark();
     BeginSweep();
-
-    while (m_state == EGCState::Sweeping)
-    {
-        if (DrainSweep() == 0)
-            break;
-    }
+    DrainSweepWithTimeout(kDefaultSweepTimeoutSeconds);
 }
 
 void GCManager::CollectAllForShutdown()
 {
     // Finish any in-flight sweep so the pending-destroy list starts empty.
-    while (m_state == EGCState::Sweeping)
-    {
-        if (DrainSweep() == 0)
-            break;
-    }
-
-    m_state = EGCState::Idle;
+    DrainSweepWithTimeout(kDefaultSweepTimeoutSeconds);
 
     // Treat every live object as unreachable, then sweep everything. Roots are
     // intentionally ignored: this is a final teardown, not a reachability collect.
@@ -114,12 +105,61 @@ void GCManager::CollectAllForShutdown()
         obj->SetGCMarkColor(EGCMarkColor::White);
 
     BeginSweep();
+    DrainSweepWithTimeout(kDefaultSweepTimeoutSeconds);
+}
 
-    while (m_state == EGCState::Sweeping)
+void GCManager::DrainPendingDestroyWithTimeout(double timeoutSeconds)
+{
+    if (!HasPendingDestroy() && m_state == EGCState::Idle)
+        return;
+
+    DrainSweepWithTimeout(timeoutSeconds);
+}
+
+void GCManager::DrainSweepWithTimeout(double timeoutSeconds)
+{
+    const auto deadline = std::chrono::steady_clock::now()
+        + std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+            std::chrono::duration<double>(timeoutSeconds));
+
+    while (m_state == EGCState::Sweeping || HasPendingDestroy())
     {
-        if (DrainSweep() == 0)
-            break;
+        DrainSweep();
+
+        if (!HasPendingDestroy() && m_state == EGCState::Idle)
+            return;
+
+        if (std::chrono::steady_clock::now() >= deadline)
+        {
+            DLOG(LogCore, ELogLevel::Error,
+                "GC sweep did not complete within {:.1f}s; {} object(s) still pending. Forcing cleanup.",
+                timeoutSeconds, m_pendingDestroy.size());
+            ForceFinishPendingDestroy();
+            return;
+        }
     }
+}
+
+void GCManager::ForceFinishPendingDestroy()
+{
+    std::vector<DObject*> pending = std::move(m_pendingDestroy);
+    m_pendingDestroy.clear();
+
+    for (DObject* obj : pending)
+    {
+        if (!obj->IsReadyForFinishDestroy())
+        {
+            DClass* cls = obj->GetClass();
+            const char* name = cls ? cls->GetName().c_str() : "DObject";
+            DLOG(LogCore, ELogLevel::Warning,
+                "GC force-finishing {} before IsReadyForFinishDestroy", name);
+        }
+
+        obj->FinishDestroy();
+        GetReflectionRegistry().DestroyObject(obj);
+    }
+
+    m_state = EGCState::Idle;
 }
 
 void GCManager::BeginSweep()

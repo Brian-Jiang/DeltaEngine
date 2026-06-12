@@ -52,6 +52,10 @@ public:
     /// Number of objects currently on the pending-destroy list.
     size_t GetPendingDestroyCount() const { return m_pendingDestroy.size(); }
 
+    /// Drains the pending-destroy list synchronously with a timeout. On expiry logs an
+    /// error and force-finishes any remaining objects.
+    DELTAENGINE_API void DrainPendingDestroyWithTimeout(double timeoutSeconds = 10.0);
+
 private:
     /// Moves every unreachable (White) object to PendingKill, calls BeginDestroy,
     /// and parks it on the pending-destroy list.
@@ -60,6 +64,11 @@ private:
     /// Calls FinishDestroy + frees every pending object that is ready; returns the
     /// count finished this call. Returns to Idle once the list drains.
     size_t DrainSweep();
+
+    void DrainSweepWithTimeout(double timeoutSeconds);
+    void ForceFinishPendingDestroy();
+
+    static constexpr double kDefaultSweepTimeoutSeconds = 10.0;
 
     EGCState              m_state            = EGCState::Idle;
     bool                  m_marking          = false;

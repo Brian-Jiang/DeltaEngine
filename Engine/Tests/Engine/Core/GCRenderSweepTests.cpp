@@ -31,8 +31,7 @@ protected:
     {
         m_completedFence = UINT64_MAX;
         m_queue.ProcessCompleted();
-        while (GetGCManager().HasPendingDestroy())
-            GetGCManager().Tick();
+        GetGCManager().DrainPendingDestroyWithTimeout();
         GetRenderResourceReleaseService().UnregisterQueue(&m_queue);
         GCRenderLifecycleTestRenderer::Reset();
     }

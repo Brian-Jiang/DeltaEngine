@@ -16,9 +16,7 @@ class DPrimaryAssetGCRootingTests : public ::testing::Test
 protected:
     void TearDown() override
     {
-        GCManager& gc = GetGCManager();
-        while (gc.HasPendingDestroy())
-            gc.Tick();
+        GetGCManager().DrainPendingDestroyWithTimeout();
     }
 };
 }
