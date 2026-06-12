@@ -84,6 +84,27 @@ TEST(MeshRenderProxyTests, SubmeshContributesToShadowMap_AlphaBlendMaterial_Retu
     EXPECT_FALSE(result);
 }
 
+TEST(MeshRenderProxyTests, SubmeshContributesToGBuffer_NullMaterial_ReturnsTrue)
+{
+    EXPECT_TRUE(MeshRenderProxy::SubmeshContributesToGBuffer(nullptr));
+}
+
+TEST(MeshRenderProxyTests, SubmeshContributesToGBuffer_OpaqueMaterial_ReturnsTrue)
+{
+    DMaterial material;
+    EXPECT_TRUE(MeshRenderProxy::SubmeshContributesToGBuffer(&material));
+}
+
+TEST(MeshRenderProxyTests, SubmeshContributesToGBuffer_AlphaBlendMaterial_ReturnsFalse)
+{
+    DMaterial material;
+    CD3DX12_BLEND_DESC blendDesc(D3D12_DEFAULT);
+    blendDesc.RenderTarget[0].BlendEnable = TRUE;
+    material.SetBlendState(CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC(blendDesc));
+
+    EXPECT_FALSE(MeshRenderProxy::SubmeshContributesToGBuffer(&material));
+}
+
 TEST(MeshRenderProxyTests, MeshRenderProxy_InitializeWithNullMesh_DoesNotCrash)
 {
     // Arrange

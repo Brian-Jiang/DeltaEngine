@@ -22,6 +22,15 @@ void SetBoolProperty(DObject& obj, const char* name, bool value)
     ASSERT_NE(prop, nullptr);
     prop->SetValue(&obj, &value);
 }
+
+void SetUInt32Property(DObject& obj, const char* name, uint32_t value)
+{
+    DClass* cls = obj.GetClass();
+    ASSERT_NE(cls, nullptr);
+    DProperty* prop = cls->FindPropertyByName(name);
+    ASSERT_NE(prop, nullptr);
+    prop->SetValue(&obj, &value);
+}
 }
 
 class MeshRendererShadowHarness : public MeshRenderer
@@ -37,6 +46,20 @@ TEST(MeshShadowSubmissionTests, OpaqueSubmeshContributesToShadowMap)
     mat.Initialize(&shader);
     EXPECT_TRUE(MeshRenderProxy::SubmeshContributesToShadowMap(&mat));
     EXPECT_FALSE(HasAny(mat.GetFlags(), MaterialFlags::AlphaBlend));
+}
+
+TEST(MeshShadowSubmissionTests, MaskedMaterial_ContributesToGBuffer)
+{
+    DShader shader;
+    DMaterial mat;
+    mat.Initialize(&shader);
+
+    SetUInt32Property(mat, "m_renderMode", static_cast<uint32_t>(ERenderMode::Masked));
+
+    EXPECT_TRUE(HasAny(mat.GetFlags(), MaterialFlags::AlphaTest));
+    EXPECT_FALSE(HasAny(mat.GetFlags(), MaterialFlags::AlphaBlend));
+    EXPECT_TRUE(MeshRenderProxy::SubmeshContributesToGBuffer(&mat));
+    EXPECT_TRUE(MeshRenderProxy::SubmeshContributesToShadowMap(&mat));
 }
 
 TEST(MeshShadowSubmissionTests, AlphaBlendSubmeshExcludedFromShadowMap)

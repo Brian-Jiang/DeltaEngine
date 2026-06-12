@@ -1059,6 +1059,7 @@ void DXRenderManager::Resize(UINT width, UINT height)
         "DXRenderManager::Resize received zero dimension ({}x{}); clamping to 1", width, height);
 
     m_device->Flush();
+    m_transientPool.Clear();
 
     m_width = std::max(1u, width);
     m_height = std::max(1u, height);
