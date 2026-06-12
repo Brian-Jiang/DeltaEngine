@@ -357,9 +357,11 @@ TEST(RenderGraphTransientTests, GBufferTransientLifetime_FourFormatsPerFrame_Res
     EXPECT_EQ(factory.callCount, callsAfterWarmup);
 
     const int callsBeforeResize = factory.callCount;
+    runFrame(1280, 720, false);
+    EXPECT_EQ(factory.callCount, callsBeforeResize + 3);
+
     for (uint32_t i = 0; i < TransientTexturePool::kMaxIdleFrames + 6; ++i)
         runFrame(1280, 720, false);
 
-    EXPECT_EQ(factory.callCount, callsBeforeResize + 3);
     EXPECT_EQ(pool.GetTotalCount(), 6u);
 }
