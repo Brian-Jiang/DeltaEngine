@@ -15,7 +15,7 @@ DELTA_ENGINE_NS_BEGIN
 class RootSignature;
 struct DXGraphicsContext;
 
-class GBufferRenderGraphPass final : public RenderGraphPass
+class DELTAENGINE_API GBufferRenderGraphPass final : public RenderGraphPass
 {
 public:
     using SceneDrawCallback = std::function<void(const std::shared_ptr<DXGraphicsContext>&)>;

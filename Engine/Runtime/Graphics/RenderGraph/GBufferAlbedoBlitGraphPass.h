@@ -13,7 +13,7 @@ DELTA_ENGINE_NS_BEGIN
 
 class DXRenderManager;
 
-class GBufferAlbedoBlitGraphPass final : public RenderGraphPass
+class DELTAENGINE_API GBufferAlbedoBlitGraphPass final : public RenderGraphPass
 {
 public:
     GBufferAlbedoBlitGraphPass(RenderGraphTextureHandle albedoInput,
