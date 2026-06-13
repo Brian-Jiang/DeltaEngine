@@ -25,7 +25,8 @@ VSOut VSMain(uint id : SV_VertexID)
 
 float3 ReconstructWorldPosition(float2 texCoord, float depth)
 {
-    float4 clipPos = float4(texCoord * 2.0f - 1.0f, depth, 1.0f);
+    float2 ndc = float2(texCoord.x * 2.0f - 1.0f, 1.0f - texCoord.y * 2.0f);
+    float4 clipPos = float4(ndc, depth, 1.0f);
     float4 worldPosH = mul(CameraCB.invViewProjectionMatrix, clipPos);
     return worldPosH.xyz / worldPosH.w;
 }
