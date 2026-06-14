@@ -108,7 +108,7 @@ float4 PSMain(PBRPSInput input, bool isFrontFace : SV_IsFrontFace) : SV_TARGET
     float3 F0    = lerp(float3(0.04, 0.04, 0.04), baseColor, metallic);
 
     float3 irradiance  = g_irradianceMap.Sample(g_iblSampler, N).rgb;
-    float3 F_ambient   = F_Schlick(NdotV, F0);
+    float3 F_ambient   = F_SchlickRoughness(NdotV, F0, roughness);
     float3 kD_ambient  = (1.0 - F_ambient) * (1.0 - metallic);
     float3 diffuseIBL  = kD_ambient * irradiance * baseColor;
 

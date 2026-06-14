@@ -26,6 +26,12 @@ public float3 F_Schlick(float VdotH, float3 F0)
     return F0 + (1.0 - F0) * pow(1.0 - VdotH, 5.0);
 }
 
+public float3 F_SchlickRoughness(float cosTheta, float3 F0, float roughness)
+{
+    float3 Fr = max((float3)(1.0 - roughness), F0);
+    return F0 + (Fr - F0) * pow(1.0 - cosTheta, 5.0);
+}
+
 public float3 EvaluateDirectLight(
     float3 N, float3 V, float3 L,
     float3 lightColor, float lightAttenuation,
