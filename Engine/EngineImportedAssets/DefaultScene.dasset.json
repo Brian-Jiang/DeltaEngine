@@ -181,7 +181,7 @@
     {
       "_class": "Camera",
       "_objectId": "f06a1959-f14e-459a-813b-f96e6cb30528",
-      "m_aspectRatio": 1.3648722171783447,
+      "m_aspectRatio": 0.9616888165473938,
       "m_children": [],
       "m_far": 1000.0,
       "m_fov": 0.7853981852531433,
