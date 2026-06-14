@@ -64,6 +64,10 @@ cmake --build Build/x64-Debug --target DeltaHeaderTool
 Tools/Scripts/delta_header_force_generate.bat
 ```
 
+### CI/CD (`.github/workflows/ci.yml`)
+
+GitHub Actions on **self-hosted Windows runners**. Triggers: PRs targeting `main` or `dev/**`; pushes to `main`. Pipeline: configure/build editor → build engine tests → run engine tests → build editor tests → run editor tests. Build tree (`Build/x64-Debug`) and reflection headers (`Intermediate/DeltaHeaderTool`) are cached per branch. Cache is only saved on pushes to `main`.
+
 ## Architecture
 
 The project is split into two CMake targets:
@@ -111,6 +115,25 @@ DWorld
 - Asset ownership is centralized in `DPrimaryAsset`, which stores loaded objects as `std::shared_ptr<DObject>` and returns raw pointers for lookup/use.
 - C++20 concepts (`IsDComponent`, `IsSceneComponent`, `IsEditorWindow`) are used for type-safe template APIs.
 
+### GC System (`Engine/Runtime/Core/GC/`)
+
+A blocking, two-phase garbage collector. All `DObject` instances are registered in `DObjectRegistry` at construction.
+
+| Type | Role |
+|---|---|
+| `DObjectHandle` | Versioned slot reference (`m_slotIndex` + `m_version`); stale handles resolve to `nullptr` |
+| `DObjectRegistry` | Singleton slot table; `RegisterObject`, `FreeSlot`, `Resolve`, `AddRoot`/`RemoveRoot` |
+| `GCManager` | `Mark()` colors reachable objects; `Tick()` advances Idle → Marking → Sweeping; `CollectGarbage()` runs a full cycle synchronously |
+| `StrongDObjectPtr<T>` | RAII root holder; keeps target alive by calling `AddRoot`; use instead of raw `T*` for long-lived cross-system references |
+| `WeakDObjectPtr<T>` | Non-owning; auto-nulls once target is freed (version mismatch); can be constructed from a `StrongDObjectPtr` or raw pointer |
+
+**DObject lifecycle hooks** (override in subclasses for GPU resource teardown):
+- `BeginDestroy()` — called when the object enters `PendingKill`; start releasing GPU handles
+- `IsReadyForFinishDestroy()` — GC polls each frame; return `true` once async teardown is complete
+- `FinishDestroy()` — called once ready; object is freed immediately after
+
+`GCManager::CollectAllForShutdown()` destroys every live object synchronously at engine shutdown — call it before tearing down the device.
+
 ### Graphics Layer (`Engine/Runtime/Graphics/DirectX/`)
 
 All DirectX 12 objects are wrapped:
@@ -137,6 +160,36 @@ All DirectX 12 objects are wrapped:
 | `MaterialConstants.h` | `MaterialFlags` enum (HasAlbedoMap … DoubleSided), `MaterialTextureSlot` enum, `MaterialCB` (256-byte aligned constant buffer: baseColor, metallic, roughness, emissiveColor, emissiveIntensity, alphaCutoff, flags) |
 
 `DXRenderManager` calls `UpdateIBL(cubemap)` whenever the active skybox cubemap changes and binds the resulting `IBLResources` to the `IBLTextures` root parameter slot each frame.
+
+### RenderGraph (`Engine/Runtime/Graphics/RenderGraph/`)
+
+Frame rendering is structured as a `RenderGraph` of `RenderGraphPass` instances. Barriers and clears are inserted automatically at `Compile()` time based on declared access.
+
+| Class | Role |
+|---|---|
+| `RenderGraph` | Owns passes and imported/transient textures; `AddPass`, `ImportTexture`, `CreateTexture`, `Compile`, `Execute`, `Reset` |
+| `RenderGraphPass` | Abstract base; subclasses implement `GetName()`, `Setup(builder)`, `Execute(context)` |
+| `RenderGraphBuilder` | Used inside `Setup()` to declare `Read(handle, state)` / `Write(handle, state)` access |
+| `RenderGraphTextureHandle` | Opaque index into the graph's texture list; obtained from `ImportTexture` / `CreateTexture` |
+| `TransientTexturePool` | Frame-scoped texture recycler; `Acquire(desc)`, `BeginFrame(fenceCompleted)`, `RetireFrame(fenceSubmitted)`; entries unused for `kMaxIdleFrames = 3` cycles are destroyed |
+
+**Built-in passes:**
+
+| Pass | Role |
+|---|---|
+| `GBufferRenderGraphPass` | Writes albedo / normal / material / emissive / depth G-Buffer targets |
+| `DeferredLightingGraphPass` | Reads G-Buffer SRVs, outputs scene color |
+| `SceneRenderGraphPass` | Forward scene draw (non-deferred path) |
+| `ShadowRenderGraphPass` | Shadow map generation |
+| `SceneShadowReadGraphPass` | Transitions shadow map for read |
+| `SkyboxRenderGraphPass` | Skybox draw after scene |
+| `PostProcessRenderGraphPass` | Runs `PostProcessStack` passes |
+| `PostProcessFinalizeGraphPass` | Final blit to swap-chain target |
+| `MsaaResolveGraphPass` | MSAA resolve step |
+
+**Adding a new pass:** subclass `RenderGraphPass`, declare reads/writes in `Setup()`, record commands in `Execute()`. Do not manually insert resource barriers — the graph handles them.
+
+**Deferred rendering shaders:** `GBuffer.slang` (G-Buffer fill) and `DeferredLighting.slang` (lighting resolve) are the deferred shader pair, alongside the existing PBR and Standard sets.
 
 ### Rendering Components (`Engine/Runtime/Graphics/Renderer/`)
 
@@ -174,6 +227,7 @@ New post-process passes subclass `PostProcessPass`, annotate with `DCLASS()`, an
   - **Standard shader quartet:** `StandardObject.slang` / `StandardLighting.slang` / `StandardConstantStructs.slang` / `StandardInputs.slang`
   - **PBR shader set:** `PBRObject.slang` / `PBRLighting.slang` / `PBRInputs.slang` — physically-based rendering with IBL support
   - **IBL bake shaders:** `IBL_BrdfLut.slang`, `IBL_IrradianceConvolve.slang`, `IBL_SpecularPrefilter.slang`, `IBL_Math.slang`
+  - **Deferred shaders:** `GBuffer.slang` (G-Buffer fill), `DeferredLighting.slang` (deferred lighting resolve)
 
 ### Editor UI (`Engine/Editor/`)
 
@@ -304,7 +358,9 @@ Engine/Tests/
 │   ├── Reflection/   — ReflectionRegistry
 │   ├── Serialization/— core serialization
 │   ├── Assets/       — DPrimaryAsset, scene asset integration
-│   └── Graphics/     — render structure, render core
+│   ├── Core/         — GC system (DObjectRegistry, GCManager, sweep)
+│   └── Graphics/     — render structure, render core, render graph compile
+│         └── Gpu/    — GPU-level tests requiring a real D3D12 device
 ├── Editor/           # Editor library tests
 │   ├── EditorCommandTests_UndoStack.cpp
 │   ├── EditorCommandTests_SceneStructure.cpp
@@ -318,10 +374,14 @@ Engine/Tests/
 │   ├── EditorWindows/— window concept + viewport preset tests
 │   ├── Serialization/— snapshot round-trip, bulk data, references
 │   └── UI/           — editor theme color tests
-└── Shared/           — shared test helpers (SerializationTestSupport, TestEnvironment)
+└── Shared/           — shared test helpers (SerializationTestSupport, TestEnvironment,
+                        GpuGraphicsFixture, GpuTestAssetFixture, GpuReadback,
+                        GpuSceneBuilder, GpuD3D12Validation)
 ```
 
 `EditorCoreFixture` spins up `EditorCore` in headless mode so editor command tests run without a window or GPU.
+
+`GpuGraphicsFixture` (in `Engine/Tests/Shared/`) initialises a real D3D12 device and direct queue for GPU-level tests. `GpuTestAssetFixture` extends it with a preloaded scene. `GpuReadback` provides CPU-side readback helpers. `GpuD3D12Validation` enables the D3D12 debug layer with break-on-error. Use these only for tests that genuinely need the GPU — they are slower and require the hardware to be available.
 
 `DeltaHeaderTool` has its own **pytest** suite under `Tools/DeltaHeaderTool/tests/` (pytest installed in the bundled Python). Run it via `Tools\Scripts\test-delta-header-tool.bat --automatic` from any tool/agent context.
 
@@ -420,6 +480,7 @@ Tools/
     ├── build-x64-debug.bat                # Build DeltaEditorLaunch
     ├── build-x64-debug-engine-tests.bat   # Build DeltaEngineTests
     ├── build-x64-debug-editor-tests.bat   # Build DeltaEditorTests
+    ├── configure-x64-debug.bat            # Run CMake configure step only (no build)
     ├── rebuild-x64-debug.bat              # Configure + build DeltaEditorLaunch
     ├── run-x64-debug.bat                  # Launch DeltaEditorLaunch.exe
     ├── run-x64-debug-engine-tests.bat     # Run DeltaEngineTests.exe
