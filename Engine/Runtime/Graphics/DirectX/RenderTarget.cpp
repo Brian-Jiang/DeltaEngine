@@ -124,6 +124,11 @@ DXGI_FORMAT RenderTarget::GetDepthStencilFormat() const
     if ( depthStencilTexture )
     {
         dsvFormat = depthStencilTexture->GetD3D12ResourceDesc().Format;
+        // Typeless depth resources are viewed through a D32_FLOAT DSV.
+        if ( dsvFormat == DXGI_FORMAT_R32_TYPELESS )
+        {
+            dsvFormat = DXGI_FORMAT_D32_FLOAT;
+        }
     }
 
     return dsvFormat;

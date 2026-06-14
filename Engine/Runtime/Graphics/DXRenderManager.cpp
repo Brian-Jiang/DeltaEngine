@@ -27,6 +27,12 @@
 #include "Runtime/Graphics/RenderGraph/SceneRenderGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/SceneShadowReadGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/SkyboxRenderGraphPass.h"
+#include "Runtime/Graphics/RenderGraph/GBufferRenderGraphPass.h"
+#include "Runtime/Graphics/RenderGraph/DeferredLightingGraphPass.h"
+#include "Runtime/Graphics/ShaderCompile.h"
+#include "Runtime/Graphics/Structures/GBufferRootParameterType.h"
+#include "Runtime/Graphics/Structures/DeferredLightingRootParameterType.h"
+#include "Runtime/Graphics/DirectX/PipelineStateObject.h"
 #include "Runtime/Graphics/RenderProxy/CameraRenderProxy.h"
 #include "Runtime/Graphics/RenderProxy/SkyboxRenderProxy.h"
 #include "Runtime/Core/DWorld.h"
@@ -39,13 +45,20 @@
 #include "Runtime/Graphics/RenderProxy/RenderProxy.h"
 
 #include <algorithm>
+#include <filesystem>
 
 using namespace Microsoft::WRL;
 using namespace DeltaEngine;
 using namespace DirectX;
 
+namespace
+{
+constexpr RenderPath kActiveRenderPath = RenderPath::Deferred;
+}
+
 DXRenderManager::DXRenderManager(std::shared_ptr<Device> device, std::shared_ptr<RenderTarget> renderTarget, UINT width, UINT height)
-    : m_device(std::move(device)), m_renderTarget(std::move(renderTarget)), m_width(width), m_height(height),
+    : m_device(std::move(device)), m_renderTarget(std::move(renderTarget)), m_renderPath(kActiveRenderPath),
+    m_width(width), m_height(height),
     m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
     m_scissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX))
 {
@@ -189,8 +202,232 @@ void DXRenderManager::LoadAssets()
     m_rootSignature = m_device->CreateRootSignature(rootSignatureDescription.Desc_1_1);
     m_rootSignature->GetD3D12RootSignature()->SetName(L"RootSignature Scene");
 
+    InitGBufferPipeline();
+    if (m_renderPath == RenderPath::Deferred)
+        InitDeferredLightingPipeline();
+
     m_iblBaker.Initialize(*m_device);
     m_shadowPass.Initialize(*m_device);
+}
+
+void DXRenderManager::InitGBufferPipeline()
+{
+    m_gbufferVertexShaderBlob = CompileSlangStage(
+        std::filesystem::path("Shaders/GBuffer.slang"), "VSMain", "vs_6_6", "GBuffer VS");
+    m_gbufferPixelShaderBlob = CompileSlangStage(
+        std::filesystem::path("Shaders/GBuffer.slang"), "PSMain", "ps_6_6", "GBuffer PS");
+
+    if (!m_gbufferVertexShaderBlob || !m_gbufferPixelShaderBlob)
+        return;
+
+    D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
+        D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
+
+    CD3DX12_ROOT_PARAMETER1 rootParameters[static_cast<UINT>(GBufferRootParameterType::NumRootParameterTypes)] {};
+    rootParameters[static_cast<UINT>(GBufferRootParameterType::CameraCB)].InitAsConstantBufferView(0);
+    rootParameters[static_cast<UINT>(GBufferRootParameterType::ObjectCB)].InitAsConstantBufferView(1);
+    rootParameters[static_cast<UINT>(GBufferRootParameterType::MaterialCB)].InitAsConstantBufferView(3);
+
+    CD3DX12_DESCRIPTOR_RANGE1 textureRange {};
+    textureRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, static_cast<UINT>(MaterialTextureSlot::Count), 0, 1,
+        D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
+    rootParameters[static_cast<UINT>(GBufferRootParameterType::Texture)].InitAsDescriptorTable(
+        1, &textureRange, D3D12_SHADER_VISIBILITY_PIXEL);
+
+    CD3DX12_STATIC_SAMPLER_DESC materialSampler(
+        1,
+        D3D12_FILTER_ANISOTROPIC,
+        D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+        D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+        D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+        0.0f,
+        16u,
+        D3D12_COMPARISON_FUNC_LESS_EQUAL,
+        D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+        0.0f,
+        D3D12_FLOAT32_MAX,
+        D3D12_SHADER_VISIBILITY_PIXEL);
+
+    CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
+    rootSignatureDescription.Init_1_1(
+        static_cast<UINT>(GBufferRootParameterType::NumRootParameterTypes),
+        rootParameters,
+        1,
+        &materialSampler,
+        rootSignatureFlags);
+
+    m_gbufferRootSignature = m_device->CreateRootSignature(rootSignatureDescription.Desc_1_1);
+    if (m_gbufferRootSignature)
+        m_gbufferRootSignature->GetD3D12RootSignature()->SetName(L"RootSignature GBuffer");
+}
+
+ISlangBlob* DXRenderManager::GetGBufferVertexShaderBlob() const
+{
+    return m_gbufferVertexShaderBlob.get();
+}
+
+ISlangBlob* DXRenderManager::GetGBufferPixelShaderBlob() const
+{
+    return m_gbufferPixelShaderBlob.get();
+}
+
+D3D12_RT_FORMAT_ARRAY DXRenderManager::GetGBufferRTVFormats() const
+{
+    D3D12_RT_FORMAT_ARRAY formats {};
+    formats.NumRenderTargets = 4;
+    formats.RTFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+    formats.RTFormats[1] = DXGI_FORMAT_R16G16B16A16_FLOAT;
+    formats.RTFormats[2] = DXGI_FORMAT_R8G8B8A8_UNORM;
+    formats.RTFormats[3] = DXGI_FORMAT_R11G11B10_FLOAT;
+    return formats;
+}
+
+bool DXRenderManager::EnsureDeferredLightingPipeline()
+{
+    if (m_deferredLightingReady)
+        return true;
+
+    return InitDeferredLightingPipeline();
+}
+
+bool DXRenderManager::InitDeferredLightingPipeline()
+{
+    if (!m_device)
+        return false;
+
+    Slang::ComPtr<ISlangBlob> vsBlob = CompileSlangStage(
+        std::filesystem::path("Shaders/DeferredLighting.slang"), "VSMain", "vs_6_6", "DeferredLighting VS");
+    Slang::ComPtr<ISlangBlob> psBlob = CompileSlangStage(
+        std::filesystem::path("Shaders/DeferredLighting.slang"), "PSMain", "ps_6_6", "DeferredLighting PS");
+    if (!vsBlob || !psBlob)
+        return false;
+
+    CD3DX12_DESCRIPTOR_RANGE1 gbufferRange {};
+    gbufferRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 0, 4, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
+
+    CD3DX12_DESCRIPTOR_RANGE1 iblRange {};
+    iblRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3u, 0, 2, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+
+    CD3DX12_DESCRIPTOR_RANGE1 shadowRange {};
+    shadowRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3u, 0, 3, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+
+    CD3DX12_ROOT_PARAMETER1 rootParameters[static_cast<UINT>(DeferredLightingRootParameterType::NumRootParameterTypes)] {};
+    rootParameters[static_cast<UINT>(DeferredLightingRootParameterType::GBufferTextures)].InitAsDescriptorTable(
+        1, &gbufferRange, D3D12_SHADER_VISIBILITY_PIXEL);
+    rootParameters[static_cast<UINT>(DeferredLightingRootParameterType::CameraCB)].InitAsConstantBufferView(0);
+    rootParameters[static_cast<UINT>(DeferredLightingRootParameterType::LightCB)].InitAsConstantBufferView(2);
+    rootParameters[static_cast<UINT>(DeferredLightingRootParameterType::PointLights)].InitAsShaderResourceView(0);
+    rootParameters[static_cast<UINT>(DeferredLightingRootParameterType::SpotLights)].InitAsShaderResourceView(1);
+    rootParameters[static_cast<UINT>(DeferredLightingRootParameterType::DirectionalLights)].InitAsShaderResourceView(2);
+    rootParameters[static_cast<UINT>(DeferredLightingRootParameterType::IBLTextures)].InitAsDescriptorTable(
+        1, &iblRange, D3D12_SHADER_VISIBILITY_PIXEL);
+    rootParameters[static_cast<UINT>(DeferredLightingRootParameterType::ShadowMaps)].InitAsDescriptorTable(
+        1, &shadowRange, D3D12_SHADER_VISIBILITY_PIXEL);
+    rootParameters[static_cast<UINT>(DeferredLightingRootParameterType::ShadowCB)].InitAsConstantBufferView(
+        4, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
+
+    CD3DX12_STATIC_SAMPLER_DESC staticSamplers[3] {};
+    staticSamplers[0] = CD3DX12_STATIC_SAMPLER_DESC(
+        0,
+        D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+        D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+        D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+        D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
+    staticSamplers[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    staticSamplers[1] = CD3DX12_STATIC_SAMPLER_DESC(
+        2,
+        D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+        D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+        D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+        D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+        0.0f,
+        0u,
+        D3D12_COMPARISON_FUNC_LESS_EQUAL,
+        D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK,
+        0.0f,
+        D3D12_FLOAT32_MAX,
+        D3D12_SHADER_VISIBILITY_PIXEL);
+    staticSamplers[2] = CD3DX12_STATIC_SAMPLER_DESC(
+        3,
+        D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT,
+        D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+        D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+        D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+        0.0f,
+        0u,
+        D3D12_COMPARISON_FUNC_LESS,
+        D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+        0.0f,
+        D3D12_FLOAT32_MAX,
+        D3D12_SHADER_VISIBILITY_PIXEL);
+
+    D3D12_ROOT_SIGNATURE_FLAGS flags =
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS |
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
+
+    CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rsDesc;
+    rsDesc.Init_1_1(static_cast<UINT>(DeferredLightingRootParameterType::NumRootParameterTypes), rootParameters,
+        _countof(staticSamplers), staticSamplers, flags);
+
+    m_deferredLightingRootSignature = m_device->CreateRootSignature(rsDesc.Desc_1_1);
+    if (!m_deferredLightingRootSignature)
+        return false;
+
+    m_deferredLightingRootSignature->GetD3D12RootSignature()->SetName(L"RootSignature DeferredLighting");
+
+    struct PipelineStateStream
+    {
+        CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
+        CD3DX12_PIPELINE_STATE_STREAM_VS VS;
+        CD3DX12_PIPELINE_STATE_STREAM_PS PS;
+        CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER RasterizerState;
+        CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC BlendState;
+        CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL DepthStencilState;
+        CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT InputLayout;
+        CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY PrimitiveTopologyType;
+        CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT DSVFormat;
+        CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS RTVFormats;
+        CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_DESC SampleDesc;
+    } pss {};
+
+    CD3DX12_RASTERIZER_DESC rasterizerState(D3D12_DEFAULT);
+    rasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+
+    CD3DX12_DEPTH_STENCIL_DESC depthStencilState(D3D12_DEFAULT);
+    depthStencilState.DepthEnable = FALSE;
+    depthStencilState.StencilEnable = FALSE;
+
+    D3D12_RT_FORMAT_ARRAY rtvFormats {};
+    rtvFormats.NumRenderTargets = 1;
+    rtvFormats.RTFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT;
+
+    D3D12_SHADER_BYTECODE vsBytecode { vsBlob->getBufferPointer(), vsBlob->getBufferSize() };
+    D3D12_SHADER_BYTECODE psBytecode { psBlob->getBufferPointer(), psBlob->getBufferSize() };
+
+    pss.pRootSignature = m_deferredLightingRootSignature->GetD3D12RootSignature().Get();
+    pss.VS = vsBytecode;
+    pss.PS = psBytecode;
+    pss.RasterizerState = rasterizerState;
+    pss.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+    pss.DepthStencilState = depthStencilState;
+    pss.InputLayout = { nullptr, 0 };
+    pss.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    pss.DSVFormat = DXGI_FORMAT_UNKNOWN;
+    pss.RTVFormats = rtvFormats;
+    pss.SampleDesc = { 1, 0 };
+
+    m_deferredLightingPSO = m_device->CreatePipelineStateObject(pss);
+    if (!m_deferredLightingPSO)
+        return false;
+
+    m_deferredLightingPSO->GetD3D12PipelineState()->SetName(L"PSO DeferredLighting");
+    m_deferredLightingReady = true;
+    return true;
 }
 
 void DXRenderManager::InitWorldRenderers(DWorld& world)
@@ -201,10 +438,19 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
 
     // Create a color buffer with sRGB for gamma correction.
     DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
-    DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT;
 
     // Check the best multisample quality level that can be used for the given back buffer format.
-    DXGI_SAMPLE_DESC sampleDesc = m_device->GetMultisampleQualityLevels(backBufferFormat);
+    DXGI_SAMPLE_DESC sampleDesc{};
+    if (m_renderPath == RenderPath::Forward)
+        sampleDesc = m_device->GetMultisampleQualityLevels(backBufferFormat);
+    else
+        sampleDesc = { 1, 0 };
+
+    // Typeless depth gets both a D32_FLOAT DSV and an R32_FLOAT SRV (needed by the deferred
+    // graph to sample scene depth); CreateViews only supports typeless depth for non-MSAA.
+    DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT;
+    if (m_renderPath == RenderPath::Deferred && sampleDesc.Count == 1)
+        depthBufferFormat = DXGI_FORMAT_R32_TYPELESS;
 
     // Create an off-screen render target with a single color buffer and a depth buffer.
     auto colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(backBufferFormat, m_width, m_height, 1, 1, sampleDesc.Count,
@@ -225,7 +471,7 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
         sampleDesc.Quality, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
 
     D3D12_CLEAR_VALUE depthClearValue;
-    depthClearValue.Format = depthDesc.Format;
+    depthClearValue.Format = DXGI_FORMAT_D32_FLOAT;
     depthClearValue.DepthStencil = { 1.0f, 0 };
 
     auto depthTexture = m_device->CreateTexture(depthDesc, &depthClearValue);
@@ -320,29 +566,104 @@ void DXRenderManager::RenderScene(const SceneDrawCallback& drawCallback)
 
 void DXRenderManager::BuildFrameGraph(const SceneDrawCallback& drawCallback, PostProcessStack* stack)
 {
+    switch (m_renderPath)
+    {
+    case RenderPath::Forward:
+        BuildForwardFrameGraph(drawCallback, stack);
+        break;
+    case RenderPath::Deferred:
+        BuildDeferredFrameGraph(drawCallback, stack);
+        break;
+    }
+}
+
+bool DXRenderManager::ImportSceneTargets(RenderGraphTextureUsage colorAndShader, RenderGraphTextureUsage depthUsage,
+    std::shared_ptr<DirectX12Texture>& colorTexture, std::shared_ptr<DirectX12Texture>& depthTexture)
+{
     m_frameResources = {};
     m_frameBindings = {};
 
-    auto colorTexture = m_renderTarget->GetTexture(AttachmentPoint::Color0);
-    auto depthTexture = m_renderTarget->GetTexture(AttachmentPoint::DepthStencil);
+    colorTexture = m_renderTarget->GetTexture(AttachmentPoint::Color0);
+    depthTexture = m_renderTarget->GetTexture(AttachmentPoint::DepthStencil);
     if (!colorTexture || !depthTexture)
-        return;
-
-    const RenderGraphTextureUsage colorAndShader =
-        RenderGraphTextureUsage::ColorAttachment | RenderGraphTextureUsage::ShaderResource;
-    const RenderGraphTextureUsage depthAndShader =
-        RenderGraphTextureUsage::DepthAttachment | RenderGraphTextureUsage::ShaderResource;
+        return false;
 
     m_frameResources.sceneColor = m_frameGraph.ImportTexture("SceneColor", colorTexture, colorAndShader);
     m_frameBindings.Register(m_frameResources.sceneColor,
         colorTexture->GetRenderTargetView(), colorTexture->GetShaderResourceView());
 
-    m_frameResources.sceneDepth = m_frameGraph.ImportTexture("SceneDepth", depthTexture,
-        RenderGraphTextureUsage::DepthAttachment);
-    m_frameBindings.Register(m_frameResources.sceneDepth, depthTexture->GetDepthStencilView(), {});
+    m_frameResources.sceneDepth = m_frameGraph.ImportTexture("SceneDepth", depthTexture, depthUsage);
+    D3D12_CPU_DESCRIPTOR_HANDLE depthSrv {};
+    if ((depthUsage & RenderGraphTextureUsage::ShaderResource) != RenderGraphTextureUsage::None)
+    {
+        const D3D12_CPU_DESCRIPTOR_HANDLE srv = depthTexture->GetShaderResourceView();
+        if (srv.ptr != 0)
+            depthSrv = srv;
+    }
+    m_frameBindings.Register(m_frameResources.sceneDepth, depthTexture->GetDepthStencilView(), depthSrv);
+
+    return true;
+}
+
+void DXRenderManager::AddShadowPasses(RenderGraphTextureUsage depthAndShader)
+{
+    if (!m_currentWorld || !m_shadowPass.ShadowResourcesReady())
+        return;
 
     auto ctx = GetGraphicsContext();
-    const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+
+    m_frameResources.shadowDirectional = m_frameGraph.ImportTexture("ShadowDirectional",
+        m_shadowPass.GetDirectionalAtlasTexture(), depthAndShader);
+    m_frameResources.shadowSpot = m_frameGraph.ImportTexture("ShadowSpot",
+        m_shadowPass.GetSpotAtlasTexture(), depthAndShader);
+    m_frameResources.shadowPoint = m_frameGraph.ImportTexture("ShadowPointCubes",
+        m_shadowPass.GetPointCubeArrayTexture(), depthAndShader);
+
+    m_frameGraph.AddPass(std::make_unique<ShadowRenderGraphPass>(
+        &m_shadowPass, m_currentWorld, ctx,
+        m_frameResources.shadowDirectional, m_frameResources.shadowSpot, m_frameResources.shadowPoint));
+    m_frameGraph.AddPass(std::make_unique<SceneShadowReadGraphPass>(
+        m_frameResources.shadowDirectional, m_frameResources.shadowSpot, m_frameResources.shadowPoint));
+}
+
+void DXRenderManager::CreateGBufferTextures(RenderGraphTextureUsage gbufferUsage)
+{
+    const auto makeDesc = [this](DXGI_FORMAT format)
+    {
+        return CD3DX12_RESOURCE_DESC::Tex2D(
+            format,
+            m_width,
+            m_height,
+            1,
+            1,
+            1,
+            0,
+            D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+    };
+
+    auto registerTexture = [this, gbufferUsage](const char* name, const D3D12_RESOURCE_DESC& desc)
+    {
+        const RenderGraphTextureHandle handle = m_frameGraph.CreateTexture(name, desc, gbufferUsage);
+        auto texture = m_frameGraph.GetImportedTexture(handle).texture;
+        if (texture)
+            m_frameBindings.Register(handle, texture->GetRenderTargetView(), texture->GetShaderResourceView());
+        return handle;
+    };
+
+    m_frameResources.gbufferAlbedo = registerTexture("GBufferAlbedo",
+        makeDesc(DXGI_FORMAT_R8G8B8A8_UNORM));
+    m_frameResources.gbufferNormal = registerTexture("GBufferNormal",
+        makeDesc(DXGI_FORMAT_R16G16B16A16_FLOAT));
+    m_frameResources.gbufferMaterial = registerTexture("GBufferMaterial",
+        makeDesc(DXGI_FORMAT_R8G8B8A8_UNORM));
+    m_frameResources.gbufferEmissive = registerTexture("GBufferEmissive",
+        makeDesc(DXGI_FORMAT_R11G11B10_FLOAT));
+}
+
+void DXRenderManager::AddShadowSceneSkyboxPasses(const SceneDrawCallback& drawCallback, const float clearColor[4],
+    RenderGraphTextureUsage depthAndShader)
+{
+    auto ctx = GetGraphicsContext();
     const SceneRenderGraphPass::DescriptorStageCallback stageDescriptors =
         [this](CommandList& cl)
         {
@@ -350,21 +671,7 @@ void DXRenderManager::BuildFrameGraph(const SceneDrawCallback& drawCallback, Pos
             StageShadowDescriptors(cl);
         };
 
-    if (m_currentWorld && m_shadowPass.ShadowResourcesReady())
-    {
-        m_frameResources.shadowDirectional = m_frameGraph.ImportTexture("ShadowDirectional",
-            m_shadowPass.GetDirectionalAtlasTexture(), depthAndShader);
-        m_frameResources.shadowSpot = m_frameGraph.ImportTexture("ShadowSpot",
-            m_shadowPass.GetSpotAtlasTexture(), depthAndShader);
-        m_frameResources.shadowPoint = m_frameGraph.ImportTexture("ShadowPointCubes",
-            m_shadowPass.GetPointCubeArrayTexture(), depthAndShader);
-
-        m_frameGraph.AddPass(std::make_unique<ShadowRenderGraphPass>(
-            &m_shadowPass, m_currentWorld, ctx,
-            m_frameResources.shadowDirectional, m_frameResources.shadowSpot, m_frameResources.shadowPoint));
-        m_frameGraph.AddPass(std::make_unique<SceneShadowReadGraphPass>(
-            m_frameResources.shadowDirectional, m_frameResources.shadowSpot, m_frameResources.shadowPoint));
-    }
+    AddShadowPasses(depthAndShader);
 
     m_frameGraph.AddPass(std::make_unique<SceneRenderGraphPass>(
         m_frameResources.sceneColor, m_frameResources.sceneDepth,
@@ -380,37 +687,20 @@ void DXRenderManager::BuildFrameGraph(const SceneDrawCallback& drawCallback, Pos
             m_renderTarget.get(), m_rootSignature, m_viewport, m_scissorRect,
             stageDescriptors, m_currentWorld, ctx));
     }
+}
 
-    RenderGraphTextureHandle postInputHandle = m_frameResources.sceneColor;
+void DXRenderManager::FinalizeNoPostProcessOutput()
+{
+    m_frameGraph.AddPass(std::make_unique<PostProcessFinalizeGraphPass>(m_frameResources.sceneColor));
+    m_frameResources.finalOutput = m_frameResources.sceneColor;
+    m_finalPostProcessSRV = m_frameBindings.SrvFor(m_frameResources.sceneColor);
+    m_hasPostProcessedOutput = false;
+    m_finalPostProcessTexture.reset();
+}
 
-    if (!stack || stack->GetPassCount() == 0)
-    {
-        m_frameResources.finalOutput = m_frameResources.sceneColor;
-        m_finalPostProcessSRV = m_frameBindings.SrvFor(m_frameResources.sceneColor);
-        m_hasPostProcessedOutput = false;
-        m_finalPostProcessTexture.reset();
-        return;
-    }
-
-    const auto sceneDesc = colorTexture->GetD3D12ResourceDesc();
-    const bool useResolvedScene = sceneDesc.SampleDesc.Count > 1;
-    if (useResolvedScene)
-    {
-        const auto resolvedDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-            sceneDesc.Format, sceneDesc.Width, static_cast<UINT>(sceneDesc.Height),
-            1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE);
-        m_frameResources.resolvedScene = m_frameGraph.CreateTexture("ResolvedScene", resolvedDesc,
-            RenderGraphTextureUsage::ShaderResource);
-        auto resolvedScene = m_frameGraph.GetImportedTexture(m_frameResources.resolvedScene).texture;
-        if (resolvedScene)
-        {
-            m_frameBindings.Register(m_frameResources.resolvedScene, {}, resolvedScene->GetShaderResourceView());
-            m_frameGraph.AddPass(std::make_unique<MsaaResolveGraphPass>(
-                m_frameResources.sceneColor, m_frameResources.resolvedScene, colorTexture, resolvedScene));
-            postInputHandle = m_frameResources.resolvedScene;
-        }
-    }
-
+void DXRenderManager::AppendPostProcessChain(PostProcessStack* stack, RenderGraphTextureHandle postInputHandle,
+    RenderGraphTextureUsage colorAndShader)
+{
     m_frameResources.ping = m_frameGraph.ImportTexture("Ping", m_pingPong[0].texture, colorAndShader);
     m_frameResources.pong = m_frameGraph.ImportTexture("Pong", m_pingPong[1].texture, colorAndShader);
     m_frameBindings.Register(m_frameResources.ping, m_pingPong[0].rtv, m_pingPong[0].srv);
@@ -442,6 +732,129 @@ void DXRenderManager::BuildFrameGraph(const SceneDrawCallback& drawCallback, Pos
     m_finalPostProcessSRV = m_frameBindings.SrvFor(inputHandle);
     m_hasPostProcessedOutput = true;
     m_finalPostProcessTexture = m_frameGraph.GetImportedTexture(inputHandle).texture;
+}
+
+void DXRenderManager::BuildForwardFrameGraph(const SceneDrawCallback& drawCallback, PostProcessStack* stack)
+{
+    const RenderGraphTextureUsage colorAndShader =
+        RenderGraphTextureUsage::ColorAttachment | RenderGraphTextureUsage::ShaderResource;
+    const RenderGraphTextureUsage depthAndShader =
+        RenderGraphTextureUsage::DepthAttachment | RenderGraphTextureUsage::ShaderResource;
+
+    std::shared_ptr<DirectX12Texture> colorTexture;
+    std::shared_ptr<DirectX12Texture> depthTexture;
+    if (!ImportSceneTargets(colorAndShader, RenderGraphTextureUsage::DepthAttachment, colorTexture, depthTexture))
+        return;
+
+    const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+    AddShadowSceneSkyboxPasses(drawCallback, clearColor, depthAndShader);
+
+    if (!stack || stack->GetPassCount() == 0)
+    {
+        FinalizeNoPostProcessOutput();
+        return;
+    }
+
+    RenderGraphTextureHandle postInputHandle = m_frameResources.sceneColor;
+
+    const auto sceneDesc = colorTexture->GetD3D12ResourceDesc();
+    const bool useResolvedScene = sceneDesc.SampleDesc.Count > 1;
+    if (useResolvedScene)
+    {
+        const auto resolvedDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+            sceneDesc.Format, sceneDesc.Width, static_cast<UINT>(sceneDesc.Height),
+            1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE);
+        m_frameResources.resolvedScene = m_frameGraph.CreateTexture("ResolvedScene", resolvedDesc,
+            RenderGraphTextureUsage::ShaderResource);
+        auto resolvedScene = m_frameGraph.GetImportedTexture(m_frameResources.resolvedScene).texture;
+        if (resolvedScene)
+        {
+            m_frameBindings.Register(m_frameResources.resolvedScene, {}, resolvedScene->GetShaderResourceView());
+            m_frameGraph.AddPass(std::make_unique<MsaaResolveGraphPass>(
+                m_frameResources.sceneColor, m_frameResources.resolvedScene, colorTexture, resolvedScene));
+            postInputHandle = m_frameResources.resolvedScene;
+        }
+    }
+
+    AppendPostProcessChain(stack, postInputHandle, colorAndShader);
+}
+
+void DXRenderManager::BuildDeferredFrameGraph(const SceneDrawCallback& drawCallback, PostProcessStack* stack)
+{
+    const RenderGraphTextureUsage colorAndShader =
+        RenderGraphTextureUsage::ColorAttachment | RenderGraphTextureUsage::ShaderResource;
+    const RenderGraphTextureUsage depthAndShader =
+        RenderGraphTextureUsage::DepthAttachment | RenderGraphTextureUsage::ShaderResource;
+    const RenderGraphTextureUsage gbufferUsage =
+        RenderGraphTextureUsage::ColorAttachment | RenderGraphTextureUsage::ShaderResource;
+
+    std::shared_ptr<DirectX12Texture> colorTexture;
+    std::shared_ptr<DirectX12Texture> depthTexture;
+    if (!ImportSceneTargets(colorAndShader, depthAndShader, colorTexture, depthTexture))
+        return;
+
+    auto ctx = GetGraphicsContext();
+
+    AddShadowPasses(depthAndShader);
+    CreateGBufferTextures(gbufferUsage);
+
+    m_frameGraph.AddPass(std::make_unique<GBufferRenderGraphPass>(
+        m_frameResources.gbufferAlbedo,
+        m_frameResources.gbufferNormal,
+        m_frameResources.gbufferMaterial,
+        m_frameResources.gbufferEmissive,
+        m_frameResources.sceneDepth,
+        m_frameBindings.RtvFor(m_frameResources.gbufferAlbedo),
+        m_frameBindings.RtvFor(m_frameResources.gbufferNormal),
+        m_frameBindings.RtvFor(m_frameResources.gbufferMaterial),
+        m_frameBindings.RtvFor(m_frameResources.gbufferEmissive),
+        depthTexture ? depthTexture->GetDepthStencilView() : D3D12_CPU_DESCRIPTOR_HANDLE {},
+        m_gbufferRootSignature,
+        m_viewport,
+        m_scissorRect,
+        ctx,
+        drawCallback));
+
+    m_frameGraph.AddPass(std::make_unique<DeferredLightingGraphPass>(
+        m_frameResources.gbufferAlbedo,
+        m_frameResources.gbufferNormal,
+        m_frameResources.gbufferMaterial,
+        m_frameResources.gbufferEmissive,
+        m_frameResources.sceneDepth,
+        m_frameResources.sceneColor,
+        m_frameBindings.SrvFor(m_frameResources.gbufferAlbedo),
+        m_frameBindings.SrvFor(m_frameResources.gbufferNormal),
+        m_frameBindings.SrvFor(m_frameResources.gbufferMaterial),
+        m_frameBindings.SrvFor(m_frameResources.gbufferEmissive),
+        m_frameBindings.SrvFor(m_frameResources.sceneDepth),
+        m_frameBindings.RtvFor(m_frameResources.sceneColor),
+        m_viewport,
+        m_scissorRect,
+        this,
+        ctx));
+
+    if (m_currentWorld && m_currentWorld->GetSkybox())
+    {
+        const SkyboxRenderGraphPass::DescriptorStageCallback stageDescriptors =
+            [this](CommandList& cl)
+            {
+                StageIBLDescriptors(cl);
+                StageShadowDescriptors(cl);
+            };
+
+        m_frameGraph.AddPass(std::make_unique<SkyboxRenderGraphPass>(
+            m_frameResources.sceneColor, m_frameResources.sceneDepth,
+            m_renderTarget.get(), m_rootSignature, m_viewport, m_scissorRect,
+            stageDescriptors, m_currentWorld, ctx));
+    }
+
+    if (!stack || stack->GetPassCount() == 0)
+    {
+        FinalizeNoPostProcessOutput();
+        return;
+    }
+
+    AppendPostProcessChain(stack, m_frameResources.sceneColor, colorAndShader);
 }
 
 void DXRenderManager::ExecuteBootstrapSceneFallback(DXGraphicsContext& ctx,
@@ -561,6 +974,11 @@ void DXRenderManager::UpdateIBL(DTexture* skyboxCubemap)
 
 void DXRenderManager::StageIBLDescriptors(CommandList& commandList)
 {
+    StageIBLDescriptors(commandList, static_cast<int32_t>(RootParameterType::IBLTextures));
+}
+
+void DXRenderManager::StageIBLDescriptors(CommandList& commandList, int32_t iblRootParameterIndex)
+{
     if (!m_iblResources.irradianceCube || !m_iblResources.specularCube || !m_iblResources.brdfLut)
     {
         DLOG(LogRenderer, ELogLevel::Verbose,
@@ -570,16 +988,23 @@ void DXRenderManager::StageIBLDescriptors(CommandList& commandList)
         return;
     }
 
-    const int32_t rp = static_cast<int32_t>(RootParameterType::IBLTextures);
-    commandList.SetShaderResourceView(rp, 0, m_iblResources.irradianceCube,
+    commandList.SetShaderResourceView(iblRootParameterIndex, 0, m_iblResources.irradianceCube,
         D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    commandList.SetShaderResourceView(rp, 1, m_iblResources.specularCube,
+    commandList.SetShaderResourceView(iblRootParameterIndex, 1, m_iblResources.specularCube,
         D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    commandList.SetShaderResourceView(rp, 2, m_iblResources.brdfLut,
+    commandList.SetShaderResourceView(iblRootParameterIndex, 2, m_iblResources.brdfLut,
         D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 }
 
 void DXRenderManager::StageShadowDescriptors(CommandList& commandList)
+{
+    StageShadowDescriptors(commandList,
+        static_cast<int32_t>(RootParameterType::ShadowMaps),
+        static_cast<int32_t>(RootParameterType::ShadowCB));
+}
+
+void DXRenderManager::StageShadowDescriptors(CommandList& commandList, int32_t shadowMapsRootParameter,
+    int32_t shadowCbRootParameter)
 {
     const bool shadowsOk = m_shadowPass.ShadowResourcesReady();
     auto mapDir = shadowsOk ? m_shadowPass.GetDirectionalAtlasTexture() : nullptr;
@@ -602,17 +1027,16 @@ void DXRenderManager::StageShadowDescriptors(CommandList& commandList)
         cubeAr = fbCube;
     }
 
-    const int32_t rp = static_cast<int32_t>(RootParameterType::ShadowMaps);
-    commandList.SetShaderResourceView(rp, 0, mapDir, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    commandList.SetShaderResourceView(rp, 1, mapSpot, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    commandList.SetShaderResourceView(rp, 2, cubeAr, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    commandList.SetShaderResourceView(shadowMapsRootParameter, 0, mapDir, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    commandList.SetShaderResourceView(shadowMapsRootParameter, 1, mapSpot, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    commandList.SetShaderResourceView(shadowMapsRootParameter, 2, cubeAr, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
     const ShadowSettings& settings = m_shadowPass.GetSettings();
     ShadowCBGPU shadowCb {};
     shadowCb.m_pcssBlockerSamples = (std::clamp)(settings.m_pcssBlockerSamples, 1, 32);
     shadowCb.m_pcssPCFSamples = (std::clamp)(settings.m_pcssPCFSamples, 1, 32);
     shadowCb.m_qualityScalar = (std::max)(0.05f, settings.m_qualityScalar);
-    commandList.SetGraphicsDynamicConstantBuffer(static_cast<UINT>(RootParameterType::ShadowCB), shadowCb);
+    commandList.SetGraphicsDynamicConstantBuffer(static_cast<UINT>(shadowCbRootParameter), shadowCb);
 }
 
 void DXRenderManager::RenderFrame()
@@ -648,6 +1072,7 @@ void DXRenderManager::Resize(UINT width, UINT height)
         "DXRenderManager::Resize received zero dimension ({}x{}); clamping to 1", width, height);
 
     m_device->Flush();
+    m_transientPool.Clear();
 
     m_width = std::max(1u, width);
     m_height = std::max(1u, height);

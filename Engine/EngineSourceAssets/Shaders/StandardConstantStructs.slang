@@ -7,6 +7,7 @@ public struct Camera
 {
     public float4x4 viewMatrix;
     public float4x4 projectionMatrix;
+    public float4x4 invViewProjectionMatrix;
     public float4 position;
 };
 

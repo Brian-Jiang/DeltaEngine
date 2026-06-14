@@ -1,6 +1,13 @@
 import StandardConstantStructs;
 import PBRInputs;
-import PBRLighting;
+
+struct GBufferOutput
+{
+    float4 albedoAo : SV_Target0;
+    float4 normal : SV_Target1;
+    float4 material : SV_Target2;
+    float3 emissive : SV_Target3;
+};
 
 [shader("vertex")]
 PBRPSInput VSMain(PBRVSInput input)
@@ -26,7 +33,7 @@ PBRPSInput VSMain(PBRVSInput input)
 }
 
 [shader("fragment")]
-float4 PSMain(PBRPSInput input, bool isFrontFace : SV_IsFrontFace) : SV_TARGET
+GBufferOutput PSMain(PBRPSInput input, bool isFrontFace : SV_IsFrontFace)
 {
     uint flags = MaterialCB.flags;
 
@@ -84,41 +91,10 @@ float4 PSMain(PBRPSInput input, bool isFrontFace : SV_IsFrontFace) : SV_TARGET
                  * MaterialCB.emissiveIntensity;
     }
 
-    float3 V  = normalize(CameraCB.position.xyz - input.positionWS);
-    float3 P  = input.positionWS;
-    float3 Lo = float3(0, 0, 0);
-
-    for (uint i = 0; i < LightCB.numDirectionalLights; ++i)
-    {
-        Lo += EvaluateDirectionalPBR(DirectionalLights[i], P, N, V, baseColor, metallic, roughness);
-    }
-
-    for (uint j = 0; j < LightCB.numPointLights; ++j)
-    {
-        Lo += EvaluatePointPBR(PointLights[j], P, N, V, baseColor, metallic, roughness);
-    }
-
-    for (uint k = 0; k < LightCB.numSpotLights; ++k)
-    {
-        Lo += EvaluateSpotPBR(SpotLights[k], P, N, V, baseColor, metallic, roughness);
-    }
-
-    float  NdotV = max(dot(N, V), 0.0);
-    float3 R     = reflect(-V, N);
-    float3 F0    = lerp(float3(0.04, 0.04, 0.04), baseColor, metallic);
-
-    float3 irradiance  = g_irradianceMap.Sample(g_iblSampler, N).rgb;
-    float3 F_ambient   = F_SchlickRoughness(NdotV, F0, roughness);
-    float3 kD_ambient  = (1.0 - F_ambient) * (1.0 - metallic);
-    float3 diffuseIBL  = kD_ambient * irradiance * baseColor;
-
-    float  lod              = roughness * IBL_SPECULAR_MAX_MIP;
-    float3 prefilteredColor = g_specularMap.SampleLevel(g_iblSampler, R, lod).rgb;
-    float2 brdf             = g_brdfLut.Sample(g_iblSampler, float2(NdotV, roughness)).rg;
-    float3 specularIBL      = prefilteredColor * (F_ambient * brdf.x + brdf.y);
-
-    float3 ambient = (diffuseIBL + specularIBL) * ao;
-    float3 color   = ambient + Lo + emissive;
-
-    return float4(color, alpha);
+    GBufferOutput output;
+    output.albedoAo = float4(baseColor, ao);
+    output.normal = float4(N, 0.0);
+    output.material = float4(metallic, roughness, asfloat(flags & 0xFFFFu), asfloat((flags >> 16) & 0xFFFFu));
+    output.emissive = emissive;
+    return output;
 }

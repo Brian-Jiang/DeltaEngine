@@ -129,7 +129,8 @@ void EngineMain::RecordSceneDraws(std::shared_ptr<DXGraphicsContext> context)
 
         if (context->activeRenderCamera.has_value())
             context->commandList->SetGraphicsDynamicConstantBuffer(0, context->activeRenderCamera->cb);
-        context->ApplyLightBuffersToCommandList();
+        if (context->activePass != ScenePassType::GBuffer)
+            context->ApplyLightBuffersToCommandList();
 
         PIXBeginEvent(d3dCL, PIX_COLOR_DEFAULT, L"GatherDrawCalls");
         world->GatherOpaqueDrawCalls(context);

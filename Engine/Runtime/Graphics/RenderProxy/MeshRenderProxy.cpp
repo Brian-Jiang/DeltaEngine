@@ -14,9 +14,11 @@
 #include "Graphics/DirectX/IndexBuffer.h"
 #include "Graphics/DirectX/PipelineStateObject.h"
 #include "Graphics/DirectX/RootSignature.h"
+#include "Graphics/DirectX/RenderTarget.h"
 #include "Graphics/DirectX/VertexBuffer.h"
 #include "Graphics/MaterialConstants.h"
 #include "Graphics/Structures/RootParameterType.h"
+#include "Graphics/Structures/GBufferRootParameterType.h"
 #include "Graphics/Shadow/ShadowDepthPSO.h"
 #include "Graphics/Shadow/ShadowView.h"
 #include "Core/DMaterial.h"
@@ -53,7 +55,8 @@ DeltaEngine::MeshRenderProxy::~MeshRenderProxy()
 
 bool MeshRenderProxy::HasExclusiveGPUResources() const
 {
-    return !m_VertexBuffers.empty() || !m_IndexBuffers.empty() || !m_pipelineStateObjects.empty();
+    return !m_VertexBuffers.empty() || !m_IndexBuffers.empty() || !m_pipelineStateObjects.empty()
+        || !m_gbufferPipelineStateObjects.empty();
 }
 
 void MeshRenderProxy::ReleaseSharedReferences()
@@ -75,6 +78,7 @@ void DeltaEngine::MeshRenderProxy::SetMesh(DMesh* mesh)
     m_IndexBuffers.clear();
     m_textures.clear();
     m_pipelineStateObjects.clear();
+    m_gbufferPipelineStateObjects.clear();
     m_meshDirty = true;
 }
 
@@ -126,7 +130,7 @@ void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext>
 
     DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
     DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT;
-    DXGI_SAMPLE_DESC sampleDesc = device->GetMultisampleQualityLevels(backBufferFormat);
+    DXGI_SAMPLE_DESC sampleDesc = renderContext->renderManager->GetRenderTarget()->GetSampleDesc();
 
     D3D12_RT_FORMAT_ARRAY rtvFormats = {};
     rtvFormats.NumRenderTargets = 1;
@@ -134,7 +138,15 @@ void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext>
 
     m_textures.clear();
     m_pipelineStateObjects.clear();
+    m_gbufferPipelineStateObjects.clear();
     const std::string meshName = m_mesh->GetSourcePath().stem().string();
+
+    ISlangBlob* gbufferVertexShader = renderContext->renderManager->GetGBufferVertexShaderBlob();
+    ISlangBlob* gbufferPixelShader = renderContext->renderManager->GetGBufferPixelShaderBlob();
+    const auto gbufferRootSignature = renderContext->renderManager->GetGBufferRootSignature();
+    const D3D12_RT_FORMAT_ARRAY gbufferRtvFormats = renderContext->renderManager->GetGBufferRTVFormats();
+    const DXGI_SAMPLE_DESC gbufferSampleDesc { 1, 0 };
+
     for (int i = 0; i < m_mesh->GetSubMeshCount(); ++i)
     {
         auto material = m_mesh->GetMaterial(i);
@@ -144,6 +156,7 @@ void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext>
                 "MeshRenderProxy::Initialize: submesh {} of '{}' has null material; skipping submesh",
                 i, meshName);
             m_pipelineStateObjects.push_back(nullptr);
+            m_gbufferPipelineStateObjects.push_back(nullptr);
             continue;
         }
         if (!DELTA_ENSURE(material->GetShader()))
@@ -152,6 +165,7 @@ void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext>
                 "MeshRenderProxy::Initialize: submesh {} of '{}' has material with null shader; skipping submesh",
                 i, meshName);
             m_pipelineStateObjects.push_back(nullptr);
+            m_gbufferPipelineStateObjects.push_back(nullptr);
             continue;
         }
 
@@ -163,6 +177,7 @@ void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext>
                 "MeshRenderProxy::Initialize: submesh {} of '{}' has shader missing VS or PS blob; skipping submesh",
                 i, meshName);
             m_pipelineStateObjects.push_back(nullptr);
+            m_gbufferPipelineStateObjects.push_back(nullptr);
             continue;
         }
 
@@ -173,6 +188,7 @@ void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext>
                 "MeshRenderProxy::Initialize: submesh {} of '{}' has empty shader input layout; skipping submesh",
                 i, meshName);
             m_pipelineStateObjects.push_back(nullptr);
+            m_gbufferPipelineStateObjects.push_back(nullptr);
             continue;
         }
 
@@ -204,6 +220,32 @@ void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext>
             const std::wstring psoName = StringUtils::Utf8ToWString(
                 std::format("PSO MeshRenderProxy Sub{}", i));
             m_pipelineStateObjects.back()->GetD3D12PipelineState()->SetName(psoName.c_str());
+        }
+
+        if (gbufferRootSignature && gbufferVertexShader && gbufferPixelShader)
+        {
+            CD3DX12_SHADER_BYTECODE gbufferVsBytecode {
+                const_cast<void*>(gbufferVertexShader->getBufferPointer()), gbufferVertexShader->getBufferSize() };
+            CD3DX12_SHADER_BYTECODE gbufferPsBytecode {
+                const_cast<void*>(gbufferPixelShader->getBufferPointer()), gbufferPixelShader->getBufferSize() };
+
+            pipelineStateStream.pRootSignature = gbufferRootSignature->GetD3D12RootSignature().Get();
+            pipelineStateStream.VS = gbufferVsBytecode;
+            pipelineStateStream.PS = gbufferPsBytecode;
+            pipelineStateStream.RTVFormats = gbufferRtvFormats;
+            pipelineStateStream.SampleDesc = gbufferSampleDesc;
+
+            m_gbufferPipelineStateObjects.push_back(device->CreatePipelineStateObject(pipelineStateStream));
+            if (m_gbufferPipelineStateObjects.back())
+            {
+                const std::wstring psoName = StringUtils::Utf8ToWString(
+                    std::format("PSO MeshRenderProxy GBuffer Sub{}", i));
+                m_gbufferPipelineStateObjects.back()->GetD3D12PipelineState()->SetName(psoName.c_str());
+            }
+        }
+        else
+        {
+            m_gbufferPipelineStateObjects.push_back(nullptr);
         }
 
         m_textures.insert({ i, std::unordered_map<uint32_t, std::shared_ptr<DirectX12Texture>>() });
@@ -248,7 +290,7 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
             m_IndexBuffers.push_back(indexBuffer);
         }
 
-        if (m_pipelineStateObjects.empty())
+        if (m_pipelineStateObjects.empty() && m_gbufferPipelineStateObjects.empty())
             Initialize(renderContext);
 
         m_meshDirty = false;
@@ -265,34 +307,47 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
     obj.color = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
     obj.useInstanceMatrix = 0;
 
-    commandList->SetGraphicsDynamicConstantBuffer(static_cast<UINT>(RootParameterType::ObjectCB), obj);
+    const bool gbufferPass = renderContext->activePass == ScenePassType::GBuffer;
+    const auto& activePsos = gbufferPass ? m_gbufferPipelineStateObjects : m_pipelineStateObjects;
+    const uint32_t objectCbSlot = gbufferPass
+        ? static_cast<uint32_t>(GBufferRootParameterType::ObjectCB)
+        : static_cast<uint32_t>(RootParameterType::ObjectCB);
+    const uint32_t materialCbSlot = gbufferPass
+        ? static_cast<uint32_t>(GBufferRootParameterType::MaterialCB)
+        : static_cast<uint32_t>(RootParameterType::MaterialCB);
+    const uint32_t textureSlot = gbufferPass
+        ? static_cast<uint32_t>(GBufferRootParameterType::Texture)
+        : static_cast<uint32_t>(RootParameterType::Texture);
+
+    commandList->SetGraphicsDynamicConstantBuffer(objectCbSlot, obj);
 
     const uint32_t slotCount = static_cast<uint32_t>(MaterialTextureSlot::Count);
     const D3D12_CPU_DESCRIPTOR_HANDLE whiteSRV = DefaultTextures::GetWhiteSRV();
 
-    if (m_VertexBuffers.size() != m_pipelineStateObjects.size()
-        || m_IndexBuffers.size() != m_pipelineStateObjects.size())
+    if (activePsos.size() != m_VertexBuffers.size() || m_IndexBuffers.size() != activePsos.size())
     {
         DLOG(LogRenderer, ELogLevel::Warning,
             "MeshRenderProxy::GatherDrawCalls: submesh count drift (PSO={}, VB={}, IB={}); clamping to minimum",
-            m_pipelineStateObjects.size(), m_VertexBuffers.size(), m_IndexBuffers.size());
+            activePsos.size(), m_VertexBuffers.size(), m_IndexBuffers.size());
     }
-    const size_t drawCount = (std::min)({ m_pipelineStateObjects.size(), m_VertexBuffers.size(), m_IndexBuffers.size() });
+    const size_t drawCount = (std::min)({ activePsos.size(), m_VertexBuffers.size(), m_IndexBuffers.size() });
 
     for (size_t i = 0; i < drawCount; ++i)
     {
-        if (!m_pipelineStateObjects[i])
+        DMaterial* material = m_mesh ? m_mesh->GetMaterial(static_cast<int>(i)) : nullptr;
+        if (gbufferPass && !SubmeshContributesToGBuffer(material))
             continue;
-        commandList->SetPipelineState(m_pipelineStateObjects[i]);
+
+        if (!activePsos[i])
+            continue;
+        commandList->SetPipelineState(activePsos[i]);
         commandList->SetPrimitiveTopology(m_PrimitiveTopology);
 
-        DMaterial* material = m_mesh ? m_mesh->GetMaterial(static_cast<int>(i)) : nullptr;
         if (material)
         {
             MaterialCB materialCB {};
             material->FillMaterialCB(materialCB);
-            commandList->SetGraphicsDynamicConstantBuffer(static_cast<UINT>(RootParameterType::MaterialCB),
-                sizeof(MaterialCB), &materialCB);
+            commandList->SetGraphicsDynamicConstantBuffer(materialCbSlot, sizeof(MaterialCB), &materialCB);
         }
 
         auto submeshIt = m_textures.find(static_cast<uint32_t>(i));
@@ -308,12 +363,12 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
 
             if (tex)
             {
-                commandList->SetShaderResourceView(static_cast<uint32_t>(RootParameterType::Texture), slot, tex,
+                commandList->SetShaderResourceView(textureSlot, slot, tex,
                     D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
             }
             else
             {
-                commandList->SetShaderResourceView(static_cast<uint32_t>(RootParameterType::Texture), slot, whiteSRV);
+                commandList->SetShaderResourceView(textureSlot, slot, whiteSRV);
             }
         }
 
@@ -337,6 +392,11 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
 bool MeshRenderProxy::SubmeshContributesToShadowMap(const DMaterial* material)
 {
     return !(material && HasAny(material->GetFlags(), MaterialFlags::AlphaBlend));
+}
+
+bool MeshRenderProxy::SubmeshContributesToGBuffer(const DMaterial* material)
+{
+    return SubmeshContributesToShadowMap(material);
 }
 
 void MeshRenderProxy::GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext, const ShadowView& view)

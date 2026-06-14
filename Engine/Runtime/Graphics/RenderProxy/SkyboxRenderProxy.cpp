@@ -12,6 +12,7 @@
 #include "Graphics/DirectX/DirectX12Texture.h"
 #include "Graphics/DirectX/PipelineStateObject.h"
 #include "Graphics/DirectX/RootSignature.h"
+#include "Graphics/DirectX/RenderTarget.h"
 #include "Graphics/Structures/RootParameterType.h"
 #include "Core/DMaterial.h"
 #include "Core/DShader.h"
@@ -93,7 +94,7 @@ void SkyboxRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext> renderCont
 
     DXGI_FORMAT backBufFmt  = DXGI_FORMAT_R16G16B16A16_FLOAT;
     DXGI_FORMAT depthFmt    = DXGI_FORMAT_D32_FLOAT;
-    DXGI_SAMPLE_DESC sample = renderContext->device->GetMultisampleQualityLevels(backBufFmt);
+    DXGI_SAMPLE_DESC sample = renderContext->renderManager->GetRenderTarget()->GetSampleDesc();
 
     D3D12_RT_FORMAT_ARRAY rtvFormats = {};
     rtvFormats.NumRenderTargets = 1;

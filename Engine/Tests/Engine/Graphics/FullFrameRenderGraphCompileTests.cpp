@@ -6,6 +6,8 @@
 #include "Runtime/Graphics/RenderGraph/SceneShadowReadGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/ShadowRenderGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/SkyboxRenderGraphPass.h"
+#include "Runtime/Graphics/RenderGraph/GBufferRenderGraphPass.h"
+#include "Runtime/Graphics/RenderGraph/DeferredLightingGraphPass.h"
 
 #include <cstring>
 
@@ -61,6 +63,32 @@ D3D12_CPU_DESCRIPTOR_HANDLE MakeDummyHandle(UINT index)
     D3D12_CPU_DESCRIPTOR_HANDLE handle{};
     handle.ptr = static_cast<SIZE_T>(index);
     return handle;
+}
+
+void AddDeferredLightingPasses(RenderGraph& graph,
+    RenderGraphTextureHandle albedo,
+    RenderGraphTextureHandle normal,
+    RenderGraphTextureHandle material,
+    RenderGraphTextureHandle emissive,
+    RenderGraphTextureHandle depth,
+    RenderGraphTextureHandle sceneColor)
+{
+    graph.AddPass(std::make_unique<GBufferRenderGraphPass>(
+        albedo, normal, material, emissive, depth,
+        MakeDummyHandle(10), MakeDummyHandle(11), MakeDummyHandle(12), MakeDummyHandle(13), MakeDummyHandle(14),
+        nullptr,
+        CD3DX12_VIEWPORT(0.0f, 0.0f, 1920.0f, 1080.0f),
+        CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX),
+        nullptr,
+        nullptr));
+    graph.AddPass(std::make_unique<DeferredLightingGraphPass>(
+        albedo, normal, material, emissive, depth, sceneColor,
+        MakeDummyHandle(0), MakeDummyHandle(1), MakeDummyHandle(2), MakeDummyHandle(3), MakeDummyHandle(4),
+        MakeDummyHandle(5),
+        CD3DX12_VIEWPORT(0.0f, 0.0f, 1920.0f, 1080.0f),
+        CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX),
+        nullptr,
+        nullptr));
 }
 
 void AddPostProcessPass(RenderGraph& graph, RenderGraphTextureHandle input, RenderGraphTextureHandle output,
@@ -238,11 +266,107 @@ TEST(FullFrameRenderGraphCompileTests, FullChain_NoPostProcess)
     graph.AddPass(std::make_unique<SceneShadowReadGraphPass>(shadow.directional, shadow.spot, shadow.point));
     AddScenePass(graph, color, depth);
     AddSkyboxPass(graph, color, depth);
+    graph.AddPass(std::make_unique<PostProcessFinalizeGraphPass>(color));
+
+    graph.Compile();
+
+    ASSERT_EQ(graph.GetCompiledPassCount(), 5u);
+    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(3).passIndex).GetName(), "Skybox");
+    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(4).passIndex).GetName(), "PostProcessFinalize");
+
+    const auto& finalizeTransitions = graph.GetCompiledPass(4).transitions;
+    bool foundSceneSrv = false;
+    for (const auto& transition : finalizeTransitions)
+    {
+        if (transition.texture == color && transition.stateAfter == D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
+            foundSceneSrv = true;
+    }
+    EXPECT_TRUE(foundSceneSrv);
+}
+
+TEST(FullFrameRenderGraphCompileTests, FullChain_DeferredNoMsaaResolve)
+{
+    RenderGraph graph;
+    const RenderGraphTextureUsage colorAndShader =
+        RenderGraphTextureUsage::ColorAttachment | RenderGraphTextureUsage::ShaderResource;
+
+    const RenderGraphTextureHandle color = graph.ImportTexture("SceneColor", nullptr, colorAndShader);
+    const RenderGraphTextureHandle depth = graph.ImportTexture("SceneDepth", nullptr,
+        RenderGraphTextureUsage::DepthAttachment | RenderGraphTextureUsage::ShaderResource);
+    const RenderGraphTextureHandle albedo = graph.ImportTexture("GBufferAlbedo", nullptr, colorAndShader);
+    const RenderGraphTextureHandle normal = graph.ImportTexture("GBufferNormal", nullptr, colorAndShader);
+    const RenderGraphTextureHandle material = graph.ImportTexture("GBufferMaterial", nullptr, colorAndShader);
+    const RenderGraphTextureHandle emissive = graph.ImportTexture("GBufferEmissive", nullptr, colorAndShader);
+    const RenderGraphTextureHandle ping = graph.ImportTexture("Ping", nullptr, colorAndShader);
+
+    AddDeferredLightingPasses(graph, albedo, normal, material, emissive, depth, color);
+    AddPostProcessPass(graph, color, ping, 0, 1);
+    graph.AddPass(std::make_unique<PostProcessFinalizeGraphPass>(ping));
 
     graph.Compile();
 
     ASSERT_EQ(graph.GetCompiledPassCount(), 4u);
-    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(3).passIndex).GetName(), "Skybox");
+    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(0).passIndex).GetName(), "GBuffer");
+    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(1).passIndex).GetName(), "DeferredLighting");
+    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(2).passIndex).GetName(), "PostProcess");
+    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(3).passIndex).GetName(), "PostProcessFinalize");
+    EXPECT_EQ(FindCompiledPassIndex(graph, "MsaaResolve"), graph.GetCompiledPassCount());
+}
+
+TEST(FullFrameRenderGraphCompileTests, FullChain_DeferredNoPostProcess)
+{
+    RenderGraph graph;
+    const RenderGraphTextureUsage colorAndShader =
+        RenderGraphTextureUsage::ColorAttachment | RenderGraphTextureUsage::ShaderResource;
+
+    const RenderGraphTextureHandle color = graph.ImportTexture("SceneColor", nullptr, colorAndShader);
+    const RenderGraphTextureHandle depth = graph.ImportTexture("SceneDepth", nullptr,
+        RenderGraphTextureUsage::DepthAttachment | RenderGraphTextureUsage::ShaderResource);
+    const RenderGraphTextureHandle albedo = graph.ImportTexture("GBufferAlbedo", nullptr, colorAndShader);
+    const RenderGraphTextureHandle normal = graph.ImportTexture("GBufferNormal", nullptr, colorAndShader);
+    const RenderGraphTextureHandle material = graph.ImportTexture("GBufferMaterial", nullptr, colorAndShader);
+    const RenderGraphTextureHandle emissive = graph.ImportTexture("GBufferEmissive", nullptr, colorAndShader);
+    const ShadowHandles shadow = ImportShadowAtlases(graph);
+
+    graph.AddPass(std::make_unique<ShadowRenderGraphPass>(
+        nullptr, nullptr, nullptr, shadow.directional, shadow.spot, shadow.point));
+    graph.AddPass(std::make_unique<SceneShadowReadGraphPass>(shadow.directional, shadow.spot, shadow.point));
+    AddDeferredLightingPasses(graph, albedo, normal, material, emissive, depth, color);
+    graph.AddPass(std::make_unique<PostProcessFinalizeGraphPass>(color));
+
+    graph.Compile();
+
+    ASSERT_EQ(graph.GetCompiledPassCount(), 5u);
+    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(3).passIndex).GetName(), "DeferredLighting");
+    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(4).passIndex).GetName(), "PostProcessFinalize");
+    EXPECT_EQ(FindCompiledPassIndex(graph, "MsaaResolve"), graph.GetCompiledPassCount());
+}
+
+TEST(FullFrameRenderGraphCompileTests, FullChain_DeferredWithSkybox)
+{
+    RenderGraph graph;
+    const RenderGraphTextureUsage colorAndShader =
+        RenderGraphTextureUsage::ColorAttachment | RenderGraphTextureUsage::ShaderResource;
+
+    const RenderGraphTextureHandle color = graph.ImportTexture("SceneColor", nullptr, colorAndShader);
+    const RenderGraphTextureHandle depth = graph.ImportTexture("SceneDepth", nullptr,
+        RenderGraphTextureUsage::DepthAttachment | RenderGraphTextureUsage::ShaderResource);
+    const RenderGraphTextureHandle albedo = graph.ImportTexture("GBufferAlbedo", nullptr, colorAndShader);
+    const RenderGraphTextureHandle normal = graph.ImportTexture("GBufferNormal", nullptr, colorAndShader);
+    const RenderGraphTextureHandle material = graph.ImportTexture("GBufferMaterial", nullptr, colorAndShader);
+    const RenderGraphTextureHandle emissive = graph.ImportTexture("GBufferEmissive", nullptr, colorAndShader);
+
+    AddDeferredLightingPasses(graph, albedo, normal, material, emissive, depth, color);
+    AddSkyboxPass(graph, color, depth);
+    graph.AddPass(std::make_unique<PostProcessFinalizeGraphPass>(color));
+
+    graph.Compile();
+
+    ASSERT_EQ(graph.GetCompiledPassCount(), 4u);
+    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(0).passIndex).GetName(), "GBuffer");
+    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(1).passIndex).GetName(), "DeferredLighting");
+    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(2).passIndex).GetName(), "Skybox");
+    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(3).passIndex).GetName(), "PostProcessFinalize");
 }
 
 TEST(FullFrameRenderGraphCompileTests, SkyboxPass_NoClears)

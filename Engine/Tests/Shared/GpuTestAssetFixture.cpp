@@ -80,6 +80,7 @@ ActiveRenderCamera BuildActiveRenderCamera(const Camera& camera, const float ren
     arc.cb.projectionMatrix =
         XMMatrixTranspose(XMMatrixPerspectiveFovLH(fov, aspectRatio, nearPlane, farPlane));
     arc.cb.position = position;
+    PopulateInvViewProjection(arc.cb);
     return arc;
 }
 } // namespace

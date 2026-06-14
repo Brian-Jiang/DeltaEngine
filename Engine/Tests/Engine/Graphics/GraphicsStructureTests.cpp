@@ -1,6 +1,7 @@
 #include <windows.h>
 
 #include "Runtime/Graphics/Structures/Camera.h"
+#include "Runtime/Graphics/Structures/DeferredLightingRootParameterType.h"
 #include "Runtime/Graphics/Structures/Light.h"
 #include "Runtime/Graphics/Structures/RootParameterType.h"
 #include "Runtime/Graphics/Structures/Vertex.h"
@@ -47,6 +48,20 @@ TEST(GraphicsStructureTests, RootParameterOrderMatchesShaderSlots)
     EXPECT_EQ(static_cast<int>(RootParameterType::ShadowMaps), 9);
     EXPECT_EQ(static_cast<int>(RootParameterType::ShadowCB), 10);
     EXPECT_EQ(static_cast<int>(RootParameterType::NumRootParameterTypes), 11);
+}
+
+TEST(GraphicsStructureTests, DeferredLightingRootParameterOrderMatchesShaderSlots)
+{
+    EXPECT_EQ(static_cast<int>(DeferredLightingRootParameterType::GBufferTextures), 0);
+    EXPECT_EQ(static_cast<int>(DeferredLightingRootParameterType::CameraCB), 1);
+    EXPECT_EQ(static_cast<int>(DeferredLightingRootParameterType::LightCB), 2);
+    EXPECT_EQ(static_cast<int>(DeferredLightingRootParameterType::PointLights), 3);
+    EXPECT_EQ(static_cast<int>(DeferredLightingRootParameterType::SpotLights), 4);
+    EXPECT_EQ(static_cast<int>(DeferredLightingRootParameterType::DirectionalLights), 5);
+    EXPECT_EQ(static_cast<int>(DeferredLightingRootParameterType::IBLTextures), 6);
+    EXPECT_EQ(static_cast<int>(DeferredLightingRootParameterType::ShadowMaps), 7);
+    EXPECT_EQ(static_cast<int>(DeferredLightingRootParameterType::ShadowCB), 8);
+    EXPECT_EQ(static_cast<int>(DeferredLightingRootParameterType::NumRootParameterTypes), 9);
 }
 
 TEST(GraphicsStructureTests, VertexLayoutMatchesInputLayoutExpectations)

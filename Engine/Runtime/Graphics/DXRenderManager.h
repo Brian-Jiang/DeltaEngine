@@ -26,7 +26,10 @@
 #include "Runtime/Graphics/RenderGraph/RenderGraphResourceHandle.h"
 #include "Runtime/Graphics/RenderGraph/TransientTexturePool.h"
 #include "Runtime/Graphics/RenderResourceReleaseQueue.h"
+#include "Runtime/Graphics/RenderPath.h"
 #include "Runtime/Graphics/Shadow/ShadowPassManager.h"
+
+#include <slang-com-ptr.h>
 
 DELTA_ENGINE_NS_BEGIN
 
@@ -40,6 +43,7 @@ class PostProcessStack;
 class PostProcessPass;
 class ShadowDepthPSO;
 class RenderProxy;
+class PipelineStateObject;
 
 struct PostProcessTarget
 {
@@ -74,6 +78,10 @@ struct FrameGraphResources
     RenderGraphTextureHandle pong;
     RenderGraphTextureHandle resolvedScene;
     RenderGraphTextureHandle finalOutput;
+    RenderGraphTextureHandle gbufferAlbedo;
+    RenderGraphTextureHandle gbufferNormal;
+    RenderGraphTextureHandle gbufferMaterial;
+    RenderGraphTextureHandle gbufferEmissive;
 };
 
 /// Renders the scene to an offscreen render target. Does not own swap chain or window.
@@ -116,6 +124,18 @@ public:
     inline float GetAspectRatio() const { return m_aspectRatio; }
 
 	inline std::shared_ptr<RootSignature> GetRootSignature() const { return m_rootSignature; }
+    inline std::shared_ptr<RootSignature> GetGBufferRootSignature() const { return m_gbufferRootSignature; }
+    inline RenderPath GetRenderPath() const { return m_renderPath; }
+    DELTAENGINE_API void SetRenderPath(RenderPath path) { m_renderPath = path; }
+    DELTAENGINE_API ISlangBlob* GetGBufferVertexShaderBlob() const;
+    DELTAENGINE_API ISlangBlob* GetGBufferPixelShaderBlob() const;
+    DELTAENGINE_API D3D12_RT_FORMAT_ARRAY GetGBufferRTVFormats() const;
+    DELTAENGINE_API bool EnsureDeferredLightingPipeline();
+    DELTAENGINE_API std::shared_ptr<RootSignature> GetDeferredLightingRootSignature() const
+    {
+        return m_deferredLightingRootSignature;
+    }
+    DELTAENGINE_API std::shared_ptr<PipelineStateObject> GetDeferredLightingPSO() const { return m_deferredLightingPSO; }
     inline std::shared_ptr<Device> GetDevice() const { return m_device; }
     inline std::shared_ptr<RenderTarget> GetRenderTarget() const { return m_renderTarget; }
     inline std::shared_ptr<CommandList> GetCurrentCommandList() const { return m_currentCommandList; }
@@ -135,9 +155,26 @@ public:
     /// Frame-scoped texture pool shared by the render graph and the editor display path.
     DELTAENGINE_API TransientTexturePool& GetTransientPool() { return m_transientPool; }
 
+    DELTAENGINE_API void StageIBLDescriptors(CommandList& commandList, int32_t iblRootParameterIndex);
+    DELTAENGINE_API void StageShadowDescriptors(CommandList& commandList, int32_t shadowMapsRootParameter,
+        int32_t shadowCbRootParameter);
+
 private:
     void CreatePingPongTargets(UINT width, UINT height);
     void BuildFrameGraph(const SceneDrawCallback& drawCallback, PostProcessStack* stack);
+    void BuildForwardFrameGraph(const SceneDrawCallback& drawCallback, PostProcessStack* stack);
+    void BuildDeferredFrameGraph(const SceneDrawCallback& drawCallback, PostProcessStack* stack);
+    bool ImportSceneTargets(RenderGraphTextureUsage colorAndShader, RenderGraphTextureUsage depthUsage,
+        std::shared_ptr<DirectX12Texture>& colorTexture, std::shared_ptr<DirectX12Texture>& depthTexture);
+    void AddShadowSceneSkyboxPasses(const SceneDrawCallback& drawCallback, const float clearColor[4],
+        RenderGraphTextureUsage depthAndShader);
+    void AddShadowPasses(RenderGraphTextureUsage depthAndShader);
+    void CreateGBufferTextures(RenderGraphTextureUsage gbufferUsage);
+    void InitGBufferPipeline();
+    bool InitDeferredLightingPipeline();
+    void FinalizeNoPostProcessOutput();
+    void AppendPostProcessChain(PostProcessStack* stack, RenderGraphTextureHandle postInputHandle,
+        RenderGraphTextureUsage colorAndShader);
     void ExecuteFrameGraph(DXGraphicsContext& ctx, const SceneDrawCallback& drawCallback);
     void ExecuteBootstrapSceneFallback(DXGraphicsContext& ctx, const SceneDrawCallback& drawCallback);
     void UpdateIBL(DTexture* skyboxCubemap);
@@ -151,6 +188,12 @@ private:
 	std::shared_ptr<Device> m_device;
     std::shared_ptr<RenderTarget> m_renderTarget;
     std::shared_ptr<RootSignature> m_rootSignature;
+    std::shared_ptr<RootSignature> m_gbufferRootSignature;
+    Slang::ComPtr<ISlangBlob> m_gbufferVertexShaderBlob;
+    Slang::ComPtr<ISlangBlob> m_gbufferPixelShaderBlob;
+    std::shared_ptr<RootSignature> m_deferredLightingRootSignature;
+    std::shared_ptr<PipelineStateObject> m_deferredLightingPSO;
+    bool m_deferredLightingReady = false;
 	std::shared_ptr<CommandList> m_currentCommandList;
 
     PostProcessTarget m_pingPong[2];
@@ -180,6 +223,7 @@ private:
     RenderResourceReleaseQueue m_releaseQueue;
     uint64_t m_lastSubmittedFence = 0;
 
+    RenderPath m_renderPath;
     UINT m_width;
     UINT m_height;
     float m_aspectRatio;

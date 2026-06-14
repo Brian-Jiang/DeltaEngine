@@ -34,6 +34,8 @@ set(DELTA_ENGINE_TEST_SOURCES
     Graphics/Gpu/GpuLifecycleTests.cpp
     Graphics/Gpu/GpuMeshAndShadowTests.cpp
     Graphics/Gpu/GpuPostProcessTests.cpp
+    Graphics/GBufferRenderGraphCompileTests.cpp
+    Graphics/RenderPathGraphCompileTests.cpp
     Graphics/RenderGraphCompileTests.cpp
     Graphics/RenderGraphTests.cpp
     Graphics/SceneRenderGraphCompileTests.cpp

@@ -15,9 +15,21 @@ struct alignas(16) CameraCB
     /// Projection matrix for the active camera.
     DirectX::XMMATRIX projectionMatrix;
 
+    /// Inverse of (view * projection), transposed for HLSL mul(rowVec, matrix).
+    DirectX::XMMATRIX invViewProjectionMatrix;
+
     /// Camera world position.
     DirectX::XMVECTOR position;
 };
+
+/// Computes and stores invViewProjectionMatrix from the transposed view/projection in cb.
+inline void PopulateInvViewProjection(CameraCB& cb)
+{
+    const DirectX::XMMATRIX view = DirectX::XMMatrixTranspose(cb.viewMatrix);
+    const DirectX::XMMATRIX projection = DirectX::XMMatrixTranspose(cb.projectionMatrix);
+    const DirectX::XMMATRIX viewProjection = DirectX::XMMatrixMultiply(view, projection);
+    cb.invViewProjectionMatrix = DirectX::XMMatrixTranspose(DirectX::XMMatrixInverse(nullptr, viewProjection));
+}
 
 /// Per-frame active camera for rendering and shadow frustum fitting (editor preview or game camera).
 struct alignas(16) ActiveRenderCamera

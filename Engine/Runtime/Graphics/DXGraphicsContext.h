@@ -20,6 +20,12 @@ class RootSignature;
 class DXRenderManager;
 class CameraRenderProxy;
 
+enum class ScenePassType : uint8_t
+{
+    Forward,
+    GBuffer
+};
+
 /// Passed to every renderer's InitGraphicState / GatherDrawCalls.
 /// Camera data (view, projection, position) is constant for the frame;
 /// each renderer uses this plus its own model matrix for per-draw MVP.
@@ -45,6 +51,10 @@ struct DXGraphicsContext
 
     /// Uploads the gathered light buffers to the command list.
     DELTAENGINE_API void ApplyLightBuffersToCommandList();
+    DELTAENGINE_API void ApplyLightBuffersToCommandList(uint32_t lightCbSlot,
+        uint32_t directionalLightsSlot,
+        uint32_t pointLightsSlot,
+        uint32_t spotLightsSlot);
 
     /// When set, full active camera (GPU CB + lens) for this frame—editor viewport or override path.
     /// Filled before PrepareFrame shadow pass when pending; used for scene draws and directional shadow frustum.
@@ -55,6 +65,9 @@ struct DXGraphicsContext
 
     /// Global shadow quality multiplier sourced from ShadowPassManager settings.
     float shadowQualityScalar = 1.0f;
+
+    /// Active scene geometry pass; MeshRenderProxy selects PSO/root bindings from this.
+    ScenePassType activePass = ScenePassType::Forward;
 };
 
 DELTA_ENGINE_NS_END
