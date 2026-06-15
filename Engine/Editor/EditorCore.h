@@ -74,6 +74,10 @@ public:
     DELTAEDITOR_API void EnqueueSerializedCommand(std::string jsonPayload);
     DELTAEDITOR_API void DrainCommandQueue(std::vector<std::string>& outResponses);
 
+    /// Reimports the given assets on the main thread. Shader assets are recompiled (PSOs refresh
+    /// automatically next frame); other asset types are skipped. Returns {ok, reimported, skipped}.
+    DELTAEDITOR_API nlohmann::json ReimportAssets(const std::vector<AssetId>& assetIds);
+
     DELTAEDITOR_API McpRegistry* GetMcpRegistry() { return m_mcpRegistry.get(); }
     DELTAEDITOR_API EditorAnimationManager* GetAnimationManager() { return m_animationManager.get(); }
 

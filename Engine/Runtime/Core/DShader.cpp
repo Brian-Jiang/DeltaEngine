@@ -346,6 +346,7 @@ void DShader::CompileShader()
 {
     m_vertexShaderBlob = CompileSlangStage(m_sourcePath, m_vertexShaderEntryPoint, m_vertexShaderTargetProfile, "DShader VS");
     m_pixelShaderBlob = CompileSlangStage(m_sourcePath, m_pixelShaderEntryPoint, m_pixelShaderTargetProfile, "DShader PS");
+    ++m_compileGeneration;
 
     if (!BlobLooksValid(m_vertexShaderBlob))
         DLOG(LogShader, ELogLevel::Error,

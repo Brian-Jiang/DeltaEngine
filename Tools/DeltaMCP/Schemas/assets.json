@@ -80,6 +80,15 @@
                        "description": "Empty, '/dynamic', or '/dynamic/...'." },
         "new_value": { "type": "any",    "required": true }
       }
+    },
+    "reimport_assets": {
+      "description": "Reimport asset(s). Shader assets are recompiled and their PSOs refreshed live (next frame); other asset types are accepted but skipped for now.",
+      "undoable": false,
+      "params": {
+        "asset_ids": { "type": "array", "required": true,
+                       "items": { "type": "string" },
+                       "description": "Asset UUID strings." }
+      }
     }
   }
 }

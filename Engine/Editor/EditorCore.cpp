@@ -287,6 +287,41 @@ DPrimaryAsset* EditorCore::GetActiveSceneAsset()
     return scene->GetOwningAsset();
 }
 
+nlohmann::json EditorCore::ReimportAssets(const std::vector<AssetId>& assetIds)
+{
+    nlohmann::json reimported = nlohmann::json::array();
+    nlohmann::json skipped = nlohmann::json::array();
+
+    for (const AssetId& id : assetIds)
+    {
+        DPrimaryAsset* asset = m_assetDatabase ? m_assetDatabase->LoadAsset(id) : nullptr;
+        if (!asset)
+        {
+            skipped.push_back({{"asset_id", id.ToString()}, {"reason", "not found or failed to load"}});
+            continue;
+        }
+
+        if (auto* shaderAsset = dynamic_cast<PA_Shader*>(asset))
+        {
+            DShader* shader = shaderAsset->GetShader();
+            if (!shader)
+            {
+                skipped.push_back({{"asset_id", id.ToString()}, {"reason", "shader asset has no shader"}});
+                continue;
+            }
+
+            DLOG(LogEditorCore, ELogLevel::Verbose, "ReimportAssets: reimporting shader '{}'", id.ToString());
+            shader->Reimport();
+            reimported.push_back(id.ToString());
+            continue;
+        }
+
+        skipped.push_back({{"asset_id", id.ToString()}, {"reason", "not a shader asset"}});
+    }
+
+    return { {"ok", true}, {"reimported", reimported}, {"skipped", skipped} };
+}
+
 void EditorCore::EnqueueSerializedCommand(std::string jsonPayload)
 {
     if (!DELTA_ENSURE(!jsonPayload.empty()))
@@ -527,6 +562,26 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
 
                 outResponses.push_back(
                     nlohmann::json{{"ok", true}, {"commandType", "StartTransformChannelAnimation"}}.dump());
+                continue;
+            }
+            if (name == "ReimportAssets")
+            {
+                std::vector<AssetId> ids;
+                if (envelope.contains("assetIds") && envelope["assetIds"].is_array())
+                {
+                    for (const auto& v : envelope["assetIds"])
+                    {
+                        if (!v.is_string())
+                            continue;
+                        const AssetId id = UUID::FromString(v.get<std::string>());
+                        if (!id.IsNull())
+                            ids.push_back(id);
+                    }
+                }
+
+                nlohmann::json result = ReimportAssets(ids);
+                result["commandType"] = "ReimportAssets";
+                outResponses.push_back(result.dump());
                 continue;
             }
             outResponses.push_back(

@@ -64,3 +64,60 @@ TEST_F(McpAssetsSystemTests, QueryUsages_WithSceneAssetId_ReturnsUsagesArray)
     EXPECT_TRUE(res["ok"].get<bool>());
     EXPECT_TRUE(res["usages"].is_array());
 }
+
+// reimport_assets: the command validates + enqueues; DrainCommandQueue runs the actual
+// reimport on the main thread. The end-to-end shader-recompile path needs a compilable
+// .slang source + GPU, so these tests cover routing/validation and non-shader handling only.
+
+TEST_F(McpAssetsSystemTests, ReimportAssets_MissingParam_ReturnsError)
+{
+    auto res = Dispatch("assets", "reimport_assets");
+    EXPECT_FALSE(res["ok"].get<bool>());
+    EXPECT_TRUE(res.contains("error"));
+}
+
+TEST_F(McpAssetsSystemTests, ReimportAssets_EmptyArray_ReturnsError)
+{
+    auto res = Dispatch("assets", "reimport_assets", {{"asset_ids", json::array()}});
+    EXPECT_FALSE(res["ok"].get<bool>());
+    EXPECT_TRUE(res.contains("error"));
+}
+
+TEST_F(McpAssetsSystemTests, ReimportAssets_NonShaderAsset_QueuedAndSkipped)
+{
+    const AssetId sceneId = GetActiveSceneAssetId();
+    ASSERT_FALSE(sceneId.IsNull());
+
+    auto res = Dispatch("assets", "reimport_assets",
+                        {{"asset_ids", json::array({sceneId.ToString()})}});
+    ASSERT_TRUE(res["ok"].get<bool>());
+    EXPECT_TRUE(res.value("queued", false));
+
+    std::vector<std::string> responses;
+    m_core->DrainCommandQueue(responses);
+    ASSERT_EQ(responses.size(), 1u);
+
+    const json drained = json::parse(responses[0]);
+    EXPECT_TRUE(drained["ok"].get<bool>());
+    ASSERT_TRUE(drained["skipped"].is_array());
+    ASSERT_EQ(drained["skipped"].size(), 1u);
+    EXPECT_EQ(drained["skipped"][0]["asset_id"].get<std::string>(), sceneId.ToString());
+    EXPECT_TRUE(drained["reimported"].empty());
+}
+
+TEST_F(McpAssetsSystemTests, ReimportAssets_UnknownId_QueuedAndSkipped)
+{
+    const std::string unknownId = "11111111-1111-1111-1111-111111111111";
+    auto res = Dispatch("assets", "reimport_assets",
+                        {{"asset_ids", json::array({unknownId})}});
+    ASSERT_TRUE(res["ok"].get<bool>());
+
+    std::vector<std::string> responses;
+    m_core->DrainCommandQueue(responses);
+    ASSERT_EQ(responses.size(), 1u);
+
+    const json drained = json::parse(responses[0]);
+    EXPECT_TRUE(drained["ok"].get<bool>());
+    ASSERT_EQ(drained["skipped"].size(), 1u);
+    EXPECT_EQ(drained["skipped"][0]["asset_id"].get<std::string>(), unknownId);
+}

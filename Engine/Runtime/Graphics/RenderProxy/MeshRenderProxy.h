@@ -54,6 +54,9 @@ public:
     DELTAENGINE_API void ReleaseSharedReferences() override;
 
 private:
+    /// True if any submesh material's shader has been recompiled since the PSOs were built.
+    bool ShadersChanged() const;
+
     DMesh* m_mesh;
     std::shared_ptr<MeshRendererSettings> m_settings;
 
@@ -67,6 +70,9 @@ private:
     // maybe similar to srp batcher, we can have a pso batcher that batches mesh render proxies with the same settings and creates a PSO for each batch.
     std::vector<std::shared_ptr<PipelineStateObject>> m_pipelineStateObjects;
     std::vector<std::shared_ptr<PipelineStateObject>> m_gbufferPipelineStateObjects;
+
+    // Shader compile generation recorded per submesh when PSOs were built; index-aligned with m_pipelineStateObjects.
+    std::vector<uint32_t> m_builtShaderGenerations;
 
     bool m_meshDirty;
 };

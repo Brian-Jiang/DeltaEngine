@@ -139,6 +139,7 @@ void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext>
     m_textures.clear();
     m_pipelineStateObjects.clear();
     m_gbufferPipelineStateObjects.clear();
+    m_builtShaderGenerations.clear();
     const std::string meshName = m_mesh->GetSourcePath().stem().string();
 
     ISlangBlob* gbufferVertexShader = renderContext->renderManager->GetGBufferVertexShaderBlob();
@@ -150,6 +151,9 @@ void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext>
     for (int i = 0; i < m_mesh->GetSubMeshCount(); ++i)
     {
         auto material = m_mesh->GetMaterial(i);
+        // Record the shader generation for this submesh in every branch (skip or build) to stay index-aligned.
+        DShader* submeshShader = material ? material->GetShader() : nullptr;
+        m_builtShaderGenerations.push_back(submeshShader ? submeshShader->GetCompileGeneration() : 0u);
         if (!DELTA_ENSURE(material))
         {
             DLOG(LogRenderer, ELogLevel::Warning,
@@ -295,6 +299,11 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
 
         m_meshDirty = false;
     }
+    else if (ShadersChanged())
+    {
+        // A material's shader was reimported; rebuild PSOs from the new bytecode (VB/IB untouched).
+        Initialize(renderContext);
+    }
 
     struct ObjectData
     {
@@ -387,6 +396,27 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
             commandList->Draw(vertexCount, 1u, 0u, 0u);
         }
     }
+}
+
+bool MeshRenderProxy::ShadersChanged() const
+{
+    if (!m_mesh || m_builtShaderGenerations.empty())
+        return false;
+
+    const int submeshCount = m_mesh->GetSubMeshCount();
+    if (static_cast<size_t>(submeshCount) != m_builtShaderGenerations.size())
+        return true;
+
+    for (int i = 0; i < submeshCount; ++i)
+    {
+        DMaterial* material = m_mesh->GetMaterial(i);
+        DShader* shader = material ? material->GetShader() : nullptr;
+        const uint32_t gen = shader ? shader->GetCompileGeneration() : 0u;
+        if (gen != m_builtShaderGenerations[static_cast<size_t>(i)])
+            return true;
+    }
+
+    return false;
 }
 
 bool MeshRenderProxy::SubmeshContributesToShadowMap(const DMaterial* material)

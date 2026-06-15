@@ -318,6 +318,8 @@ void McpAssetsSystem::RegisterTools(McpRegistry& registry)
 
     registry.RegisterCommand("assets", "set_asset_dynamic_metadata",
         [this](EditorCore& c, const nlohmann::json& p) { return CommandSetAssetDynamicMetadata(c, p); });
+    registry.RegisterCommand("assets", "reimport_assets",
+        [this](EditorCore& c, const nlohmann::json& p) { return CommandReimportAssets(c, p); });
 }
 
 nlohmann::json McpAssetsSystem::QueryList(EditorCore& core, const nlohmann::json& params)
@@ -836,6 +838,35 @@ nlohmann::json McpAssetsSystem::CommandSetAssetDynamicMetadata(EditorCore& core,
 
     core.EnqueueSerializedCommand(envelope.dump());
     return { {"ok", true}, {"queued", true}, {"command", "EditorCommand_SetAssetDynamicMeta"} };
+}
+
+nlohmann::json McpAssetsSystem::CommandReimportAssets(EditorCore& core, const nlohmann::json& params)
+{
+    if (!params.contains("asset_ids") || !params["asset_ids"].is_array())
+        return MakeError("missing required param: asset_ids (array of UUID strings)");
+
+    nlohmann::json assetIds = nlohmann::json::array();
+    for (const auto& v : params["asset_ids"])
+    {
+        if (!v.is_string())
+            return MakeError("asset_ids must contain only strings");
+        const std::string idStr = v.get<std::string>();
+        if (UUID::FromString(idStr).IsNull())
+            return MakeError("invalid asset_id: " + idStr);
+        assetIds.push_back(idStr);
+    }
+
+    if (assetIds.empty())
+        return MakeError("asset_ids is empty");
+
+    // Marshal to the main thread: shader recompile swaps GPU blobs the render thread reads.
+    nlohmann::json envelope;
+    envelope["type"]     = "auxiliary";
+    envelope["name"]     = "ReimportAssets";
+    envelope["assetIds"] = std::move(assetIds);
+
+    core.EnqueueSerializedCommand(envelope.dump());
+    return { {"ok", true}, {"queued", true}, {"command", "ReimportAssets"} };
 }
 
 nlohmann::json McpAssetsSystem::QueryHasStaticMetaSchema(EditorCore& core, const nlohmann::json& params)

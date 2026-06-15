@@ -55,6 +55,9 @@ public:
     inline ISlangBlob* GetPixelShaderBlob() const { return m_pixelShaderBlob.get(); }
     inline const std::vector<D3D12_INPUT_ELEMENT_DESC>& GetInputLayout() const { return m_inputLayout; }
 
+    /// Bumped on every recompile; render proxies poll this to rebuild PSOs after a reimport.
+    inline uint32_t GetCompileGeneration() const { return m_compileGeneration; }
+
 private:
     void CompileShader();
 
@@ -63,6 +66,7 @@ private:
     Slang::ComPtr<ISlangBlob> m_pixelShaderBlob;
     std::vector<D3D12_INPUT_ELEMENT_DESC> m_inputLayout;
     std::vector<std::string> m_inputLayoutSemanticNames;
+    uint32_t m_compileGeneration = 0;
 
     DPROPERTY()
     std::filesystem::path m_sourcePath;
