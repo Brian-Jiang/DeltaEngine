@@ -1,6 +1,8 @@
 #include "Runtime/Reflection/DProperty.h"
 
 #include "Runtime/Assets/DPrimaryAsset.h"
+#include "Runtime/Core/Delegates/DynamicDelegate.h"
+#include "Runtime/Core/GC/DObjectRegistry.h"
 #include "Runtime/Reflection/DStruct.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
 #include "Runtime/Serialization/AssetArchive.h"
@@ -856,4 +858,191 @@ ScriptPointer DObjectPtrPropertyBase::GetUnresolvedPointer(void* objectPtr) cons
 {
     auto it = m_unresolvedPointers.find(objectPtr);
     return (it != m_unresolvedPointers.end()) ? it->second : ScriptPointer{};
+}
+
+namespace
+{
+
+ScriptPointer MakeScriptPointer(DObject* target)
+{
+    ScriptPointer sp;
+    if (target)
+    {
+        sp.m_objectId = target->GetObjectId();
+        if (DPrimaryAsset* owningAsset = target->GetOwningAsset())
+            sp.m_assetId = owningAsset->GetAssetId();
+    }
+    return sp;
+}
+
+void SerializeDelegateBindingArray(
+    AssetArchive& ar,
+    const std::string& arrayKey,
+    bool namedArray,
+    FDynamicMulticastDelegate* delegate,
+    std::unordered_map<void*, std::vector<FUnresolvedDelegateBinding>>* unresolvedMap,
+    void* fieldAddr)
+{
+    if (ar.IsSaving())
+    {
+        const std::vector<FDynamicDelegateBinding>& bindings = delegate->GetBindings();
+        if (namedArray)
+            ar.BeginArray(arrayKey, bindings.size());
+        else
+            ar.BeginNestedArray(bindings.size());
+
+        for (const FDynamicDelegateBinding& binding : bindings)
+        {
+            DObject* target = GetDObjectRegistry().Resolve(binding.m_objectHandle);
+            ScriptPointer sp = MakeScriptPointer(target);
+            std::string functionName = binding.m_functionName;
+
+            ar.BeginObject("DynamicDelegateBinding");
+            ar.Serialize("object", sp);
+            ar.Serialize("functionName", functionName);
+            ar.EndObject();
+        }
+        ar.EndArray();
+    }
+    else
+    {
+        const size_t count = namedArray ? ar.BeginArrayLoad(arrayKey) : ar.BeginNestedArrayLoad();
+        std::vector<FUnresolvedDelegateBinding> loaded;
+        loaded.reserve(count);
+
+        for (size_t i = 0; i < count; ++i)
+        {
+            (void)ar.BeginObjectLoad();
+            FUnresolvedDelegateBinding entry;
+            ar.Serialize("object", entry.m_object);
+            ar.Serialize("functionName", entry.m_functionName);
+            ar.EndObject();
+            loaded.push_back(std::move(entry));
+        }
+        ar.EndArray();
+
+        if (unresolvedMap)
+            (*unresolvedMap)[fieldAddr] = std::move(loaded);
+    }
+}
+
+} // namespace
+
+// ---------------------------------------------------------------------------
+// DDelegatePropertyBase
+// ---------------------------------------------------------------------------
+
+void DDelegatePropertyBase::Serialize(AssetArchive& ar, void* objectPtr)
+{
+    DELTA_VERIFY(objectPtr != nullptr);
+
+    void* fieldAddr = GetValue(objectPtr);
+    FDynamicMulticastDelegate* delegate = GetDelegate(fieldAddr);
+    SerializeDelegateBindingArray(ar, GetName(), true, delegate, &m_unresolvedBindings, fieldAddr);
+}
+
+void DDelegatePropertyBase::SerializeElement(AssetArchive& ar, void* elementAddr)
+{
+    DELTA_VERIFY(elementAddr != nullptr);
+
+    FDynamicMulticastDelegate* delegate = GetDelegate(elementAddr);
+    SerializeDelegateBindingArray(ar, {}, false, delegate, &m_unresolvedBindings, elementAddr);
+}
+
+void DDelegatePropertyBase::SetUnresolvedBindings(
+    void* fieldAddr,
+    std::vector<FUnresolvedDelegateBinding> bindings)
+{
+    m_unresolvedBindings[fieldAddr] = std::move(bindings);
+}
+
+const std::vector<FUnresolvedDelegateBinding>* DDelegatePropertyBase::GetUnresolvedBindings(
+    void* fieldAddr) const
+{
+    auto it = m_unresolvedBindings.find(fieldAddr);
+    return (it != m_unresolvedBindings.end()) ? &it->second : nullptr;
+}
+
+// ---------------------------------------------------------------------------
+// DDelegateProperty
+// ---------------------------------------------------------------------------
+
+DDelegateProperty::DDelegateProperty(std::string name, uint32_t offset)
+    : DDelegatePropertyBase(std::move(name), "FDynamicMulticastDelegate", offset, sizeof(FDynamicMulticastDelegate))
+{
+}
+
+void DDelegateProperty::InitializeValue(void* address) const
+{
+    new (address) FDynamicMulticastDelegate();
+}
+
+void DDelegateProperty::DestroyValue(void* address) const
+{
+    GetDelegate(address)->~FDynamicMulticastDelegate();
+}
+
+void DDelegateProperty::SetValue(void* instance, const void* field_value) const
+{
+    void* addr = static_cast<uint8_t*>(instance) + m_offset;
+    *GetDelegate(addr) = *static_cast<const FDynamicMulticastDelegate*>(field_value);
+}
+
+void* DDelegateProperty::GetValue(const void* instance) const
+{
+    return static_cast<uint8_t*>(const_cast<void*>(instance)) + m_offset;
+}
+
+void DDelegateProperty::CopyValue(void* dest, const void* src) const
+{
+    new (dest) FDynamicMulticastDelegate(*GetDelegate(src));
+}
+
+bool DDelegateProperty::Identical(const void* a, const void* b) const
+{
+    const FDynamicMulticastDelegate* lhs = GetDelegate(a);
+    const FDynamicMulticastDelegate* rhs = GetDelegate(b);
+    return lhs->GetBindings() == rhs->GetBindings();
+}
+
+std::string DDelegateProperty::ToString(const void* address) const
+{
+    const FDynamicMulticastDelegate* delegate = GetDelegate(address);
+    return "Delegate(" + std::to_string(delegate->GetBindingCount()) + " bindings)";
+}
+
+EPropertyType DDelegateProperty::GetPropertyType() const
+{
+    return EPropertyType::Delegate;
+}
+
+void DDelegateProperty::ResolveBindings(
+    void* fieldAddr,
+    const std::function<DObject*(const ScriptPointer&)>& resolve)
+{
+    auto it = m_unresolvedBindings.find(fieldAddr);
+    if (it == m_unresolvedBindings.end())
+        return;
+
+    FDynamicMulticastDelegate* delegate = GetDelegate(fieldAddr);
+    delegate->Clear();
+
+    for (const FUnresolvedDelegateBinding& binding : it->second)
+    {
+        DObject* object = resolve(binding.m_object);
+        if (object)
+            delegate->AddDynamic(object, binding.m_functionName);
+    }
+
+    m_unresolvedBindings.erase(it);
+}
+
+FDynamicMulticastDelegate* DDelegateProperty::GetDelegate(void* fieldAddr)
+{
+    return static_cast<FDynamicMulticastDelegate*>(fieldAddr);
+}
+
+const FDynamicMulticastDelegate* DDelegateProperty::GetDelegate(const void* fieldAddr) const
+{
+    return static_cast<const FDynamicMulticastDelegate*>(fieldAddr);
 }

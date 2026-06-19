@@ -5,6 +5,7 @@
 DELTA_ENGINE_NS_BEGIN
 
 struct FDelegateHandle;
+class FDynamicMulticastDelegate;
 
 template<typename Signature>
 class TDelegate;

@@ -3,9 +3,11 @@
 #include "EngineIncludes.h"
 
 #include <filesystem>
+#include <functional>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
+#include <vector>
 
 #include "Core/DObject.h"
 #include "Serialization/ScriptPointer.h"
@@ -33,7 +35,18 @@ enum class EPropertyType
     BulkData,
     Vector,
     Struct,
+    Delegate,
 };
+
+struct FUnresolvedDelegateBinding
+{
+    ScriptPointer m_object;
+    std::string   m_functionName;
+
+    bool operator==(const FUnresolvedDelegateBinding&) const = default;
+};
+
+class FDynamicMulticastDelegate;
 
 class DProperty
 {
@@ -370,6 +383,55 @@ public:
         *static_cast<T**>(valueAddress) = static_cast<T*>(resolved);
         m_unresolvedPointers.erase(valueAddress);
     }
+};
+
+
+class DDelegatePropertyBase : public DProperty
+{
+public:
+    DDelegatePropertyBase(std::string name, std::string type, uint32_t offset, uint32_t size)
+        : DProperty(std::move(name), std::move(type), offset, size) {}
+
+    void Serialize(AssetArchive& ar, void* objectPtr) override;
+    void SerializeElement(AssetArchive& ar, void* elementAddr) override;
+
+    virtual void ResolveBindings(void* fieldAddr,
+        const std::function<DObject*(const ScriptPointer&)>& resolve) = 0;
+
+    DELTAENGINE_API void SetUnresolvedBindings(void* fieldAddr,
+        std::vector<FUnresolvedDelegateBinding> bindings);
+
+    DELTAENGINE_API const std::vector<FUnresolvedDelegateBinding>* GetUnresolvedBindings(
+        void* fieldAddr) const;
+
+protected:
+    virtual FDynamicMulticastDelegate* GetDelegate(void* fieldAddr) = 0;
+    virtual const FDynamicMulticastDelegate* GetDelegate(const void* fieldAddr) const = 0;
+
+    std::unordered_map<void*, std::vector<FUnresolvedDelegateBinding>> m_unresolvedBindings;
+};
+
+
+class DELTAENGINE_API DDelegateProperty : public DDelegatePropertyBase
+{
+public:
+    DDelegateProperty(std::string name, uint32_t offset);
+
+    void InitializeValue(void* address) const override;
+    void DestroyValue(void* address) const override;
+    void SetValue(void* instance, const void* field_value) const override;
+    void* GetValue(const void* instance) const override;
+    void CopyValue(void* dest, const void* src) const override;
+    bool Identical(const void* a, const void* b) const override;
+    std::string ToString(const void* address) const override;
+    EPropertyType GetPropertyType() const override;
+
+    void ResolveBindings(void* fieldAddr,
+        const std::function<DObject*(const ScriptPointer&)>& resolve) override;
+
+protected:
+    FDynamicMulticastDelegate* GetDelegate(void* fieldAddr) override;
+    const FDynamicMulticastDelegate* GetDelegate(const void* fieldAddr) const override;
 };
 
 
