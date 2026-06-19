@@ -140,7 +140,6 @@ TEST_F(DelegateGCBindingTests, AddDObject_PendingKill_SkipsAtSweepStart)
 
     GCLifecycleTestComponent::s_readyForFinishDestroy = false;
 
-    GetDObjectRegistry().AddRoot(object->GetGCHandle());
     GetGCManager().RequestCollect();
     GetGCManager().Tick();
 
@@ -154,7 +153,4 @@ TEST_F(DelegateGCBindingTests, AddDObject_PendingKill_SkipsAtSweepStart)
 
     GCLifecycleTestComponent::s_readyForFinishDestroy = true;
     GetGCManager().Tick();
-
-    GetDObjectRegistry().RemoveRoot(object->GetGCHandle());
-    registry.DestroyObject(object);
 }
