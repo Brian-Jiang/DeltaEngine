@@ -30,10 +30,27 @@ using namespace DeltaEngine;
 EditorWindow_WorldOutliner::EditorWindow_WorldOutliner()
 {
     m_title = "World Outliner";
+
+    if (g_editorCore)
+    {
+        if (EditorSelectionState* sel = g_editorCore->GetSelectionState())
+            m_onSelectionChangedHandle = sel->OnSelectionChanged.AddRaw(this, &EditorWindow_WorldOutliner::HandleSelectionChanged);
+    }
 }
 
 EditorWindow_WorldOutliner::~EditorWindow_WorldOutliner()
 {
+    if (g_editorCore)
+    {
+        if (EditorSelectionState* sel = g_editorCore->GetSelectionState())
+            sel->OnSelectionChanged.Remove(m_onSelectionChangedHandle);
+    }
+}
+
+void EditorWindow_WorldOutliner::HandleSelectionChanged()
+{
+    ++m_selectionRevision;
+    RebuildFilter();
 }
 
 void EditorWindow_WorldOutliner::RebuildFilter()
