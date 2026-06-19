@@ -22,13 +22,13 @@ class TestComponent : public DComponent
 
 public:
     DFUNCTION(ShowAsButton)
-    void TestFunction();
+    DELTAENGINE_API void TestFunction();
 
     DFUNCTION()
-    int TestAdd(int a, int b);
+    DELTAENGINE_API int TestAdd(int a, int b);
 
     DFUNCTION()
-    float TestMultiply(float x, bool negate);
+    DELTAENGINE_API float TestMultiply(float x, bool negate);
 
 private:
     DPROPERTY()
