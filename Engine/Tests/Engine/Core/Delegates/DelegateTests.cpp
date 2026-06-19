@@ -12,12 +12,12 @@ int StaticAdd(int a, int b)
     return a + b;
 }
 
+int s_voidCounter = 0;
+
 void StaticIncrementCounter()
 {
     ++s_voidCounter;
 }
-
-int s_voidCounter = 0;
 
 struct DelegateTestObject
 {
