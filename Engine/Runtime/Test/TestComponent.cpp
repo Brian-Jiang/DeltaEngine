@@ -4,6 +4,7 @@ using namespace DeltaEngine;
 
 void TestComponent::TestFunction()
 {
+    ++m_testInt;
     DLOG(LogCore, ELogLevel::Log, "Test component log");
 }
 

@@ -48,6 +48,7 @@ set(DELTA_ENGINE_TEST_SOURCES
     Reflection/ReflectionRegistryHardeningTests.cpp
     Reflection/ReflectionStructClassTests.cpp
     Reflection/ReflectionPropertyTests.cpp
+    Reflection/DynamicDelegatePropertyTests.cpp
     Reflection/ReflectionReferenceTraversalTests.cpp
     Serialization/Core/UuidTests.cpp
     Serialization/Core/ScriptPointerTests.cpp
@@ -60,6 +61,7 @@ set(DELTA_ENGINE_TEST_SOURCES
     Core/Delegates/DelegateTests.cpp
     Core/Delegates/MulticastDelegateTests.cpp
     Core/Delegates/DelegateGCBindingTests.cpp
+    Core/Delegates/DynamicDelegateTests.cpp
     Core/GCObjectRegistryTests.cpp
     Core/GCMarkTests.cpp
     Core/GCSweepTests.cpp
