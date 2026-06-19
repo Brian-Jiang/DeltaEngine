@@ -18,7 +18,8 @@ class TMulticastDelegate<void(Args...)>
     {
         FDelegateHandle Handle;
         TDelegate<void(Args...)> Binding;
-        const void* BoundObject = nullptr;
+        const void*              BoundObject = nullptr;
+        DObjectHandle            BoundDObjectHandle{};
     };
 
 public:
@@ -77,6 +78,30 @@ public:
         return AddRawBinding(std::move(binding), object);
     }
 
+    template<DObjectDerived UserClass>
+    FDelegateHandle AddDObject(UserClass* object, void (UserClass::*method)(Args...))
+    {
+        TDelegate<void(Args...)> binding;
+        binding.BindDObject(object, method);
+        return AddDObjectBinding(std::move(binding), object, object->GetGCHandle());
+    }
+
+    template<DObjectDerived UserClass>
+    FDelegateHandle AddDObject(UserClass* object, void (UserClass::*method)(Args...) const)
+    {
+        TDelegate<void(Args...)> binding;
+        binding.BindDObject(object, method);
+        return AddDObjectBinding(std::move(binding), object, object->GetGCHandle());
+    }
+
+    template<DObjectDerived UserClass>
+    FDelegateHandle AddDObject(const UserClass* object, void (UserClass::*method)(Args...) const)
+    {
+        TDelegate<void(Args...)> binding;
+        binding.BindDObject(object, method);
+        return AddDObjectBinding(std::move(binding), object, object->GetGCHandle());
+    }
+
     bool Remove(FDelegateHandle handle)
     {
         if (!handle.IsValid())
@@ -126,6 +151,8 @@ public:
             if (entry.Binding.IsBound())
                 entry.Binding.Execute(std::forward<Args>(args)...);
         }
+
+        CompactStaleDObjectBindings();
     }
 
 private:
@@ -139,7 +166,32 @@ private:
         return m_entries.back().Handle;
     }
 
-    std::vector<FMulticastDelegateEntry> m_entries;
+    FDelegateHandle AddDObjectBinding(TDelegate<void(Args...)>&& binding,
+                                      const void* object,
+                                      const DObjectHandle& handle)
+    {
+        FMulticastDelegateEntry entry;
+        entry.Handle = FDelegateHandle::Generate();
+        entry.Binding = std::move(binding);
+        entry.BoundObject = object;
+        entry.BoundDObjectHandle = handle;
+        m_entries.push_back(std::move(entry));
+        return m_entries.back().Handle;
+    }
+
+    void CompactStaleDObjectBindings() const
+    {
+        const auto newEnd = std::remove_if(m_entries.begin(), m_entries.end(),
+            [](const FMulticastDelegateEntry& entry)
+            {
+                return entry.BoundDObjectHandle.IsSet()
+                    && GetDObjectRegistry().Resolve(entry.BoundDObjectHandle) == nullptr;
+            });
+
+        m_entries.erase(newEnd, m_entries.end());
+    }
+
+    mutable std::vector<FMulticastDelegateEntry> m_entries;
 };
 
 DELTA_ENGINE_NS_END

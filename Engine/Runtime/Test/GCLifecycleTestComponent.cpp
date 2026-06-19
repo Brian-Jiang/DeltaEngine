@@ -4,6 +4,7 @@ using namespace DeltaEngine;
 
 int  GCLifecycleTestComponent::s_beginDestroyCount     = 0;
 int  GCLifecycleTestComponent::s_finishDestroyCount    = 0;
+int  GCLifecycleTestComponent::s_delegatePingCount     = 0;
 bool GCLifecycleTestComponent::s_readyForFinishDestroy = true;
 
 void GCLifecycleTestComponent::BeginDestroy()
@@ -21,9 +22,15 @@ void GCLifecycleTestComponent::FinishDestroy()
     ++s_finishDestroyCount;
 }
 
+void GCLifecycleTestComponent::DelegatePing()
+{
+    ++s_delegatePingCount;
+}
+
 void GCLifecycleTestComponent::Reset()
 {
     s_beginDestroyCount     = 0;
     s_finishDestroyCount    = 0;
+    s_delegatePingCount     = 0;
     s_readyForFinishDestroy = true;
 }

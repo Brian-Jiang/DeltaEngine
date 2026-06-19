@@ -59,6 +59,7 @@ set(DELTA_ENGINE_TEST_SOURCES
     Core/CoreObjectLifecycleTests.cpp
     Core/Delegates/DelegateTests.cpp
     Core/Delegates/MulticastDelegateTests.cpp
+    Core/Delegates/DelegateGCBindingTests.cpp
     Core/GCObjectRegistryTests.cpp
     Core/GCMarkTests.cpp
     Core/GCSweepTests.cpp
