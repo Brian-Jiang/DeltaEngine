@@ -392,8 +392,8 @@ public:
     DDelegatePropertyBase(std::string name, std::string type, uint32_t offset, uint32_t size)
         : DProperty(std::move(name), std::move(type), offset, size) {}
 
-    void Serialize(AssetArchive& ar, void* objectPtr) override;
-    void SerializeElement(AssetArchive& ar, void* elementAddr) override;
+    DELTAENGINE_API void Serialize(AssetArchive& ar, void* objectPtr) override;
+    DELTAENGINE_API void SerializeElement(AssetArchive& ar, void* elementAddr) override;
 
     virtual void ResolveBindings(void* fieldAddr,
         const std::function<DObject*(const ScriptPointer&)>& resolve) = 0;
