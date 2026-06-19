@@ -4,6 +4,7 @@
 #include "Runtime/Core/Delegates/DelegateHandle.h"
 
 #include <algorithm>
+#include <iterator>
 #include <utility>
 #include <vector>
 
