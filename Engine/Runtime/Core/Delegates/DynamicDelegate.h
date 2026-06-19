@@ -7,6 +7,7 @@
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DFunction.h"
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -43,7 +44,7 @@ public:
 
     const std::vector<FDynamicDelegateBinding>& GetBindings() const { return m_bindings; }
 
-    void Broadcast() const
+    void BroadcastWithParams(void* params, uint32_t expectedParamCount) const
     {
         auto& registry = GetDObjectRegistry();
         for (const FDynamicDelegateBinding& binding : m_bindings)
@@ -59,12 +60,60 @@ public:
             if (function->HasReturnValue())
                 continue;
 
-            function->Invoke(object, nullptr);
+            if (function->GetNumParams() != expectedParamCount)
+                continue;
+
+            function->Invoke(object, params);
         }
+    }
+
+    void Broadcast() const
+    {
+        BroadcastWithParams(nullptr, 0);
     }
 
 private:
     std::vector<FDynamicDelegateBinding> m_bindings;
+};
+
+/// Reflected single-cast dynamic delegate. Main-thread use only.
+class FDynamicDelegate : public FDynamicMulticastDelegate
+{
+public:
+    using FDynamicMulticastDelegate::AddDynamic;
+    using FDynamicMulticastDelegate::Clear;
+    using FDynamicMulticastDelegate::IsBound;
+    using FDynamicMulticastDelegate::GetBindingCount;
+    using FDynamicMulticastDelegate::GetBindings;
+
+    void ExecuteWithParams(void* params, uint32_t expectedParamCount) const
+    {
+        auto& registry = GetDObjectRegistry();
+        for (const FDynamicDelegateBinding& binding : GetBindings())
+        {
+            DObject* object = registry.Resolve(binding.m_objectHandle);
+            if (!object)
+                return;
+
+            DFunction* function = object->GetClass()->FindFunctionByName(binding.m_functionName);
+            if (!function)
+                return;
+
+            if (function->HasReturnValue())
+                return;
+
+            if (function->GetNumParams() != expectedParamCount)
+                return;
+
+            function->Invoke(object, params);
+            return;
+        }
+    }
+
+    void Execute() const
+    {
+        ExecuteWithParams(nullptr, 0);
+    }
 };
 
 DELTA_ENGINE_NS_END

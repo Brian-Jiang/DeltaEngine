@@ -30,6 +30,12 @@ public:
     DFUNCTION()
     DELTAENGINE_API float TestMultiply(float x, bool negate);
 
+    DFUNCTION()
+    DELTAENGINE_API void OnIntEvent(int value);
+
+    DFUNCTION()
+    DELTAENGINE_API void OnTwoArgEvent(int a, float b);
+
 private:
     DPROPERTY()
     float m_testFloat = 0.0f;

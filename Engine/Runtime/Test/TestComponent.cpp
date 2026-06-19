@@ -17,3 +17,14 @@ float TestComponent::TestMultiply(float x, bool negate)
 {
     return negate ? -x : x;
 }
+
+void TestComponent::OnIntEvent(int value)
+{
+    m_testInt = value;
+}
+
+void TestComponent::OnTwoArgEvent(int a, float b)
+{
+    m_testInt = a;
+    m_testFloat = b;
+}

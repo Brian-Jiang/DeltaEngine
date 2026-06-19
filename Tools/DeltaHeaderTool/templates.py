@@ -353,3 +353,57 @@ ${fields}\
 GENERATED_HEADER_PARAMS_FIELD = Template("""\
     ${type} ${name};
 """)
+
+# ============================================================
+# DYNAMIC DELEGATE CODEGEN
+# ============================================================
+
+DELEGATE_PARAMS_STRUCT = Template("""\
+struct ${delegate_name}_Params
+{
+${fields}\
+};
+
+""")
+
+DELEGATE_PARAM_ASSIGNMENT = Template("""\
+    params.${param_name} = ${param_name};
+""")
+
+DELEGATE_BROADCAST_WITH_PARAMS = Template("""\
+void ${delegate_name}::Broadcast(${param_declarations}) const
+{
+    ${delegate_name}_Params params;
+${param_assignments}\
+    BroadcastWithParams(&params, ${param_count});
+}
+""")
+
+DELEGATE_BROADCAST_NO_PARAMS = Template("""\
+void ${delegate_name}::Broadcast() const
+{
+    BroadcastWithParams(nullptr, 0);
+}
+""")
+
+DELEGATE_EXECUTE_WITH_PARAMS = Template("""\
+void ${delegate_name}::Execute(${param_declarations}) const
+{
+    ${delegate_name}_Params params;
+${param_assignments}\
+    ExecuteWithParams(&params, ${param_count});
+}
+""")
+
+DELEGATE_EXECUTE_NO_PARAMS = Template("""\
+void ${delegate_name}::Execute() const
+{
+    ExecuteWithParams(nullptr, 0);
+}
+""")
+
+DPROPERTY_DELEGATE = Template("""\
+    cls->AddProperty(new DDelegateProperty(
+        "${field_name}",
+        offsetof(${class_name}, ${field_name})));
+""")
