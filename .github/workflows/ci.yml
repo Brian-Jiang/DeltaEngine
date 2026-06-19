@@ -25,6 +25,10 @@ jobs:
         with:
           lfs: true
 
+      - name: Run delta mcp tests
+        shell: cmd
+        run: Tools\Scripts\test-delta-mcp.bat --automatic
+
       - name: Resolve cache branch id
         id: cache-branch
         shell: cmd
