@@ -48,6 +48,15 @@ public:
         };
     }
 
+    template<typename UserClass>
+    void BindRaw(const UserClass* object, Ret (UserClass::*method)(Args...) const)
+    {
+        m_invocable = [object, method](Args... args) -> Ret
+        {
+            return (object->*method)(std::forward<Args>(args)...);
+        };
+    }
+
     void Unbind() { m_invocable = nullptr; }
 
     bool IsBound() const { return static_cast<bool>(m_invocable); }
@@ -102,6 +111,15 @@ public:
 
     template<typename UserClass>
     void BindRaw(UserClass* object, void (UserClass::*method)(Args...) const)
+    {
+        m_invocable = [object, method](Args... args)
+        {
+            (object->*method)(std::forward<Args>(args)...);
+        };
+    }
+
+    template<typename UserClass>
+    void BindRaw(const UserClass* object, void (UserClass::*method)(Args...) const)
     {
         m_invocable = [object, method](Args... args)
         {
