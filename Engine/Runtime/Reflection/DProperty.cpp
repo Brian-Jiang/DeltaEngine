@@ -979,13 +979,14 @@ void DDelegateProperty::InitializeValue(void* address) const
 
 void DDelegateProperty::DestroyValue(void* address) const
 {
-    GetDelegate(address)->~FDynamicMulticastDelegate();
+    static_cast<FDynamicMulticastDelegate*>(address)->~FDynamicMulticastDelegate();
 }
 
 void DDelegateProperty::SetValue(void* instance, const void* field_value) const
 {
     void* addr = static_cast<uint8_t*>(instance) + m_offset;
-    *GetDelegate(addr) = *static_cast<const FDynamicMulticastDelegate*>(field_value);
+    *static_cast<FDynamicMulticastDelegate*>(addr) =
+        *static_cast<const FDynamicMulticastDelegate*>(field_value);
 }
 
 void* DDelegateProperty::GetValue(const void* instance) const
