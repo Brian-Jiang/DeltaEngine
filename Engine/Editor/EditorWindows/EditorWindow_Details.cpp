@@ -76,9 +76,33 @@ void LivePreviewWrite(DObject* obj, DProperty* prop)
 EditorWindow_Details::EditorWindow_Details()
 {
     m_title = "Details";
+
+    if (g_editorCore)
+    {
+        if (EditorSelectionState* sel = g_editorCore->GetSelectionState())
+            m_onSelectionChangedHandle = sel->OnSelectionChanged.AddRaw(this, &EditorWindow_Details::HandleSelectionChanged);
+    }
 }
 
-EditorWindow_Details::~EditorWindow_Details() = default;
+EditorWindow_Details::~EditorWindow_Details()
+{
+    if (g_editorCore)
+    {
+        if (EditorSelectionState* sel = g_editorCore->GetSelectionState())
+            sel->OnSelectionChanged.Remove(m_onSelectionChangedHandle);
+    }
+}
+
+void EditorWindow_Details::HandleSelectionChanged()
+{
+    m_activeEditProp   = nullptr;
+    m_activeEditBefore = {};
+    m_activeEditObject = nullptr;
+
+    m_transformEditing    = false;
+    m_transformEditTarget = nullptr;
+    m_transformEditBefore = {};
+}
 
 void EditorWindow_Details::Render(bool& open)
 {

@@ -5,6 +5,7 @@
 #include "EditorWindows/EditorWindow.h"
 #include "EditorWindows/EditorWindow_ViewportPresets.h"
 #include "Editor/EditorViewportCamera.h"
+#include "Runtime/Core/Delegates/DelegateHandle.h"
 #include "imgui.h"
 
 #include <nlohmann/json.hpp>
@@ -38,6 +39,7 @@ public:
     void SetPreviewCamera(const EditorViewportCamera& cam);
 
 private:
+    void HandleSelectionChanged();
     void UpdateSceneRenderSize(int renderW, int renderH);
     void UpdateViewportFlyMode(bool viewportImageHovered);
     void DrawGizmo(const ImVec2& imageMin, const ImVec2& imageSize, float texW, float texH);
@@ -60,6 +62,8 @@ private:
     bool            m_gizmoEditing    = false;
     SceneComponent* m_gizmoEditTarget = nullptr;
     nlohmann::json  m_gizmoEditBefore;
+
+    FDelegateHandle m_onSelectionChangedHandle;
 };
 
 DELTA_ENGINE_NS_END

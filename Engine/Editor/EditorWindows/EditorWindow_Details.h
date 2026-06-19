@@ -3,6 +3,7 @@
 #include "EngineIncludes.h"
 
 #include "EditorWindows/EditorWindow.h"
+#include "Runtime/Core/Delegates/DelegateHandle.h"
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DProperty.h"
 #include "Runtime/Reflection/DVectorProperty.h"
@@ -34,6 +35,8 @@ public:
     void Render(bool& open) override;
 
 private:
+    void HandleSelectionChanged();
+
     void RenderAssetDetails(const AssetId& assetId);
     void RenderFolderDetails(const std::string& folderRelPath);
     void RenderGameObjectDetails(GameObject* gameObject);
@@ -84,6 +87,8 @@ private:
     StringField    m_stringField;
     ReferenceField m_refField;
     ObjectPtrField m_objPtrField;
+
+    FDelegateHandle m_onSelectionChangedHandle;
 };
 
 DELTA_ENGINE_NS_END
