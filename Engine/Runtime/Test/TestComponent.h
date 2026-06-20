@@ -16,6 +16,8 @@ DELTA_ENGINE_NS_BEGIN
 
 class DTexture;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FTestComponentEvent, int, Value);
+
 DCLASS()
 class TestComponent : public DComponent
 {
@@ -37,7 +39,22 @@ public:
     DFUNCTION()
     DELTAENGINE_API void OnTwoArgEvent(int a, float b);
 
+    DFUNCTION()
+    DELTAENGINE_API void OnTestEventReceived(int value);
+
+    DELTAENGINE_API void BroadcastTestEvent(int value);
+
+    static int GetLastReceivedValue() { return s_lastReceivedValue; }
+    static int GetReceiveCount() { return s_receiveCount; }
+    static void ResetEventReceiveTracking();
+
 private:
+    static int s_lastReceivedValue;
+    static int s_receiveCount;
+
+    DPROPERTY()
+    FTestComponentEvent OnTestEvent;
+
     DPROPERTY()
     float m_testFloat = 0.0f;
 

@@ -2,6 +2,15 @@
 
 using namespace DeltaEngine;
 
+int TestComponent::s_lastReceivedValue = 0;
+int TestComponent::s_receiveCount = 0;
+
+void TestComponent::ResetEventReceiveTracking()
+{
+    s_lastReceivedValue = 0;
+    s_receiveCount = 0;
+}
+
 void TestComponent::TestFunction()
 {
     ++m_testInt;
@@ -27,4 +36,15 @@ void TestComponent::OnTwoArgEvent(int a, float b)
 {
     m_testInt = a;
     m_testFloat = b;
+}
+
+void TestComponent::OnTestEventReceived(int value)
+{
+    s_lastReceivedValue = value;
+    ++s_receiveCount;
+}
+
+void TestComponent::BroadcastTestEvent(int value)
+{
+    OnTestEvent.Broadcast(value);
 }
