@@ -728,9 +728,16 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
                                     tu=tu)
             if resolved is None and delegate_names:
                 type_name = child.type.spelling
+                for prefix in ("class ", "struct "):
+                    if type_name.startswith(prefix):
+                        type_name = type_name[len(prefix):].strip()
+                        break
                 if "::" in type_name:
                     type_name = type_name.rsplit("::", 1)[-1]
-                if type_name in delegate_names:
+                canonical = child.type.get_canonical().spelling
+                if "::" in canonical:
+                    canonical = canonical.rsplit("::", 1)[-1]
+                if type_name in delegate_names or canonical in delegate_names:
                     resolved = ("DDelegateProperty", False, "")
             if resolved is None:
                 continue
@@ -1015,6 +1022,19 @@ def _delegate_names(delegates: list[DelegateInfo]) -> set[str]:
     return {d.name for d in delegates}
 
 
+def _delegate_preamble_block(delegates: list[DelegateInfo]) -> str:
+    """Forward-declare generated delegate types so libclang does not treat unknown
+    spellings (e.g. FTestComponentEvent) as int during stripped-header parsing."""
+    if not delegates:
+        return ""
+    lines = ["namespace DeltaEngine {"]
+    for delegate in delegates:
+        base = "FDynamicMulticastDelegate" if delegate.is_multicast else "FDynamicDelegate"
+        lines.append(f"class {delegate.name} : public {base} {{}};")
+    lines.append("}")
+    return "\n".join(lines) + "\n\n"
+
+
 # ── public API ───────────────────────────────────────────────
 
 
@@ -1035,7 +1055,11 @@ def parse_header(
     source_includes = _collect_source_includes(raw, file_path)
     delegates = _collect_dynamic_delegate_declarations(raw, file_path, diag)
     delegate_names = _delegate_names(delegates)
-    stripped_source = _PREAMBLE + _INCLUDE_RE.sub("", raw)
+    stripped_source = (
+        _PREAMBLE
+        + _delegate_preamble_block(delegates)
+        + _INCLUDE_RE.sub("", raw)
+    )
 
     args = ["-std=c++23", "-x", "c++", "-w", "-ferror-limit=0"]
     parse_options = (

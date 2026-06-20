@@ -267,3 +267,12 @@ def test_dynamic_delegate_dproperty_resolution(parse_dynamic_delegate):
     by_name = {p.name: p for p in host.properties}
     assert by_name["m_plainDelegate"].property_class == "DDelegateProperty"
     assert by_name["m_onOneInt"].property_class == "DDelegateProperty"
+
+
+@requires_libclang
+def test_test_component_delegate_property_resolution(fixtures_dir):
+    require_libclang()
+    result = parse_header(fixtures_dir / "test_component_delegate.h", fixtures_dir)
+    host = next(c for c in result.classes if c.name == "TestComponent")
+    by_name = {p.name: p for p in host.properties}
+    assert by_name["OnTestEvent"].property_class == "DDelegateProperty"
