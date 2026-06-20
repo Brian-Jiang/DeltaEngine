@@ -46,11 +46,11 @@ public:
 
     static int GetLastReceivedValue() { return s_lastReceivedValue; }
     static int GetReceiveCount() { return s_receiveCount; }
-    static void ResetEventReceiveTracking();
+    DELTAENGINE_API static void ResetEventReceiveTracking();
 
 private:
-    static int s_lastReceivedValue;
-    static int s_receiveCount;
+    DELTAENGINE_API static int s_lastReceivedValue;
+    DELTAENGINE_API static int s_receiveCount;
 
     DPROPERTY()
     FTestComponentEvent OnTestEvent;
