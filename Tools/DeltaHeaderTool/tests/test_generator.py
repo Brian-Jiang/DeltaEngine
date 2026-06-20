@@ -135,3 +135,34 @@ def test_snapshots_simple_class(fixtures_dir, snapshot_dir, snapshot_update):
         assert snap_cpp.is_file(), "missing snapshot; run pytest with --snapshot-update"
         assert h == _read_snapshot(snap_h)
         assert cpp == _read_snapshot(snap_cpp)
+
+
+@requires_libclang
+def test_generate_dynamic_delegate_markers(fixtures_dir):
+    require_libclang()
+    path = fixtures_dir / "dynamic_delegate.h"
+    result = parse_header(path, fixtures_dir)
+    h = generate_header_file(
+        result.classes, result.source_includes, result.forward_decls, result.delegates,
+    )
+    cpp = generate_source_file(
+        result.classes, path.stem, {}, result.delegates, f"{path.stem}.h",
+    )
+
+    assert "struct FOnOneInt_Params" in h
+    assert "int Value;" in h
+    assert "struct FOnTwoArgs_Params" in h
+    assert "int First;" in h
+    assert "float Second;" in h
+
+    assert "void FOnOneInt::Broadcast(int Value) const" in cpp
+    assert "params.Value = Value;" in cpp
+    assert "BroadcastWithParams(&params, 1);" in cpp
+    assert "void FOnTwoArgs::Broadcast(int First, float Second) const" in cpp
+    assert "BroadcastWithParams(&params, 2);" in cpp
+    assert "void FOnExecutePlain::Execute() const" in cpp
+    assert "ExecuteWithParams(nullptr, 0);" in cpp
+    assert "void FOnExecuteInt::Execute(int Value) const" in cpp
+    assert "ExecuteWithParams(&params, 1);" in cpp
+    assert "new DDelegateProperty(" in cpp
+    assert '"m_onOneInt"' in cpp

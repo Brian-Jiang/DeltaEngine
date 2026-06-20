@@ -5,6 +5,7 @@
 #include <string>
 
 #include "SimpleMath.h"
+#include "Runtime/Core/Delegates/DynamicDelegate.h"
 #include "Runtime/Core/SceneComponent.h"
 #include "Runtime/Graphics/DXGraphicsContext.h"
 
@@ -29,6 +30,12 @@ public:
 
     DFUNCTION()
     DELTAENGINE_API float TestMultiply(float x, bool negate);
+
+    DFUNCTION()
+    DELTAENGINE_API void OnIntEvent(int value);
+
+    DFUNCTION()
+    DELTAENGINE_API void OnTwoArgEvent(int a, float b);
 
 private:
     DPROPERTY()
@@ -64,5 +71,8 @@ private:
     DPROPERTY(EditorOnly, HideInDetails)
     float m_editorOnlyAndHiddenFloat = 0.0f;
 };
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnIntEvent, int, value);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnTwoArgEvent, int, a, float, b);
 
 DELTA_ENGINE_NS_END

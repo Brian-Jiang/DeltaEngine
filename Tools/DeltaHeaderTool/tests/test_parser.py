@@ -225,3 +225,45 @@ def test_class_with_meta_dstruct_metadata(parse_class_with_meta):
     s = by_name["MetaTaggedStruct"]
     assert s.is_struct is True
     assert s.metadata == {"Category": "Math"}
+
+
+@pytest.fixture
+def parse_dynamic_delegate(fixtures_dir):
+    require_libclang()
+    return parse_header(fixtures_dir / "dynamic_delegate.h", fixtures_dir)
+
+
+@requires_libclang
+def test_dynamic_delegate_declarations(parse_dynamic_delegate):
+    by_name = {d.name: d for d in parse_dynamic_delegate.delegates}
+    assert len(parse_dynamic_delegate.delegates) == 5
+
+    plain = by_name["FOnPlain"]
+    assert plain.is_multicast is True
+    assert plain.params == []
+    assert plain.needs_codegen is False
+
+    one = by_name["FOnOneInt"]
+    assert one.is_multicast is True
+    assert len(one.params) == 1
+    assert one.params[0].cpp_type == "int"
+    assert one.params[0].name == "Value"
+    assert one.params[0].property_class == "DIntProperty"
+
+    two = by_name["FOnTwoArgs"]
+    assert two.is_multicast is True
+    assert len(two.params) == 2
+    assert two.params[0].cpp_type == "int"
+    assert two.params[1].cpp_type == "float"
+
+    execute = by_name["FOnExecuteInt"]
+    assert execute.is_multicast is False
+    assert len(execute.params) == 1
+
+
+@requires_libclang
+def test_dynamic_delegate_dproperty_resolution(parse_dynamic_delegate):
+    host = next(c for c in parse_dynamic_delegate.classes if c.name == "DelegatePropertyHost")
+    by_name = {p.name: p for p in host.properties}
+    assert by_name["m_plainDelegate"].property_class == "DDelegateProperty"
+    assert by_name["m_onOneInt"].property_class == "DDelegateProperty"

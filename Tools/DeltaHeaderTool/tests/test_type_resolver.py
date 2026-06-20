@@ -68,6 +68,20 @@ def test_unknown_type_returns_none():
     assert resolve_type_from_string("NotAReflectableType") is None
 
 
+@pytest.mark.parametrize(
+    "cpp",
+    [
+        "FDynamicMulticastDelegate",
+        "FDynamicDelegate",
+        "DeltaEngine::FDynamicMulticastDelegate",
+        "FOnSomethingDynamicMulticastDelegate",
+    ],
+)
+def test_delegate_property_types_resolve(cpp):
+    r = resolve_type_from_string(cpp)
+    assert r == ("DDelegateProperty", False, "")
+
+
 def test_type_map_covers_listed_subclasses():
     expected = {
         "DFloatProperty",
