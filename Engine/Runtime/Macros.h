@@ -41,21 +41,21 @@ public: \
     class DelegateName : public DeltaEngine::FDynamicDelegate \
     { \
     public: \
-        void Execute() const; \
+        DELTAENGINE_API void Execute() const; \
     };
 
 #define DECLARE_DYNAMIC_DELEGATE_OneParam(DelegateName, Param1Type, Param1Name) \
     class DelegateName : public DeltaEngine::FDynamicDelegate \
     { \
     public: \
-        void Execute(Param1Type Param1Name) const; \
+        DELTAENGINE_API void Execute(Param1Type Param1Name) const; \
     };
 
 #define DECLARE_DYNAMIC_DELEGATE_TwoParams(DelegateName, Param1Type, Param1Name, Param2Type, Param2Name) \
     class DelegateName : public DeltaEngine::FDynamicDelegate \
     { \
     public: \
-        void Execute(Param1Type Param1Name, Param2Type Param2Name) const; \
+        DELTAENGINE_API void Execute(Param1Type Param1Name, Param2Type Param2Name) const; \
     };
 
 #define DECLARE_DYNAMIC_MULTICAST_DELEGATE(DelegateName) \
@@ -67,12 +67,12 @@ public: \
     class DelegateName : public DeltaEngine::FDynamicMulticastDelegate \
     { \
     public: \
-        void Broadcast(Param1Type Param1Name) const; \
+        DELTAENGINE_API void Broadcast(Param1Type Param1Name) const; \
     };
 
 #define DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(DelegateName, Param1Type, Param1Name, Param2Type, Param2Name) \
     class DelegateName : public DeltaEngine::FDynamicMulticastDelegate \
     { \
     public: \
-        void Broadcast(Param1Type Param1Name, Param2Type Param2Name) const; \
+        DELTAENGINE_API void Broadcast(Param1Type Param1Name, Param2Type Param2Name) const; \
     };

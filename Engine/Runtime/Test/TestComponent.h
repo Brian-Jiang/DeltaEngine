@@ -5,6 +5,7 @@
 #include <string>
 
 #include "SimpleMath.h"
+#include "Runtime/Core/Delegates/DynamicDelegate.h"
 #include "Runtime/Core/SceneComponent.h"
 #include "Runtime/Graphics/DXGraphicsContext.h"
 
@@ -70,5 +71,8 @@ private:
     DPROPERTY(EditorOnly, HideInDetails)
     float m_editorOnlyAndHiddenFloat = 0.0f;
 };
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnIntEvent, int, value);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnTwoArgEvent, int, a, float, b);
 
 DELTA_ENGINE_NS_END

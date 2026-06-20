@@ -1,7 +1,6 @@
 #include "Runtime/Core/Delegates/DynamicDelegate.h"
 #include "Runtime/Reflection/DProperty.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
-#include "Runtime/Test/DynamicDelegateTestTypes.h"
 #include "Runtime/Test/TestComponent.h"
 
 #include <gtest/gtest.h>
