@@ -41,6 +41,26 @@ TEST(SceneComponent, SceneComponent_SetParent_AncestorCycle_RejectsAndKeepsHiera
     EXPECT_EQ(leaf.GetParent(), &mid);
 }
 
+TEST(SceneComponent, SceneComponent_SetWorldPosition_OnParentedChild_KeepsAffineTransform)
+{
+    SceneComponent root;
+    SceneComponent child;
+    child.SetParent(&root);
+
+    // World-space move on a parented child derives the local position by subtracting
+    // the parent position; without forcing w=1 this corrupts the homogeneous transform
+    // (r[3].w becomes 0), which collapses the mesh under perspective projection.
+    child.SetWorldPosition(DirectX::SimpleMath::Vector3 { 5.f, 2.f, -3.f });
+
+    const DirectX::XMMATRIX world = child.GetWorldTransform();
+    EXPECT_NEAR(DirectX::XMVectorGetW(world.r[3]), 1.f, 1e-4f);
+
+    const DirectX::SimpleMath::Vector3 wp = child.GetWorldPosition();
+    EXPECT_NEAR(wp.x, 5.f, 1e-4f);
+    EXPECT_NEAR(wp.y, 2.f, 1e-4f);
+    EXPECT_NEAR(wp.z, -3.f, 1e-4f);
+}
+
 TEST(SceneComponent, SceneComponent_PostRestore_RecomputesWorldTransformFromLocals)
 {
     SceneComponent root;

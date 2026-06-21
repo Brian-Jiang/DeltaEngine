@@ -2,6 +2,7 @@
 
 #include "Editor/EditorCore.h"
 #include "Editor/Commands/PropertyValueIO.h"
+#include "Editor/Mcp/McpAnimationDefaults.h"
 #include "Mcp/McpRegistry.h"
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/GameObject.h"
@@ -617,7 +618,7 @@ nlohmann::json McpSceneSystem::CommandSetPosition(EditorCore& core, const nlohma
     const Vector3 target(v[0].get<float>(), v[1].get<float>(), v[2].get<float>());
     const std::string space = params.value("space", "local");
     const bool worldSpace   = (space == "world");
-    const float duration    = params.value("duration_seconds", 0.0f);
+    const float duration    = params.value("duration_seconds", kDefaultAnimationDurationSeconds);
 
     auto [scAssetId, scObjectId] = core.GetIdsForObject(sc);
 
@@ -692,7 +693,7 @@ nlohmann::json McpSceneSystem::CommandSetRotation(EditorCore& core, const nlohma
 
     const std::string space = params.value("space", "local");
     const bool worldSpace   = (space == "world");
-    const float duration    = params.value("duration_seconds", 0.0f);
+    const float duration    = params.value("duration_seconds", kDefaultAnimationDurationSeconds);
 
     auto [scAssetId, scObjectId] = core.GetIdsForObject(sc);
 
@@ -756,7 +757,7 @@ nlohmann::json McpSceneSystem::CommandSetScale(EditorCore& core, const nlohmann:
 
     const auto& v      = params["value"];
     const Vector3 target(v[0].get<float>(), v[1].get<float>(), v[2].get<float>());
-    const float duration = params.value("duration_seconds", 0.0f);
+    const float duration = params.value("duration_seconds", kDefaultAnimationDurationSeconds);
 
     auto [scAssetId, scObjectId] = core.GetIdsForObject(sc);
 

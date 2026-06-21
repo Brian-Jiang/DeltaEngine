@@ -1,6 +1,7 @@
 #include "Editor/Mcp/Systems/McpLightsSystem.h"
 
 #include "Editor/EditorCore.h"
+#include "Editor/Mcp/McpAnimationDefaults.h"
 #include "Editor/Mcp/McpRegistry.h"
 
 #include "Runtime/Core/UUID.h"
@@ -27,7 +28,7 @@ nlohmann::json McpLightsSystem::CommandSetIntensity(EditorCore& core, const nloh
         return {{"ok", false}, {"error", "invalid objectId"}};
 
     const float target   = params["value"].get<float>();
-    const float duration = params.value("duration_seconds", 0.0f);
+    const float duration = params.value("duration_seconds", kDefaultAnimationDurationSeconds);
 
     if (duration <= 0.0f)
     {

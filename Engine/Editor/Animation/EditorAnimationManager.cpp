@@ -275,6 +275,9 @@ void EditorAnimationManager::NotifyChannelComplete(
     if (--it->activeChannelCount > 0)
         return;
 
+    nlohmann::json snapshot = std::move(it->snapshotJson);
+    m_sessions.erase(it);
+
     // All channels done — commit a single SetProperty on m_localTransform.
     if (auto* sc = core.ResolveObject<SceneComponent>(assetId, objectId))
     {
@@ -283,13 +286,11 @@ void EditorAnimationManager::NotifyChannelComplete(
             EditorCommandContext ctx{core};
             auto cmd = std::make_unique<EditorCommand_SetProperty>(
                 assetId, objectId, "m_localTransform",
-                it->snapshotJson,
+                std::move(snapshot),
                 PropertyToJson(sc, prop));
             core.GetCommandManager().Execute(std::move(cmd), ctx);
         }
     }
-
-    m_sessions.erase(it);
 }
 
 EditorAnimationInstance* EditorAnimationManager::FindInstance(

@@ -34,7 +34,9 @@ void SceneComponent::SetLocalPosition(DirectX::SimpleMath::Vector3 position)
 
 void SceneComponent::SetLocalPosition(DirectX::XMVECTOR position)
 {
-    m_localTransform.r[3] = position;
+    // Force the homogeneous w to 1: callers such as SetWorldPosition derive this vector
+    // by subtracting two positions (w becomes 0), which would corrupt the affine transform.
+    m_localTransform.r[3] = XMVectorSetW(position, 1.0f);
     SetTransformDirty();
 }
 

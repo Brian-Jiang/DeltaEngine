@@ -26,6 +26,8 @@ void MeshRenderer::SetMesh(DMesh* mesh)
 
 void MeshRenderer::PostEditChangeProperty(const DProperty* prop)
 {
+    SceneComponent::PostEditChangeProperty(prop);
+
     if (prop && prop->GetName() == "m_mesh")
         CreateRenderProxy();
 }
