@@ -4,6 +4,7 @@
 #include "Runtime/Graphics/RenderProxy/MeshRenderProxy.h"
 #include "Runtime/Graphics/RenderProxy/RenderProxy.h"
 #include "Runtime/Graphics/Shadow/ShadowView.h"
+#include "Runtime/Reflection/DProperty.h"
 
 using namespace DeltaEngine;
 
@@ -21,6 +22,12 @@ void MeshRenderer::SetMesh(DMesh* mesh)
 {
     m_mesh = mesh;
     CreateRenderProxy();
+}
+
+void MeshRenderer::PostEditChangeProperty(const DProperty* prop)
+{
+    if (prop && prop->GetName() == "m_mesh")
+        CreateRenderProxy();
 }
 
 void MeshRenderer::InitGraphicState(std::shared_ptr<DXGraphicsContext> context)

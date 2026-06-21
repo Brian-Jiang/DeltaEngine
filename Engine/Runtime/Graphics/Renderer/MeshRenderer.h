@@ -10,6 +10,7 @@ DELTA_ENGINE_NS_BEGIN
 
 class MeshRenderProxy;
 class DMesh;
+class DProperty;
 
 DSTRUCT()
 struct MeshRendererSettings
@@ -29,6 +30,8 @@ public:
     DFUNCTION()
     /// Sets the mesh rendered by this component.
     void SetMesh(DMesh* mesh);
+
+    void PostEditChangeProperty(const DProperty* prop) override;
 
 protected:
     void InitGraphicState(std::shared_ptr<DXGraphicsContext> context) override;

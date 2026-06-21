@@ -155,6 +155,7 @@ bool AssetMatchesFolder(
 }
 
 nlohmann::json SerializeProperties(
+    EditorCore& core,
     const DObject* obj,
     const DClass* dclass,
     const std::unordered_set<std::string>& includeFields)
@@ -164,7 +165,7 @@ nlohmann::json SerializeProperties(
     {
         if (!includeFields.empty() && !includeFields.contains(p->GetName()))
             continue;
-        nlohmann::json val = PropertyToJson(obj, p);
+        nlohmann::json val = PropertyToJson(obj, p, core);
         if (!val.is_null())
             props[p->GetName()] = std::move(val);
     }
@@ -462,7 +463,7 @@ nlohmann::json McpAssetsSystem::QueryGet(EditorCore& core, const nlohmann::json&
             nlohmann::json o;
             o["object_id"] = obj->GetObjectId().ToString();
             o["class"]     = obj->GetClass()->GetName();
-            o["properties"] = SerializeProperties(obj, obj->GetClass(), allProps);
+            o["properties"] = SerializeProperties(core, obj, obj->GetClass(), allProps);
             objects.push_back(std::move(o));
         }
         result["properties"] = std::move(objects);

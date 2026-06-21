@@ -87,7 +87,7 @@ bool EditorCommand_SetProperty::Execute(EditorCommandContext& ctx)
             DClass* dc = obj->GetClass();
             DProperty* prop = dc ? dc->FindPropertyByName(m_propertyName) : nullptr;
             if (prop)
-                m_valueBefore = PropertyToJson(obj, prop);
+                m_valueBefore = PropertyToJson(obj, prop, ctx.core);
         }
     }
 
