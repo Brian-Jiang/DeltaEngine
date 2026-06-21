@@ -48,6 +48,7 @@ static nlohmann::json MakeError(const std::string& msg)
 }
 
 static nlohmann::json SerializeProperties(
+    EditorCore& core,
     const DObject* obj,
     const DClass* dclass,
     const std::unordered_set<std::string>& includeFields)
@@ -58,7 +59,7 @@ static nlohmann::json SerializeProperties(
         if (!includeFields.empty() && !includeFields.contains(p->GetName()))
             continue;
 
-        nlohmann::json val = PropertyToJson(obj, p);
+        nlohmann::json val = PropertyToJson(obj, p, core);
         if (!val.is_null())
             props[p->GetName()] = std::move(val);
     }
@@ -237,7 +238,7 @@ nlohmann::json McpSceneSystem::QueryGameObjects(EditorCore& core, const nlohmann
         entry["class"] = go->GetClass() ? go->GetClass()->GetName() : "GameObject";
 
         if (go->GetClass())
-            entry["properties"] = SerializeProperties(go, go->GetClass(), includeFields);
+            entry["properties"] = SerializeProperties(core, go, go->GetClass(), includeFields);
 
         arr.push_back(std::move(entry));
     }
@@ -267,7 +268,7 @@ nlohmann::json McpSceneSystem::QueryGameObject(EditorCore& core, const nlohmann:
     result["class"] = go->GetClass() ? go->GetClass()->GetName() : "GameObject";
 
     if (go->GetClass())
-        result["properties"] = SerializeProperties(go, go->GetClass(), includeFields);
+        result["properties"] = SerializeProperties(core, go, go->GetClass(), includeFields);
 
     nlohmann::json comps = nlohmann::json::array();
     for (DComponent* comp : go->GetComponents())
@@ -370,7 +371,7 @@ nlohmann::json McpSceneSystem::QueryComponent(EditorCore& core, const nlohmann::
     nlohmann::json result;
     result["object_id"] = objectId.ToString();
     result["class"] = dclass->GetName();
-    result["properties"] = SerializeProperties(obj, dclass, includeFields);
+    result["properties"] = SerializeProperties(core, obj, dclass, includeFields);
 
     if (auto* comp = dynamic_cast<DComponent*>(obj))
     {
@@ -423,7 +424,7 @@ nlohmann::json McpSceneSystem::QueryComponentsOnObject(EditorCore& core, const n
         entry["name"] = name;
 
         if (includeProperties && dc)
-            entry["properties"] = SerializeProperties(comp, dc, noFilter);
+            entry["properties"] = SerializeProperties(core, comp, dc, noFilter);
 
         arr.push_back(std::move(entry));
     };
@@ -466,7 +467,7 @@ nlohmann::json McpSceneSystem::QueryFindByProperty(EditorCore& core, const nlohm
         if (!objClass || !objClass->IsChildOf(dclass))
             continue;
 
-        nlohmann::json propVal = PropertyToJson(obj, prop);
+        nlohmann::json propVal = PropertyToJson(obj, prop, core);
         if (propVal == targetValue)
         {
             auto [aId, oId] = core.GetIdsForObject(obj);
@@ -492,22 +493,10 @@ nlohmann::json McpSceneSystem::CommandCreateGameObject(EditorCore& core, const n
 
     nlohmann::json data;
     data["className"] = "GameObject";
-
-    nlohmann::json result = EnqueueCommand(core, "scene", "EditorCommand_CreateGameObject", std::move(data));
-
     if (!name.empty() && name != "New GameObject")
-    {
-        nlohmann::json renameData;
-        renameData["newName"] = name;
-        core.EnqueueSerializedCommand(nlohmann::json{
-            {"type", "command"},
-            {"system", "scene"},
-            {"command", "EditorCommand_RenameObject"},
-            {"params", {{"newName", name}}}
-        }.dump());
-    }
+        data["initialName"] = name;
 
-    return result;
+    return EnqueueCommand(core, "scene", "EditorCommand_CreateGameObject", std::move(data));
 }
 
 // ─── Command: DeleteGameObject ──────────────────────────────────────────────

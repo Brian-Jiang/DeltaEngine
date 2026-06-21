@@ -20,9 +20,10 @@
 using namespace DeltaEngine;
 
 EditorCommand_CreateGameObject::EditorCommand_CreateGameObject(
-    AssetId sceneAssetId, std::string className)
+    AssetId sceneAssetId, std::string className, std::string initialName)
     : m_sceneAssetId(sceneAssetId)
     , m_className(std::move(className))
+    , m_initialName(std::move(initialName))
 {
 }
 
@@ -52,7 +53,7 @@ bool EditorCommand_CreateGameObject::Execute(EditorCommandContext& ctx)
     }
 
     DScene* scene = world->GetActiveScene();
-    const std::string goName = std::format("New {}", m_className);
+    const std::string goName = m_initialName.empty() ? std::format("New {}", m_className) : m_initialName;
     GameObject* go = world->CreateGameObjectInScene(scene, goName);
     if (!go)
     {
@@ -161,6 +162,7 @@ void EditorCommand_CreateGameObject::Serialize(nlohmann::json& out) const
 {
     out["sceneAssetId"] = m_sceneAssetId.ToString();
     out["className"] = m_className;
+    out["initialName"] = m_initialName;
     out["createdId"] = m_createdId.ToString();
 
     if (m_hasSnapshot)
@@ -178,6 +180,7 @@ void EditorCommand_CreateGameObject::Deserialize(const nlohmann::json& in)
 {
     m_sceneAssetId = UUID::FromString(in.value("sceneAssetId", ""));
     m_className = in.value("className", "");
+    m_initialName = in.value("initialName", "");
     m_createdId = UUID::FromString(in.value("createdId", ""));
 
     if (in.contains("snapshot"))

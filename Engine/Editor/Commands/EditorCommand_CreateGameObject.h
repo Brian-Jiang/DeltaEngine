@@ -14,7 +14,7 @@ class DELTAEDITOR_API EditorCommand_CreateGameObject : public EditorCommand
 {
 public:
     EditorCommand_CreateGameObject() = default;
-    EditorCommand_CreateGameObject(AssetId sceneAssetId, std::string className);
+    EditorCommand_CreateGameObject(AssetId sceneAssetId, std::string className, std::string initialName = {});
 
     static constexpr std::string_view StaticTypeName() { return "EditorCommand_CreateGameObject"; }
     std::string_view GetTypeName() const override { return StaticTypeName(); }
@@ -29,6 +29,7 @@ public:
 private:
     AssetId m_sceneAssetId;
     std::string m_className;
+    std::string m_initialName;
     ObjectId m_createdId;
     ObjectSnapshot m_snapshot;
     mutable std::string m_description;
