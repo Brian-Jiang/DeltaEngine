@@ -19,23 +19,28 @@
       "m_passes": [
         {
           "assetId": "a521c98a-6402-46d4-b0d6-a61e1c232971",
-          "objectId": "1ac4d4ba-9002-48de-80c4-38b7fa911b8e"
+          "objectId": "baf70b8d-96d8-4911-b369-aea4c6b856b7"
         },
         {
           "assetId": "a521c98a-6402-46d4-b0d6-a61e1c232971",
           "objectId": "82a86343-28ce-4a52-8b00-9983f3a49a19"
+        },
+        {
+          "assetId": "a521c98a-6402-46d4-b0d6-a61e1c232971",
+          "objectId": "6e4bc917-f4c7-4ff3-ae17-5c773b1a6e78"
         }
       ]
     },
     {
-      "_class": "PassthroughPass",
-      "_objectId": "1ac4d4ba-9002-48de-80c4-38b7fa911b8e",
+      "_class": "ColorGradingPass",
+      "_objectId": "baf70b8d-96d8-4911-b369-aea4c6b856b7",
+      "m_contrast": 1.0,
       "m_enabled": true,
+      "m_gain": [1.0, 1.0, 1.0, 0.0],
+      "m_gamma": [1.0, 1.0, 1.0, 0.0],
+      "m_lift": [0.0, 0.0, 0.0, 0.0],
       "m_passName": "",
-      "m_shader": {
-        "assetId": "40920546-8395-4a4f-a82b-9580ab130178",
-        "objectId": "5228835e-bd5f-4f6a-bd52-ede3e0afab36"
-      }
+      "m_saturation": 1.0
     },
     {
       "_class": "TonemapPass",
@@ -47,6 +52,16 @@
         "assetId": "5be5ecb5-60bb-4324-b4c2-7b38d1df176f",
         "objectId": "8d589704-55b4-4801-b70c-2a4a49220dba"
       }
+    },
+    {
+      "_class": "VignettePass",
+      "_objectId": "6e4bc917-f4c7-4ff3-ae17-5c773b1a6e78",
+      "m_color": [0.0, 0.0, 0.0, 1.0],
+      "m_enabled": true,
+      "m_intensity": 0.4,
+      "m_passName": "",
+      "m_roundness": 1.0,
+      "m_smoothness": 0.5
     }
   ]
 }

@@ -60,6 +60,10 @@ TEST(PostProcessStackHardeningTests, PA_PostProcessStack_AddPass_ValidClass_Incr
     EXPECT_EQ(stack->GetPassCount(), 1);
     ASSERT_NE(asset->AddPass("TonemapPass"), nullptr);
     EXPECT_EQ(stack->GetPassCount(), 2);
+    ASSERT_NE(asset->AddPass("ColorGradingPass"), nullptr);
+    EXPECT_EQ(stack->GetPassCount(), 3);
+    ASSERT_NE(asset->AddPass("VignettePass"), nullptr);
+    EXPECT_EQ(stack->GetPassCount(), 4);
 
     GetReflectionRegistry().DestroyObject(asset);
 }
