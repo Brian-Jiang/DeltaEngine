@@ -4,6 +4,8 @@
 
 #include "Runtime/Graphics/PostProcess/PostProcessPass.h"
 
+#include <d3d12.h>
+
 #include <memory>
 
 #include <slang-com-ptr.h>

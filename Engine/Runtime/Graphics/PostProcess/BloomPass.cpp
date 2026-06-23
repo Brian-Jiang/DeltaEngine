@@ -265,7 +265,7 @@ void BloomPass::Execute(DXGraphicsContext& ctx,
         1,
         1,
         0,
-        D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_SHADER_RESOURCE);
+        D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
 
     TransientTexturePool& pool = ctx.renderManager->GetTransientPool();
     std::shared_ptr<DirectX12Texture> bloomA = pool.Acquire(desc, "BloomHalfA");
