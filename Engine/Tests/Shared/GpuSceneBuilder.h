@@ -30,6 +30,7 @@ public:
     PointLight* AddPointLightWithShadows();
     SpotLight* AddSpotLightWithShadows();
     PostProcessStack* CreatePassthroughTonemapStack();
+    PostProcessStack* CreateBloomTonemapStack();
     void AttachPostProcessStack(Camera* camera, PostProcessStack* stack);
 
     void InitGpuResources();
