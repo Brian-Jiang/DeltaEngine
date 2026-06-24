@@ -26,17 +26,25 @@ std::filesystem::path StarObjPath()
     return IOManager::GetEngineSourceAssetFullPath(std::filesystem::path("Star.obj"));
 }
 
-DMesh* ImportStarMeshOrSkip()
+DMesh* TryImportStarMesh()
 {
     const std::filesystem::path path = StarObjPath();
     if (!std::filesystem::exists(path))
-        GTEST_SKIP() << "Star.obj not found at " << path.string();
+        return nullptr;
 
     DMesh* mesh = CreateDObject<DMesh>();
     mesh->ImportFromAbsolutePath(path);
     if (mesh->GetSubMeshCount() <= 0)
-        GTEST_SKIP() << "Star.obj imported with zero submeshes";
+        return nullptr;
 
+    return mesh;
+}
+
+DMesh* ImportStarMeshOrSkip()
+{
+    DMesh* mesh = TryImportStarMesh();
+    if (!mesh)
+        GTEST_SKIP() << "Star.obj not available at " << StarObjPath().string();
     return mesh;
 }
 
