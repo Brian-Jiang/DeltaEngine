@@ -142,8 +142,12 @@ MaterialFlags DMaterial::ComputeFlags() const
         flags |= MaterialFlags::AlphaTest;
     if (static_cast<ERenderMode>(m_renderMode) == ERenderMode::Transparent)
         flags |= MaterialFlags::AlphaBlend;
-    else if (m_blendDesc.RenderTarget[0].BlendEnable)
-        flags |= MaterialFlags::AlphaBlend;
+    else
+    {
+        const CD3DX12_BLEND_DESC& blend = m_blendDesc;
+        if (blend.RenderTarget[0].BlendEnable)
+            flags |= MaterialFlags::AlphaBlend;
+    }
     return flags;
 }
 
