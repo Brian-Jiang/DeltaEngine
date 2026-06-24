@@ -377,15 +377,53 @@ TEST(FullFrameRenderGraphCompileTests, FullChain_DeferredWithSkybox)
 
     AddDeferredLightingPasses(graph, albedo, normal, material, emissive, depth, color);
     AddSkyboxPass(graph, color, depth);
+    AddTransparentPass(graph, color, depth);
     graph.AddPass(std::make_unique<PostProcessFinalizeGraphPass>(color));
 
     graph.Compile();
 
-    ASSERT_EQ(graph.GetCompiledPassCount(), 4u);
+    ASSERT_EQ(graph.GetCompiledPassCount(), 5u);
     EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(0).passIndex).GetName(), "GBuffer");
     EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(1).passIndex).GetName(), "DeferredLighting");
     EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(2).passIndex).GetName(), "Skybox");
-    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(3).passIndex).GetName(), "PostProcessFinalize");
+    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(3).passIndex).GetName(), "Transparent");
+    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(4).passIndex).GetName(), "PostProcessFinalize");
+}
+
+TEST(FullFrameRenderGraphCompileTests, FullChain_DeferredWithTransparent_Order)
+{
+    RenderGraph graph;
+    const RenderGraphTextureUsage colorAndShader =
+        RenderGraphTextureUsage::ColorAttachment | RenderGraphTextureUsage::ShaderResource;
+
+    const RenderGraphTextureHandle color = graph.ImportTexture("SceneColor", nullptr, colorAndShader);
+    const RenderGraphTextureHandle depth = graph.ImportTexture("SceneDepth", nullptr,
+        RenderGraphTextureUsage::DepthAttachment | RenderGraphTextureUsage::ShaderResource);
+    const RenderGraphTextureHandle albedo = graph.ImportTexture("GBufferAlbedo", nullptr, colorAndShader);
+    const RenderGraphTextureHandle normal = graph.ImportTexture("GBufferNormal", nullptr, colorAndShader);
+    const RenderGraphTextureHandle material = graph.ImportTexture("GBufferMaterial", nullptr, colorAndShader);
+    const RenderGraphTextureHandle emissive = graph.ImportTexture("GBufferEmissive", nullptr, colorAndShader);
+    const RenderGraphTextureHandle ping = graph.ImportTexture("Ping", nullptr, colorAndShader);
+    const ShadowHandles shadow = ImportShadowAtlases(graph);
+
+    graph.AddPass(std::make_unique<ShadowRenderGraphPass>(
+        nullptr, nullptr, nullptr, shadow.directional, shadow.spot, shadow.point));
+    graph.AddPass(std::make_unique<SceneShadowReadGraphPass>(shadow.directional, shadow.spot, shadow.point));
+    AddDeferredLightingPasses(graph, albedo, normal, material, emissive, depth, color);
+    AddSkyboxPass(graph, color, depth);
+    AddTransparentPass(graph, color, depth);
+    AddPostProcessPass(graph, color, ping, 0, 1);
+    graph.AddPass(std::make_unique<PostProcessFinalizeGraphPass>(ping));
+
+    graph.Compile();
+
+    ASSERT_EQ(graph.GetCompiledPassCount(), 8u);
+    const size_t skyboxIdx = FindCompiledPassIndex(graph, "Skybox");
+    const size_t transparentIdx = FindCompiledPassIndex(graph, "Transparent");
+    const size_t postIdx = FindCompiledPassIndex(graph, "PostProcess");
+    EXPECT_LT(skyboxIdx, transparentIdx);
+    EXPECT_LT(transparentIdx, postIdx);
+    EXPECT_EQ(graph.GetCompiledPass(transparentIdx).clears.size(), 0u);
 }
 
 TEST(FullFrameRenderGraphCompileTests, FullChain_ForwardWithTransparent_Order)

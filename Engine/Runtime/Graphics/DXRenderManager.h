@@ -167,7 +167,8 @@ private:
         const SceneDrawCallback& transparentDrawCallback, PostProcessStack* stack);
     void BuildForwardFrameGraph(const SceneDrawCallback& opaqueDrawCallback,
         const SceneDrawCallback& transparentDrawCallback, PostProcessStack* stack);
-    void BuildDeferredFrameGraph(const SceneDrawCallback& drawCallback, PostProcessStack* stack);
+    void BuildDeferredFrameGraph(const SceneDrawCallback& opaqueDrawCallback,
+        const SceneDrawCallback& transparentDrawCallback, PostProcessStack* stack);
     bool ImportSceneTargets(RenderGraphTextureUsage colorAndShader, RenderGraphTextureUsage depthUsage,
         std::shared_ptr<DirectX12Texture>& colorTexture, std::shared_ptr<DirectX12Texture>& depthTexture);
     void AddShadowSceneSkyboxPasses(const SceneDrawCallback& opaqueDrawCallback,

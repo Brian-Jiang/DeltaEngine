@@ -576,7 +576,7 @@ void DXRenderManager::BuildFrameGraph(const SceneDrawCallback& opaqueDrawCallbac
         BuildForwardFrameGraph(opaqueDrawCallback, transparentDrawCallback, stack);
         break;
     case RenderPath::Deferred:
-        BuildDeferredFrameGraph(opaqueDrawCallback, stack);
+        BuildDeferredFrameGraph(opaqueDrawCallback, transparentDrawCallback, stack);
         break;
     }
 }
@@ -790,7 +790,8 @@ void DXRenderManager::BuildForwardFrameGraph(const SceneDrawCallback& opaqueDraw
     AppendPostProcessChain(stack, postInputHandle, colorAndShader);
 }
 
-void DXRenderManager::BuildDeferredFrameGraph(const SceneDrawCallback& drawCallback, PostProcessStack* stack)
+void DXRenderManager::BuildDeferredFrameGraph(const SceneDrawCallback& opaqueDrawCallback,
+    const SceneDrawCallback& transparentDrawCallback, PostProcessStack* stack)
 {
     const RenderGraphTextureUsage colorAndShader =
         RenderGraphTextureUsage::ColorAttachment | RenderGraphTextureUsage::ShaderResource;
@@ -824,7 +825,7 @@ void DXRenderManager::BuildDeferredFrameGraph(const SceneDrawCallback& drawCallb
         m_viewport,
         m_scissorRect,
         ctx,
-        drawCallback));
+        opaqueDrawCallback));
 
     m_frameGraph.AddPass(std::make_unique<DeferredLightingGraphPass>(
         m_frameResources.gbufferAlbedo,
@@ -844,20 +845,25 @@ void DXRenderManager::BuildDeferredFrameGraph(const SceneDrawCallback& drawCallb
         this,
         ctx));
 
+    const TransparentRenderGraphPass::DescriptorStageCallback stageDescriptors =
+        [this](CommandList& cl)
+        {
+            StageIBLDescriptors(cl);
+            StageShadowDescriptors(cl);
+        };
+
     if (m_currentWorld && m_currentWorld->GetSkybox())
     {
-        const SkyboxRenderGraphPass::DescriptorStageCallback stageDescriptors =
-            [this](CommandList& cl)
-            {
-                StageIBLDescriptors(cl);
-                StageShadowDescriptors(cl);
-            };
-
         m_frameGraph.AddPass(std::make_unique<SkyboxRenderGraphPass>(
             m_frameResources.sceneColor, m_frameResources.sceneDepth,
             m_renderTarget.get(), m_rootSignature, m_viewport, m_scissorRect,
             stageDescriptors, m_currentWorld, ctx));
     }
+
+    m_frameGraph.AddPass(std::make_unique<TransparentRenderGraphPass>(
+        m_frameResources.sceneColor, m_frameResources.sceneDepth,
+        m_renderTarget.get(), m_rootSignature, m_viewport, m_scissorRect,
+        stageDescriptors, ctx, transparentDrawCallback));
 
     if (!stack || stack->GetPassCount() == 0)
     {
