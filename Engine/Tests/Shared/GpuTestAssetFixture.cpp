@@ -181,10 +181,15 @@ void GpuTestAssetFixture::RenderSceneFrame()
     renderManager.PrepareFrame();
     AssertGpuValidationClean(GetDevice()->GetD3D12Device().Get());
 
-    renderManager.RenderScene([this](const std::shared_ptr<DXGraphicsContext>& context)
-    {
-        m_engine->RecordSceneDraws(context);
-    });
+    renderManager.RenderScene(
+        [this](const std::shared_ptr<DXGraphicsContext>& context)
+        {
+            m_engine->RecordSceneDraws(context);
+        },
+        [this](const std::shared_ptr<DXGraphicsContext>& context)
+        {
+            m_engine->RecordTransparentDraws(context);
+        });
     AssertGpuValidationClean(GetDevice()->GetD3D12Device().Get());
 
     renderManager.RenderFrame();
