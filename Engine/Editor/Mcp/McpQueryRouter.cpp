@@ -39,6 +39,7 @@ std::string McpQueryRouter::Route(const std::string& rawJson) const
         {
             std::string command = q.value("command", "");
             const std::string requestId = ResolveRequestId(q);
+            const McpRequestIdScope requestScope(m_core, requestId);
 
             DLOG(LogMcpRouter, ELogLevel::Log,
                  "Received MCP command: system='{}', command='{}'", system, command);

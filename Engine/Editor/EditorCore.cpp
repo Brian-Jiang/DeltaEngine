@@ -22,6 +22,7 @@
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/EngineMain.h"
 #include "Runtime/IO/IOManager.h"
+#include "Editor/Mcp/McpProtocol.h"
 #include "Editor/Mcp/McpQueryRouter.h"
 #include "Editor/Mcp/McpRegistry.h"
 #include "Editor/McpSocketServer.h"
@@ -322,6 +323,16 @@ nlohmann::json EditorCore::ReimportAssets(const std::vector<AssetId>& assetIds)
     return { {"ok", true}, {"reimported", reimported}, {"skipped", skipped} };
 }
 
+void EditorCore::SetActiveMcpRequestId(std::string requestId)
+{
+    m_activeMcpRequestId = std::move(requestId);
+}
+
+void EditorCore::ClearActiveMcpRequestId()
+{
+    m_activeMcpRequestId.clear();
+}
+
 void EditorCore::EnqueueSerializedCommand(std::string jsonPayload)
 {
     if (!DELTA_ENSURE(!jsonPayload.empty()))
@@ -329,6 +340,24 @@ void EditorCore::EnqueueSerializedCommand(std::string jsonPayload)
         DLOG(LogEditorCore, ELogLevel::Warning,
              "EnqueueSerializedCommand: empty payload dropped (expected non-empty JSON envelope)");
         return;
+    }
+
+    if (!m_activeMcpRequestId.empty())
+    {
+        nlohmann::json envelope;
+        try
+        {
+            envelope = nlohmann::json::parse(jsonPayload);
+        }
+        catch (const nlohmann::json::parse_error& e)
+        {
+            DLOG(LogEditorCore, ELogLevel::Warning,
+                 "EnqueueSerializedCommand: JSON parse error: {}", e.what());
+            return;
+        }
+
+        envelope["request_id"] = m_activeMcpRequestId;
+        jsonPayload = envelope.dump();
     }
 
     std::lock_guard lock(m_commandQueueMutex);
@@ -350,6 +379,15 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
 
     EditorCommandContext ctx{ *this };
 
+    auto emitResponse = [&](const nlohmann::json& envelope, nlohmann::json payload) {
+        const std::string requestId = envelope.value("request_id", "");
+        outResponses.push_back(MakeResultResponse(requestId, std::move(payload)).dump());
+    };
+
+    auto emitResponseNoEnvelope = [&](nlohmann::json payload) {
+        outResponses.push_back(MakeResultResponse("", std::move(payload)).dump());
+    };
+
     for (const auto& payload : batch)
     {
         nlohmann::json envelope;
@@ -360,7 +398,7 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
         catch (const nlohmann::json::parse_error& e)
         {
             DLOG(LogEditorCommand, ELogLevel::Error, "[DrainCommandQueue] JSON parse error: {}", e.what());
-            outResponses.push_back(nlohmann::json{{"ok", false}, {"error", std::string{"JSON parse error: "} + e.what()}}.dump());
+            emitResponseNoEnvelope({{"ok", false}, {"error", std::string{"JSON parse error: "} + e.what()}});
             continue;
         }
 
@@ -368,7 +406,7 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
         if (type.empty())
         {
             DLOG(LogEditorCommand, ELogLevel::Error, "[DrainCommandQueue] Missing 'type' field");
-            outResponses.push_back(nlohmann::json{{"ok", false}, {"error", "Missing 'type' field"}}.dump());
+            emitResponse(envelope, {{"ok", false}, {"error", "Missing 'type' field"}});
             continue;
         }
 
@@ -379,8 +417,7 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
             {
                 m_commandManager->ExecuteAuxiliary(
                     std::make_unique<EditorAuxiliaryCommand_SaveScene>(), ctx);
-                outResponses.push_back(
-                    nlohmann::json{{"ok", true}, {"commandType", "SaveDirtyAssets"}}.dump());
+                emitResponse(envelope, {{"ok", true}, {"commandType", "SaveDirtyAssets"}});
                 continue;
             }
             if (name == "LoadScene")
@@ -388,16 +425,15 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
                 std::string scenePath = envelope.value("scenePath", "");
                 if (scenePath.empty())
                 {
-                    outResponses.push_back(
-                        nlohmann::json{{"ok", false}, {"commandType", "LoadScene"},
-                                       {"error", "Missing 'scenePath' field"}}.dump());
+                    emitResponse(envelope,
+                        {{"ok", false}, {"commandType", "LoadScene"},
+                         {"error", "Missing 'scenePath' field"}});
                     continue;
                 }
                 m_commandManager->ExecuteAuxiliary(
                     std::make_unique<EditorAuxiliaryCommand_LoadScene>(
                         std::filesystem::path(scenePath)), ctx);
-                outResponses.push_back(
-                    nlohmann::json{{"ok", true}, {"commandType", "LoadScene"}}.dump());
+                emitResponse(envelope, {{"ok", true}, {"commandType", "LoadScene"}});
                 continue;
             }
             if (name == "StartLightAnimation")
@@ -411,9 +447,9 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
                 LightComponent* light = ResolveObject<LightComponent>(animAssetId, animObjectId);
                 if (!light)
                 {
-                    outResponses.push_back(
-                        nlohmann::json{{"ok", false}, {"commandType", "StartLightAnimation"},
-                                       {"error", "object not found or not a LightComponent"}}.dump());
+                    emitResponse(envelope,
+                        {{"ok", false}, {"commandType", "StartLightAnimation"},
+                         {"error", "object not found or not a LightComponent"}});
                     continue;
                 }
 
@@ -434,8 +470,7 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
                         nlohmann::json(targetValue));
                     m_commandManager->Execute(std::move(cmd), ctx);
                 }
-                outResponses.push_back(
-                    nlohmann::json{{"ok", true}, {"commandType", "StartLightAnimation"}}.dump());
+                emitResponse(envelope, {{"ok", true}, {"commandType", "StartLightAnimation"}});
                 continue;
             }
             if (name == "StartTransformChannelAnimation")
@@ -452,27 +487,27 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
 
                 if (scAssetId.IsNull() || scObjectId.IsNull() || channel.empty())
                 {
-                    outResponses.push_back(
-                        nlohmann::json{{"ok", false}, {"commandType", "StartTransformChannelAnimation"},
-                                       {"error", "Missing scAssetId, scObjectId, or channel"}}.dump());
+                    emitResponse(envelope,
+                        {{"ok", false}, {"commandType", "StartTransformChannelAnimation"},
+                         {"error", "Missing scAssetId, scObjectId, or channel"}});
                     continue;
                 }
 
                 SceneComponent* sc = ResolveObject<SceneComponent>(scAssetId, scObjectId);
                 if (!sc)
                 {
-                    outResponses.push_back(
-                        nlohmann::json{{"ok", false}, {"commandType", "StartTransformChannelAnimation"},
-                                       {"error", "SceneComponent not found"}}.dump());
+                    emitResponse(envelope,
+                        {{"ok", false}, {"commandType", "StartTransformChannelAnimation"},
+                         {"error", "SceneComponent not found"}});
                     continue;
                 }
 
                 DProperty* transformProp = sc->GetClass()->FindPropertyByName("m_localTransform");
                 if (!transformProp)
                 {
-                    outResponses.push_back(
-                        nlohmann::json{{"ok", false}, {"commandType", "StartTransformChannelAnimation"},
-                                       {"error", "m_localTransform property not found"}}.dump());
+                    emitResponse(envelope,
+                        {{"ok", false}, {"commandType", "StartTransformChannelAnimation"},
+                         {"error", "m_localTransform property not found"}});
                     continue;
                 }
 
@@ -554,14 +589,13 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
                 }
                 else
                 {
-                    outResponses.push_back(
-                        nlohmann::json{{"ok", false}, {"commandType", "StartTransformChannelAnimation"},
-                                       {"error", "Unknown channel: " + channel}}.dump());
+                    emitResponse(envelope,
+                        {{"ok", false}, {"commandType", "StartTransformChannelAnimation"},
+                         {"error", "Unknown channel: " + channel}});
                     continue;
                 }
 
-                outResponses.push_back(
-                    nlohmann::json{{"ok", true}, {"commandType", "StartTransformChannelAnimation"}}.dump());
+                emitResponse(envelope, {{"ok", true}, {"commandType", "StartTransformChannelAnimation"}});
                 continue;
             }
             if (name == "ReimportAssets")
@@ -581,11 +615,10 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
 
                 nlohmann::json result = ReimportAssets(ids);
                 result["commandType"] = "ReimportAssets";
-                outResponses.push_back(result.dump());
+                emitResponse(envelope, std::move(result));
                 continue;
             }
-            outResponses.push_back(
-                nlohmann::json{{"ok", false}, {"error", "Unknown auxiliary: " + name}}.dump());
+            emitResponse(envelope, {{"ok", false}, {"error", "Unknown auxiliary: " + name}});
             continue;
         }
 
@@ -619,7 +652,7 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
         if (!cmd)
         {
             DLOG(LogEditorCommand, ELogLevel::Error, "[DrainCommandQueue] Unknown command type: {}", commandName);
-            outResponses.push_back(nlohmann::json{{"ok", false}, {"commandType", commandName}, {"error", "Unknown command type"}}.dump());
+            emitResponse(envelope, {{"ok", false}, {"commandType", commandName}, {"error", "Unknown command type"}});
             continue;
         }
 
@@ -631,7 +664,9 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
         catch (const std::exception& e)
         {
             DLOG(LogEditorCommand, ELogLevel::Error, "[DrainCommandQueue] Deserialize failed for '{}': {}", commandName, e.what());
-            outResponses.push_back(nlohmann::json{{"ok", false}, {"commandType", commandName}, {"error", std::string{"Deserialize failed: "} + e.what()}}.dump());
+            emitResponse(envelope,
+                {{"ok", false}, {"commandType", commandName},
+                 {"error", std::string{"Deserialize failed: "} + e.what()}});
             continue;
         }
 
@@ -645,15 +680,13 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
             std::string objectId = j.value("createdId", "");
             if (objectId.empty())
                 objectId = j.value("createdComponentId", "");
-            outResponses.push_back(
-                nlohmann::json{{"ok", true}, {"commandType", typeName}, {"objectId", objectId}}.dump()
-            );
+            emitResponse(envelope,
+                {{"ok", true}, {"commandType", typeName}, {"objectId", objectId}});
         }
         else
         {
-            outResponses.push_back(
-                nlohmann::json{{"ok", false}, {"commandType", typeName}, {"error", "Execute() returned false"}}.dump()
-            );
+            emitResponse(envelope,
+                {{"ok", false}, {"commandType", typeName}, {"error", "Execute() returned false"}});
         }
     }
 
