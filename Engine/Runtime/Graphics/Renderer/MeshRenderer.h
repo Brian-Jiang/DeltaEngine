@@ -3,6 +3,7 @@
 #include "EngineIncludes.h"
 
 #include "Runtime/Graphics/Renderer/Renderer.h"
+#include "Runtime/Graphics/TransparentDrawEntry.h"
 
 #include "MeshRenderer.generated.h"
 
@@ -30,6 +31,10 @@ public:
     DFUNCTION()
     /// Sets the mesh rendered by this component.
     void SetMesh(DMesh* mesh);
+
+    /// Collects transparent submesh draw entries for back-to-front sorting.
+    void CollectTransparentDrawEntries(std::vector<TransparentDrawEntry>& out,
+        DirectX::XMVECTOR cameraPosition) const;
 
     void PostEditChangeProperty(const DProperty* prop) override;
 

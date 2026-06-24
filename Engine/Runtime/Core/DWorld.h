@@ -43,6 +43,9 @@ public:
     /// Walk the scene tree and call GatherDrawCalls on every Renderer (excludes skybox).
     DELTAENGINE_API void GatherOpaqueDrawCalls(std::shared_ptr<DXGraphicsContext> context) const;
 
+    /// Walk the scene tree, collect transparent submeshes, sort back-to-front, and draw them.
+    DELTAENGINE_API void GatherTransparentDrawCalls(std::shared_ptr<DXGraphicsContext> context) const;
+
     /// Walk the scene tree and call GatherDrawCalls on every Renderer, then skybox last.
     DELTAENGINE_API void GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const;
 

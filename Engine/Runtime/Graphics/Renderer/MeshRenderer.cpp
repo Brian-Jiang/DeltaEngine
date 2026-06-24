@@ -70,6 +70,15 @@ void DeltaEngine::MeshRenderer::GatherDrawCalls(std::shared_ptr<DXGraphicsContex
     m_meshRenderProxy->GatherDrawCalls(context);
 }
 
+void MeshRenderer::CollectTransparentDrawEntries(std::vector<TransparentDrawEntry>& out,
+    DirectX::XMVECTOR cameraPosition) const
+{
+    if (!m_mesh || !m_meshRenderProxy)
+        return;
+
+    m_meshRenderProxy->AppendTransparentDrawEntries(out, cameraPosition);
+}
+
 void MeshRenderer::GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> context, const ShadowView& view)
 {
     if (!m_castShadow || !m_meshRenderProxy)
