@@ -40,14 +40,6 @@ DMesh* TryImportStarMesh()
     return mesh;
 }
 
-DMesh* ImportStarMeshOrSkip()
-{
-    DMesh* mesh = TryImportStarMesh();
-    if (!mesh)
-        GTEST_SKIP() << "Star.obj not available at " << StarObjPath().string();
-    return mesh;
-}
-
 void SetTransparentMaterial(DMaterial& material)
 {
     material.SetRenderMode(static_cast<uint32_t>(ERenderMode::Transparent));
