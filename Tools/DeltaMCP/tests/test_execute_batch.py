@@ -8,7 +8,7 @@ def test_valid_op_forwarded(monkeypatch):
         sent.append(op)
         return {"ok": True}
 
-    monkeypatch.setattr(delta_mcp_server, "_send_command", fake_send)
+    monkeypatch.setattr(delta_mcp_server, "_send_mcp_command", fake_send)
 
     result = delta_mcp_server.execute_batch(
         [{"type": "command", "system": "scene",
@@ -25,7 +25,7 @@ def test_invalid_op_not_forwarded(monkeypatch):
         sent.append(op)
         return {"ok": True}
 
-    monkeypatch.setattr(delta_mcp_server, "_send_command", fake_send)
+    monkeypatch.setattr(delta_mcp_server, "_send_mcp_command", fake_send)
 
     result = delta_mcp_server.execute_batch(
         [{"type": "command", "system": "scene",
@@ -43,7 +43,7 @@ def test_mixed_batch(monkeypatch):
         sent.append(op)
         return {"ok": True}
 
-    monkeypatch.setattr(delta_mcp_server, "_send_command", fake_send)
+    monkeypatch.setattr(delta_mcp_server, "_send_mcp_command", fake_send)
 
     result = delta_mcp_server.execute_batch([
         {"type": "command", "system": "scene",
@@ -64,10 +64,10 @@ def test_local_meta_query_bypasses_validation(monkeypatch):
         sent.append(op)
         return {"ok": True}
 
-    monkeypatch.setattr(delta_mcp_server, "_send_command", fake_send)
+    monkeypatch.setattr(delta_mcp_server, "_send_query", fake_send)
 
     result = delta_mcp_server.execute_batch(
         [{"type": "query", "system": "meta", "query": "active_systems", "params": {}}]
     )
     assert result["ok"] is True
-    assert len(sent) == 1
+    assert len(sent) == 0
