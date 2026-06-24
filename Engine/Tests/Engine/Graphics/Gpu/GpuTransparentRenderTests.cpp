@@ -42,6 +42,15 @@ void SetFloat4Property(DObject& obj, const char* name, const XMFLOAT4& value)
     prop->SetValue(&obj, const_cast<XMFLOAT4*>(&value));
 }
 
+void SetFloatProperty(DObject& obj, const char* name, const float value)
+{
+    DClass* cls = obj.GetClass();
+    ASSERT_NE(cls, nullptr);
+    DProperty* prop = cls->FindPropertyByName(name);
+    ASSERT_NE(prop, nullptr);
+    prop->SetValue(&obj, const_cast<float*>(&value));
+}
+
 DMesh* GetRendererMesh(MeshRenderer* renderer)
 {
     if (!renderer)
@@ -65,13 +74,21 @@ DMaterial* GetMeshMaterial(MeshRenderer* renderer)
     return mesh ? mesh->GetMaterial(0) : nullptr;
 }
 
-void ConfigureTransparentMaterial(DMaterial* material, const XMFLOAT4& baseColor, const bool doubleSided = false)
+void ConfigureTransparentMaterial(DMaterial* material,
+    const XMFLOAT4& baseColor,
+    const bool doubleSided = false,
+    const bool selfIlluminated = false)
 {
     ASSERT_NE(material, nullptr);
     material->SetRenderMode(static_cast<uint32_t>(ERenderMode::Transparent));
     SetFloat4Property(*material, "m_baseColor", baseColor);
     if (doubleSided)
         SetBoolProperty(*material, "m_doubleSided", true);
+    if (selfIlluminated)
+    {
+        SetFloat4Property(*material, "m_emissiveColor", { baseColor.x, baseColor.y, baseColor.z, 0.0f });
+        SetFloatProperty(*material, "m_emissiveIntensity", 1.0f);
+    }
 }
 
 void AttachPostProcessStack(GpuSceneBuilder& builder, Camera* camera)
@@ -87,14 +104,15 @@ MeshRenderer* AddTransparentSphere(GpuSceneBuilder& builder,
     const float y,
     const float z,
     const XMFLOAT4& baseColor,
-    const bool doubleSided = false)
+    const bool doubleSided = false,
+    const bool selfIlluminated = false)
 {
     MeshRenderer* renderer = builder.AddSphereMesh(name, x, y, z);
     if (!renderer)
         return nullptr;
 
     DMaterial* material = GetMeshMaterial(renderer);
-    ConfigureTransparentMaterial(material, baseColor, doubleSided);
+    ConfigureTransparentMaterial(material, baseColor, doubleSided, selfIlluminated);
     return renderer;
 }
 
@@ -154,7 +172,8 @@ TEST_F(GpuTransparentRenderTests, TransparentSphere_ProducesNonClearCenterPixel)
 {
     GpuSceneBuilder builder(GetEngine(), GetAssetDatabase());
     Camera* camera = builder.AddCamera();
-    ASSERT_NE(AddTransparentSphere(builder, "TransparentSphere", 0.0f, 0.0f, 0.0f, { 1.0f, 0.0f, 0.0f, 0.7f }), nullptr);
+    ASSERT_NE(AddTransparentSphere(builder, "TransparentSphere", 0.0f, 0.0f, 0.0f, { 1.0f, 0.0f, 0.0f, 0.7f }, false, true),
+        nullptr);
     ASSERT_NE(camera, nullptr);
     ASSERT_NE(builder.AddDirectionalLightWithShadows(), nullptr);
     AttachPostProcessStack(builder, camera);
@@ -179,8 +198,10 @@ TEST_F(GpuTransparentRenderTests, TwoTransparentSpheres_NearRedDominatesCenterPi
 {
     GpuSceneBuilder builder(GetEngine(), GetAssetDatabase());
     Camera* camera = builder.AddCamera();
-    ASSERT_NE(AddTransparentSphere(builder, "NearSphere", 0.0f, 0.0f, -4.0f, { 1.0f, 0.0f, 0.0f, 0.7f }), nullptr);
-    ASSERT_NE(AddTransparentSphere(builder, "FarSphere", 0.0f, 0.0f, -12.0f, { 0.0f, 1.0f, 0.0f, 0.7f }), nullptr);
+    ASSERT_NE(AddTransparentSphere(builder, "NearSphere", 0.0f, 0.0f, -4.0f, { 1.0f, 0.0f, 0.0f, 0.7f }, false, true),
+        nullptr);
+    ASSERT_NE(AddTransparentSphere(builder, "FarSphere", 0.0f, 0.0f, -12.0f, { 0.0f, 1.0f, 0.0f, 0.7f }, false, true),
+        nullptr);
     ASSERT_NE(camera, nullptr);
     ASSERT_NE(builder.AddDirectionalLightWithShadows(), nullptr);
     AttachPostProcessStack(builder, camera);
