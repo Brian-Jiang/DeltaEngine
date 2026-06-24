@@ -62,7 +62,9 @@ TEST(TransparentDrawSortTests, SortTransparentDrawEntriesDescending_OrdersFarToN
 
 TEST(TransparentDrawSortTests, ComputeSubmeshSortDepth_MatchesCameraDistance)
 {
-    DMesh* mesh = ImportStarMeshOrSkip();
+    DMesh* mesh = TryImportStarMesh();
+    if (!mesh)
+        GTEST_SKIP() << "Star.obj not available at " << StarObjPath().string();
 
     const XMVECTOR cameraPosition = XMVectorSet(0.f, 0.f, 0.f, 1.f);
     const XMMATRIX nearTransform = XMMatrixTranslation(0.f, 0.f, 5.f);
@@ -78,7 +80,9 @@ TEST(TransparentDrawSortTests, ComputeSubmeshSortDepth_MatchesCameraDistance)
 
 TEST(TransparentDrawSortTests, AppendTransparentDrawEntries_SkipsOpaqueSubmeshes)
 {
-    DMesh* mesh = ImportStarMeshOrSkip();
+    DMesh* mesh = TryImportStarMesh();
+    if (!mesh)
+        GTEST_SKIP() << "Star.obj not available at " << StarObjPath().string();
 
     DMaterial opaqueMaterial;
     DMaterial transparentMaterial;
@@ -113,7 +117,9 @@ TEST(TransparentDrawSortTests, AppendTransparentDrawEntries_SkipsOpaqueSubmeshes
 
 TEST(TransparentDrawSortTests, AppendTransparentDrawEntries_AllOpaqueMesh_ReturnsEmpty)
 {
-    DMesh* mesh = ImportStarMeshOrSkip();
+    DMesh* mesh = TryImportStarMesh();
+    if (!mesh)
+        GTEST_SKIP() << "Star.obj not available at " << StarObjPath().string();
 
     DMaterial opaqueMaterial;
     std::vector<DMaterial*> materials(static_cast<size_t>(mesh->GetSubMeshCount()), &opaqueMaterial);
@@ -130,7 +136,9 @@ TEST(TransparentDrawSortTests, AppendTransparentDrawEntries_AllOpaqueMesh_Return
 
 TEST(TransparentDrawSortTests, GatherDrawCalls_ActivePassForward_SkipsTransparentSubmeshes)
 {
-    DMesh* mesh = ImportStarMeshOrSkip();
+    DMesh* mesh = TryImportStarMesh();
+    if (!mesh)
+        GTEST_SKIP() << "Star.obj not available at " << StarObjPath().string();
 
     DMaterial transparentMaterial;
     SetTransparentMaterial(transparentMaterial);
@@ -147,7 +155,9 @@ TEST(TransparentDrawSortTests, GatherDrawCalls_ActivePassForward_SkipsTransparen
 
 TEST(TransparentDrawSortTests, GatherDrawCalls_ActivePassTransparent_SkipsOpaqueSubmeshes)
 {
-    DMesh* mesh = ImportStarMeshOrSkip();
+    DMesh* mesh = TryImportStarMesh();
+    if (!mesh)
+        GTEST_SKIP() << "Star.obj not available at " << StarObjPath().string();
 
     DMaterial opaqueMaterial;
     std::vector<DMaterial*> materials(static_cast<size_t>(mesh->GetSubMeshCount()), &opaqueMaterial);
@@ -163,7 +173,9 @@ TEST(TransparentDrawSortTests, GatherDrawCalls_ActivePassTransparent_SkipsOpaque
 
 TEST(TransparentDrawSortTests, DWorld_GatherTransparentDrawCalls_SortsMultipleRenderersBackToFront)
 {
-    DMesh* mesh = ImportStarMeshOrSkip();
+    DMesh* mesh = TryImportStarMesh();
+    if (!mesh)
+        GTEST_SKIP() << "Star.obj not available at " << StarObjPath().string();
 
     DMaterial transparentMaterial;
     SetTransparentMaterial(transparentMaterial);
