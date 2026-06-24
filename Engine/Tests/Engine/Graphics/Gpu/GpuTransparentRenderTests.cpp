@@ -5,7 +5,9 @@
 #include "Runtime/Core/Camera.h"
 #include "Runtime/Core/DMaterial.h"
 #include "Runtime/Core/DMesh.h"
+#include "Runtime/Core/DScene.h"
 #include "Runtime/Core/DWorld.h"
+#include "Runtime/Core/GameObject.h"
 #include "Runtime/Graphics/DirectX/RenderTarget.h"
 #include "Runtime/Graphics/PostProcess/PostProcessStack.h"
 #include "Runtime/Graphics/Renderer/MeshRenderer.h"
@@ -213,10 +215,22 @@ TEST_F(GpuTransparentRenderTests, TransparentSphereWithSkybox_StillShowsNonClear
     PA_DScene* sceneAsset = LoadImportedScene("DefaultScene");
     ASSERT_NE(sceneAsset, nullptr);
 
-    GpuSceneBuilder builder(GetEngine(), GetAssetDatabase());
-    Camera* camera = builder.AddCamera();
-    ASSERT_NE(AddTransparentSphere(builder, "TransparentSphere", 0.0f, 0.0f, -2.0f, { 1.0f, 1.0f, 1.0f, 0.25f }), nullptr);
+    DWorld* world = GetEngine().GetWorld();
+    ASSERT_NE(world, nullptr);
+
+    Camera* camera = nullptr;
+    if (DScene* scene = world->GetActiveScene())
+    {
+        for (GameObject* gameObject : scene->GetGameObjects())
+        {
+            if (gameObject && (camera = gameObject->GetRootSceneComponent<Camera>()))
+                break;
+        }
+    }
     ASSERT_NE(camera, nullptr);
+
+    GpuSceneBuilder builder(GetEngine(), GetAssetDatabase());
+    ASSERT_NE(AddTransparentSphere(builder, "TransparentSphere", 0.0f, 0.0f, -2.0f, { 1.0f, 1.0f, 1.0f, 0.25f }), nullptr);
     AttachPostProcessStack(builder, camera);
 
     builder.InitGpuResources();
