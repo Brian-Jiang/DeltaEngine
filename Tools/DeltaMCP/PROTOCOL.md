@@ -77,7 +77,7 @@ When `ok:false` or `expects_result:false`, the accept line is the final response
 
 ### Phase 2 — Result (main thread, after DrainCommandQueue)
 
-**Not yet emitted by C++ (future phase).** Documented shape:
+Sent after main-thread execution for commands where the client waited (`expects_result:true`). Always includes `phase` and `request_id`.
 
 ```json
 {
@@ -89,7 +89,9 @@ When `ok:false` or `expects_result:false`, the accept line is the final response
 }
 ```
 
-Until phase-2 tagging is implemented, drain responses are sent as untagged flat JSON on the same socket connection.
+C++ may also emit a phase-2 line after drain for queued commands with `expects_result:false` (e.g. `SaveProject`, `LoadScene`). The Python client does not wait for those lines; it returns after the accept envelope.
+
+CreateGameObject with a custom name runs create then rename on the main thread and emits **one** phase-2 result. If rename fails after create succeeds, the result includes `objectId` plus an `error` field describing the rename failure.
 
 ## expects_result Rules
 
@@ -102,7 +104,7 @@ Until phase-2 tagging is implemented, drain responses are sent as untagged flat 
 | `false` | Commands with no useful drain payload: `LoadScene` |
 | `true` | Creates, deletes, set-property, rename, reparent, reimport, metadata commands that return meaningful drain data (especially `objectId`) |
 
-## Python Client Behavior (future)
+## Python Client Behavior
 
 1. Read phase-1 accept immediately.
 2. If `ok:false` or `expects_result:false` → return stripped accept to caller.

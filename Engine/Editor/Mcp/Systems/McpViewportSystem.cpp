@@ -5,6 +5,7 @@
 #include "Editor/EditorViewportCamera.h"
 #include "Editor/EditorRenderManager.h"
 #include "Editor/EditorWindows/EditorWindow_Viewport.h"
+#include "Mcp/McpProtocol.h"
 #include "Mcp/McpRegistry.h"
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/GameObject.h"
@@ -27,7 +28,7 @@ namespace
 
 static nlohmann::json MakeError(const std::string& msg)
 {
-    return { {"ok", false}, {"error", msg} };
+    return MakeMcpError(msg);
 }
 
 static void GetSceneRenderDims(float& outW, float& outH)
