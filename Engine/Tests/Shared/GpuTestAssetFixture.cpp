@@ -196,6 +196,19 @@ void GpuTestAssetFixture::RenderSceneFrame()
     SubmitAndFlush();
 }
 
+void GpuTestAssetFixture::InitializeEngineWithRenderPath(const RenderPath path)
+{
+    m_engine = std::make_unique<EngineMain>();
+    m_engine->CreateWorld();
+
+    auto renderManager = CreateRenderManager(path);
+    m_engine->Initialize(renderManager);
+    m_engine->GetRenderManager()->InitWorldRenderers(*m_engine->GetWorld());
+
+    GetDevice()->Flush();
+    AssertGpuValidationClean(GetDevice()->GetD3D12Device().Get());
+}
+
 void GpuTestAssetFixture::SetUp()
 {
     const std::filesystem::path importedRoot = IOManager::GetEngineImportedAssetsFolder();
@@ -206,15 +219,7 @@ void GpuTestAssetFixture::SetUp()
     m_locatorScope = std::make_unique<ScopedAssetDatabaseLocatorRegistration>(m_assetDatabase.get());
     m_assetDatabase->ScanAssetsFolder(importedRoot);
 
-    m_engine = std::make_unique<EngineMain>();
-    m_engine->CreateWorld();
-
-    auto renderManager = CreateRenderManager();
-    m_engine->Initialize(renderManager);
-    m_engine->GetRenderManager()->InitWorldRenderers(*m_engine->GetWorld());
-
-    GetDevice()->Flush();
-    AssertGpuValidationClean(GetDevice()->GetD3D12Device().Get());
+    InitializeEngineWithRenderPath(GetInitialRenderPath());
 }
 
 void GpuTestAssetFixture::TearDown()
