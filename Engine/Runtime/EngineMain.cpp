@@ -138,6 +138,22 @@ void EngineMain::RecordSceneDraws(std::shared_ptr<DXGraphicsContext> context)
     }
 }
 
+void EngineMain::RecordTransparentDraws(std::shared_ptr<DXGraphicsContext> context)
+{
+    if (DWorld* world = GetWorld())
+    {
+        auto* d3dCL = context->commandList->GetD3D12CommandList().Get();
+
+        if (context->activeRenderCamera.has_value())
+            context->commandList->SetGraphicsDynamicConstantBuffer(0, context->activeRenderCamera->cb);
+        context->ApplyLightBuffersToCommandList();
+
+        PIXBeginEvent(d3dCL, PIX_COLOR_DEFAULT, L"GatherTransparentDrawCalls");
+        world->GatherTransparentDrawCalls(context);
+        PIXEndEvent(d3dCL);
+    }
+}
+
 void EngineMain::CreateWorld()
 {
     for (const WorldContext& ctx : m_worldContextList)

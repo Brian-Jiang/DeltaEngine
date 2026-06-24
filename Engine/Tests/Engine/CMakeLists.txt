@@ -18,6 +18,7 @@ set(DELTA_ENGINE_TEST_SOURCES
     Graphics/MeshRenderProxyTests.cpp
     Graphics/RenderResourceReleaseQueueTests.cpp
     Graphics/MeshShadowSubmissionTests.cpp
+    Graphics/TransparentDrawSortTests.cpp
     Graphics/PostProcessTests_DataModel.cpp
     Graphics/PostProcessStackHardeningTests.cpp
     Graphics/PostProcessRenderGraphCompileTests.cpp

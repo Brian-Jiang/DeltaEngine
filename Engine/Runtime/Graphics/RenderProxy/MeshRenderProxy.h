@@ -3,6 +3,7 @@
 #include "EngineIncludes.h"
 
 #include "Runtime/Graphics/RenderProxy/RenderProxy.h"
+#include "Runtime/Graphics/TransparentDrawEntry.h"
 
 #include <d3d12.h>
 #include <DirectXMath.h>
@@ -39,6 +40,16 @@ public:
     /// Records draw calls for the current mesh into the active command list.
     DELTAENGINE_API void GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext) override;
 
+    /// Records a single submesh draw using the active pass bindings.
+    DELTAENGINE_API void DrawSubmesh(std::shared_ptr<DXGraphicsContext> renderContext, size_t submeshIndex);
+
+    /// Appends transparent submesh entries with sort depth for back-to-front ordering.
+    DELTAENGINE_API void AppendTransparentDrawEntries(std::vector<TransparentDrawEntry>& out,
+        DirectX::XMVECTOR cameraPosition) const;
+
+    DELTAENGINE_API static float ComputeSubmeshSortDepth(const DMesh* mesh, int submeshIndex,
+        DirectX::XMMATRIX worldMatrix, DirectX::XMVECTOR cameraPosition);
+
     DELTAENGINE_API void GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext, const ShadowView& view) override;
 
     DELTAENGINE_API static bool SubmeshContributesToShadowMap(const DMaterial* material);
@@ -58,6 +69,10 @@ public:
 private:
     /// True if any submesh material's shader has been recompiled since the PSOs were built.
     bool ShadersChanged() const;
+
+    void EnsureDrawResourcesReady(std::shared_ptr<DXGraphicsContext> renderContext);
+    void BindObjectConstantBuffer(std::shared_ptr<DXGraphicsContext> renderContext) const;
+    void DrawSubmeshInternal(std::shared_ptr<DXGraphicsContext> renderContext, size_t submeshIndex);
 
     DMesh* m_mesh;
     std::shared_ptr<MeshRendererSettings> m_settings;
