@@ -43,9 +43,10 @@ void ForEachRenderer(const SceneComponent* root, const std::function<void(Render
         if (Renderer* renderer = dynamic_cast<Renderer*>(const_cast<SceneComponent*>(current)))
             visitor(renderer);
 
-        const size_t childCount = current->m_children.size();
+        const std::vector<SceneComponent*>& children = current->GetChildren();
+        const size_t childCount = children.size();
         for (int i = static_cast<int>(childCount) - 1; i >= 0; --i)
-            stack.push(current->m_children[static_cast<size_t>(i)]);
+            stack.push(children[static_cast<size_t>(i)]);
     }
 }
 }
