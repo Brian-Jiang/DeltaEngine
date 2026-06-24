@@ -44,6 +44,32 @@ nlohmann::json MakeAcceptResponse(
     return accept;
 }
 
+nlohmann::json MakeResultResponse(
+    const std::string& requestId,
+    nlohmann::json payload)
+{
+    nlohmann::json result;
+    result["phase"] = "result";
+    if (!requestId.empty())
+        result["request_id"] = requestId;
+
+    for (auto it = payload.begin(); it != payload.end(); ++it)
+        result[it.key()] = it.value();
+
+    return result;
+}
+
+McpRequestIdScope::McpRequestIdScope(EditorCore& core, std::string requestId)
+    : m_core(core)
+{
+    m_core.SetActiveMcpRequestId(std::move(requestId));
+}
+
+McpRequestIdScope::~McpRequestIdScope()
+{
+    m_core.ClearActiveMcpRequestId();
+}
+
 nlohmann::json EnqueueMcpCommand(
     EditorCore& core,
     std::string_view system,

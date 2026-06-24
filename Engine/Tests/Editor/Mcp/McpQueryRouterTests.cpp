@@ -97,8 +97,62 @@ TEST_F(McpQueryRouterTests, Route_CommandSaveProject_ValidEnvelope_ReturnsAccept
     EXPECT_TRUE(out["queued"].get<bool>());
     ASSERT_TRUE(out.contains("expects_result"));
     EXPECT_FALSE(out["expects_result"].get<bool>());
+}
 
-    // Phase-2 result lines from DrainCommandQueue are still untagged (future phase).
+TEST_F(McpQueryRouterTests, Route_CommandSaveProject_Drain_ReturnsResultWithRequestId)
+{
+    auto* reg = m_core->GetMcpRegistry();
+    ASSERT_NE(reg, nullptr);
+    const McpQueryRouter router(*m_core, *reg);
+
+    json env;
+    env["type"]        = "command";
+    env["system"]      = "common";
+    env["command"]     = "SaveProject";
+    env["params"]      = json::object();
+    env["request_id"]  = "req-save-1";
+
+    const json accept = json::parse(router.Route(env.dump()));
+    EXPECT_EQ(accept["phase"].get<std::string>(), "accept");
+    EXPECT_TRUE(accept["queued"].get<bool>());
+
+    std::vector<std::string> responses;
+    m_core->DrainCommandQueue(responses);
+
+    ASSERT_EQ(responses.size(), 1u);
+    const json result = json::parse(responses[0]);
+    EXPECT_EQ(result["phase"].get<std::string>(), "result");
+    EXPECT_EQ(result["request_id"].get<std::string>(), "req-save-1");
+    EXPECT_TRUE(result["ok"].get<bool>());
+    EXPECT_EQ(result["commandType"].get<std::string>(), "SaveDirtyAssets");
+}
+
+TEST_F(McpQueryRouterTests, Route_CommandCreateGameObject_Drain_ReturnsResultWithRequestId)
+{
+    auto* reg = m_core->GetMcpRegistry();
+    ASSERT_NE(reg, nullptr);
+    const McpQueryRouter router(*m_core, *reg);
+
+    json env;
+    env["type"]        = "command";
+    env["system"]      = "scene";
+    env["command"]     = "CreateGameObject";
+    env["params"]      = {{"name", "New GameObject"}};
+    env["request_id"]  = "req-create-7";
+
+    const json accept = json::parse(router.Route(env.dump()));
+    EXPECT_EQ(accept["phase"].get<std::string>(), "accept");
+    EXPECT_TRUE(accept["queued"].get<bool>());
+
+    std::vector<std::string> responses;
+    m_core->DrainCommandQueue(responses);
+
+    ASSERT_EQ(responses.size(), 1u);
+    const json result = json::parse(responses[0]);
+    EXPECT_EQ(result["phase"].get<std::string>(), "result");
+    EXPECT_EQ(result["request_id"].get<std::string>(), "req-create-7");
+    EXPECT_TRUE(result["ok"].get<bool>());
+    EXPECT_FALSE(result["objectId"].get<std::string>().empty());
 }
 
 TEST_F(McpQueryRouterTests, Route_CommandCreateGameObject_WithRequestId_ReturnsAccept)

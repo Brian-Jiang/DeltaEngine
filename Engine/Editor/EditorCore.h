@@ -81,6 +81,9 @@ public:
     DELTAEDITOR_API McpRegistry* GetMcpRegistry() { return m_mcpRegistry.get(); }
     DELTAEDITOR_API EditorAnimationManager* GetAnimationManager() { return m_animationManager.get(); }
 
+    DELTAEDITOR_API void SetActiveMcpRequestId(std::string requestId);
+    DELTAEDITOR_API void ClearActiveMcpRequestId();
+
 private:
     std::unique_ptr<EditorAssetDatabase> m_assetDatabase;
     std::unique_ptr<EditorSelectionState> m_selectionState;
@@ -93,6 +96,7 @@ private:
     std::unique_ptr<McpRegistry> m_mcpRegistry;
     std::unique_ptr<EditorAnimationManager> m_animationManager;
     bool m_headless = false;
+    std::string m_activeMcpRequestId;
 };
 
 DELTA_ENGINE_NS_END
