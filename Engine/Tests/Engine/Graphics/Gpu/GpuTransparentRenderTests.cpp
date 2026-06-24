@@ -276,7 +276,7 @@ TEST_F(GpuTransparentRenderTests, TransparentSphere_ProducesNonClearCenterPixel)
     GpuSceneBuilder builder(GetEngine(), GetAssetDatabase());
     DWorld* world = GetEngine().GetWorld();
     Camera* camera = builder.AddCamera();
-    ASSERT_NE(AddIndependentTransparentStar(builder, GetAssetDatabase(), world, world->GetActiveScene(),
+    ASSERT_NE(AddIndependentTransparentStar(GetAssetDatabase(), world, world->GetActiveScene(),
                  "TransparentStar", 0.0f, 0.0f, 0.0f, { 1.0f, 0.0f, 0.0f, 0.7f }),
         nullptr);
     ASSERT_NE(camera, nullptr);
@@ -308,10 +308,10 @@ TEST_F(GpuTransparentRenderTests, TwoTransparentSpheres_NearRedDominatesCenterPi
     DWorld* world = GetEngine().GetWorld();
     DScene* scene = world ? world->GetActiveScene() : nullptr;
     Camera* camera = builder.AddCamera();
-    ASSERT_NE(AddIndependentTransparentStar(builder, GetAssetDatabase(), world, scene, "NearStar", 0.0f, 0.0f, -4.0f,
+    ASSERT_NE(AddIndependentTransparentStar(GetAssetDatabase(), world, scene, "NearStar", 0.0f, 0.0f, -4.0f,
                  { 1.0f, 0.0f, 0.0f, 0.7f }),
         nullptr);
-    ASSERT_NE(AddIndependentTransparentStar(builder, GetAssetDatabase(), world, scene, "FarStar", 0.0f, 0.0f, -12.0f,
+    ASSERT_NE(AddIndependentTransparentStar(GetAssetDatabase(), world, scene, "FarStar", 0.0f, 0.0f, -12.0f,
                  { 0.0f, 1.0f, 0.0f, 0.7f }),
         nullptr);
     ASSERT_NE(camera, nullptr);
