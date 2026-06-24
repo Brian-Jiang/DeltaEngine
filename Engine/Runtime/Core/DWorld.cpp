@@ -9,6 +9,7 @@
 #include "Runtime/Assets/DPrimaryAsset.h"
 #include "Runtime/Graphics/DXGraphicsContext.h"
 #include "Runtime/Graphics/Light/LightComponent.h"
+#include "Runtime/Graphics/RenderProxy/MeshRenderProxy.h"
 #include "Runtime/Graphics/RenderProxy/RenderProxy.h"
 #include "Runtime/Graphics/Renderer/MeshRenderer.h"
 #include "Runtime/Graphics/Renderer/Renderer.h"
