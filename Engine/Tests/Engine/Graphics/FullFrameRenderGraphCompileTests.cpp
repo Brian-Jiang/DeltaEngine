@@ -6,6 +6,7 @@
 #include "Runtime/Graphics/RenderGraph/SceneShadowReadGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/ShadowRenderGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/SkyboxRenderGraphPass.h"
+#include "Runtime/Graphics/RenderGraph/TransparentRenderGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/GBufferRenderGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/DeferredLightingGraphPass.h"
 
@@ -54,6 +55,13 @@ void AddScenePass(RenderGraph& graph, RenderGraphTextureHandle color, RenderGrap
 void AddSkyboxPass(RenderGraph& graph, RenderGraphTextureHandle color, RenderGraphTextureHandle depth)
 {
     graph.AddPass(std::make_unique<SkyboxRenderGraphPass>(
+        color, depth, nullptr, nullptr, CD3DX12_VIEWPORT(0.0f, 0.0f, 1920.0f, 1080.0f), CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX),
+        nullptr, nullptr, nullptr));
+}
+
+void AddTransparentPass(RenderGraph& graph, RenderGraphTextureHandle color, RenderGraphTextureHandle depth)
+{
+    graph.AddPass(std::make_unique<TransparentRenderGraphPass>(
         color, depth, nullptr, nullptr, CD3DX12_VIEWPORT(0.0f, 0.0f, 1920.0f, 1080.0f), CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX),
         nullptr, nullptr, nullptr));
 }
@@ -127,19 +135,22 @@ TEST(FullFrameRenderGraphCompileTests, FullChain_Order)
     graph.AddPass(std::make_unique<SceneShadowReadGraphPass>(shadow.directional, shadow.spot, shadow.point));
     AddScenePass(graph, color, depth);
     AddSkyboxPass(graph, color, depth);
+    AddTransparentPass(graph, color, depth);
     AddPostProcessPass(graph, color, ping, 0, 1);
     graph.AddPass(std::make_unique<PostProcessFinalizeGraphPass>(ping));
 
     graph.Compile();
 
-    ASSERT_EQ(graph.GetCompiledPassCount(), 6u);
+    ASSERT_EQ(graph.GetCompiledPassCount(), 7u);
     const size_t shadowIdx = FindCompiledPassIndex(graph, "Shadow");
     const size_t shadowReadIdx = FindCompiledPassIndex(graph, "SceneShadowRead");
     const size_t skyboxIdx = FindCompiledPassIndex(graph, "Skybox");
+    const size_t transparentIdx = FindCompiledPassIndex(graph, "Transparent");
     const size_t postIdx = FindCompiledPassIndex(graph, "PostProcess");
     const size_t finalizeIdx = FindCompiledPassIndex(graph, "PostProcessFinalize");
     EXPECT_LT(shadowIdx, shadowReadIdx);
-    EXPECT_LT(skyboxIdx, postIdx);
+    EXPECT_LT(skyboxIdx, transparentIdx);
+    EXPECT_LT(transparentIdx, postIdx);
     EXPECT_LT(postIdx, finalizeIdx);
 }
 
@@ -157,6 +168,7 @@ TEST(FullFrameRenderGraphCompileTests, FullChain_PostProcessDeclaredBeforeScene_
 
     AddPostProcessPass(graph, color, ping, 0, 1);
     graph.AddPass(std::make_unique<PostProcessFinalizeGraphPass>(ping));
+    AddTransparentPass(graph, color, depth);
     AddSkyboxPass(graph, color, depth);
     AddScenePass(graph, color, depth);
     graph.AddPass(std::make_unique<SceneShadowReadGraphPass>(shadow.directional, shadow.spot, shadow.point));
@@ -165,16 +177,18 @@ TEST(FullFrameRenderGraphCompileTests, FullChain_PostProcessDeclaredBeforeScene_
 
     graph.Compile();
 
-    ASSERT_EQ(graph.GetCompiledPassCount(), 6u);
+    ASSERT_EQ(graph.GetCompiledPassCount(), 7u);
     const size_t shadowIdx = FindCompiledPassIndex(graph, "Shadow");
     const size_t shadowReadIdx = FindCompiledPassIndex(graph, "SceneShadowRead");
     const size_t sceneIdx = FindCompiledPassIndex(graph, "Scene");
     const size_t skyboxIdx = FindCompiledPassIndex(graph, "Skybox");
+    const size_t transparentIdx = FindCompiledPassIndex(graph, "Transparent");
     const size_t postIdx = FindCompiledPassIndex(graph, "PostProcess");
     const size_t finalizeIdx = FindCompiledPassIndex(graph, "PostProcessFinalize");
     EXPECT_LT(shadowIdx, shadowReadIdx);
     EXPECT_LT(sceneIdx, postIdx);
-    EXPECT_LT(skyboxIdx, postIdx);
+    EXPECT_LT(skyboxIdx, transparentIdx);
+    EXPECT_LT(transparentIdx, postIdx);
     EXPECT_LT(postIdx, finalizeIdx);
 }
 
@@ -195,6 +209,7 @@ TEST(FullFrameRenderGraphCompileTests, FullChain_ShadowToSceneColor)
     graph.AddPass(std::make_unique<SceneShadowReadGraphPass>(shadow.directional, shadow.spot, shadow.point));
     AddScenePass(graph, color, depth);
     AddSkyboxPass(graph, color, depth);
+    AddTransparentPass(graph, color, depth);
     AddPostProcessPass(graph, color, ping, 0, 1);
 
     graph.Compile();
@@ -206,7 +221,7 @@ TEST(FullFrameRenderGraphCompileTests, FullChain_ShadowToSceneColor)
             EXPECT_EQ(transition.stateAfter, D3D12_RESOURCE_STATE_RENDER_TARGET);
     }
 
-    const auto& postTransitions = graph.GetCompiledPass(4).transitions;
+    const auto& postTransitions = graph.GetCompiledPass(5).transitions;
     bool foundSceneSrv = false;
     for (const auto& transition : postTransitions)
     {
@@ -231,18 +246,20 @@ TEST(FullFrameRenderGraphCompileTests, FullChain_WithMsaaResolve)
 
     AddScenePass(graph, color, depth);
     AddSkyboxPass(graph, color, depth);
+    AddTransparentPass(graph, color, depth);
     graph.AddPass(std::make_unique<MsaaResolveGraphPass>(color, resolved, nullptr, nullptr));
     AddPostProcessPass(graph, resolved, ping, 0, 1);
 
     graph.Compile();
 
-    ASSERT_EQ(graph.GetCompiledPassCount(), 4u);
+    ASSERT_EQ(graph.GetCompiledPassCount(), 5u);
     EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(0).passIndex).GetName(), "Scene");
     EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(1).passIndex).GetName(), "Skybox");
-    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(2).passIndex).GetName(), "MsaaResolve");
-    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(3).passIndex).GetName(), "PostProcess");
+    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(2).passIndex).GetName(), "Transparent");
+    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(3).passIndex).GetName(), "MsaaResolve");
+    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(4).passIndex).GetName(), "PostProcess");
 
-    const auto& resolveTransitions = graph.GetCompiledPass(2).transitions;
+    const auto& resolveTransitions = graph.GetCompiledPass(3).transitions;
     ASSERT_EQ(resolveTransitions.size(), 2u);
     EXPECT_EQ(resolveTransitions[0].texture, color);
     EXPECT_EQ(resolveTransitions[0].stateAfter, D3D12_RESOURCE_STATE_RESOLVE_SOURCE);
@@ -266,15 +283,17 @@ TEST(FullFrameRenderGraphCompileTests, FullChain_NoPostProcess)
     graph.AddPass(std::make_unique<SceneShadowReadGraphPass>(shadow.directional, shadow.spot, shadow.point));
     AddScenePass(graph, color, depth);
     AddSkyboxPass(graph, color, depth);
+    AddTransparentPass(graph, color, depth);
     graph.AddPass(std::make_unique<PostProcessFinalizeGraphPass>(color));
 
     graph.Compile();
 
-    ASSERT_EQ(graph.GetCompiledPassCount(), 5u);
+    ASSERT_EQ(graph.GetCompiledPassCount(), 6u);
     EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(3).passIndex).GetName(), "Skybox");
-    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(4).passIndex).GetName(), "PostProcessFinalize");
+    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(4).passIndex).GetName(), "Transparent");
+    EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(5).passIndex).GetName(), "PostProcessFinalize");
 
-    const auto& finalizeTransitions = graph.GetCompiledPass(4).transitions;
+    const auto& finalizeTransitions = graph.GetCompiledPass(5).transitions;
     bool foundSceneSrv = false;
     for (const auto& transition : finalizeTransitions)
     {
@@ -369,6 +388,37 @@ TEST(FullFrameRenderGraphCompileTests, FullChain_DeferredWithSkybox)
     EXPECT_STREQ(graph.GetPass(graph.GetCompiledPass(3).passIndex).GetName(), "PostProcessFinalize");
 }
 
+TEST(FullFrameRenderGraphCompileTests, FullChain_ForwardWithTransparent_Order)
+{
+    RenderGraph graph;
+    const RenderGraphTextureUsage colorAndShader =
+        RenderGraphTextureUsage::ColorAttachment | RenderGraphTextureUsage::ShaderResource;
+
+    const RenderGraphTextureHandle color = graph.ImportTexture("SceneColor", nullptr, colorAndShader);
+    const RenderGraphTextureHandle depth = graph.ImportTexture("SceneDepth", nullptr,
+        RenderGraphTextureUsage::DepthAttachment);
+    const RenderGraphTextureHandle ping = graph.ImportTexture("Ping", nullptr, colorAndShader);
+    const ShadowHandles shadow = ImportShadowAtlases(graph);
+
+    graph.AddPass(std::make_unique<ShadowRenderGraphPass>(
+        nullptr, nullptr, nullptr, shadow.directional, shadow.spot, shadow.point));
+    graph.AddPass(std::make_unique<SceneShadowReadGraphPass>(shadow.directional, shadow.spot, shadow.point));
+    AddScenePass(graph, color, depth);
+    AddSkyboxPass(graph, color, depth);
+    AddTransparentPass(graph, color, depth);
+    AddPostProcessPass(graph, color, ping, 0, 1);
+    graph.AddPass(std::make_unique<PostProcessFinalizeGraphPass>(ping));
+
+    graph.Compile();
+
+    ASSERT_EQ(graph.GetCompiledPassCount(), 7u);
+    const size_t skyboxIdx = FindCompiledPassIndex(graph, "Skybox");
+    const size_t transparentIdx = FindCompiledPassIndex(graph, "Transparent");
+    const size_t postIdx = FindCompiledPassIndex(graph, "PostProcess");
+    EXPECT_LT(skyboxIdx, transparentIdx);
+    EXPECT_LT(transparentIdx, postIdx);
+}
+
 TEST(FullFrameRenderGraphCompileTests, SkyboxPass_NoClears)
 {
     RenderGraph graph;
@@ -381,6 +431,25 @@ TEST(FullFrameRenderGraphCompileTests, SkyboxPass_NoClears)
 
     AddScenePass(graph, color, depth);
     AddSkyboxPass(graph, color, depth);
+
+    graph.Compile();
+
+    ASSERT_EQ(graph.GetCompiledPassCount(), 2u);
+    EXPECT_EQ(graph.GetCompiledPass(1).clears.size(), 0u);
+}
+
+TEST(FullFrameRenderGraphCompileTests, TransparentPass_NoClears)
+{
+    RenderGraph graph;
+    const RenderGraphTextureUsage colorAndShader =
+        RenderGraphTextureUsage::ColorAttachment | RenderGraphTextureUsage::ShaderResource;
+
+    const RenderGraphTextureHandle color = graph.ImportTexture("SceneColor", nullptr, colorAndShader);
+    const RenderGraphTextureHandle depth = graph.ImportTexture("SceneDepth", nullptr,
+        RenderGraphTextureUsage::DepthAttachment);
+
+    AddScenePass(graph, color, depth);
+    AddTransparentPass(graph, color, depth);
 
     graph.Compile();
 

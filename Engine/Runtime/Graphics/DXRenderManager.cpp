@@ -27,6 +27,7 @@
 #include "Runtime/Graphics/RenderGraph/SceneRenderGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/SceneShadowReadGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/SkyboxRenderGraphPass.h"
+#include "Runtime/Graphics/RenderGraph/TransparentRenderGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/GBufferRenderGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/DeferredLightingGraphPass.h"
 #include "Runtime/Graphics/ShaderCompile.h"
@@ -559,20 +560,23 @@ void DXRenderManager::PrepareFrame()
         m_currentWorld->PreGatherDrawCalls(ctx);
 }
 
-void DXRenderManager::RenderScene(const SceneDrawCallback& drawCallback)
+void DXRenderManager::RenderScene(const SceneDrawCallback& opaqueDrawCallback,
+    const SceneDrawCallback& transparentDrawCallback)
 {
-    m_pendingSceneDrawCallback = drawCallback;
+    m_pendingSceneDrawCallback = opaqueDrawCallback;
+    m_pendingTransparentDrawCallback = transparentDrawCallback;
 }
 
-void DXRenderManager::BuildFrameGraph(const SceneDrawCallback& drawCallback, PostProcessStack* stack)
+void DXRenderManager::BuildFrameGraph(const SceneDrawCallback& opaqueDrawCallback,
+    const SceneDrawCallback& transparentDrawCallback, PostProcessStack* stack)
 {
     switch (m_renderPath)
     {
     case RenderPath::Forward:
-        BuildForwardFrameGraph(drawCallback, stack);
+        BuildForwardFrameGraph(opaqueDrawCallback, transparentDrawCallback, stack);
         break;
     case RenderPath::Deferred:
-        BuildDeferredFrameGraph(drawCallback, stack);
+        BuildDeferredFrameGraph(opaqueDrawCallback, stack);
         break;
     }
 }
@@ -660,7 +664,8 @@ void DXRenderManager::CreateGBufferTextures(RenderGraphTextureUsage gbufferUsage
         makeDesc(DXGI_FORMAT_R11G11B10_FLOAT));
 }
 
-void DXRenderManager::AddShadowSceneSkyboxPasses(const SceneDrawCallback& drawCallback, const float clearColor[4],
+void DXRenderManager::AddShadowSceneSkyboxPasses(const SceneDrawCallback& opaqueDrawCallback,
+    const SceneDrawCallback& transparentDrawCallback, const float clearColor[4],
     RenderGraphTextureUsage depthAndShader)
 {
     auto ctx = GetGraphicsContext();
@@ -678,7 +683,7 @@ void DXRenderManager::AddShadowSceneSkyboxPasses(const SceneDrawCallback& drawCa
         RenderGraphClearValue::Color4(clearColor[0], clearColor[1], clearColor[2], clearColor[3]),
         RenderGraphClearValue::DepthStencil(1.0f),
         m_renderTarget.get(), m_rootSignature, m_viewport, m_scissorRect,
-        stageDescriptors, ctx, drawCallback));
+        stageDescriptors, ctx, opaqueDrawCallback));
 
     if (m_currentWorld && m_currentWorld->GetSkybox())
     {
@@ -687,6 +692,11 @@ void DXRenderManager::AddShadowSceneSkyboxPasses(const SceneDrawCallback& drawCa
             m_renderTarget.get(), m_rootSignature, m_viewport, m_scissorRect,
             stageDescriptors, m_currentWorld, ctx));
     }
+
+    m_frameGraph.AddPass(std::make_unique<TransparentRenderGraphPass>(
+        m_frameResources.sceneColor, m_frameResources.sceneDepth,
+        m_renderTarget.get(), m_rootSignature, m_viewport, m_scissorRect,
+        stageDescriptors, ctx, transparentDrawCallback));
 }
 
 void DXRenderManager::FinalizeNoPostProcessOutput()
@@ -734,7 +744,8 @@ void DXRenderManager::AppendPostProcessChain(PostProcessStack* stack, RenderGrap
     m_finalPostProcessTexture = m_frameGraph.GetImportedTexture(inputHandle).texture;
 }
 
-void DXRenderManager::BuildForwardFrameGraph(const SceneDrawCallback& drawCallback, PostProcessStack* stack)
+void DXRenderManager::BuildForwardFrameGraph(const SceneDrawCallback& opaqueDrawCallback,
+    const SceneDrawCallback& transparentDrawCallback, PostProcessStack* stack)
 {
     const RenderGraphTextureUsage colorAndShader =
         RenderGraphTextureUsage::ColorAttachment | RenderGraphTextureUsage::ShaderResource;
@@ -747,7 +758,7 @@ void DXRenderManager::BuildForwardFrameGraph(const SceneDrawCallback& drawCallba
         return;
 
     const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
-    AddShadowSceneSkyboxPasses(drawCallback, clearColor, depthAndShader);
+    AddShadowSceneSkyboxPasses(opaqueDrawCallback, transparentDrawCallback, clearColor, depthAndShader);
 
     if (!stack || stack->GetPassCount() == 0)
     {
@@ -1045,10 +1056,11 @@ void DXRenderManager::RenderFrame()
     PostProcessStack* stack = ctx->camera ? ctx->camera->GetPostProcessStack() : nullptr;
 
     m_frameGraph.Reset();
-    BuildFrameGraph(m_pendingSceneDrawCallback, stack);
+    BuildFrameGraph(m_pendingSceneDrawCallback, m_pendingTransparentDrawCallback, stack);
     m_frameGraph.Compile();
     ExecuteFrameGraph(*ctx, m_pendingSceneDrawCallback);
     m_pendingSceneDrawCallback = nullptr;
+    m_pendingTransparentDrawCallback = nullptr;
     m_frameGraphDirty = false;
 
     CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
@@ -1120,6 +1132,7 @@ void DXRenderManager::OnDestroy()
     m_frameGraph.Reset();
     m_currentContext.reset();
     m_pendingSceneDrawCallback = nullptr;
+    m_pendingTransparentDrawCallback = nullptr;
 
     m_transientPool.Clear();
     for (PostProcessPass* pass : m_trackedPasses)

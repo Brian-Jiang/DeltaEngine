@@ -104,10 +104,12 @@ public:
     /// Caller is responsible for executing the command list and presenting.
     DELTAENGINE_API void PrepareFrame();
 
-    /// Renders the forward scene pass as a render graph node: clears + binds the
-    /// scene render target, stages frame descriptors, then invokes drawCallback
-    /// to record the scene draws. Call between PrepareFrame and RenderFrame.
-    DELTAENGINE_API void RenderScene(const SceneDrawCallback& drawCallback);
+    /// Renders the forward scene passes as render graph nodes. The opaque callback
+    /// records the cleared scene pass; the transparent callback records the
+    /// load-existing transparent overlay after skybox. Call between PrepareFrame
+    /// and RenderFrame.
+    DELTAENGINE_API void RenderScene(const SceneDrawCallback& opaqueDrawCallback,
+        const SceneDrawCallback& transparentDrawCallback);
 
     DELTAENGINE_API void RenderFrame();
 
@@ -161,12 +163,15 @@ public:
 
 private:
     void CreatePingPongTargets(UINT width, UINT height);
-    void BuildFrameGraph(const SceneDrawCallback& drawCallback, PostProcessStack* stack);
-    void BuildForwardFrameGraph(const SceneDrawCallback& drawCallback, PostProcessStack* stack);
+    void BuildFrameGraph(const SceneDrawCallback& opaqueDrawCallback,
+        const SceneDrawCallback& transparentDrawCallback, PostProcessStack* stack);
+    void BuildForwardFrameGraph(const SceneDrawCallback& opaqueDrawCallback,
+        const SceneDrawCallback& transparentDrawCallback, PostProcessStack* stack);
     void BuildDeferredFrameGraph(const SceneDrawCallback& drawCallback, PostProcessStack* stack);
     bool ImportSceneTargets(RenderGraphTextureUsage colorAndShader, RenderGraphTextureUsage depthUsage,
         std::shared_ptr<DirectX12Texture>& colorTexture, std::shared_ptr<DirectX12Texture>& depthTexture);
-    void AddShadowSceneSkyboxPasses(const SceneDrawCallback& drawCallback, const float clearColor[4],
+    void AddShadowSceneSkyboxPasses(const SceneDrawCallback& opaqueDrawCallback,
+        const SceneDrawCallback& transparentDrawCallback, const float clearColor[4],
         RenderGraphTextureUsage depthAndShader);
     void AddShadowPasses(RenderGraphTextureUsage depthAndShader);
     void CreateGBufferTextures(RenderGraphTextureUsage gbufferUsage);
@@ -210,6 +215,7 @@ private:
     FrameGraphBindings m_frameBindings;
     bool m_frameGraphDirty = true;
     SceneDrawCallback m_pendingSceneDrawCallback;
+    SceneDrawCallback m_pendingTransparentDrawCallback;
 
     std::optional<ActiveRenderCamera> m_pendingActiveRenderCamera;
 
