@@ -23,7 +23,8 @@ class CameraRenderProxy;
 enum class ScenePassType : uint8_t
 {
     Forward,
-    GBuffer
+    GBuffer,
+    Transparent,
 };
 
 /// Passed to every renderer's InitGraphicState / GatherDrawCalls.

@@ -43,6 +43,8 @@ public:
 
     DELTAENGINE_API static bool SubmeshContributesToShadowMap(const DMaterial* material);
     DELTAENGINE_API static bool SubmeshContributesToGBuffer(const DMaterial* material);
+    DELTAENGINE_API static bool SubmeshContributesToOpaquePass(const DMaterial* material);
+    DELTAENGINE_API static bool SubmeshContributesToTransparentPass(const DMaterial* material);
 
     /// Returns the number of indices in the first index buffer.
     DELTAENGINE_API size_t GetIndexCount() const;

@@ -344,8 +344,17 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
     for (size_t i = 0; i < drawCount; ++i)
     {
         DMaterial* material = m_mesh ? m_mesh->GetMaterial(static_cast<int>(i)) : nullptr;
-        if (gbufferPass && !SubmeshContributesToGBuffer(material))
-            continue;
+        const ScenePassType pass = renderContext->activePass;
+        if (pass == ScenePassType::Forward || pass == ScenePassType::GBuffer)
+        {
+            if (!SubmeshContributesToOpaquePass(material))
+                continue;
+        }
+        else if (pass == ScenePassType::Transparent)
+        {
+            if (!SubmeshContributesToTransparentPass(material))
+                continue;
+        }
 
         if (!activePsos[i])
             continue;
@@ -419,14 +428,24 @@ bool MeshRenderProxy::ShadersChanged() const
     return false;
 }
 
-bool MeshRenderProxy::SubmeshContributesToShadowMap(const DMaterial* material)
+bool MeshRenderProxy::SubmeshContributesToOpaquePass(const DMaterial* material)
 {
     return !(material && HasAny(material->GetFlags(), MaterialFlags::AlphaBlend));
 }
 
+bool MeshRenderProxy::SubmeshContributesToTransparentPass(const DMaterial* material)
+{
+    return material && HasAny(material->GetFlags(), MaterialFlags::AlphaBlend);
+}
+
+bool MeshRenderProxy::SubmeshContributesToShadowMap(const DMaterial* material)
+{
+    return SubmeshContributesToOpaquePass(material);
+}
+
 bool MeshRenderProxy::SubmeshContributesToGBuffer(const DMaterial* material)
 {
-    return SubmeshContributesToShadowMap(material);
+    return SubmeshContributesToOpaquePass(material);
 }
 
 void MeshRenderProxy::GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext, const ShadowView& view)

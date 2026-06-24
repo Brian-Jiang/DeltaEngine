@@ -23,6 +23,7 @@ enum class ERenderMode : uint32_t
 {
     Opaque = 0,
     Masked = 1,
+    Transparent = 2,
 };
 
 DCLASS()
@@ -65,6 +66,9 @@ public:
     DFUNCTION()
     DELTAENGINE_API void SetAlphaMaskTexture(DTexture* texture);
 
+    DFUNCTION()
+    DELTAENGINE_API void SetRenderMode(uint32_t mode);
+
     /// Returns the texture at the requested slot, or nullptr.
     DFUNCTION()
     DELTAENGINE_API DTexture* GetTexture(int slot) const;
@@ -84,6 +88,7 @@ public:
 
 private:
     MaterialFlags ComputeFlags() const;
+    void ApplyRenderModePipelineState();
 
 private:
     DPROPERTY()

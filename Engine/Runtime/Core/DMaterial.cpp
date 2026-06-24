@@ -2,11 +2,48 @@
 
 using namespace DeltaEngine;
 
+namespace
+{
+CD3DX12_BLEND_DESC MakeOpaqueBlendDesc()
+{
+    return CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+}
+
+CD3DX12_BLEND_DESC MakeTransparentBlendDesc()
+{
+    CD3DX12_BLEND_DESC blend(D3D12_DEFAULT);
+    blend.RenderTarget[0].BlendEnable = TRUE;
+    blend.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+    blend.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+    blend.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+    blend.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+    blend.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+    blend.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+    blend.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+    return blend;
+}
+
+CD3DX12_DEPTH_STENCIL_DESC MakeOpaqueDepthStencilDesc()
+{
+    return CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+}
+
+CD3DX12_DEPTH_STENCIL_DESC MakeTransparentDepthStencilDesc()
+{
+    CD3DX12_DEPTH_STENCIL_DESC depth(D3D12_DEFAULT);
+    depth.DepthEnable = TRUE;
+    depth.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+    depth.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+    return depth;
+}
+}
+
 DMaterial::DMaterial()
     : m_shader(nullptr)
     , m_blendDesc()
     , m_depthStencilState()
 {
+    ApplyRenderModePipelineState();
 }
 
 DMaterial::~DMaterial() = default;
@@ -29,6 +66,29 @@ void DMaterial::SetBlendState(const CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC& bl
 void DMaterial::SetDepthStencilState(const CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL& depthStencilState)
 {
     m_depthStencilState = depthStencilState;
+}
+
+void DMaterial::SetRenderMode(uint32_t mode)
+{
+    m_renderMode = mode;
+    ApplyRenderModePipelineState();
+}
+
+void DMaterial::ApplyRenderModePipelineState()
+{
+    switch (static_cast<ERenderMode>(m_renderMode))
+    {
+    case ERenderMode::Transparent:
+        m_blendDesc = CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC(MakeTransparentBlendDesc());
+        m_depthStencilState = CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL(MakeTransparentDepthStencilDesc());
+        break;
+    case ERenderMode::Opaque:
+    case ERenderMode::Masked:
+    default:
+        m_blendDesc = CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC(MakeOpaqueBlendDesc());
+        m_depthStencilState = CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL(MakeOpaqueDepthStencilDesc());
+        break;
+    }
 }
 
 void DMaterial::SetAlbedoTexture(DTexture* texture)            { m_albedoTexture = texture; }
@@ -54,9 +114,19 @@ DTexture* DMaterial::GetTexture(int slot) const
 
 DShader* DMaterial::GetShader() const { return m_shader; }
 
-CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC DMaterial::GetBlendState() const { return m_blendDesc; }
+CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC DMaterial::GetBlendState() const
+{
+    if (static_cast<ERenderMode>(m_renderMode) == ERenderMode::Transparent)
+        return CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC(MakeTransparentBlendDesc());
+    return m_blendDesc;
+}
 
-CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL DMaterial::GetDepthStencilState() const { return m_depthStencilState; }
+CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL DMaterial::GetDepthStencilState() const
+{
+    if (static_cast<ERenderMode>(m_renderMode) == ERenderMode::Transparent)
+        return CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL(MakeTransparentDepthStencilDesc());
+    return m_depthStencilState;
+}
 
 MaterialFlags DMaterial::ComputeFlags() const
 {
@@ -70,9 +140,14 @@ MaterialFlags DMaterial::ComputeFlags() const
     if (m_doubleSided)              flags |= MaterialFlags::DoubleSided;
     if (static_cast<ERenderMode>(m_renderMode) == ERenderMode::Masked)
         flags |= MaterialFlags::AlphaTest;
-    const CD3DX12_BLEND_DESC& blend = m_blendDesc;
-    if (blend.RenderTarget[0].BlendEnable)
+    if (static_cast<ERenderMode>(m_renderMode) == ERenderMode::Transparent)
         flags |= MaterialFlags::AlphaBlend;
+    else
+    {
+        const CD3DX12_BLEND_DESC& blend = m_blendDesc;
+        if (blend.RenderTarget[0].BlendEnable)
+            flags |= MaterialFlags::AlphaBlend;
+    }
     return flags;
 }
 
