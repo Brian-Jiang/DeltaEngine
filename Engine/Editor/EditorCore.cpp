@@ -134,7 +134,7 @@ void EditorCore::Initialize(EngineMain& engine, bool headless, std::filesystem::
         constexpr uint16_t kPreferredMcpPort = 57340;
         auto router = std::make_shared<McpQueryRouter>(*this, *m_mcpRegistry);
         g_mcpServer = std::make_unique<McpSocketServer>(
-            [router](const std::string& json) { router->Route(json); },
+            [router](const std::string& json) -> std::string { return router->Route(json); },
             [router](const std::string& json) -> std::string { return router->Route(json); });
         const uint16_t mcpPort = g_mcpServer->Start(kPreferredMcpPort);
         if (mcpPort == 0)

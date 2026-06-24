@@ -252,5 +252,5 @@ nlohmann::json McpViewportSystem::CommandSetViewportCamera(EditorCore&, const nl
     GetActiveCamera(cam);
     MergeCameraParams(cam, params);
     ApplySetViewportCamera(cam);
-    return { {"ok", true} };
+    return { {"ok", true}, {"expects_result", false} };
 }

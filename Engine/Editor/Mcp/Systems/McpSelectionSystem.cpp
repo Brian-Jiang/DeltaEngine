@@ -129,7 +129,7 @@ nlohmann::json McpSelectionSystem::CommandSelectObject(EditorCore& core, const n
             sel->ClearComponentSelection();
             sel->ClearAssetSelection();
         }
-        return {{"ok", true}};
+        return {{"ok", true}, {"expects_result", false}};
     }
 
     enum class Kind : uint8_t { GameObject, Component, Asset };
@@ -197,7 +197,7 @@ nlohmann::json McpSelectionSystem::CommandSelectObject(EditorCore& core, const n
         }
     }
 
-    nlohmann::json out{{"ok", true}, {"count", resolved.size()}};
+    nlohmann::json out{{"ok", true}, {"count", resolved.size()}, {"expects_result", false}};
     if (!unknown.empty())
         out["unknown_object_ids"] = std::move(unknown);
     return out;

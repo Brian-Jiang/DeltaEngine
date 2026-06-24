@@ -1,5 +1,6 @@
 #include "McpQueryRouter.h"
 
+#include "McpProtocol.h"
 #include "McpRegistry.h"
 
 #include <nlohmann/json.hpp>
@@ -37,6 +38,7 @@ std::string McpQueryRouter::Route(const std::string& rawJson) const
         if (type == "command")
         {
             std::string command = q.value("command", "");
+            const std::string requestId = ResolveRequestId(q);
 
             DLOG(LogMcpRouter, ELogLevel::Log,
                  "Received MCP command: system='{}', command='{}'", system, command);
@@ -45,14 +47,20 @@ std::string McpQueryRouter::Route(const std::string& rawJson) const
 
             if (system.empty() || command.empty())
             {
-                return nlohmann::json{
-                    {"ok", false},
-                    {"error", "Command must include 'system' and 'command' fields"}
-                }.dump();
+                return MakeAcceptResponse(
+                    requestId,
+                    command,
+                    nlohmann::json{
+                        {"ok", false},
+                        {"error", "Command must include 'system' and 'command' fields"}
+                    })
+                    .dump();
             }
 
-            return m_registry
-                .DispatchCommand(system, command, m_core, params)
+            return MakeAcceptResponse(
+                requestId,
+                command,
+                m_registry.DispatchCommand(system, command, m_core, params))
                 .dump();
         }
 
