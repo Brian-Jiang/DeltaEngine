@@ -111,7 +111,7 @@ TEST_F(McpQueryRouterTests, Route_CommandCreateGameObject_WithRequestId_ReturnsA
     env["type"]        = "command";
     env["system"]      = "scene";
     env["command"]     = "CreateGameObject";
-    env["params"]      = json::object();
+    env["params"]      = {{"name", "New GameObject"}};
     env["request_id"]  = "req-create-7";
 
     const json out = json::parse(router.Route(env.dump()));
