@@ -168,8 +168,8 @@ TEST(FullFrameRenderGraphCompileTests, FullChain_PostProcessDeclaredBeforeScene_
 
     AddPostProcessPass(graph, color, ping, 0, 1);
     graph.AddPass(std::make_unique<PostProcessFinalizeGraphPass>(ping));
-    AddTransparentPass(graph, color, depth);
     AddSkyboxPass(graph, color, depth);
+    AddTransparentPass(graph, color, depth);
     AddScenePass(graph, color, depth);
     graph.AddPass(std::make_unique<SceneShadowReadGraphPass>(shadow.directional, shadow.spot, shadow.point));
     graph.AddPass(std::make_unique<ShadowRenderGraphPass>(
