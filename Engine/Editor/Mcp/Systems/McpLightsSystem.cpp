@@ -43,6 +43,7 @@ nlohmann::json McpLightsSystem::CommandSetIntensity(EditorCore& core, const nloh
             {"valueAfter",   target}
         };
         core.EnqueueSerializedCommand(envelope.dump());
+        return {{"ok", true}, {"queued", true}, {"expects_result", true}};
     }
     else
     {
@@ -56,7 +57,6 @@ nlohmann::json McpLightsSystem::CommandSetIntensity(EditorCore& core, const nloh
         envelope["targetValue"]  = target;
         envelope["duration"]     = duration;
         core.EnqueueSerializedCommand(envelope.dump());
+        return {{"ok", true}, {"queued", true}, {"expects_result", false}};
     }
-
-    return {{"ok", true}, {"queued", true}};
 }

@@ -16,8 +16,9 @@ DECLARE_LOG_CATEGORY(LogMcpServer)
 class McpSocketServer
 {
 public:
-    using CommandHandler = std::function<void(const std::string& json)>;
-    using QueryHandler   = std::function<std::string(const std::string& json)>;
+    using RouteHandler   = std::function<std::string(const std::string& json)>;
+    using CommandHandler = RouteHandler;
+    using QueryHandler   = RouteHandler;
 
     McpSocketServer(CommandHandler onCommand, QueryHandler onQuery);
     ~McpSocketServer();

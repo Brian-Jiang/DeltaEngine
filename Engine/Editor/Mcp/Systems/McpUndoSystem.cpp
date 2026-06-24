@@ -88,7 +88,8 @@ nlohmann::json McpUndoSystem::CommandUndo(EditorCore& core, const nlohmann::json
         {"ok", true},
         {"steps_done", done},
         {"can_undo", mgr.CanUndo()},
-        {"can_redo", mgr.CanRedo()}
+        {"can_redo", mgr.CanRedo()},
+        {"expects_result", false}
     };
 }
 
@@ -125,6 +126,7 @@ nlohmann::json McpUndoSystem::CommandRedo(EditorCore& core, const nlohmann::json
         {"ok", true},
         {"steps_done", done},
         {"can_undo", mgr.CanUndo()},
-        {"can_redo", mgr.CanRedo()}
+        {"can_redo", mgr.CanRedo()},
+        {"expects_result", false}
     };
 }
