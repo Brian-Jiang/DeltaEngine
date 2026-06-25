@@ -186,6 +186,107 @@ def test_orphan_result_discarded(monkeypatch):
     assert delta_mcp_server._orphan_buffer[0]["request_id"] == "orphan-99"
 
 
+def test_accept_timeout_returns_error(monkeypatch):
+    closed = []
+
+    def fake_read_matching_line(phase, request_id, timeout_s):
+        return None
+
+    def fake_close():
+        closed.append(True)
+
+    monkeypatch.setattr(delta_mcp_server, "_ensure_connected", _noop_connect)
+    monkeypatch.setattr(delta_mcp_server, "_read_matching_line", fake_read_matching_line)
+    monkeypatch.setattr(delta_mcp_server, "_close_connection", fake_close)
+
+    result = delta_mcp_server._send_mcp_command(
+        {
+            "type": "command",
+            "system": "scene",
+            "command": "CreateGameObject",
+            "params": {"name": "Cube"},
+        }
+    )
+
+    assert result == {
+        "ok": False,
+        "error": "Timed out after 5.0s waiting for command accept",
+    }
+    assert closed == []
+
+
+def test_late_orphan_after_timeout_does_not_break_next_command(monkeypatch):
+    accept_a = {
+        "phase": "accept",
+        "request_id": "1",
+        "ok": True,
+        "expects_result": True,
+        "command": "CreateGameObject",
+        "queued": True,
+    }
+    orphan_result_a = {
+        "phase": "result",
+        "request_id": "1",
+        "ok": True,
+        "objectId": "late-a",
+    }
+    accept_b = {
+        "phase": "accept",
+        "request_id": "2",
+        "ok": True,
+        "expects_result": True,
+        "command": "DeleteGameObject",
+        "queued": True,
+    }
+    result_b = {
+        "phase": "result",
+        "request_id": "2",
+        "ok": True,
+        "commandType": "EditorCommand_DeleteGameObject",
+    }
+
+    lines = [accept_a]
+
+    def fake_read_line(timeout_s):
+        if lines:
+            return lines.pop(0)
+        raise TimeoutError("no line")
+
+    monkeypatch.setattr(delta_mcp_server, "_ensure_connected", _noop_connect)
+    monkeypatch.setattr(delta_mcp_server, "_read_line", fake_read_line)
+
+    result_a = delta_mcp_server._send_mcp_command(
+        {
+            "type": "command",
+            "system": "scene",
+            "command": "CreateGameObject",
+            "params": {"name": "Cube"},
+        }
+    )
+
+    assert result_a["ok"] is True
+    assert result_a["execution_pending"] is True
+    assert "timeout_message" in result_a
+
+    lines.extend([orphan_result_a, accept_b, result_b])
+
+    result_b_out = delta_mcp_server._send_mcp_command(
+        {
+            "type": "command",
+            "system": "scene",
+            "command": "DeleteGameObject",
+            "params": {"objectId": "obj-1"},
+        }
+    )
+
+    assert result_b_out == {
+        "ok": True,
+        "commandType": "EditorCommand_DeleteGameObject",
+    }
+    assert len(delta_mcp_server._orphan_buffer) == 1
+    assert delta_mcp_server._orphan_buffer[0]["request_id"] == "1"
+
+
 def test_query_unchanged(monkeypatch):
     calls = []
 

@@ -343,6 +343,16 @@ def execute_batch(operations: list[dict]) -> dict:
       Example:
         {"type":"command","system":"scene","command":"CreateGameObject","params":{"name":"Sun"}}
 
+    Commands use the two-phase wire protocol internally (see PROTOCOL.md):
+      - Queries: one synchronous response.
+      - Commands: immediate accept envelope, then optional result after editor
+        main-thread execution when expects_result is true.
+      - Caller-visible results strip wire fields (phase, request_id, queued,
+        expects_result).
+      - On result timeout (30s), the command entry returns the stripped accept
+        plus execution_pending:true and timeout_message; the TCP socket stays
+        open. Re-query scene state rather than retrying the same command.
+
     Terminology:
       - query     = read-only operation
       - command   = mutating operation

@@ -71,6 +71,51 @@ void RouteAndExpectExpectsResult(
     EXPECT_EQ(accept["expects_result"].get<bool>(), expectedExpectsResult) << command;
 }
 
+json RouteCommandAndDrain(
+    EditorCore& core,
+    McpRegistry& reg,
+    const char* system,
+    const char* command,
+    json params,
+    const char* requestId)
+{
+    const McpQueryRouter router(core, reg);
+    json env;
+    env["type"]        = "command";
+    env["system"]      = system;
+    env["command"]     = command;
+    env["params"]      = std::move(params);
+    env["request_id"]  = requestId;
+
+    const json accept = json::parse(router.Route(env.dump()));
+    EXPECT_EQ(accept["phase"].get<std::string>(), "accept");
+    EXPECT_EQ(accept["request_id"].get<std::string>(), requestId);
+
+    std::vector<std::string> responses;
+    core.DrainCommandQueue(responses);
+    EXPECT_EQ(responses.size(), 1u);
+    const json result = json::parse(responses[0]);
+    EXPECT_EQ(result["phase"].get<std::string>(), "result");
+    EXPECT_EQ(result["request_id"].get<std::string>(), requestId);
+    return result;
+}
+
+std::string CreateLegacyGameObject(EditorCore& core, const AssetId& sceneAssetId)
+{
+    json data;
+    data["sceneAssetId"] = sceneAssetId.ToString();
+    data["className"]    = "GameObject";
+    json createEnv;
+    createEnv["type"] = "EditorCommand_CreateGameObject";
+    createEnv["data"] = data;
+    core.EnqueueSerializedCommand(createEnv.dump());
+    std::vector<std::string> createResponses;
+    core.DrainCommandQueue(createResponses);
+    if (createResponses.empty())
+        return {};
+    return json::parse(createResponses[0]).value("objectId", std::string{});
+}
+
 } // namespace
 
 class McpQueryRouterTests : public EditorCoreFixture {};
@@ -360,4 +405,114 @@ TEST_F(McpQueryRouterTests, Route_Commands_AcceptExpectsResultMatchesPolicy)
     RouteAndExpectExpectsResult(*m_core, *reg, "assets", "reimport_assets",
         {{"asset_ids", json::array({sceneAssetId.ToString()})}},
         "req-reimport-er", true);
+}
+
+TEST_F(McpQueryRouterTests, Route_CommandRenameObject_Drain_ReturnsResultWithRequestId)
+{
+    auto* reg = m_core->GetMcpRegistry();
+    ASSERT_NE(reg, nullptr);
+
+    const AssetId sceneAssetId = GetActiveSceneAssetId();
+    ASSERT_FALSE(sceneAssetId.IsNull());
+
+    const std::string goId = CreateLegacyGameObject(*m_core, sceneAssetId);
+    ASSERT_FALSE(goId.empty());
+
+    const json result = RouteCommandAndDrain(
+        *m_core,
+        *reg,
+        "common",
+        "RenameObject",
+        {{"objectId", goId}, {"newName", "RenamedViaRouter"}},
+        "req-rename-drain-1");
+
+    EXPECT_TRUE(result["ok"].get<bool>());
+    EXPECT_EQ(result["commandType"].get<std::string>(), "EditorCommand_RenameObject");
+}
+
+TEST_F(McpQueryRouterTests, Route_CommandCreateGameObjectCustomName_Drain_ReturnsResultWithObjectId)
+{
+    auto* reg = m_core->GetMcpRegistry();
+    ASSERT_NE(reg, nullptr);
+
+    const json result = RouteCommandAndDrain(
+        *m_core,
+        *reg,
+        "scene",
+        "CreateGameObject",
+        {{"name", "CustomNameGO"}},
+        "req-custom-name-drain");
+
+    EXPECT_TRUE(result["ok"].get<bool>());
+    EXPECT_FALSE(result["objectId"].get<std::string>().empty());
+    EXPECT_FALSE(result.contains("error"));
+}
+
+TEST_F(McpQueryRouterTests, Route_TwoQueuedCommands_OneDrain_ReturnsBothResultsWithRequestIds)
+{
+    auto* reg = m_core->GetMcpRegistry();
+    ASSERT_NE(reg, nullptr);
+    const McpQueryRouter router(*m_core, *reg);
+
+    json envA;
+    envA["type"]        = "command";
+    envA["system"]      = "scene";
+    envA["command"]     = "CreateGameObject";
+    envA["params"]      = {{"name", "BatchA"}};
+    envA["request_id"]  = "req-batch-a";
+
+    json envB;
+    envB["type"]        = "command";
+    envB["system"]      = "scene";
+    envB["command"]     = "CreateGameObject";
+    envB["params"]      = {{"name", "BatchB"}};
+    envB["request_id"]  = "req-batch-b";
+
+    const json acceptA = json::parse(router.Route(envA.dump()));
+    EXPECT_EQ(acceptA["phase"].get<std::string>(), "accept");
+    EXPECT_EQ(acceptA["request_id"].get<std::string>(), "req-batch-a");
+    EXPECT_TRUE(acceptA["queued"].get<bool>());
+
+    const json acceptB = json::parse(router.Route(envB.dump()));
+    EXPECT_EQ(acceptB["phase"].get<std::string>(), "accept");
+    EXPECT_EQ(acceptB["request_id"].get<std::string>(), "req-batch-b");
+    EXPECT_TRUE(acceptB["queued"].get<bool>());
+
+    std::vector<std::string> responses;
+    m_core->DrainCommandQueue(responses);
+
+    ASSERT_EQ(responses.size(), 2u);
+    const json resultA = json::parse(responses[0]);
+    const json resultB = json::parse(responses[1]);
+    EXPECT_EQ(resultA["phase"].get<std::string>(), "result");
+    EXPECT_EQ(resultA["request_id"].get<std::string>(), "req-batch-a");
+    EXPECT_TRUE(resultA["ok"].get<bool>());
+    EXPECT_FALSE(resultA["objectId"].get<std::string>().empty());
+
+    EXPECT_EQ(resultB["phase"].get<std::string>(), "result");
+    EXPECT_EQ(resultB["request_id"].get<std::string>(), "req-batch-b");
+    EXPECT_TRUE(resultB["ok"].get<bool>());
+    EXPECT_FALSE(resultB["objectId"].get<std::string>().empty());
+}
+
+TEST_F(McpQueryRouterTests, Route_SyncSelectObject_Drain_EmitsNoResults)
+{
+    auto* reg = m_core->GetMcpRegistry();
+    ASSERT_NE(reg, nullptr);
+    const McpQueryRouter router(*m_core, *reg);
+
+    json env;
+    env["type"]        = "command";
+    env["system"]      = "selection";
+    env["command"]     = "SelectObject";
+    env["params"]      = {{"object_ids", json::array()}};
+    env["request_id"]  = "req-select-drain";
+
+    const json accept = json::parse(router.Route(env.dump()));
+    EXPECT_EQ(accept["phase"].get<std::string>(), "accept");
+    EXPECT_FALSE(accept["expects_result"].get<bool>());
+
+    std::vector<std::string> responses;
+    m_core->DrainCommandQueue(responses);
+    EXPECT_TRUE(responses.empty());
 }
