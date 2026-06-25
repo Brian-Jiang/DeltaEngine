@@ -17,6 +17,13 @@ class EnvContext:
     bundled_python: Path
 
     def run_vs_command(self, command: str) -> int:
+        if os.environ.get("VSCMD_ARG_TGT_ARCH"):
+            result = subprocess.run(
+                ["cmd", "/c", command],
+                cwd=self.project_root,
+            )
+            return result.returncode
+
         vs_devcmd = str(self.vs_devcmd).replace('"', '""')
         wrapped = f'call "{vs_devcmd}" -arch=amd64 >nul 2>&1 && {command}'
         result = subprocess.run(
