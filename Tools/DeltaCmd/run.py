@@ -25,4 +25,7 @@ def run(target_alias: str, preset_name: str, extra_args: list[str], env: EnvCont
         print(missing_run_hint(target_alias))
         return 1
 
+    if target_alias == "editor":
+        return env.run_gui_command(exe_path, extra_args)
+
     return env.run_command([exe_path, *extra_args])

@@ -26,9 +26,9 @@ TEST_SUITES: dict[str, str | None] = {
 }
 
 MISSING_EXE_HINTS: dict[str, str] = {
-    "editor": "Run build-x64-debug.bat or rebuild-x64-debug.bat first.",
-    "engine": "Run build-x64-debug-engine-tests.bat first.",
-    "editor-tests": "Run build-x64-debug-editor-tests.bat first.",
+    "editor": "Run 'DeltaCmd.bat build editor' or 'DeltaCmd.bat configure && DeltaCmd.bat build editor' first.",
+    "engine": "Run 'DeltaCmd.bat build engine-tests' first.",
+    "editor-tests": "Run 'DeltaCmd.bat build editor-tests' first.",
 }
 
 HEADER_TOOL_SCRIPT = Path("Tools/DeltaHeaderTool/main.py")
