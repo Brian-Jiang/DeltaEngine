@@ -19,11 +19,27 @@ RUN_TARGETS: dict[str, str] = {
     "editor": "DeltaEditorLaunch.exe",
 }
 
-TEST_SUITES: dict[str, str | None] = {
+GTEST_SUITES: dict[str, str] = {
     "engine": "DeltaEngineTests.exe",
     "editor": "DeltaEditorTests.exe",
-    "header-tool": None,
 }
+
+PYTEST_SUITES: dict[str, Path] = {
+    "header-tool": Path("Tools/DeltaHeaderTool/tests"),
+    "delta-cmd": Path("Tools/DeltaCmd/tests"),
+}
+
+TEST_SUITES: dict[str, str | None] = {
+    **GTEST_SUITES,
+    **{alias: None for alias in PYTEST_SUITES},
+}
+
+HEADER_ACTIONS: dict[str, str] = {
+    "generate": "Incremental reflection codegen",
+    "force": "Full reflection codegen (--force)",
+}
+
+FORWARDER = "Tools/Scripts/DeltaCmd.bat"
 
 MISSING_EXE_HINTS: dict[str, str] = {
     "editor": "Run 'DeltaCmd.bat build editor' or 'DeltaCmd.bat configure && DeltaCmd.bat build editor' first.",
@@ -32,7 +48,7 @@ MISSING_EXE_HINTS: dict[str, str] = {
 }
 
 HEADER_TOOL_SCRIPT = Path("Tools/DeltaHeaderTool/main.py")
-HEADER_TOOL_TEST_DIR = Path("Tools/DeltaHeaderTool/tests")
+HEADER_TOOL_TEST_DIR = PYTEST_SUITES["header-tool"]
 
 HEADER_TOOL_INCLUDE_DIRS: tuple[str, ...] = (
     "Engine",
@@ -119,3 +135,60 @@ def header_tool_argv(project_root: Path, *, force: bool) -> list[str]:
         argv.append("--force")
 
     return argv
+
+
+def resolve_pytest_suite(alias: str) -> Path:
+    test_dir = PYTEST_SUITES.get(alias)
+    if test_dir is None:
+        known = ", ".join(sorted(PYTEST_SUITES))
+        raise RegistryError(f"Unknown pytest suite '{alias}'. Known suites: {known}")
+    return test_dir
+
+
+def format_list_output() -> str:
+    lines: list[str] = []
+    lines.append("DeltaCmd registry")
+    lines.append("=" * 17)
+    lines.append("")
+
+    lines.append("Presets:")
+    for name in sorted(PRESETS):
+        preset = PRESETS[name]
+        configure_preset = preset["configure_preset"]
+        binary_dir = preset["binary_dir"]
+        lines.append(f"  {name}  (configure: {configure_preset}, binary: {binary_dir})")
+    lines.append("")
+
+    lines.append("Build targets:")
+    for alias in sorted(BUILD_TARGETS):
+        lines.append(f"  {alias:<14} -> {BUILD_TARGETS[alias]}")
+    lines.append("")
+
+    lines.append("Run targets:")
+    for alias in sorted(RUN_TARGETS):
+        lines.append(f"  {alias:<14} -> {RUN_TARGETS[alias]}")
+    lines.append("")
+
+    lines.append("Test suites:")
+    for alias in sorted(GTEST_SUITES):
+        lines.append(f"  {alias:<14} -> {GTEST_SUITES[alias]} (GTest)")
+    for alias in sorted(PYTEST_SUITES):
+        lines.append(f"  {alias:<14} -> pytest {PYTEST_SUITES[alias]}")
+    lines.append("")
+
+    lines.append("Header commands:")
+    for action in sorted(HEADER_ACTIONS):
+        lines.append(f"  {action:<9} {HEADER_ACTIONS[action]}")
+    lines.append("")
+
+    lines.append("Examples:")
+    forwarder = FORWARDER.replace("/", "\\")
+    lines.append(f"  {forwarder} configure --automatic")
+    lines.append(f"  {forwarder} build editor --automatic")
+    lines.append(f"  {forwarder} run editor --automatic")
+    lines.append(f"  {forwarder} test engine --automatic")
+    lines.append(f"  {forwarder} test delta-cmd --automatic")
+    lines.append(f"  {forwarder} header generate --automatic")
+    lines.append(f"  {forwarder} list --automatic")
+
+    return "\n".join(lines)

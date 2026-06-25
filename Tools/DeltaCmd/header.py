@@ -3,11 +3,11 @@ from __future__ import annotations
 import sys
 
 from env import EnvContext
-from registry import HEADER_TOOL_SCRIPT, RegistryError, header_tool_argv
+from registry import HEADER_ACTIONS, HEADER_TOOL_SCRIPT, RegistryError, header_tool_argv
 
 
 def run(action: str, env: EnvContext) -> int:
-    if action not in {"generate", "force"}:
+    if action not in HEADER_ACTIONS:
         print(f"ERROR: Unknown header action '{action}'.", file=sys.stderr)
         return 1
 

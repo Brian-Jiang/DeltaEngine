@@ -10,38 +10,56 @@ DeltaEngine is a DirectX 12 game engine with an integrated editor, written in C+
 
 **CMake + Ninja**, targeting Windows x64. The only configured preset is `x64-debug`.
 
-**Always drive builds, runs, and tests through `Tools/Scripts/*.bat`** — they set up `DELTA_PROJECT_ROOT`, the bundled Python, and the VS dev environment. Do not call `cmake` / `pytest` directly from tool or agent invocations.
+**Always drive builds, runs, and tests through `Tools/Scripts/DeltaCmd.bat`** — it sets up `DELTA_PROJECT_ROOT`, the bundled Python, and the VS dev environment. Do not call `cmake` / `pytest` directly from tool or agent invocations.
 
 ```bash
-Tools\Scripts\build-x64-debug.bat              # incremental build (DeltaEditorLaunch)
-Tools\Scripts\rebuild-x64-debug.bat            # configure + build (DeltaEditorLaunch)
-Tools\Scripts\build-x64-debug-engine-tests.bat # build DeltaEngineTests
-Tools\Scripts\build-x64-debug-editor-tests.bat # build DeltaEditorTests
-Tools\Scripts\run-x64-debug.bat                # launch DeltaEditorLaunch.exe
-Tools\Scripts\run-x64-debug-engine-tests.bat   # run DeltaEngineTests (extra args forwarded to GTest)
-Tools\Scripts\run-x64-debug-editor-tests.bat   # run DeltaEditorTests (extra args forwarded to GTest)
-Tools\Scripts\delta_header_generate.bat        # incremental reflection codegen
-Tools\Scripts\delta_header_force_generate.bat  # full reflection codegen
-Tools\Scripts\test-delta-header-tool.bat       # pytest for DeltaHeaderTool
+Tools\Scripts\DeltaCmd.bat --automatic list                    # discover presets, targets, and examples
+Tools\Scripts\DeltaCmd.bat --automatic configure             # cmake --preset x64-debug
+Tools\Scripts\DeltaCmd.bat --automatic build editor          # incremental build (DeltaEditorLaunch)
+Tools\Scripts\DeltaCmd.bat --automatic build engine-tests    # build DeltaEngineTests
+Tools\Scripts\DeltaCmd.bat --automatic build editor-tests    # build DeltaEditorTests
+Tools\Scripts\DeltaCmd.bat --automatic run editor            # launch DeltaEditorLaunch.exe
+Tools\Scripts\DeltaCmd.bat --automatic test engine           # run DeltaEngineTests (GTest)
+Tools\Scripts\DeltaCmd.bat --automatic test editor           # run DeltaEditorTests (GTest)
+Tools\Scripts\DeltaCmd.bat --automatic test header-tool      # pytest for DeltaHeaderTool
+Tools\Scripts\DeltaCmd.bat --automatic test delta-cmd        # pytest for DeltaCmd
+Tools\Scripts\DeltaCmd.bat --automatic header generate       # incremental reflection codegen
+Tools\Scripts\DeltaCmd.bat --automatic header force          # full reflection codegen
 ```
+
+Legacy `.bat` aliases (e.g. `build-x64-debug.bat`, `run-x64-debug-engine-tests.bat`) forward to the same DeltaCmd subcommands and remain valid.
+
+| Legacy `.bat` | DeltaCmd equivalent |
+|---|---|
+| `configure-x64-debug.bat` | `configure` |
+| `rebuild-x64-debug.bat` | `configure` then `build editor` |
+| `build-x64-debug.bat` / `build.bat` | `build editor` |
+| `build-x64-debug-engine-tests.bat` | `build engine-tests` |
+| `build-x64-debug-editor-tests.bat` | `build editor-tests` |
+| `run-x64-debug.bat` | `run editor` |
+| `run-x64-debug-engine-tests.bat` | `test engine` |
+| `run-x64-debug-editor-tests.bat` | `test editor` |
+| `delta_header_generate.bat` | `header generate` |
+| `delta_header_force_generate.bat` | `header force` |
+| `test-delta-header-tool.bat` | `test header-tool` |
+| `test-delta-cmd.bat` | `test delta-cmd` |
 
 ### `--automatic` flag (MANDATORY for tool/agent invocations)
 
-Every script in `Tools/Scripts/` pauses at the end by default so a human double-clicking the `.bat` can read the output. **When invoked by Claude Code, an agent, CI, or any other non-interactive context, always pass `--automatic`** so the script skips the trailing `pause` and returns the real exit code. Omitting it will hang the tool call forever waiting on a keypress.
+Every DeltaCmd invocation (and legacy `.bat` forwarders) pauses at the end by default so a human double-clicking can read the output. **When invoked by Claude Code, an agent, CI, or any other non-interactive context, always pass `--automatic`** so the CLI skips the trailing pause and returns the real exit code. Omitting it will hang the tool call forever waiting on a keypress.
 
 ```bash
-Tools\Scripts\build-x64-debug.bat --automatic
-Tools\Scripts\run-x64-debug-engine-tests.bat --automatic              # build then run engine tests
-Tools\Scripts\run-x64-debug-editor-tests.bat --automatic              # build then run editor tests
-Tools\Scripts\run-x64-debug-engine-tests.bat --automatic --gtest_filter=Foo*  # GTest filter example
-Tools\Scripts\test-delta-header-tool.bat --automatic
-Tools\Scripts\test-delta-header-tool.bat --automatic -k test_parser  # extra args pass through to pytest
+Tools\Scripts\DeltaCmd.bat --automatic build editor
+Tools\Scripts\DeltaCmd.bat --automatic test engine
+Tools\Scripts\DeltaCmd.bat --automatic test engine -- --gtest_filter=Foo*   # GTest filter example
+Tools\Scripts\DeltaCmd.bat --automatic test header-tool -k test_parser    # pytest filter example
+Tools\Scripts\DeltaCmd.bat --automatic test delta-cmd
 ```
 
 **Verifying code modifications:** After any change to engine or editor code, run the relevant test suite to confirm nothing regressed:
 ```bash
-Tools\Scripts\build-x64-debug-engine-tests.bat --automatic && Tools\Scripts\run-x64-debug-engine-tests.bat --automatic
-Tools\Scripts\build-x64-debug-editor-tests.bat --automatic && Tools\Scripts\run-x64-debug-editor-tests.bat --automatic
+Tools\Scripts\DeltaCmd.bat --automatic build engine-tests && Tools\Scripts\DeltaCmd.bat --automatic test engine
+Tools\Scripts\DeltaCmd.bat --automatic build editor-tests && Tools\Scripts\DeltaCmd.bat --automatic test editor
 ```
 
 Build output goes to `Build/x64-Debug/bin/` (executables) and `Build/x64-Debug/lib/` (libraries). The `CopyDxcBin` custom target copies DXC compiler binaries to the output directory automatically.
@@ -60,13 +78,13 @@ Build output goes to `Build/x64-Debug/bin/` (executables) and `Build/x64-Debug/l
 # Force full regeneration (VS: build the DeltaHeaderTool target)
 cmake --build Build/x64-Debug --target DeltaHeaderTool
 
-# Or via script
-Tools/Scripts/delta_header_force_generate.bat
+# Or via DeltaCmd
+Tools\Scripts\DeltaCmd.bat --automatic header force
 ```
 
 ### CI/CD (`.github/workflows/ci.yml`)
 
-GitHub Actions on **self-hosted Windows runners**. Triggers: PRs targeting `main` or `dev/**`; pushes to `main`. Pipeline: configure/build editor → build engine tests → run engine tests → build editor tests → run editor tests. Build tree (`Build/x64-Debug`) and reflection headers (`Intermediate/DeltaHeaderTool`) are cached per branch. Cache is only saved on pushes to `main`.
+GitHub Actions on **self-hosted Windows runners**. Triggers: PRs targeting `main` or `dev/**`; pushes to `main`. Pipeline: DeltaCmd self-tests → DeltaMCP tests → configure/build editor → build engine tests → run engine tests → build editor tests → run editor tests. Build tree (`Build/x64-Debug`) and reflection headers (`Intermediate/DeltaHeaderTool`) are cached per branch. Cache is only saved on pushes to `main`.
 
 ## Architecture
 
@@ -383,7 +401,9 @@ Engine/Tests/
 
 `GpuGraphicsFixture` (in `Engine/Tests/Shared/`) initialises a real D3D12 device and direct queue for GPU-level tests. `GpuTestAssetFixture` extends it with a preloaded scene. `GpuReadback` provides CPU-side readback helpers. `GpuD3D12Validation` enables the D3D12 debug layer with break-on-error. Use these only for tests that genuinely need the GPU — they are slower and require the hardware to be available.
 
-`DeltaHeaderTool` has its own **pytest** suite under `Tools/DeltaHeaderTool/tests/` (pytest installed in the bundled Python). Run it via `Tools\Scripts\test-delta-header-tool.bat --automatic` from any tool/agent context.
+`DeltaHeaderTool` has its own **pytest** suite under `Tools/DeltaHeaderTool/tests/` (pytest installed in the bundled Python). Run it via `Tools\Scripts\DeltaCmd.bat --automatic test header-tool` from any tool/agent context.
+
+`DeltaCmd` has a **pytest** self-test suite under `Tools/DeltaCmd/tests/`. Run it via `Tools\Scripts\DeltaCmd.bat --automatic test delta-cmd` (or `Tools\Scripts\test-delta-cmd.bat --automatic`).
 
 ---
 
@@ -473,25 +493,39 @@ Tools/
 │   ├── type_resolver.py # C++ type → DProperty subclass mapping
 │   ├── diagnostics.py   # Non-fatal warning accumulation
 │   └── clang/           # Bundled libclang Python bindings
+├── DeltaCmd/            # Unified build/run/test CLI (bundled Python)
+│   ├── main.py          # Entry point
+│   ├── cli.py           # argparse subcommands
+│   ├── env.py           # repo root, bundled python, VS devcmd, --automatic
+│   ├── registry.py      # presets, targets, paths (single source of truth)
+│   ├── configure.py
+│   ├── build.py
+│   ├── run.py
+│   ├── test.py
+│   ├── header.py
+│   ├── list_cmd.py
+│   └── tests/           # pytest self-tests
 ├── CMake/
 │   └── PythonSetup.cmake  # Sets DELTA_PYTHON to bundled python.exe
 └── Scripts/
+    ├── DeltaCmd.bat                     # Single forwarder to Tools/DeltaCmd/main.py
     ├── build.bat
-    ├── build-x64-debug.bat                # Build DeltaEditorLaunch
-    ├── build-x64-debug-engine-tests.bat   # Build DeltaEngineTests
-    ├── build-x64-debug-editor-tests.bat   # Build DeltaEditorTests
-    ├── configure-x64-debug.bat            # Run CMake configure step only (no build)
-    ├── rebuild-x64-debug.bat              # Configure + build DeltaEditorLaunch
-    ├── run-x64-debug.bat                  # Launch DeltaEditorLaunch.exe
-    ├── run-x64-debug-engine-tests.bat     # Run DeltaEngineTests.exe
-    ├── run-x64-debug-editor-tests.bat     # Run DeltaEditorTests.exe
+    ├── build-x64-debug.bat                # → build editor
+    ├── build-x64-debug-engine-tests.bat   # → build engine-tests
+    ├── build-x64-debug-editor-tests.bat   # → build editor-tests
+    ├── configure-x64-debug.bat            # → configure
+    ├── rebuild-x64-debug.bat              # → configure + build editor
+    ├── run-x64-debug.bat                  # → run editor
+    ├── run-x64-debug-engine-tests.bat     # → test engine
+    ├── run-x64-debug-editor-tests.bat     # → test editor
     ├── set_env.bat
-    ├── delta_header_generate.bat          # Incremental generation
-    ├── delta_header_force_generate.bat    # Full regeneration (--force)
-    └── test-delta-header-tool.bat         # pytest for DeltaHeaderTool
+    ├── delta_header_generate.bat          # → header generate
+    ├── delta_header_force_generate.bat    # → header force
+    ├── test-delta-header-tool.bat         # → test header-tool
+    └── test-delta-cmd.bat                 # → test delta-cmd
 
     # All scripts pause at the end when run interactively.
-    # Pass --automatic (first arg) when invoking from tools/agents/CI.
+    # Pass --automatic when invoking from tools/agents/CI.
 ```
 
 ### DeltaHeaderTool Pipeline
@@ -520,7 +554,7 @@ Python is **build-time only**. The bundled `Tools/Python/python.exe` runs `Delta
 - **No raw `new`/`delete`** for reflected engine objects — use `CreateDObject<T>()`; asset ownership/lifetime is handled by reflection registry + `DPrimaryAsset`.
 - **Slang shaders** live in `Engine/EngineSourceAssets/Shaders/` as `.slang` files and are compiled at runtime via `CompileSlangStage`. The `StandardObject.slang` / `StandardLighting.slang` / `StandardConstantStructs.slang` / `StandardInputs.slang` quartet forms the standard material shader. `PBRObject.slang` / `PBRLighting.slang` / `PBRInputs.slang` form the PBR material shader set (uses IBL).
 - **`DXGraphicsContext`** is the primary way to pass rendering state down the call stack — do not add global graphics state.
-- **Adding a new reflected class:** annotate with `DCLASS()` + `DGENERATED_BODY(Name)`, add `DPROPERTY()`/`DFUNCTION()` annotations, then build (or run `delta_header_generate.bat`) — the tool regenerates the `.generated.h/.cpp` pair automatically.
+- **Adding a new reflected class:** annotate with `DCLASS()` + `DGENERATED_BODY(Name)`, add `DPROPERTY()`/`DFUNCTION()` annotations, then build (or run `DeltaCmd.bat --automatic header generate`) — the tool regenerates the `.generated.h/.cpp` pair automatically.
 - **Do not hand-edit generated files** in `Intermediate/DeltaHeaderTool/Generated/` — they are overwritten on every build.
 - **Adding a new editor command:** subclass `EditorCommand`, implement `Execute`/`Undo`/`Serialize`/`Deserialize`, add a `static constexpr std::string_view StaticTypeName()`, and declare a `CommandRegistrar<T>` static instance in the `.cpp` to auto-register with `EditorCommandRegistry`.
 - **Logging:** use `DLOG(Category, ELogLevel::X, ...)` everywhere; define a `DEFINE_LOG_CATEGORY` in the `.cpp` and `DECLARE_LOG_CATEGORY` in the `.h`.
