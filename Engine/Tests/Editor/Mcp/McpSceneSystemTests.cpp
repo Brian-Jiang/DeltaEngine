@@ -313,7 +313,8 @@ TEST_F(McpSceneSystemTests, CommandSetPosition_Immediate_SetsLocalPosition)
     auto dispatchRes = Dispatch("scene", "SetPosition",
         {{"objectId", plId},
          {"value", json::array({4.0f, 0.0f, 0.0f})},
-         {"space", "local"}});
+         {"space", "local"},
+         {"duration_seconds", 0.0f}});
     EXPECT_TRUE(dispatchRes["ok"].get<bool>());
 
     std::vector<std::string> responses;
@@ -342,7 +343,8 @@ TEST_F(McpSceneSystemTests, CommandSetRotation_Immediate_SetsLocalRotation)
 
     auto dispatchRes = Dispatch("scene", "SetRotation",
         {{"objectId", plId},
-         {"value", json::array({0.0f, 0.0f, 0.0f, 1.0f})}});  // identity quaternion
+         {"value", json::array({0.0f, 0.0f, 0.0f, 1.0f})},  // identity quaternion
+         {"duration_seconds", 0.0f}});
     EXPECT_TRUE(dispatchRes["ok"].get<bool>());
 
     std::vector<std::string> responses;
@@ -371,7 +373,8 @@ TEST_F(McpSceneSystemTests, CommandSetScale_Immediate_SetsLocalScale)
 
     auto dispatchRes = Dispatch("scene", "SetScale",
         {{"objectId", plId},
-         {"value", json::array({2.0f, 2.0f, 2.0f})}});
+         {"value", json::array({2.0f, 2.0f, 2.0f})},
+         {"duration_seconds", 0.0f}});
     EXPECT_TRUE(dispatchRes["ok"].get<bool>());
 
     std::vector<std::string> responses;
@@ -410,6 +413,32 @@ TEST_F(McpSceneSystemTests, CommandSetPosition_WithDuration_QueuesAnimation)
     m_core->DrainCommandQueue(responses);
     ASSERT_GE(responses.size(), 1u);
     EXPECT_TRUE(json::parse(responses[0])["ok"].get<bool>());
+}
+
+TEST_F(McpSceneSystemTests, CommandSetPosition_DefaultDuration_QueuesAnimation)
+{
+    const std::string goId = CreateLegacyGameObject();
+    ASSERT_FALSE(goId.empty());
+
+    json data;
+    data["sceneAssetId"] = GetActiveSceneAssetId().ToString();
+    data["gameObjectId"] = goId;
+    data["className"]    = "PointLight";
+    json env;
+    env["type"] = "EditorCommand_CreateComponent";
+    env["data"] = data;
+    m_core->EnqueueSerializedCommand(env.dump());
+    std::vector<std::string> cr;
+    m_core->DrainCommandQueue(cr);
+    const std::string plId = json::parse(cr[0]).value("objectId", std::string{});
+    ASSERT_FALSE(plId.empty());
+
+    // Omitting duration_seconds animates by default (kDefaultAnimationDurationSeconds).
+    auto dispatchRes = Dispatch("scene", "SetPosition",
+        {{"objectId", plId},
+         {"value", json::array({3.0f, 0.0f, 0.0f})}});
+    EXPECT_TRUE(dispatchRes["ok"].get<bool>());
+    EXPECT_TRUE(dispatchRes.value("queued", false));
 }
 
 TEST_F(McpSceneSystemTests, CommandSetPosition_MissingObjectId_ReturnsError)

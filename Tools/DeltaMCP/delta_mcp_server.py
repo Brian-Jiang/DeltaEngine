@@ -4,6 +4,8 @@ import socket
 
 from mcp.server.fastmcp import FastMCP
 
+from validation import validate_operation
+
 
 def _find_repo_root() -> pathlib.Path:
     here = pathlib.Path(__file__).resolve()
@@ -70,6 +72,15 @@ def _describe_operations(requested: list[dict]) -> dict:
 
 _LOCAL_META_QUERIES = {"list_operations", "describe_operations",
                        "capabilities", "active_systems"}
+
+
+def _is_local_meta_query(op: dict) -> bool:
+    return (
+        isinstance(op, dict)
+        and op.get("type", "query") == "query"
+        and op.get("system") == "meta"
+        and op.get("query") in _LOCAL_META_QUERIES
+    )
 
 
 def _handle_local_meta(payload: dict) -> dict:
@@ -238,11 +249,23 @@ def execute_batch(operations: list[dict]) -> dict:
       3. Query scene state to obtain objectIds if you need to target existing objects.
       4. Call execute_batch with your queries and/or commands.
 
+    Each operation is validated against the loaded schema before dispatch. An
+    operation with an unknown system, unknown query/command, or invalid params
+    is rejected with a structured error (naming the exact failing part) and is
+    NOT forwarded to the editor.
+
     Returns:
       { "ok": <true if all succeeded>, "results": [ <one result per entry> ] }
     """
     results = []
     for op in operations:
+        if _is_local_meta_query(op):
+            results.append(_send_command(op))
+            continue
+        error = validate_operation(op, _SCHEMAS["systems"])
+        if error is not None:
+            results.append(error)
+            continue
         results.append(_send_command(op))
     all_ok = all(r.get("ok", False) for r in results)
     return {"ok": all_ok, "results": results}

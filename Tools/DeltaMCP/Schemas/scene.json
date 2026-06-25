@@ -186,8 +186,8 @@
         "duration_seconds": {
           "type": "float",
           "optional": true,
-          "default": 0,
-          "description": "Tween duration; 0 = immediate"
+          "default": 1.0,
+          "description": "Tween duration in seconds. Defaults to 1.0 (animated); <= 0 = immediate"
         },
         "easing": {
           "type": "string",
@@ -215,8 +215,8 @@
         "duration_seconds": {
           "type": "float",
           "optional": true,
-          "default": 0,
-          "description": "Tween duration; 0 = immediate"
+          "default": 1.0,
+          "description": "Tween duration in seconds. Defaults to 1.0 (animated); <= 0 = immediate"
         },
         "easing": {
           "type": "string",
@@ -238,8 +238,8 @@
         "duration_seconds": {
           "type": "float",
           "optional": true,
-          "default": 0,
-          "description": "Tween duration; 0 = immediate"
+          "default": 1.0,
+          "description": "Tween duration in seconds. Defaults to 1.0 (animated); <= 0 = immediate"
         },
         "easing": {
           "type": "string",
