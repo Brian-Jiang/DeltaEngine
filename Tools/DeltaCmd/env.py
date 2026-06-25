@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+# VS dev environment discovery and activation live here (Phase 3+).
+# set_env.bat only resolves DELTA_PROJECT_ROOT and DELTA_PYTHON.
+
 import os
 import subprocess
 import sys
@@ -26,6 +29,18 @@ class EnvContext:
         command = [str(arg) for arg in argv]
         result = subprocess.run(
             command,
+            cwd=self.project_root,
+        )
+        return result.returncode
+
+    def run_gui_command(self, exe_path: Path, extra_args: list[str]) -> int:
+        exe = str(exe_path).replace('"', '""')
+        quoted_args = " ".join(f'"{arg.replace(chr(34), chr(34) + chr(34))}"' for arg in extra_args)
+        command = f'start "" /wait "{exe}"'
+        if quoted_args:
+            command = f"{command} {quoted_args}"
+        result = subprocess.run(
+            ["cmd", "/c", command],
             cwd=self.project_root,
         )
         return result.returncode
