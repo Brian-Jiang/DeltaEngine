@@ -8,11 +8,6 @@
 
 using namespace DeltaEngine;
 
-static nlohmann::json MakeError(const std::string& msg)
-{
-    return { {"ok", false}, {"error", msg} };
-}
-
 void McpCommonSystem::RegisterTools(McpRegistry& registry)
 {
     registry.RegisterCommand("common", "RenameObject",
@@ -26,26 +21,26 @@ void McpCommonSystem::RegisterTools(McpRegistry& registry)
 nlohmann::json McpCommonSystem::CommandRenameObject(EditorCore& core, const nlohmann::json& params)
 {
     if (!params.contains("objectId"))
-        return MakeError("missing required param: objectId");
+        return MakeMcpError("missing required param: objectId");
     if (!params.contains("newName"))
-        return MakeError("missing required param: newName");
+        return MakeMcpError("missing required param: newName");
 
     nlohmann::json data;
     data["targetObjectId"] = params["objectId"].get<std::string>();
     data["newName"] = params["newName"].get<std::string>();
     if (params.contains("assetId"))
         data["assetId"] = params["assetId"].get<std::string>();
-    return EnqueueMcpCommand(core, "common", "EditorCommand_RenameObject", std::move(data));
+    return EnqueueMcpCommand(core, "common", "EditorCommand_RenameObject", std::move(data), true);
 }
 
 nlohmann::json McpCommonSystem::CommandSetProperty(EditorCore& core, const nlohmann::json& params)
 {
     if (!params.contains("objectId"))
-        return MakeError("missing required param: objectId");
+        return MakeMcpError("missing required param: objectId");
     if (!params.contains("propertyName"))
-        return MakeError("missing required param: propertyName");
+        return MakeMcpError("missing required param: propertyName");
     if (!params.contains("valueAfter"))
-        return MakeError("missing required param: valueAfter");
+        return MakeMcpError("missing required param: valueAfter");
 
     nlohmann::json data;
     data["objectId"] = params["objectId"].get<std::string>();
@@ -53,7 +48,7 @@ nlohmann::json McpCommonSystem::CommandSetProperty(EditorCore& core, const nlohm
     data["valueAfter"] = params["valueAfter"];
     if (params.contains("assetId"))
         data["assetId"] = params["assetId"].get<std::string>();
-    return EnqueueMcpCommand(core, "common", "EditorCommand_SetProperty", std::move(data));
+    return EnqueueMcpCommand(core, "common", "EditorCommand_SetProperty", std::move(data), true);
 }
 
 nlohmann::json McpCommonSystem::CommandSaveProject(EditorCore& core, const nlohmann::json&)

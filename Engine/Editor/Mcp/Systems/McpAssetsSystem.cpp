@@ -3,6 +3,7 @@
 #include "Editor/Assets/EditorAssetDatabase.h"
 #include "Editor/Commands/PropertyValueIO.h"
 #include "Editor/EditorCore.h"
+#include "Mcp/McpProtocol.h"
 #include "Mcp/McpRegistry.h"
 #include "Runtime/Assets/DPrimaryAsset.h"
 #include "Runtime/Core/DComponent.h"
@@ -31,7 +32,7 @@ namespace
 
 nlohmann::json MakeError(const std::string& msg)
 {
-    return { {"ok", false}, {"error", msg} };
+    return MakeMcpError(msg);
 }
 
 std::string TrimSlashes(std::string s)

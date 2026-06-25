@@ -3,6 +3,7 @@
 #include "EditorCore.h"
 #include "Commands/EditorCommandContext.h"
 #include "Commands/EditorCommandManager.h"
+#include "Mcp/McpProtocol.h"
 #include "Mcp/McpRegistry.h"
 
 using namespace DeltaEngine;
@@ -59,16 +60,19 @@ nlohmann::json McpUndoSystem::CommandUndo(EditorCore& core, const nlohmann::json
 {
     int steps = params.value("steps", 1);
     if (steps < 1)
-        return {{"ok", false}, {"error", "steps must be >= 1"}};
+        return MakeMcpError("steps must be >= 1");
 
     auto& mgr = core.GetCommandManager();
     if (!mgr.CanUndo())
+    {
         return {
             {"ok", false},
             {"error", "nothing to undo"},
             {"can_undo", false},
-            {"can_redo", mgr.CanRedo()}
+            {"can_redo", mgr.CanRedo()},
+            {"expects_result", false}
         };
+    }
 
     EditorCommandContext ctx{core};
     int done = 0;
@@ -80,7 +84,8 @@ nlohmann::json McpUndoSystem::CommandUndo(EditorCore& core, const nlohmann::json
                 {"error", "Undo failed"},
                 {"steps_done", done},
                 {"can_undo", mgr.CanUndo()},
-                {"can_redo", mgr.CanRedo()}
+                {"can_redo", mgr.CanRedo()},
+                {"expects_result", false}
             };
     }
 
@@ -97,7 +102,7 @@ nlohmann::json McpUndoSystem::CommandRedo(EditorCore& core, const nlohmann::json
 {
     int steps = params.value("steps", 1);
     if (steps < 1)
-        return {{"ok", false}, {"error", "steps must be >= 1"}};
+        return MakeMcpError("steps must be >= 1");
 
     auto& mgr = core.GetCommandManager();
     if (!mgr.CanRedo())
@@ -105,7 +110,8 @@ nlohmann::json McpUndoSystem::CommandRedo(EditorCore& core, const nlohmann::json
             {"ok", false},
             {"error", "nothing to redo"},
             {"can_undo", mgr.CanUndo()},
-            {"can_redo", false}
+            {"can_redo", false},
+            {"expects_result", false}
         };
 
     EditorCommandContext ctx{core};
@@ -118,7 +124,8 @@ nlohmann::json McpUndoSystem::CommandRedo(EditorCore& core, const nlohmann::json
                 {"error", "Redo failed"},
                 {"steps_done", done},
                 {"can_undo", mgr.CanUndo()},
-                {"can_redo", mgr.CanRedo()}
+                {"can_redo", mgr.CanRedo()},
+                {"expects_result", false}
             };
     }
 

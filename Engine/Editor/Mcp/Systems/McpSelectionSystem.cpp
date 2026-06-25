@@ -3,6 +3,7 @@
 #include "EditorCore.h"
 #include "EditorSelectionState.h"
 #include "Assets/EditorAssetDatabase.h"
+#include "Mcp/McpProtocol.h"
 #include "Mcp/McpRegistry.h"
 
 #include "Runtime/Core/DObject.h"
@@ -113,10 +114,10 @@ nlohmann::json McpSelectionSystem::CommandSelectObject(EditorCore& core, const n
 {
     auto* sel = core.GetSelectionState();
     if (!sel)
-        return {{"ok", false}, {"error", "no selection state"}};
+        return MakeMcpError("no selection state");
 
     if (!params.contains("object_ids") || !params["object_ids"].is_array())
-        return {{"ok", false}, {"error", "missing or invalid object_ids"}};
+        return MakeMcpError("missing or invalid object_ids");
 
     const bool addToSelection = params.value("add_to_selection", false);
     const auto& idsJson = params["object_ids"];

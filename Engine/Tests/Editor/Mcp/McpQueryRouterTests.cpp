@@ -6,10 +6,72 @@
 #include <nlohmann/json.hpp>
 
 #include <string>
+#include <vector>
 
 using json = nlohmann::json;
 using namespace DeltaEngine;
 using namespace DeltaEngine::Tests;
+
+namespace
+{
+
+std::string CreatePointLightObjectId(EditorCore& core, const AssetId& sceneAssetId)
+{
+    json data;
+    data["sceneAssetId"] = sceneAssetId.ToString();
+    data["className"]    = "GameObject";
+    json createEnv;
+    createEnv["type"] = "EditorCommand_CreateGameObject";
+    createEnv["data"] = data;
+    core.EnqueueSerializedCommand(createEnv.dump());
+    std::vector<std::string> createResponses;
+    core.DrainCommandQueue(createResponses);
+    if (createResponses.empty())
+        return {};
+    const std::string goId = json::parse(createResponses[0]).value("objectId", std::string{});
+    if (goId.empty())
+        return {};
+
+    json compData;
+    compData["sceneAssetId"] = sceneAssetId.ToString();
+    compData["gameObjectId"] = goId;
+    compData["className"]    = "PointLight";
+    json compEnv;
+    compEnv["type"] = "EditorCommand_CreateComponent";
+    compEnv["data"] = compData;
+    core.EnqueueSerializedCommand(compEnv.dump());
+    std::vector<std::string> compResponses;
+    core.DrainCommandQueue(compResponses);
+    if (compResponses.empty())
+        return {};
+    return json::parse(compResponses[0]).value("objectId", std::string{});
+}
+
+void RouteAndExpectExpectsResult(
+    EditorCore& core,
+    McpRegistry& reg,
+    const char* system,
+    const char* command,
+    json params,
+    const char* requestId,
+    bool expectedExpectsResult)
+{
+    const McpQueryRouter router(core, reg);
+    json env;
+    env["type"]        = "command";
+    env["system"]      = system;
+    env["command"]     = command;
+    env["params"]      = std::move(params);
+    env["request_id"]  = requestId;
+
+    const json accept = json::parse(router.Route(env.dump()));
+    EXPECT_EQ(accept["phase"].get<std::string>(), "accept") << command;
+    EXPECT_EQ(accept["request_id"].get<std::string>(), requestId) << command;
+    ASSERT_TRUE(accept.contains("expects_result")) << command;
+    EXPECT_EQ(accept["expects_result"].get<bool>(), expectedExpectsResult) << command;
+}
+
+} // namespace
 
 class McpQueryRouterTests : public EditorCoreFixture {};
 
@@ -225,4 +287,77 @@ TEST_F(McpQueryRouterTests, Route_CommandMissingCommandField_ReturnsAcceptErrorP
     ASSERT_TRUE(out.contains("expects_result"));
     EXPECT_FALSE(out["expects_result"].get<bool>());
     ASSERT_TRUE(out["error"].get<std::string>().find("command") != std::string::npos);
+}
+
+TEST_F(McpQueryRouterTests, Route_Commands_AcceptExpectsResultMatchesPolicy)
+{
+    auto* reg = m_core->GetMcpRegistry();
+    ASSERT_NE(reg, nullptr);
+
+    const AssetId sceneAssetId = GetActiveSceneAssetId();
+    ASSERT_FALSE(sceneAssetId.IsNull());
+
+    json createData;
+    createData["sceneAssetId"] = sceneAssetId.ToString();
+    createData["className"]    = "GameObject";
+    json createEnv;
+    createEnv["type"] = "EditorCommand_CreateGameObject";
+    createEnv["data"] = createData;
+    m_core->EnqueueSerializedCommand(createEnv.dump());
+    std::vector<std::string> createResponses;
+    m_core->DrainCommandQueue(createResponses);
+    ASSERT_EQ(createResponses.size(), 1u);
+    const std::string goId = json::parse(createResponses[0]).value("objectId", std::string{});
+    ASSERT_FALSE(goId.empty());
+
+    const std::string plId = CreatePointLightObjectId(*m_core, sceneAssetId);
+    ASSERT_FALSE(plId.empty());
+
+    RouteAndExpectExpectsResult(*m_core, *reg, "common", "RenameObject",
+        {{"objectId", goId}, {"newName", "RenamedGO"}},
+        "req-rename-er", true);
+
+    RouteAndExpectExpectsResult(*m_core, *reg, "common", "SaveProject",
+        json::object(), "req-save-er", false);
+
+    RouteAndExpectExpectsResult(*m_core, *reg, "scene", "LoadScene",
+        {{"scenePath", m_defaultScenePath.generic_string()}},
+        "req-load-er", false);
+
+    RouteAndExpectExpectsResult(*m_core, *reg, "scene", "SetPosition",
+        {{"objectId", plId},
+         {"value", json::array({1.0f, 0.0f, 0.0f})},
+         {"duration_seconds", 0.0f}},
+        "req-pos-immediate-er", true);
+
+    RouteAndExpectExpectsResult(*m_core, *reg, "scene", "SetPosition",
+        {{"objectId", plId},
+         {"value", json::array({1.0f, 0.0f, 0.0f})},
+         {"duration_seconds", 1.0f}},
+        "req-pos-animated-er", false);
+
+    RouteAndExpectExpectsResult(*m_core, *reg, "lights", "SetIntensity",
+        {{"assetId", sceneAssetId.ToString()},
+         {"objectId", plId},
+         {"value", 2.0f},
+         {"duration_seconds", 0.0f}},
+        "req-light-immediate-er", true);
+
+    RouteAndExpectExpectsResult(*m_core, *reg, "lights", "SetIntensity",
+        {{"assetId", sceneAssetId.ToString()},
+         {"objectId", plId},
+         {"value", 2.0f},
+         {"duration_seconds", 1.0f}},
+        "req-light-animated-er", false);
+
+    RouteAndExpectExpectsResult(*m_core, *reg, "undo_history", "Undo",
+        json::object(), "req-undo-er", false);
+
+    RouteAndExpectExpectsResult(*m_core, *reg, "selection", "SelectObject",
+        {{"object_ids", json::array()}},
+        "req-select-er", false);
+
+    RouteAndExpectExpectsResult(*m_core, *reg, "assets", "reimport_assets",
+        {{"asset_ids", json::array({sceneAssetId.ToString()})}},
+        "req-reimport-er", true);
 }

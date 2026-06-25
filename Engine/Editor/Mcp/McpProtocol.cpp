@@ -5,6 +5,11 @@
 
 DELTA_ENGINE_NS_BEGIN
 
+nlohmann::json MakeMcpError(const std::string& message)
+{
+    return {{"ok", false}, {"error", message}, {"expects_result", false}};
+}
+
 std::string ResolveRequestId(const nlohmann::json& envelope)
 {
     if (envelope.contains("request_id") && envelope["request_id"].is_string())

@@ -23,6 +23,7 @@
     "Undo": {
       "description": "Undo the last undoable command",
       "undoable": false,
+      "expects_result": false,
       "params": {
         "steps": {
           "type": "int",
@@ -33,6 +34,7 @@
     "Redo": {
       "description": "Redo the last undone command",
       "undoable": false,
+      "expects_result": false,
       "params": {
         "steps": {
           "type": "int",

@@ -7,6 +7,8 @@
 #include "Editor/Commands/EditorCommandManager.h"
 #include "Editor/Commands/EditorCommandRegistry.h"
 #include "Editor/Commands/EditorAuxiliarySceneCommands.h"
+#include "Editor/Commands/EditorCommand_CreateGameObject.h"
+#include "Editor/Commands/EditorCommand_RenameObject.h"
 #include "Editor/Commands/EditorCommand_SetProperty.h"
 #include "Editor/Commands/PropertyValueIO.h"
 #include "Editor/EditorSelectionState.h"
@@ -596,6 +598,60 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
                 }
 
                 emitResponse(envelope, {{"ok", true}, {"commandType", "StartTransformChannelAnimation"}});
+                continue;
+            }
+            if (name == "CreateGameObjectWithRename")
+            {
+                const std::string desiredName = envelope.value("desiredName", "");
+                DPrimaryAsset* activeAsset = GetActiveSceneAsset();
+                if (!activeAsset)
+                {
+                    emitResponse(envelope,
+                        {{"ok", false}, {"commandType", "EditorCommand_CreateGameObject"},
+                         {"error", "No active scene asset"}});
+                    continue;
+                }
+
+                const AssetId sceneAssetId = activeAsset->GetAssetId();
+                auto createCmd = std::make_unique<EditorCommand_CreateGameObject>(sceneAssetId, "GameObject");
+                EditorCommand_CreateGameObject* createPtr = createCmd.get();
+                if (!m_commandManager->Execute(std::move(createCmd), ctx))
+                {
+                    emitResponse(envelope,
+                        {{"ok", false}, {"commandType", "EditorCommand_CreateGameObject"},
+                         {"error", "Execute() returned false"}});
+                    continue;
+                }
+
+                nlohmann::json createJson;
+                createPtr->Serialize(createJson);
+                const std::string objectId = createJson.value("createdId", "");
+
+                const bool needsRename = !desiredName.empty() && desiredName != "New GameObject";
+                if (!needsRename)
+                {
+                    emitResponse(envelope,
+                        {{"ok", true}, {"commandType", "EditorCommand_CreateGameObject"}, {"objectId", objectId}});
+                    continue;
+                }
+
+                ObjectId renameTarget = UUID::FromString(objectId);
+                if (envelope.value("forceRenameFailure", false))
+                    renameTarget = ObjectId{};
+
+                auto renameCmd = std::make_unique<EditorCommand_RenameObject>(
+                    sceneAssetId, renameTarget, desiredName);
+                if (!m_commandManager->Execute(std::move(renameCmd), ctx))
+                {
+                    emitResponse(envelope,
+                        {{"ok", true}, {"commandType", "EditorCommand_CreateGameObject"},
+                         {"objectId", objectId},
+                         {"error", "rename failed: Execute() returned false"}});
+                    continue;
+                }
+
+                emitResponse(envelope,
+                    {{"ok", true}, {"commandType", "EditorCommand_CreateGameObject"}, {"objectId", objectId}});
                 continue;
             }
             if (name == "ReimportAssets")

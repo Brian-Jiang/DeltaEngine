@@ -13,6 +13,8 @@ class EditorCore;
 
 DELTAEDITOR_API std::string ResolveRequestId(const nlohmann::json& envelope);
 
+DELTAEDITOR_API nlohmann::json MakeMcpError(const std::string& message);
+
 DELTAEDITOR_API nlohmann::json MakeAcceptResponse(
     const std::string& requestId,
     const std::string& commandName,
