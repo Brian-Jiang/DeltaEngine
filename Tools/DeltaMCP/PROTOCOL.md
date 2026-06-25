@@ -106,10 +106,22 @@ CreateGameObject with a custom name runs create then rename on the main thread a
 
 ## Python Client Behavior
 
-1. Read phase-1 accept immediately.
-2. If `ok:false` or `expects_result:false` → return stripped accept to caller.
-3. Else wait up to N seconds for phase-2 with matching `request_id`.
-4. On timeout → return accept + `execution_pending:true`; do not close the socket.
-5. Buffer or discard orphan phase-2 lines so later commands are not corrupted.
+Timeout constants (see `delta_mcp_server.py`):
+
+| Phase | Timeout |
+|-------|---------|
+| Accept (phase 1) | 5.0 seconds |
+| Result (phase 2) | 30.0 seconds |
+
+1. Assign a monotonic `request_id` on every outbound command; C++ echoes it on accept and result lines.
+2. Read phase-1 accept immediately.
+3. If `ok:false` or `expects_result:false` → return stripped accept to caller.
+4. Else wait up to 30 seconds for phase-2 with matching `request_id`.
+5. On result timeout → return stripped accept + `execution_pending:true` + `timeout_message`; do not close the socket.
+6. Orphan handling: stray `phase:result` lines with a non-matching `request_id` are appended to an internal buffer (append-only, never replayed). Other mismatched lines are discarded. This prevents late results from corrupting later commands.
+
+### Agent guidance on `execution_pending`
+
+When `execute_batch` returns `execution_pending: true` for a command, the editor may still be executing it. Do **not** retry the same mutating command immediately. Instead, query scene state (e.g. `scene/game_objects`, `scene/game_object`) to verify whether the change landed.
 
 Wire fields stripped from normal success responses: `phase`, `request_id`, `queued`, `expects_result`.
