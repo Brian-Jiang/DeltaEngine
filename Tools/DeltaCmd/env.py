@@ -11,12 +11,21 @@ from pathlib import Path
 class EnvContext:
     project_root: Path
     vs_devcmd: Path
+    bundled_python: Path
 
     def run_vs_command(self, command: str) -> int:
         vs_devcmd = str(self.vs_devcmd).replace('"', '""')
         wrapped = f'call "{vs_devcmd}" -arch=amd64 >nul 2>&1 && {command}'
         result = subprocess.run(
             ["cmd", "/c", wrapped],
+            cwd=self.project_root,
+        )
+        return result.returncode
+
+    def run_command(self, argv: list[str | Path]) -> int:
+        command = [str(arg) for arg in argv]
+        result = subprocess.run(
+            command,
             cwd=self.project_root,
         )
         return result.returncode
@@ -106,7 +115,12 @@ def create_env_context() -> EnvContext:
     require_windows()
     project_root = find_project_root()
     vs_devcmd = find_vs_devcmd()
-    return EnvContext(project_root=project_root, vs_devcmd=vs_devcmd)
+    bundled_python = project_root / "Tools" / "Python" / "python.exe"
+    return EnvContext(
+        project_root=project_root,
+        vs_devcmd=vs_devcmd,
+        bundled_python=bundled_python,
+    )
 
 
 def pause_if_interactive(automatic: bool) -> None:
