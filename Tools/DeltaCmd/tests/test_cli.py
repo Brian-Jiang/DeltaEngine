@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -34,6 +35,19 @@ def _fake_env() -> EnvContext:
     )
 
 
+def _fake_session() -> MagicMock:
+    session = MagicMock()
+    session.log_dir = Path("/tmp/DeltaCmd")
+    return session
+
+
+def _patch_session(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
+    session = _fake_session()
+    monkeypatch.setattr(cli, "SessionLog", lambda *args, **kwargs: session)
+    monkeypatch.setattr(cli, "prune_logs", lambda log_dir: None)
+    return session
+
+
 def test_parser_accepts_known_commands():
     parser = cli._build_parser()
     args = parser.parse_args(["configure"])
@@ -56,8 +70,9 @@ def test_parser_rejects_unknown_build_target():
 
 def test_main_list_skips_env_context(monkeypatch):
     called = {"create_env": False}
+    _patch_session(monkeypatch)
 
-    def fake_create_env_context():
+    def fake_create_env_context(project_root=None, session=None):
         called["create_env"] = True
         return _fake_env()
 
@@ -72,8 +87,12 @@ def test_main_list_skips_env_context(monkeypatch):
 def test_main_configure_uses_env_context(monkeypatch):
     env = _fake_env()
     captured: dict[str, object] = {}
+    _patch_session(monkeypatch)
 
-    monkeypatch.setattr(cli, "create_env_context", lambda: env)
+    def fake_create_env_context(project_root=None, session=None):
+        return env
+
+    monkeypatch.setattr(cli, "create_env_context", fake_create_env_context)
     monkeypatch.setattr(cli, "finalize", lambda code, automatic: code)
     monkeypatch.setattr(
         cli.configure,
@@ -90,8 +109,12 @@ def test_main_configure_uses_env_context(monkeypatch):
 def test_main_test_forwards_pytest_suite(monkeypatch):
     env = _fake_env()
     captured: dict[str, object] = {}
+    _patch_session(monkeypatch)
 
-    monkeypatch.setattr(cli, "create_env_context", lambda: env)
+    def fake_create_env_context(project_root=None, session=None):
+        return env
+
+    monkeypatch.setattr(cli, "create_env_context", fake_create_env_context)
     monkeypatch.setattr(cli, "finalize", lambda code, automatic: code)
     monkeypatch.setattr(
         cli.test,
@@ -110,10 +133,9 @@ def test_main_test_forwards_pytest_suite(monkeypatch):
 
 
 def test_main_strips_automatic_before_dispatch(monkeypatch):
-    env = _fake_env()
+    _patch_session(monkeypatch)
     captured: dict[str, bool] = {}
 
-    monkeypatch.setattr(cli, "create_env_context", lambda: env)
     monkeypatch.setattr(
         cli,
         "finalize",
