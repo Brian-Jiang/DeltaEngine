@@ -43,6 +43,8 @@
 #include "Runtime/Graphics/Shadow/ShadowSettings.h"
 #include "Runtime/Graphics/RenderResourceReleaseService.h"
 #include "Runtime/Graphics/RenderProxy/RenderProxy.h"
+#include "Runtime/Settings/EngineSettings.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -51,14 +53,10 @@ using namespace Microsoft::WRL;
 using namespace DeltaEngine;
 using namespace DirectX;
 
-namespace
-{
-constexpr RenderPath kActiveRenderPath = RenderPath::Deferred;
-}
-
-DXRenderManager::DXRenderManager(std::shared_ptr<Device> device, std::shared_ptr<RenderTarget> renderTarget, UINT width, UINT height)
-    : m_device(std::move(device)), m_renderTarget(std::move(renderTarget)), m_renderPath(kActiveRenderPath),
-    m_width(width), m_height(height),
+DXRenderManager::DXRenderManager(std::shared_ptr<Device> device, std::shared_ptr<RenderTarget> renderTarget,
+    UINT width, UINT height, RenderPath renderPath, const ShadowAtlasSettings& shadowAtlas)
+    : m_device(std::move(device)), m_renderTarget(std::move(renderTarget)), m_renderPath(renderPath),
+    m_shadowAtlasSettings(shadowAtlas), m_width(width), m_height(height),
     m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
     m_scissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX))
 {
@@ -79,6 +77,8 @@ DXRenderManager::DXRenderManager(std::shared_ptr<Device> device, std::shared_ptr
             return texture;
         });
     m_frameGraph.SetTransientPool(&m_transientPool);
+
+    DLOG(LogRenderer, ELogLevel::Log, "DXRenderManager using render path {}", RenderPathToString(m_renderPath));
 
     LoadPipeline();
     LoadAssets();
@@ -207,7 +207,7 @@ void DXRenderManager::LoadAssets()
         InitDeferredLightingPipeline();
 
     m_iblBaker.Initialize(*m_device);
-    m_shadowPass.Initialize(*m_device);
+    m_shadowPass.Initialize(*m_device, m_shadowAtlasSettings);
 }
 
 void DXRenderManager::InitGBufferPipeline()

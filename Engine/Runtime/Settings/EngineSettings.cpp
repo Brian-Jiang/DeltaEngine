@@ -165,3 +165,22 @@ EngineSettings DeltaEngine::LoadEngineSettings()
     LoadEngineSettingsFromPath(settings, IOManager::GetEngineSettingsPath());
     return settings;
 }
+
+EngineSettings DeltaEngine::LoadOrCreateEngineSettingsFromPath(const std::filesystem::path& path)
+{
+    if (!std::filesystem::exists(path))
+    {
+        const EngineSettings defaults = GetDefaultEngineSettings();
+        SaveEngineSettingsToPath(defaults, path);
+        return defaults;
+    }
+
+    EngineSettings settings = GetDefaultEngineSettings();
+    LoadEngineSettingsFromPath(settings, path);
+    return settings;
+}
+
+EngineSettings DeltaEngine::LoadOrCreateEngineSettings()
+{
+    return LoadOrCreateEngineSettingsFromPath(IOManager::GetEngineSettingsPath());
+}

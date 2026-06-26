@@ -169,3 +169,22 @@ TEST(EngineSettingsTests, RenderPathFromString_AndToString_RoundTrip)
     EXPECT_EQ(RenderPathToString(RenderPath::Forward), "Forward");
     EXPECT_EQ(RenderPathToString(RenderPath::Deferred), "Deferred");
 }
+
+TEST(EngineSettingsTests, LoadOrCreate_MissingFile_WritesDefaults)
+{
+    const auto root = MakeTempRoot();
+    const auto path = root / "EngineSettings.json";
+
+    ASSERT_FALSE(std::filesystem::exists(path));
+
+    const EngineSettings loaded = LoadOrCreateEngineSettingsFromPath(path);
+    EXPECT_TRUE(SettingsEqual(loaded, GetDefaultEngineSettings()));
+    ASSERT_TRUE(std::filesystem::exists(path));
+
+    EngineSettings fromDisk;
+    ASSERT_TRUE(LoadEngineSettingsFromPath(fromDisk, path));
+    EXPECT_TRUE(SettingsEqual(fromDisk, GetDefaultEngineSettings()));
+
+    std::error_code ec;
+    std::filesystem::remove_all(root, ec);
+}
