@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
 import build
 import configure
@@ -9,10 +10,13 @@ import header
 import list_cmd
 import run as run_cmd
 import test
-from env import create_env_context, finalize, strip_automatic
+from env import _delta_cmd_logging, create_env_context, finalize, find_project_root, strip_automatic
 from registry import BUILD_TARGETS, FORWARDER, PRESETS, RUN_TARGETS, TEST_SUITES
 
 _FORWARDER = FORWARDER.replace("/", "\\")
+_session_logging = _delta_cmd_logging()
+SessionLog = _session_logging.SessionLog
+prune_logs = _session_logging.prune_logs
 
 _ROOT_EPILOG = f"""\
 commands:
@@ -179,38 +183,54 @@ examples:
 def main(argv: list[str] | None = None) -> int:
     raw_argv = list(sys.argv[1:] if argv is None else argv)
     filtered_argv, automatic = strip_automatic(raw_argv)
+    project_root = find_project_root(Path(__file__).resolve().parent)
 
-    parser = _build_parser()
-    args = parser.parse_args(filtered_argv)
+    session = SessionLog(project_root, filtered_argv, automatic)
+    prune_logs(session.log_dir)
+    session.write_header()
+    session.install_stream_tee()
 
-    if args.command == "list":
-        exit_code = list_cmd.run()
-        return finalize(exit_code, automatic)
+    exit_code = 1
+    try:
+        parser = _build_parser()
+        args = parser.parse_args(filtered_argv)
 
-    env = create_env_context()
-
-    if args.command == "configure":
-        exit_code = configure.run(args.preset, env)
-    elif args.command == "build":
-        exit_code = build.run(args.target, args.preset, env)
-    elif args.command == "run":
-        exit_code = run_cmd.run(
-            args.target,
-            args.preset,
-            test.normalize_extra_args(args.extra_args),
-            env,
-        )
-    elif args.command == "test":
-        exit_code = test.run(
-            args.suite,
-            args.preset,
-            test.normalize_extra_args(args.extra_args),
-            env,
-        )
-    elif args.command == "header":
-        exit_code = header.run(args.header_action or "generate", env)
-    else:
-        print(f"ERROR: Unknown command '{args.command}'.", file=sys.stderr)
-        exit_code = 1
+        if args.command == "list":
+            exit_code = list_cmd.run()
+        else:
+            env = create_env_context(project_root, session=session)
+            if env is None:
+                exit_code = 1
+            elif args.command == "configure":
+                exit_code = configure.run(args.preset, env)
+            elif args.command == "build":
+                exit_code = build.run(args.target, args.preset, env)
+            elif args.command == "run":
+                exit_code = run_cmd.run(
+                    args.target,
+                    args.preset,
+                    test.normalize_extra_args(args.extra_args),
+                    env,
+                )
+            elif args.command == "test":
+                exit_code = test.run(
+                    args.suite,
+                    args.preset,
+                    test.normalize_extra_args(args.extra_args),
+                    env,
+                )
+            elif args.command == "header":
+                exit_code = header.run(args.header_action or "generate", env)
+            else:
+                print(f"ERROR: Unknown command '{args.command}'.", file=sys.stderr)
+                exit_code = 1
+    except SystemExit as exc:
+        exit_code = exc.code if isinstance(exc.code, int) else 1
+    except KeyboardInterrupt:
+        exit_code = 130
+    finally:
+        session.restore_streams()
+        session.write_footer(exit_code)
+        session.print_log_path()
 
     return finalize(exit_code, automatic)
