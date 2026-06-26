@@ -4,10 +4,10 @@ import sys
 
 from env import EnvContext
 from registry import (
-    HEADER_TOOL_TEST_DIR,
     RegistryError,
     executable_path,
     missing_test_hint,
+    resolve_pytest_suite,
     resolve_test_suite,
 )
 
@@ -32,12 +32,18 @@ def run(suite: str, preset_name: str, extra_args: list[str], env: EnvContext) ->
             print(f"ERROR: Embedded Python not found at {env.bundled_python}", file=sys.stderr)
             return 1
 
+        try:
+            test_dir = resolve_pytest_suite(suite)
+        except RegistryError as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+
         return env.run_command(
             [
                 env.bundled_python,
                 "-m",
                 "pytest",
-                str(HEADER_TOOL_TEST_DIR),
+                str(test_dir),
                 "-v",
                 *extra_args,
             ]
