@@ -66,6 +66,7 @@ set(DELTA_ENGINE_TEST_SOURCES
     Core/CoreUtilityTests.cpp
     Core/EngineMainHardeningTests.cpp
     IO/IOManagerTests.cpp
+    Settings/EngineSettingsTests.cpp
     Logging/LogCategoryTests.cpp
     Logging/LoggingManagerTests.cpp
     Utils/StringUtilsTests.cpp
