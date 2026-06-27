@@ -18,8 +18,6 @@ public:
     DELTAENGINE_API static std::filesystem::path GetEngineImportedAssetFullPath(const std::filesystem::path& assetName, bool isJson = true);
     DELTAENGINE_API static std::filesystem::path GetIntermediateFolder();
     DELTAENGINE_API static std::filesystem::path GetToolsFolder();
-    DELTAENGINE_API static std::filesystem::path GetSettingsFolder();
-    DELTAENGINE_API static std::filesystem::path GetEngineSettingsPath();
 
     /** Default: Intermediate/EditorState. Tests may override to an isolated folder. */
     DELTAENGINE_API static std::filesystem::path GetEditorStateFolder();

@@ -22,7 +22,6 @@
 #include "Runtime/Graphics/DirectX/SwapChain.h"
 #include "Runtime/Graphics/DirectX/CommandQueue.h"
 #include "Runtime/IO/IOManager.h"
-#include "Runtime/Settings/EngineSettings.h"
 #include <d3d12.h>
 #include <backends/imgui_impl_dx12.h>
 #include <backends/imgui_impl_sdl3.h>
@@ -98,9 +97,8 @@ EditorMain::EditorMain()
         return;
     }
 
-    const EngineSettings engineSettings = LoadOrCreateEngineSettings();
-    m_renderManager = std::make_unique<EditorRenderManager>(
-        hwnd, DEFAULT_WIDTH, DEFAULT_HEIGHT, engineSettings);
+    m_renderManager = std::make_unique<EditorRenderManager>(hwnd, DEFAULT_WIDTH, DEFAULT_HEIGHT);
+    m_renderManager->ToggleVSync(false);
 
     m_engine = std::make_unique<EngineMain>();
     m_engine->CreateWorld();

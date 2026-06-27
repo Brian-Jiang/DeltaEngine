@@ -13,8 +13,6 @@ constexpr const char* k_editorSourceAssetsRel  = "Engine/EditorSourceAssets";
 constexpr const char* k_engineImportedAssetsRel = "Engine/EngineImportedAssets";
 constexpr const char* k_intermediateRel         = "Intermediate";
 constexpr const char* k_toolsRel                = "Tools";
-constexpr const char* k_settingsRel             = "Settings";
-constexpr const char* k_engineSettingsFileName  = "EngineSettings.json";
 
 std::filesystem::path ResolveProjectRoot()
 {
@@ -114,16 +112,6 @@ std::filesystem::path IOManager::GetIntermediateFolder()
 std::filesystem::path IOManager::GetToolsFolder()
 {
     return GetProjectRoot() / k_toolsRel;
-}
-
-std::filesystem::path IOManager::GetSettingsFolder()
-{
-    return GetProjectRoot() / k_settingsRel;
-}
-
-std::filesystem::path IOManager::GetEngineSettingsPath()
-{
-    return GetSettingsFolder() / k_engineSettingsFileName;
 }
 
 namespace

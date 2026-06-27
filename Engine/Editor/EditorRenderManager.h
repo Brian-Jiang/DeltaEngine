@@ -9,7 +9,6 @@
 #include "Runtime/Graphics/DirectX/ImGuiSrvDescriptorAllocator.h"
 #include "Runtime/Graphics/DirectX/SwapChain.h"
 #include "Runtime/Graphics/Structures/Camera.h"
-#include "Runtime/Settings/EngineSettings.h"
 
 #include "imgui.h"
 
@@ -29,7 +28,7 @@ class EditorRenderManager
 {
 public:
     /// Creates the editor render manager for the given HWND.
-    EditorRenderManager(HWND hwnd, UINT width, UINT height, const EngineSettings& settings);
+    EditorRenderManager(HWND hwnd, UINT width, UINT height);
     /// Releases render-manager owned resources.
     ~EditorRenderManager();
 

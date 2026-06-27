@@ -46,22 +46,6 @@ TEST(IOManager, IOManager_GetToolsFolder_ResolvesUnderProjectRoot)
     EXPECT_EQ(tools.filename(), "Tools");
 }
 
-TEST(IOManager, IOManager_GetSettingsFolder_ResolvesUnderProjectRoot)
-{
-    const std::filesystem::path settings = IOManager::GetSettingsFolder();
-
-    EXPECT_EQ(settings.parent_path(), IOManager::GetProjectRoot());
-    EXPECT_EQ(settings.filename(), "Settings");
-}
-
-TEST(IOManager, IOManager_GetEngineSettingsPath_ResolvesUnderSettingsFolder)
-{
-    const std::filesystem::path path = IOManager::GetEngineSettingsPath();
-
-    EXPECT_EQ(path.parent_path(), IOManager::GetSettingsFolder());
-    EXPECT_EQ(path.filename(), "EngineSettings.json");
-}
-
 TEST(IOManager, IOManager_GetEngineImportedAssetFullPath_AppendsJsonExtension_WhenIsJsonTrue)
 {
     const std::filesystem::path full =

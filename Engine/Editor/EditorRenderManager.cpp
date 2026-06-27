@@ -31,7 +31,7 @@ using namespace DeltaEngine;
 #define DX12_ENABLE_DEBUG_LAYER
 #endif
 
-EditorRenderManager::EditorRenderManager(HWND hwnd, UINT width, UINT height, const EngineSettings& settings)
+EditorRenderManager::EditorRenderManager(HWND hwnd, UINT width, UINT height)
     : m_hwnd(hwnd)
     , m_width(width)
     , m_height(height)
@@ -42,12 +42,9 @@ EditorRenderManager::EditorRenderManager(HWND hwnd, UINT width, UINT height, con
 
     m_device = Device::Create();
     m_swapChain = m_device->CreateSwapChain(hwnd, DXGI_FORMAT_R8G8B8A8_UNORM);
-    ToggleVSync(settings.graphics.vsync);
 
     m_offscreenRenderTarget = std::make_shared<RenderTarget>();
-    m_sceneRenderer = std::make_shared<DXRenderManager>(
-        m_device, m_offscreenRenderTarget, width, height,
-        settings.graphics.renderPath, settings.graphics.shadowAtlas);
+    m_sceneRenderer = std::make_shared<DXRenderManager>(m_device, m_offscreenRenderTarget, width, height);
 
     m_imGuiSrvAllocator.Create(*m_device, m_device->CreateShaderVisibleSrvHeap(64));
 

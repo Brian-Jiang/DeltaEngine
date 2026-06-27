@@ -28,7 +28,6 @@
 #include "Runtime/Graphics/RenderResourceReleaseQueue.h"
 #include "Runtime/Graphics/RenderPath.h"
 #include "Runtime/Graphics/Shadow/ShadowPassManager.h"
-#include "Runtime/Settings/EngineSettings.h"
 
 #include <slang-com-ptr.h>
 
@@ -90,9 +89,7 @@ struct FrameGraphResources
 class DXRenderManager : public std::enable_shared_from_this<DXRenderManager>
 {
 public:
-	DELTAENGINE_API DXRenderManager(std::shared_ptr<Device> device, std::shared_ptr<RenderTarget> renderTarget,
-        UINT width, UINT height, RenderPath renderPath = RenderPath::Deferred,
-        const ShadowAtlasSettings& shadowAtlas = ShadowAtlasSettings{});
+	DELTAENGINE_API DXRenderManager(std::shared_ptr<Device> device, std::shared_ptr<RenderTarget> renderTarget, UINT width, UINT height);
 	DELTAENGINE_API ~DXRenderManager();
 	DELTAENGINE_API void LoadPipeline();
     DELTAENGINE_API void LoadAssets();
@@ -227,7 +224,6 @@ private:
     uint64_t m_lastSubmittedFence = 0;
 
     RenderPath m_renderPath;
-    ShadowAtlasSettings m_shadowAtlasSettings;
     UINT m_width;
     UINT m_height;
     float m_aspectRatio;
