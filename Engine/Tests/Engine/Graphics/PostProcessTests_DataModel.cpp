@@ -1,8 +1,10 @@
 #include "Runtime/Graphics/PostProcess/BloomPass.h"
 #include "Runtime/Graphics/PostProcess/PA_PostProcessStack.h"
+#include "Runtime/Graphics/PostProcess/ColorGradingPass.h"
 #include "Runtime/Graphics/PostProcess/PassthroughPass.h"
 #include "Runtime/Graphics/PostProcess/PostProcessPass.h"
 #include "Runtime/Graphics/PostProcess/PostProcessStack.h"
+#include "Runtime/Graphics/PostProcess/VignettePass.h"
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DProperty.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
@@ -95,6 +97,45 @@ TEST(PostProcessDataModelTests, BloomPassIsConcreteSubclassOfPostProcessPass)
     EXPECT_NE(cls->FindPropertyByName("m_softKnee"), nullptr);
     EXPECT_NE(cls->FindPropertyByName("m_intensity"), nullptr);
     EXPECT_NE(cls->FindPropertyByName("m_blurIterations"), nullptr);
+
+    GetReflectionRegistry().DestroyObject(obj);
+}
+
+TEST(PostProcessDataModelTests, ColorGradingPassIsConcreteSubclassOfPostProcessPass)
+{
+    DObject* obj = GetReflectionRegistry().CreateObject("ColorGradingPass");
+    ASSERT_NE(obj, nullptr);
+    EXPECT_EQ(obj->GetClass()->GetName(), "ColorGradingPass");
+
+    DClass* base = GetReflectionRegistry().FindClassByName("PostProcessPass");
+    ASSERT_NE(base, nullptr);
+    EXPECT_TRUE(obj->GetClass()->IsChildOf(base));
+
+    DClass* cls = obj->GetClass();
+    EXPECT_NE(cls->FindPropertyByName("m_saturation"), nullptr);
+    EXPECT_NE(cls->FindPropertyByName("m_contrast"), nullptr);
+    EXPECT_NE(cls->FindPropertyByName("m_lift"), nullptr);
+    EXPECT_NE(cls->FindPropertyByName("m_gamma"), nullptr);
+    EXPECT_NE(cls->FindPropertyByName("m_gain"), nullptr);
+
+    GetReflectionRegistry().DestroyObject(obj);
+}
+
+TEST(PostProcessDataModelTests, VignettePassIsConcreteSubclassOfPostProcessPass)
+{
+    DObject* obj = GetReflectionRegistry().CreateObject("VignettePass");
+    ASSERT_NE(obj, nullptr);
+    EXPECT_EQ(obj->GetClass()->GetName(), "VignettePass");
+
+    DClass* base = GetReflectionRegistry().FindClassByName("PostProcessPass");
+    ASSERT_NE(base, nullptr);
+    EXPECT_TRUE(obj->GetClass()->IsChildOf(base));
+
+    DClass* cls = obj->GetClass();
+    EXPECT_NE(cls->FindPropertyByName("m_intensity"), nullptr);
+    EXPECT_NE(cls->FindPropertyByName("m_smoothness"), nullptr);
+    EXPECT_NE(cls->FindPropertyByName("m_roundness"), nullptr);
+    EXPECT_NE(cls->FindPropertyByName("m_color"), nullptr);
 
     GetReflectionRegistry().DestroyObject(obj);
 }

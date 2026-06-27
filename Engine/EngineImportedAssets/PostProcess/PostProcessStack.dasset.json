@@ -28,18 +28,27 @@
         {
           "assetId": "a521c98a-6402-46d4-b0d6-a61e1c232971",
           "objectId": "bf332468-d084-4144-89b5-488da2ecd724"
+        },
+        {
+          "assetId": "a521c98a-6402-46d4-b0d6-a61e1c232971",
+          "objectId": "6e4bc917-f4c7-4ff3-ae17-5c773b1a6e78"
         }
       ]
     },
     {
       "_class": "PassthroughPass",
       "_objectId": "433df425-9d68-49da-a5a2-582d1f9ff595",
+      "m_contrast": 1.0,
       "m_enabled": true,
+      "m_gain": [1.0, 1.0, 1.0, 0.0],
+      "m_gamma": [1.0, 1.0, 1.0, 0.0],
+      "m_lift": [0.0, 0.0, 0.0, 0.0],
       "m_passName": "",
       "m_shader": {
         "assetId": "00000000-0000-0000-0000-000000000000",
         "objectId": "00000000-0000-0000-0000-000000000000"
-      }
+      },
+      "m_saturation": 1.0
     },
     {
       "_class": "TonemapPass",
@@ -65,6 +74,16 @@
       },
       "m_softKnee": 0.6000000238418579,
       "m_threshold": 0.6000000238418579
+    },
+    {
+      "_class": "VignettePass",
+      "_objectId": "6e4bc917-f4c7-4ff3-ae17-5c773b1a6e78",
+      "m_color": [0.0, 0.0, 0.0, 1.0],
+      "m_enabled": true,
+      "m_intensity": 0.4,
+      "m_passName": "",
+      "m_roundness": 1.0,
+      "m_smoothness": 0.5
     }
   ]
 }

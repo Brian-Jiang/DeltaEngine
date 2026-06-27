@@ -10,9 +10,11 @@
 #include "Runtime/Graphics/Light/PointLight.h"
 #include "Runtime/Graphics/Light/SpotLight.h"
 #include "Runtime/Graphics/PostProcess/BloomPass.h"
+#include "Runtime/Graphics/PostProcess/ColorGradingPass.h"
 #include "Runtime/Graphics/PostProcess/PassthroughPass.h"
 #include "Runtime/Graphics/PostProcess/PostProcessStack.h"
 #include "Runtime/Graphics/PostProcess/TonemapPass.h"
+#include "Runtime/Graphics/PostProcess/VignettePass.h"
 #include "Runtime/Graphics/Renderer/MeshRenderer.h"
 #include "Runtime/IO/IOManager.h"
 #include "Runtime/Reflection/DClass.h"
@@ -172,6 +174,24 @@ PostProcessStack* GpuSceneBuilder::CreatePassthroughTonemapStack()
 
     stack->m_passes.push_back(passthrough);
     stack->m_passes.push_back(tonemap);
+    return stack;
+}
+
+PostProcessStack* GpuSceneBuilder::CreateFullPostProcessStack()
+{
+    PostProcessStack* stack = CreateDObject<PostProcessStack>();
+    if (!stack)
+        return nullptr;
+
+    PostProcessPass* colorGrading = CreateDObject<ColorGradingPass>();
+    PostProcessPass* tonemap = CreateDObject<TonemapPass>();
+    PostProcessPass* vignette = CreateDObject<VignettePass>();
+    if (!colorGrading || !tonemap || !vignette)
+        return stack;
+
+    stack->m_passes.push_back(colorGrading);
+    stack->m_passes.push_back(tonemap);
+    stack->m_passes.push_back(vignette);
     return stack;
 }
 
