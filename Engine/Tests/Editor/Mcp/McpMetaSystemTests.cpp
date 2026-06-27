@@ -58,6 +58,16 @@ TEST_F(McpMetaSystemTests, QueryDescribeOperations_ReturnsQueriesAndCommands)
     EXPECT_TRUE(res["commands"].contains("scene/CreateGameObject"));
 }
 
+TEST_F(McpMetaSystemTests, QueryDescribeOperations_IncludesProjectSettings)
+{
+    json targets = json::array({{{"system", "project"}, {"query", "settings"}}});
+
+    auto res = Dispatch("meta", "describe_operations", {{"targets", targets}});
+    EXPECT_TRUE(res["ok"].get<bool>());
+    ASSERT_TRUE(res.contains("queries"));
+    EXPECT_TRUE(res["queries"].contains("project/settings"));
+}
+
 TEST_F(McpMetaSystemTests, QueryCapabilities_ReturnsOk)
 {
     auto res = Dispatch("meta", "capabilities");

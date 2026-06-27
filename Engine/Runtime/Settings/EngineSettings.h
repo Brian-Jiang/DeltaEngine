@@ -8,6 +8,8 @@
 #include <filesystem>
 #include <string_view>
 
+#include <nlohmann/json.hpp>
+
 DELTA_ENGINE_NS_BEGIN
 
 struct ShadowAtlasSettings
@@ -26,6 +28,8 @@ struct GraphicsSettings
     ShadowAtlasSettings shadowAtlas;
 };
 
+/// Persistent engine configuration (Settings/EngineSettings.json).
+/// MCP project.settings returns this same JSON shape via EngineSettingsToJson().
 struct EngineSettings
 {
     uint32_t version = 1;
@@ -37,6 +41,8 @@ DELTAENGINE_API RenderPath RenderPathFromString(std::string_view value,
 DELTAENGINE_API std::string_view RenderPathToString(RenderPath path);
 
 DELTAENGINE_API EngineSettings GetDefaultEngineSettings();
+
+DELTAENGINE_API nlohmann::json EngineSettingsToJson(const EngineSettings& settings);
 
 DELTAENGINE_API void SaveEngineSettingsToPath(const EngineSettings& settings,
     const std::filesystem::path& path);

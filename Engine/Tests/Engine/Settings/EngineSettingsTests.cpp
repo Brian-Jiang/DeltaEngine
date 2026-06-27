@@ -169,3 +169,20 @@ TEST(EngineSettingsTests, RenderPathFromString_AndToString_RoundTrip)
     EXPECT_EQ(RenderPathToString(RenderPath::Forward), "Forward");
     EXPECT_EQ(RenderPathToString(RenderPath::Deferred), "Deferred");
 }
+
+TEST(EngineSettingsTests, EngineSettingsToJson_MatchesSaveFormat)
+{
+    const auto root = MakeTempRoot();
+    const auto path = root / "EngineSettings.json";
+
+    const EngineSettings in = GetDefaultEngineSettings();
+    SaveEngineSettingsToPath(in, path);
+    ASSERT_TRUE(std::filesystem::exists(path));
+
+    EngineSettings loaded;
+    ASSERT_TRUE(LoadEngineSettingsFromPath(loaded, path));
+    EXPECT_EQ(EngineSettingsToJson(loaded), EngineSettingsToJson(in));
+
+    std::error_code ec;
+    std::filesystem::remove_all(root, ec);
+}
