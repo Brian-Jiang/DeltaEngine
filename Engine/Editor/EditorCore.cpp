@@ -701,7 +701,7 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
      //{
      //    const std::filesystem::path psShaderPath = IOManager::GetEngineImportedAssetFullPath("PassthroughShader");
      //    DShader *psShader = CreateDObject<DShader>();
-     //    psShader->Initialize(L"Shaders/PostProcess_Passthrough.hlsl", L"VSMain", L"PSMain", L"vs_6_0", L"ps_6_0");
+     //    psShader->Initialize("Shaders/PostProcess_Passthrough.hlsl", "VSMain", "PSMain", "vs_6_0", "ps_6_0");
      //    PA_Shader *psShaderPA = PA_Shader::Create(psShader);
      //    m_assetDatabase->CreateAsset(psShaderPath, psShaderPA);
      //}
@@ -709,15 +709,25 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
      //{
      //    const std::filesystem::path psShaderPath = IOManager::GetEngineImportedAssetFullPath("TonemapShader");
      //    DShader *psShader = CreateDObject<DShader>();
-     //    psShader->Initialize(L"Shaders/PostProcess_Tonemap.hlsl", L"VSMain", L"PSMain", L"vs_6_0", L"ps_6_0");
+     //    psShader->Initialize("Shaders/PostProcess_Tonemap.hlsl", "VSMain", "PSMain", "vs_6_0", "ps_6_0");
      //    PA_Shader *psShaderPA = PA_Shader::Create(psShader);
      //    m_assetDatabase->CreateAsset(psShaderPath, psShaderPA);
      //}
 
-     //const std::filesystem::path ppStackPath = IOManager::GetEngineImportedAssetFullPath("PostProcessStack");
+     //{
+     //    const std::filesystem::path psShaderPath = IOManager::GetEngineImportedAssetFullPath("BloomShader");
+     //    DShader *psShader = CreateDObject<DShader>();
+     //    psShader->Initialize("Shaders/PostProcess_Bloom.hlsl", "VSMain", "PSMain", "vs_6_0", "ps_6_0");
+     //    PA_Shader *psShaderPA = PA_Shader::Create(psShader);
+     //    m_assetDatabase->CreateAsset(psShaderPath, psShaderPA);
+     //}
+
+     // TODO use shader assets?
+     //const std::filesystem::path ppStackPath = IOManager::GetEngineImportedAssetFullPath("PostProcess/PostProcessStack");
      //PA_PostProcessStack *ppStack = PA_PostProcessStack::Create();
      //ppStack->AddPass("PassthroughPass");
      //ppStack->AddPass("TonemapPass");
+     //ppStack->AddPass("BloomPass");
      //m_assetDatabase->CreateAsset(ppStackPath, ppStack);
 
      //const std::filesystem::path skyboxTexturePath = IOManager::GetEngineImportedAssetFullPath("SkyboxTexture");

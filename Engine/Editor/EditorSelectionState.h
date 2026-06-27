@@ -1,6 +1,7 @@
 #pragma once
 
 #include "EditorIncludes.h"
+#include "Runtime/Core/Delegates/MulticastDelegate.h"
 #include "Runtime/Core/UUID.h"
 
 #include <string>
@@ -15,6 +16,9 @@ class EditorSelectionState
 {
 public:
     EditorSelectionState() = default;
+
+    /// Main-thread use only.
+    TMulticastDelegate<void()> OnSelectionChanged;
 
     // --- GameObject selection ---
     DELTAEDITOR_API void SetSelectedGameObject(ObjectId id);
@@ -56,6 +60,15 @@ public:
     DELTAEDITOR_API void NotifyObjectDestroyed(const ObjectId& objectId);
 
 private:
+    bool ClearGameObjectSelectionInternal();
+    bool ClearComponentSelectionInternal();
+    bool ClearAssetSelectionInternal();
+    bool ClearFolderSelectionInternal();
+    bool RemoveSelectedGameObjectInternal(ObjectId id);
+    bool RemoveSelectedComponentInternal(ObjectId id);
+    bool RemoveSelectedAssetInternal(AssetId id);
+    void BroadcastSelectionChanged();
+
     std::vector<ObjectId> m_selectedGameObjects;
     std::vector<ObjectId> m_selectedComponents;
     std::vector<AssetId>  m_selectedAssets;

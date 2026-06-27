@@ -53,6 +53,19 @@ INNER_TYPE_TO_CPP = {
 _STRING_RE = re.compile(r"^std::(?:string|basic_string\s*<\s*char\b)")
 _VECTOR_RE = re.compile(r"^std::vector\s*<")
 
+_DELEGATE_TYPE_NAMES = {
+    "FDynamicMulticastDelegate",
+    "FDynamicDelegate",
+    "DeltaEngine::FDynamicMulticastDelegate",
+    "DeltaEngine::FDynamicDelegate",
+}
+
+
+def _is_delegate_property_type(spelling: str) -> bool:
+    if spelling in _DELEGATE_TYPE_NAMES:
+        return True
+    return spelling.endswith("DynamicMulticastDelegate") or spelling.endswith("DynamicDelegate")
+
 
 def _extract_vector_inner_type(spelling: str) -> str | None:
     m = re.match(r'^(?:std::)?vector\s*<\s*', spelling)
@@ -222,6 +235,9 @@ def resolve_type(cursor_type, field_name="", class_name="", *,
 
     spelling = _strip_elaborated(_strip_const(cursor_type.spelling))
 
+    if _is_delegate_property_type(spelling):
+        return ("DDelegateProperty", False, "")
+
     prop = TYPE_MAP.get(spelling)
     if prop:
         return (prop, False, "")
@@ -284,7 +300,12 @@ def resolve_type(cursor_type, field_name="", class_name="", *,
 
 
 def resolve_type_from_string(type_str: str, field_name: str = "", class_name: str = "") -> tuple | None:
-    s = _strip_const(type_str.strip())
+    s = type_str.strip()
+    if s.endswith("&&"):
+        s = s[:-2].strip()
+    elif s.endswith("&"):
+        s = s[:-1].strip()
+    s = _strip_const(s.strip())
     for prefix in ("class ", "struct "):
         if s.startswith(prefix):
             s = s[len(prefix):].strip()
@@ -294,6 +315,9 @@ def resolve_type_from_string(type_str: str, field_name: str = "", class_name: st
         pointee = s[:-1].strip()
         pointee_name = _strip_namespaces(pointee)
         return (f"DObjectPtrProperty<{pointee_name}>", True, pointee_name)
+
+    if _is_delegate_property_type(s):
+        return ("DDelegateProperty", False, "")
 
     prop = TYPE_MAP.get(s)
     if prop:

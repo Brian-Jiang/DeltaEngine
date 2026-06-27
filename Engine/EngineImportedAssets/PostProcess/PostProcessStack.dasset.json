@@ -19,11 +19,16 @@
       "m_passes": [
         {
           "assetId": "a521c98a-6402-46d4-b0d6-a61e1c232971",
+          "objectId": "433df425-9d68-49da-a5a2-582d1f9ff595"
           "objectId": "baf70b8d-96d8-4911-b369-aea4c6b856b7"
         },
         {
           "assetId": "a521c98a-6402-46d4-b0d6-a61e1c232971",
-          "objectId": "82a86343-28ce-4a52-8b00-9983f3a49a19"
+          "objectId": "1f7a6f51-5f04-4fdb-9c7b-8317a9dead8b"
+        },
+        {
+          "assetId": "a521c98a-6402-46d4-b0d6-a61e1c232971",
+          "objectId": "bf332468-d084-4144-89b5-488da2ecd724"
         },
         {
           "assetId": "a521c98a-6402-46d4-b0d6-a61e1c232971",
@@ -32,6 +37,8 @@
       ]
     },
     {
+      "_class": "PassthroughPass",
+      "_objectId": "433df425-9d68-49da-a5a2-582d1f9ff595",
       "_class": "ColorGradingPass",
       "_objectId": "baf70b8d-96d8-4911-b369-aea4c6b856b7",
       "m_contrast": 1.0,
@@ -40,18 +47,36 @@
       "m_gamma": [1.0, 1.0, 1.0, 0.0],
       "m_lift": [0.0, 0.0, 0.0, 0.0],
       "m_passName": "",
+      "m_shader": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "00000000-0000-0000-0000-000000000000"
+      }
       "m_saturation": 1.0
     },
     {
       "_class": "TonemapPass",
-      "_objectId": "82a86343-28ce-4a52-8b00-9983f3a49a19",
+      "_objectId": "1f7a6f51-5f04-4fdb-9c7b-8317a9dead8b",
       "m_enabled": true,
       "m_exposure": 1.6000003814697266,
       "m_passName": "",
       "m_shader": {
-        "assetId": "5be5ecb5-60bb-4324-b4c2-7b38d1df176f",
-        "objectId": "8d589704-55b4-4801-b70c-2a4a49220dba"
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "00000000-0000-0000-0000-000000000000"
       }
+    },
+    {
+      "_class": "BloomPass",
+      "_objectId": "bf332468-d084-4144-89b5-488da2ecd724",
+      "m_blurIterations": 5,
+      "m_enabled": true,
+      "m_intensity": 1.7000000476837158,
+      "m_passName": "",
+      "m_shader": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "00000000-0000-0000-0000-000000000000"
+      },
+      "m_softKnee": 0.6000000238418579,
+      "m_threshold": 0.6000000238418579
     },
     {
       "_class": "VignettePass",

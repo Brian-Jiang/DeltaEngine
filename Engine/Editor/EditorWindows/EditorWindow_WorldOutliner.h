@@ -12,6 +12,7 @@
 #include "EditorWindows/EditorWindow.h"
 #include "UIComponents/TypeChip.h"
 
+#include "Runtime/Core/Delegates/DelegateHandle.h"
 #include "Runtime/Core/UUID.h"
 
 DELTA_ENGINE_NS_BEGIN
@@ -40,6 +41,7 @@ public:
     void Render(bool& open) override;
 
 private:
+    void HandleSelectionChanged();
     void RebuildFilter();
 
     std::vector<OutlinerEntry>        m_entries;
@@ -50,6 +52,8 @@ private:
     ContextMenuPopup                  m_destroyGoMenu;
     EditorInlineRename                m_inlineRename;
     ObjectId                          m_renameObjectId = ObjectId::Null();
+    uint32_t                          m_selectionRevision = 0;
+    FDelegateHandle                   m_onSelectionChangedHandle;
 };
 
 DELTA_ENGINE_NS_END

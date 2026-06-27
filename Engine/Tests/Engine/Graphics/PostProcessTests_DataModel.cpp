@@ -1,3 +1,4 @@
+#include "Runtime/Graphics/PostProcess/BloomPass.h"
 #include "Runtime/Graphics/PostProcess/PA_PostProcessStack.h"
 #include "Runtime/Graphics/PostProcess/ColorGradingPass.h"
 #include "Runtime/Graphics/PostProcess/PassthroughPass.h"
@@ -77,6 +78,25 @@ TEST(PostProcessDataModelTests, PassthroughPassIsConcreteSubclassOfPostProcessPa
     DClass* base = GetReflectionRegistry().FindClassByName("PostProcessPass");
     ASSERT_NE(base, nullptr);
     EXPECT_TRUE(obj->GetClass()->IsChildOf(base));
+
+    GetReflectionRegistry().DestroyObject(obj);
+}
+
+TEST(PostProcessDataModelTests, BloomPassIsConcreteSubclassOfPostProcessPass)
+{
+    DObject* obj = GetReflectionRegistry().CreateObject("BloomPass");
+    ASSERT_NE(obj, nullptr);
+    EXPECT_EQ(obj->GetClass()->GetName(), "BloomPass");
+
+    DClass* base = GetReflectionRegistry().FindClassByName("PostProcessPass");
+    ASSERT_NE(base, nullptr);
+    EXPECT_TRUE(obj->GetClass()->IsChildOf(base));
+
+    DClass* cls = obj->GetClass();
+    EXPECT_NE(cls->FindPropertyByName("m_threshold"), nullptr);
+    EXPECT_NE(cls->FindPropertyByName("m_softKnee"), nullptr);
+    EXPECT_NE(cls->FindPropertyByName("m_intensity"), nullptr);
+    EXPECT_NE(cls->FindPropertyByName("m_blurIterations"), nullptr);
 
     GetReflectionRegistry().DestroyObject(obj);
 }
