@@ -18,15 +18,15 @@
       "_objectId": "bd61905b-dc6c-49ac-9186-51f7cf4e5f24",
       "m_passes": [
         {
-          "assetId": "5e3f9509-8f8d-4fff-afc3-b67e3e22895b",
+          "assetId": "a521c98a-6402-46d4-b0d6-a61e1c232971",
           "objectId": "433df425-9d68-49da-a5a2-582d1f9ff595"
         },
         {
-          "assetId": "5e3f9509-8f8d-4fff-afc3-b67e3e22895b",
+          "assetId": "a521c98a-6402-46d4-b0d6-a61e1c232971",
           "objectId": "1f7a6f51-5f04-4fdb-9c7b-8317a9dead8b"
         },
         {
-          "assetId": "5e3f9509-8f8d-4fff-afc3-b67e3e22895b",
+          "assetId": "a521c98a-6402-46d4-b0d6-a61e1c232971",
           "objectId": "bf332468-d084-4144-89b5-488da2ecd724"
         }
       ]
@@ -57,14 +57,14 @@
       "_objectId": "bf332468-d084-4144-89b5-488da2ecd724",
       "m_blurIterations": 5,
       "m_enabled": true,
-      "m_intensity": 0.4000000059604645,
+      "m_intensity": 1.7000000476837158,
       "m_passName": "",
       "m_shader": {
         "assetId": "00000000-0000-0000-0000-000000000000",
         "objectId": "00000000-0000-0000-0000-000000000000"
       },
-      "m_softKnee": 0.5,
-      "m_threshold": 1.0
+      "m_softKnee": 0.6000000238418579,
+      "m_threshold": 0.6000000238418579
     }
   ]
 }
