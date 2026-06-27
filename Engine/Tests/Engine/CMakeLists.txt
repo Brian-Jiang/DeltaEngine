@@ -97,6 +97,7 @@ target_link_libraries(DeltaEngineTests PRIVATE DeltaEditor DeltaEngine ThirdPart
 target_compile_options(DeltaEngineTests PRIVATE
     "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->"
     "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/WX->"
+    "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/wd6326>"
 )
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${DELTA_ENGINE_TEST_SOURCES})
 
