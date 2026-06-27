@@ -142,14 +142,14 @@ public:
 
     /// Snapshot-at-start reentrancy: Add during broadcast runs on the next broadcast only;
     /// Remove/Clear during broadcast still runs removed listeners once from the snapshot.
-    void Broadcast(Args... args) const
+    void Broadcast(const Args&... args) const
     {
         const std::vector<FMulticastDelegateEntry> snapshot = m_entries;
 
         for (const FMulticastDelegateEntry& entry : snapshot)
         {
             if (entry.Binding.IsBound())
-                entry.Binding.Execute(std::forward<Args>(args)...);
+                entry.Binding.Execute(args...);
         }
 
         CompactStaleDObjectBindings();
