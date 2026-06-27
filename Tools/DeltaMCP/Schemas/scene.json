@@ -101,6 +101,7 @@
     "CreateGameObject": {
       "description": "Create a new empty GameObject",
       "undoable": true,
+      "expects_result": true,
       "params": {
         "name": {
           "type": "string",
@@ -117,6 +118,7 @@
     "DeleteGameObject": {
       "description": "Delete a GameObject and all its components",
       "undoable": true,
+      "expects_result": true,
       "params": {
         "objectId": {
           "type": "string",
@@ -127,6 +129,7 @@
     "ReparentSceneComponent": {
       "description": "Change a SceneComponent's parent",
       "undoable": true,
+      "expects_result": true,
       "params": {
         "objectId": {
           "type": "string",
@@ -145,6 +148,7 @@
     "CreateComponent": {
       "description": "Add a component to a GameObject",
       "undoable": true,
+      "expects_result": true,
       "params": {
         "objectId": {
           "type": "string",
@@ -160,6 +164,7 @@
     "DeleteComponent": {
       "description": "Remove a component",
       "undoable": true,
+      "expects_result": true,
       "params": {
         "objectId": {
           "type": "string",
@@ -170,6 +175,8 @@
     "SetPosition": {
       "description": "Animate or immediately set a SceneComponent's position",
       "undoable": true,
+      "expects_result": true,
+      "expects_result_note": "false when duration_seconds > 0 (animated); true when duration_seconds <= 0 (immediate)",
       "params": {
         "objectId": { "type": "string", "required": true },
         "value": {
@@ -199,6 +206,8 @@
     "SetRotation": {
       "description": "Animate or immediately set a SceneComponent's rotation",
       "undoable": true,
+      "expects_result": true,
+      "expects_result_note": "false when duration_seconds > 0 (animated); true when duration_seconds <= 0 (immediate)",
       "params": {
         "objectId": { "type": "string", "required": true },
         "value": {
@@ -228,6 +237,8 @@
     "SetScale": {
       "description": "Animate or immediately set a SceneComponent's local scale",
       "undoable": true,
+      "expects_result": true,
+      "expects_result_note": "false when duration_seconds > 0 (animated); true when duration_seconds <= 0 (immediate)",
       "params": {
         "objectId": { "type": "string", "required": true },
         "value": {
@@ -271,6 +282,7 @@
     "LoadScene": {
       "description": "Close the current scene and load a different one. Not undoable; clears the undo stack.",
       "undoable": false,
+      "expects_result": false,
       "params": {
         "scenePath": {
           "type": "string",

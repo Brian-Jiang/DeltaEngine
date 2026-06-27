@@ -50,6 +50,7 @@ set(DELTA_ENGINE_TEST_SOURCES
     Reflection/ReflectionRegistryHardeningTests.cpp
     Reflection/ReflectionStructClassTests.cpp
     Reflection/ReflectionPropertyTests.cpp
+    Reflection/DynamicDelegatePropertyTests.cpp
     Reflection/ReflectionReferenceTraversalTests.cpp
     Serialization/Core/UuidTests.cpp
     Serialization/Core/ScriptPointerTests.cpp
@@ -59,6 +60,12 @@ set(DELTA_ENGINE_TEST_SOURCES
     Serialization/Core/JsonAssetArchiveHardeningTests.cpp
     Assets/Locator/NullAssetDatabaseTests.cpp
     Core/CoreObjectLifecycleTests.cpp
+    Core/Delegates/DelegateTests.cpp
+    Core/Delegates/MulticastDelegateTests.cpp
+    Core/Delegates/DelegateGCBindingTests.cpp
+    Core/Delegates/DynamicDelegateTests.cpp
+    Core/Delegates/DynamicDelegateBroadcastArgsTests.cpp
+    Core/Delegates/DynamicDelegateTestComponentTests.cpp
     Core/GCObjectRegistryTests.cpp
     Core/GCMarkTests.cpp
     Core/GCSweepTests.cpp
@@ -92,6 +99,7 @@ target_link_libraries(DeltaEngineTests PRIVATE DeltaEditor DeltaEngine ThirdPart
 target_compile_options(DeltaEngineTests PRIVATE
     "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->"
     "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/WX->"
+    "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/wd6326>"
 )
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${DELTA_ENGINE_TEST_SOURCES})
 

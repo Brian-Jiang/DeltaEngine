@@ -59,6 +59,7 @@ set(DELTA_EDITOR_TEST_SOURCES
     Mcp/McpLogSystemTests.cpp
     Mcp/McpQueryRouterTests.cpp
     Mcp/McpRegistryDispatchTests.cpp
+    Mcp/McpSocketServerTests.cpp
     Animation/AnimationManagerTests.cpp
     Animation/TransformSessionTests.cpp
     Mcp/McpLightsSystemTests.cpp
@@ -83,6 +84,7 @@ target_compile_options(DeltaEditorTests PRIVATE
     "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->"
     "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/EHsc>"
     "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/WX->"
+    "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/wd6326>"
 )
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${DELTA_EDITOR_TEST_SOURCES})
 

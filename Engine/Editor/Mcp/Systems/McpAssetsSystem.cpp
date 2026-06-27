@@ -3,6 +3,7 @@
 #include "Editor/Assets/EditorAssetDatabase.h"
 #include "Editor/Commands/PropertyValueIO.h"
 #include "Editor/EditorCore.h"
+#include "Mcp/McpProtocol.h"
 #include "Mcp/McpRegistry.h"
 #include "Runtime/Assets/DPrimaryAsset.h"
 #include "Runtime/Core/DComponent.h"
@@ -31,7 +32,7 @@ namespace
 
 nlohmann::json MakeError(const std::string& msg)
 {
-    return { {"ok", false}, {"error", msg} };
+    return MakeMcpError(msg);
 }
 
 std::string TrimSlashes(std::string s)
@@ -838,7 +839,7 @@ nlohmann::json McpAssetsSystem::CommandSetAssetDynamicMetadata(EditorCore& core,
     envelope["params"]  = std::move(data);
 
     core.EnqueueSerializedCommand(envelope.dump());
-    return { {"ok", true}, {"queued", true}, {"command", "EditorCommand_SetAssetDynamicMeta"} };
+    return { {"ok", true}, {"queued", true}, {"command", "EditorCommand_SetAssetDynamicMeta"}, {"expects_result", true} };
 }
 
 nlohmann::json McpAssetsSystem::CommandReimportAssets(EditorCore& core, const nlohmann::json& params)
@@ -867,7 +868,7 @@ nlohmann::json McpAssetsSystem::CommandReimportAssets(EditorCore& core, const nl
     envelope["assetIds"] = std::move(assetIds);
 
     core.EnqueueSerializedCommand(envelope.dump());
-    return { {"ok", true}, {"queued", true}, {"command", "ReimportAssets"} };
+    return { {"ok", true}, {"queued", true}, {"command", "ReimportAssets"}, {"expects_result", true} };
 }
 
 nlohmann::json McpAssetsSystem::QueryHasStaticMetaSchema(EditorCore& core, const nlohmann::json& params)

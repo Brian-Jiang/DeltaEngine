@@ -26,6 +26,7 @@
     "SetViewportCamera": {
       "description": "Move the viewport fly camera",
       "undoable": false,
+      "expects_result": false,
       "params": {
         "position": {
           "type": "array",
