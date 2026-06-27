@@ -1,5 +1,4 @@
 Texture2D g_inputTex : register(t0);
-Texture2D g_sceneTex : register(t0);
 Texture2D g_bloomTex : register(t1);
 SamplerState g_linearSampler : register(s0);
 
@@ -66,7 +65,7 @@ float4 PSBlur(VSOut input) : SV_Target
 [shader("fragment")]
 float4 PSComposite(VSOut input) : SV_Target
 {
-    float3 scene = g_sceneTex.Sample(g_linearSampler, input.texCoord).rgb;
+    float3 scene = g_inputTex.Sample(g_linearSampler, input.texCoord).rgb;
     float3 bloom = g_bloomTex.Sample(g_linearSampler, input.texCoord).rgb;
     return float4(scene + bloom * g_intensity, 1.0);
 }
