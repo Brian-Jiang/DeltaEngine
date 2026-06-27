@@ -74,6 +74,7 @@
     "set_asset_dynamic_metadata": {
       "description": "Mutate dynamic meta at a JSON pointer (undoable). Static meta is read-only.",
       "undoable": true,
+      "expects_result": true,
       "params": {
         "asset_id":  { "type": "string", "required": true },
         "json_path": { "type": "string", "required": true,
@@ -84,6 +85,7 @@
     "reimport_assets": {
       "description": "Reimport asset(s). Shader assets are recompiled and their PSOs refreshed live (next frame); other asset types are accepted but skipped for now.",
       "undoable": false,
+      "expects_result": true,
       "params": {
         "asset_ids": { "type": "array", "required": true,
                        "items": { "type": "string" },

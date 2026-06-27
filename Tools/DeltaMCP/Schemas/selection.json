@@ -11,6 +11,7 @@
     "SelectObject": {
       "description": "Change the editor selection",
       "undoable": false,
+      "expects_result": false,
       "params": {
         "object_ids": {
           "type": "array",
