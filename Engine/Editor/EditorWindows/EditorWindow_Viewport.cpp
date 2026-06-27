@@ -48,16 +48,35 @@ EditorWindow_Viewport::EditorWindow_Viewport()
     std::vector<EditorViewportCamera> cameras;
     if (LoadViewportCameras(cameras) && m_viewportIndex < static_cast<int>(cameras.size()))
         m_previewCamera = cameras[m_viewportIndex];
+
+    if (g_editorCore)
+    {
+        if (EditorSelectionState* sel = g_editorCore->GetSelectionState())
+            m_onSelectionChangedHandle = sel->OnSelectionChanged.AddRaw(this, &EditorWindow_Viewport::HandleSelectionChanged);
+    }
 }
 
 EditorWindow_Viewport::~EditorWindow_Viewport()
 {
+    if (g_editorCore)
+    {
+        if (EditorSelectionState* sel = g_editorCore->GetSelectionState())
+            sel->OnSelectionChanged.Remove(m_onSelectionChangedHandle);
+    }
+
     std::vector<EditorViewportCamera> cameras;
     LoadViewportCameras(cameras);
     if (m_viewportIndex >= static_cast<int>(cameras.size()))
         cameras.resize(static_cast<size_t>(m_viewportIndex) + 1);
     cameras[static_cast<size_t>(m_viewportIndex)] = m_previewCamera;
     SaveViewportCameras(cameras);
+}
+
+void EditorWindow_Viewport::HandleSelectionChanged()
+{
+    m_gizmoEditing    = false;
+    m_gizmoEditTarget = nullptr;
+    m_gizmoEditBefore = {};
 }
 
 void EditorWindow_Viewport::SetPreviewCamera(const EditorViewportCamera& cam)

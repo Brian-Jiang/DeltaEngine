@@ -174,6 +174,21 @@ DObject* ObjectSnapshotReader::Restore(
 
                 ptrProp->ResolvePointer(valueAddress, resolved);
             });
+
+        ResolveUnresolvedDelegateBindingsInStruct(obj->GetClass(), obj,
+            [&](const ScriptPointer& sp) -> DObject*
+            {
+                if (capturedSet.contains(sp.m_objectId))
+                {
+                    auto idIt = idMap.find(sp.m_objectId);
+                    if (idIt != idMap.end())
+                        return idIt->second;
+                    return nullptr;
+                }
+                if (db)
+                    return db->FindObject(sp.m_assetId, sp.m_objectId);
+                return nullptr;
+            });
     }
 
     // Phase 3: reassemble object graph and post-restore

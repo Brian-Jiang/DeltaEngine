@@ -38,6 +38,7 @@ static const char* PropertyTypeName(EPropertyType t)
     case EPropertyType::BulkData:   return "BulkData";
     case EPropertyType::Vector:     return "Vector";
     case EPropertyType::Struct:     return "Struct";
+    case EPropertyType::Delegate:   return "Delegate";
     default:
         DELTA_UNREACHABLE();
     }

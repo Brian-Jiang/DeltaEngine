@@ -69,6 +69,7 @@ bool IsUndoableInspectorPropertyType(EPropertyType type)
     case EPropertyType::ObjectPtr:
     case EPropertyType::BulkData:
     case EPropertyType::Vector:
+    case EPropertyType::Delegate:
         return false;
     default:
         DELTA_CHECK_MSG(false,

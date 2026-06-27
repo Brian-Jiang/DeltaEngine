@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from parser import ClassInfo, FunctionInfo, ForwardDeclInfo
+from parser import ClassInfo, DelegateInfo, FunctionInfo, ForwardDeclInfo
 from templates import (
     FILE_HEADER,
     FILE_FOOTER_CLASS,
@@ -41,6 +41,13 @@ from templates import (
     GENERATED_HEADER_PARAMS_FIELD,
     GENERATED_HEADER_CLASS_BLOCK,
     GENERATED_HEADER_CREATE_OBJECT,
+    DELEGATE_PARAMS_STRUCT,
+    DELEGATE_PARAM_ASSIGNMENT,
+    DELEGATE_BROADCAST_WITH_PARAMS,
+    DELEGATE_BROADCAST_NO_PARAMS,
+    DELEGATE_EXECUTE_WITH_PARAMS,
+    DELEGATE_EXECUTE_NO_PARAMS,
+    DPROPERTY_DELEGATE,
 )
 
 _OBJECT_PTR_PROP_RE = re.compile(r"^DObjectPtrProperty<(.+)>$")
@@ -104,6 +111,7 @@ def _apply_property_flags(code: str, *, editor_only: bool, hide_in_details: bool
 EXTRA_PROPERTY_HEADERS = {
     "DBulkDataProperty": "Runtime/Reflection/DBulkDataProperty.h",
     "DVectorProperty": "Runtime/Reflection/DVectorProperty.h",
+    "DDelegateProperty": "Runtime/Reflection/DProperty.h",
 }
 
 
@@ -125,6 +133,9 @@ def _collect_cpp_full_includes(
 ) -> set[str]:
     """Collect header paths for DObject-derived types used in ObjectPtr."""
     cpp_full_includes: set[str] = set()
+    if not classes:
+        return cpp_full_includes
+
     source_include = f"{classes[0].include_path}{header_stem}.h"
 
     for cls in classes:
@@ -207,6 +218,58 @@ def _params_structs_for_class(cls: ClassInfo) -> str:
     return parts
 
 
+def _params_structs_for_delegate(delegate: DelegateInfo) -> str:
+    if not delegate.params:
+        return ""
+
+    fields = ""
+    for param in delegate.params:
+        fields += GENERATED_HEADER_PARAMS_FIELD.substitute(
+            type=param.cpp_type,
+            name=param.name,
+        )
+    return DELEGATE_PARAMS_STRUCT.substitute(
+        delegate_name=delegate.name,
+        fields=fields,
+    )
+
+
+def _params_structs_for_delegates(delegates: list[DelegateInfo]) -> str:
+    parts = ""
+    for delegate in delegates:
+        if delegate.needs_codegen and delegate.params:
+            parts += _params_structs_for_delegate(delegate)
+    return parts
+
+
+def _generate_delegate_dispatch(delegate: DelegateInfo) -> str:
+    if not delegate.needs_codegen:
+        return ""
+
+    if delegate.params:
+        param_declarations = ", ".join(
+            f"{p.cpp_type} {p.name}" for p in delegate.params
+        )
+        param_assignments = ""
+        for param in delegate.params:
+            param_assignments += DELEGATE_PARAM_ASSIGNMENT.substitute(
+                param_name=param.name,
+            )
+        d = dict(
+            delegate_name=delegate.name,
+            param_declarations=param_declarations,
+            param_assignments=param_assignments,
+            param_count=len(delegate.params),
+        )
+        if delegate.is_multicast:
+            return DELEGATE_BROADCAST_WITH_PARAMS.substitute(d)
+        return DELEGATE_EXECUTE_WITH_PARAMS.substitute(d)
+
+    if delegate.is_multicast:
+        return ""
+    return DELEGATE_EXECUTE_NO_PARAMS.substitute(delegate_name=delegate.name)
+
+
 def _forward_decl_line(kind: str, name: str) -> str:
     """One forward declaration line."""
     if kind == "class":
@@ -269,15 +332,17 @@ def generate_header_file(
     classes: list[ClassInfo],
     source_includes: list[str],
     forward_decls: list[ForwardDeclInfo],
+    delegates: list[DelegateInfo] | None = None,
 ) -> str:
     """Build the entire .generated.h for one source file."""
+    delegates = delegates or []
     pre_ns_forward_decls, engine_ns_forward_decls = _build_forward_decl_blocks(forward_decls)
 
     source_includes_block = "\n".join(source_includes) if source_includes else ""
     if source_includes_block:
         source_includes_block += "\n"
 
-    per_class_content = ""
+    per_class_content = _params_structs_for_delegates(delegates)
     for cls in classes:
         params_structs = _params_structs_for_class(cls)
         per_class_content += GENERATED_HEADER_CLASS_BLOCK.substitute(
@@ -613,6 +678,11 @@ def _generate_class_registration(cls: ClassInfo) -> str:
                 field_name=prop.name,
                 class_name=cls.name,
             )
+        elif prop.property_class == "DDelegateProperty":
+            code = DPROPERTY_DELEGATE.substitute(
+                field_name=prop.name,
+                class_name=cls.name,
+            )
         elif prop.metadata:
             code = DPROPERTY_WITH_META.substitute(
                 property_type=prop.property_class,
@@ -651,15 +721,20 @@ def _generate_class_footer(cls: ClassInfo) -> str:
     return FILE_FOOTER_CLASS.substitute(class_name=cls.name)
 
 
-def generate_source_file(classes: list[ClassInfo], header_stem: str, type_to_header: dict[str, str]) -> str:
+def generate_source_file(classes: list[ClassInfo], header_stem: str, type_to_header: dict[str, str],
+                         delegates: list[DelegateInfo] | None = None,
+                         source_header_path: str | None = None) -> str:
     """Generate the entire .generated.cpp for all classes in one header file.
     Emits a single #include block, then per-class thunks/registration/footers."""
+    delegates = delegates or []
     parts: list[str] = []
 
-    # Collect unique include paths (dedup)
     source_includes = set()
     for cls in classes:
         source_includes.add(f'#include "{cls.include_path}{header_stem}.h"')
+    if not classes and delegates:
+        header_path = source_header_path or f"{header_stem}.h"
+        source_includes.add(f'#include "{header_path}"')
     source_header_include = "\n".join(sorted(source_includes))
 
     cpp_full_includes = _collect_cpp_full_includes(classes, header_stem, type_to_header)
@@ -667,6 +742,8 @@ def generate_source_file(classes: list[ClassInfo], header_stem: str, type_to_hea
         for prop in cls.properties:
             if prop.property_class in EXTRA_PROPERTY_HEADERS:
                 cpp_full_includes.add(EXTRA_PROPERTY_HEADERS[prop.property_class])
+    if delegates:
+        cpp_full_includes.add("Runtime/Core/Delegates/DynamicDelegate.h")
     cpp_full_includes_block = "\n".join(sorted(f'#include "{p}"' for p in cpp_full_includes))
     if cpp_full_includes_block:
         cpp_full_includes_block += "\n"
@@ -680,6 +757,11 @@ def generate_source_file(classes: list[ClassInfo], header_stem: str, type_to_hea
     for cls in classes:
         for fn in cls.functions:
             parts.append(_generate_thunk(cls, fn))
+
+    for delegate in delegates:
+        dispatch = _generate_delegate_dispatch(delegate)
+        if dispatch:
+            parts.append(dispatch)
 
     for cls in classes:
         parts.append(_generate_class_registration(cls))

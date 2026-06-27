@@ -10,6 +10,7 @@
 
 #include "EditorWindows/EditorWindow.h"
 
+#include "Runtime/Core/Delegates/DelegateHandle.h"
 #include "Runtime/Core/UUID.h"
 
 DELTA_ENGINE_NS_BEGIN
@@ -28,6 +29,7 @@ public:
     void Render(bool& open) override;
 
 private:
+    void HandleSelectionChanged();
     void RenderSceneComponentTree(SceneComponent* sceneComponent);
     void RenderRegularComponents(const std::vector<DComponent*>& components);
     void OnRenameCommitted(DObject* obj);
@@ -36,6 +38,7 @@ private:
     ContextMenuPopup   m_destroyCompMenu;
     EditorInlineRename m_inlineRename;
     ObjectId           m_renameComponentId = ObjectId::Null();
+    FDelegateHandle    m_onSelectionChangedHandle;
 };
 
 DELTA_ENGINE_NS_END
