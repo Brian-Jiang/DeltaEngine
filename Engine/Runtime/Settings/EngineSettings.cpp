@@ -93,14 +93,20 @@ EngineSettings DeltaEngine::GetDefaultEngineSettings()
     return EngineSettings {};
 }
 
+nlohmann::json DeltaEngine::EngineSettingsToJson(const EngineSettings& settings)
+{
+    nlohmann::json root;
+    root["version"] = settings.version;
+    WriteGraphicsSettings(root, settings.graphics);
+    return root;
+}
+
 void DeltaEngine::SaveEngineSettingsToPath(const EngineSettings& settings,
     const std::filesystem::path& path)
 {
     std::filesystem::create_directories(path.parent_path());
 
-    nlohmann::json root;
-    root["version"] = settings.version;
-    WriteGraphicsSettings(root, settings.graphics);
+    const nlohmann::json root = EngineSettingsToJson(settings);
 
     std::ofstream file(path);
     if (!file.is_open())
