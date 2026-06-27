@@ -264,6 +264,7 @@ void DMesh::ImportMeshImpl(const std::filesystem::path& absolutePath, bool loadT
     m_vertices.clear();
     m_indices.clear();
     m_textures.clear();
+    m_subMeshLocalCenters.clear();
 
     Assimp::Importer importer;
     importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, true);
@@ -522,6 +523,46 @@ const std::vector<DTexture*>& DMesh::GetTextures() const { return m_textures; }
 
 int DMesh::GetSubMeshCount() const { return static_cast<int>(m_vertices.size()); }
 
+DirectX::XMFLOAT3 DMesh::GetSubMeshLocalCenter(int index) const
+{
+    if (m_subMeshLocalCenters.size() != m_vertices.size())
+    {
+        m_subMeshLocalCenters.resize(m_vertices.size());
+        for (size_t submesh = 0; submesh < m_vertices.size(); ++submesh)
+        {
+            const std::vector<Vertex>& vertices = m_vertices[submesh];
+            if (vertices.empty())
+            {
+                m_subMeshLocalCenters[submesh] = DirectX::XMFLOAT3 { 0.0f, 0.0f, 0.0f };
+                continue;
+            }
+
+            DirectX::XMFLOAT3 minPos = vertices[0].position;
+            DirectX::XMFLOAT3 maxPos = vertices[0].position;
+            for (const Vertex& vertex : vertices)
+            {
+                minPos.x = (std::min)(minPos.x, vertex.position.x);
+                minPos.y = (std::min)(minPos.y, vertex.position.y);
+                minPos.z = (std::min)(minPos.z, vertex.position.z);
+                maxPos.x = (std::max)(maxPos.x, vertex.position.x);
+                maxPos.y = (std::max)(maxPos.y, vertex.position.y);
+                maxPos.z = (std::max)(maxPos.z, vertex.position.z);
+            }
+
+            m_subMeshLocalCenters[submesh] = DirectX::XMFLOAT3 {
+                (minPos.x + maxPos.x) * 0.5f,
+                (minPos.y + maxPos.y) * 0.5f,
+                (minPos.z + maxPos.z) * 0.5f,
+            };
+        }
+    }
+
+    if (index < 0 || static_cast<size_t>(index) >= m_subMeshLocalCenters.size())
+        return DirectX::XMFLOAT3 { 0.0f, 0.0f, 0.0f };
+
+    return m_subMeshLocalCenters[static_cast<size_t>(index)];
+}
+
 void DMesh::OnBeforeSerialize()
 {
     m_vertexData = SerializeVertices(m_vertices);
@@ -532,4 +573,5 @@ void DMesh::OnAfterDeserialize()
 {
     DeserializeVertices(m_vertexData, m_vertices);
     DeserializeIndices(m_indexData, m_indices);
+    m_subMeshLocalCenters.clear();
 }

@@ -416,42 +416,11 @@ void MeshRenderProxy::DrawSubmesh(std::shared_ptr<DXGraphicsContext> renderConte
 float MeshRenderProxy::ComputeSubmeshSortDepth(const DMesh* mesh, int submeshIndex, XMMATRIX worldMatrix,
     XMVECTOR cameraPosition)
 {
-    XMVECTOR centerWorld;
-
+    XMFLOAT3 center { 0.0f, 0.0f, 0.0f };
     if (mesh && submeshIndex >= 0 && submeshIndex < mesh->GetSubMeshCount())
-    {
-        const auto& vertices = mesh->GetVertices()[static_cast<size_t>(submeshIndex)];
-        if (!vertices.empty())
-        {
-            XMFLOAT3 minPos = vertices[0].position;
-            XMFLOAT3 maxPos = vertices[0].position;
-            for (const Vertex& vertex : vertices)
-            {
-                minPos.x = (std::min)(minPos.x, vertex.position.x);
-                minPos.y = (std::min)(minPos.y, vertex.position.y);
-                minPos.z = (std::min)(minPos.z, vertex.position.z);
-                maxPos.x = (std::max)(maxPos.x, vertex.position.x);
-                maxPos.y = (std::max)(maxPos.y, vertex.position.y);
-                maxPos.z = (std::max)(maxPos.z, vertex.position.z);
-            }
+        center = mesh->GetSubMeshLocalCenter(submeshIndex);
 
-            const XMFLOAT3 center {
-                (minPos.x + maxPos.x) * 0.5f,
-                (minPos.y + maxPos.y) * 0.5f,
-                (minPos.z + maxPos.z) * 0.5f,
-            };
-            centerWorld = XMVector3TransformCoord(XMLoadFloat3(&center), worldMatrix);
-        }
-        else
-        {
-            centerWorld = XMVector3TransformCoord(XMVectorZero(), worldMatrix);
-        }
-    }
-    else
-    {
-        centerWorld = XMVector3TransformCoord(XMVectorZero(), worldMatrix);
-    }
-
+    const XMVECTOR centerWorld = XMVector3TransformCoord(XMLoadFloat3(&center), worldMatrix);
     const XMVECTOR delta = XMVectorSubtract(centerWorld, cameraPosition);
     return XMVectorGetX(XMVector3Length(delta));
 }
