@@ -37,7 +37,7 @@ float4 PSMain(VSOut input) : SV_Target
 
     const float inner = 1.0 - g_smoothness;
     float mask = smoothstep(inner, 1.0, dist);
-    mask *= g_intensity;
+    mask = saturate(mask * g_intensity);
 
     float3 result = lerp(scene.rgb, g_color.rgb, mask);
     return float4(result, scene.a);

@@ -30,7 +30,7 @@ float3 ApplyLiftGammaGain(float3 color)
 {
     float3 lifted = color * g_gain.rgb + g_lift.rgb;
     float3 safeGamma = max(g_gamma.rgb, 1e-4);
-    return pow(saturate(lifted), 1.0 / safeGamma);
+    return pow(max(lifted, 0.0), 1.0 / safeGamma);
 }
 
 float3 ApplyContrast(float3 color, float contrast)
