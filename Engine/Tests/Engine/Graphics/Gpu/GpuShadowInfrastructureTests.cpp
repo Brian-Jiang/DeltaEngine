@@ -2,6 +2,7 @@
 
 #include "Runtime/Graphics/DirectX/DirectX12Texture.h"
 #include "Runtime/Graphics/Shadow/ShadowPassManager.h"
+#include "Runtime/Settings/EngineSettings.h"
 
 #include <gtest/gtest.h>
 
@@ -64,6 +65,36 @@ TEST_F(GpuShadowInfrastructureTests, InitializeCreatesAtlasesAndShadowDepthPso)
     EXPECT_NE(shadowDepthPso->GetRootSignature(), nullptr);
     EXPECT_NE(shadowDepthPso->GetPSO2D(), nullptr);
     EXPECT_NE(shadowDepthPso->GetPSOCube(), nullptr);
+
+    mgr.Shutdown();
+    EXPECT_GPU_VALIDATION_CLEAN(GetDevice()->GetD3D12Device().Get());
+}
+
+TEST_F(GpuShadowInfrastructureTests, InitializeUsesProvidedAtlasConfig)
+{
+    ShadowAtlasSettings cfg;
+    cfg.atlasSize = 2048;
+    cfg.pointFaceSize = 256;
+    cfg.pointCubeCount = 4;
+
+    ShadowPassManager mgr;
+    mgr.Initialize(*GetDevice(), cfg);
+
+    ASSERT_TRUE(mgr.ShadowResourcesReady());
+
+    const auto directionalAtlas = mgr.GetDirectionalAtlasTexture();
+    const auto pointCubeArray = mgr.GetPointCubeArrayTexture();
+    ASSERT_NE(directionalAtlas, nullptr);
+    ASSERT_NE(pointCubeArray, nullptr);
+
+    const D3D12_RESOURCE_DESC directionalDesc = directionalAtlas->GetD3D12ResourceDesc();
+    EXPECT_EQ(directionalDesc.Width, 2048u);
+    EXPECT_EQ(directionalDesc.Height, 2048u);
+
+    const D3D12_RESOURCE_DESC pointDesc = pointCubeArray->GetD3D12ResourceDesc();
+    EXPECT_EQ(pointDesc.Width, 256u);
+    EXPECT_EQ(pointDesc.Height, 256u);
+    EXPECT_EQ(pointDesc.DepthOrArraySize, 24u);
 
     mgr.Shutdown();
     EXPECT_GPU_VALIDATION_CLEAN(GetDevice()->GetD3D12Device().Get());
