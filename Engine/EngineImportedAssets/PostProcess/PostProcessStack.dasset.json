@@ -20,7 +20,6 @@
         {
           "assetId": "a521c98a-6402-46d4-b0d6-a61e1c232971",
           "objectId": "433df425-9d68-49da-a5a2-582d1f9ff595"
-          "objectId": "baf70b8d-96d8-4911-b369-aea4c6b856b7"
         },
         {
           "assetId": "a521c98a-6402-46d4-b0d6-a61e1c232971",
@@ -39,8 +38,6 @@
     {
       "_class": "PassthroughPass",
       "_objectId": "433df425-9d68-49da-a5a2-582d1f9ff595",
-      "_class": "ColorGradingPass",
-      "_objectId": "baf70b8d-96d8-4911-b369-aea4c6b856b7",
       "m_contrast": 1.0,
       "m_enabled": true,
       "m_gain": [1.0, 1.0, 1.0, 0.0],
@@ -50,7 +47,7 @@
       "m_shader": {
         "assetId": "00000000-0000-0000-0000-000000000000",
         "objectId": "00000000-0000-0000-0000-000000000000"
-      }
+      },
       "m_saturation": 1.0
     },
     {
