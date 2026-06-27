@@ -134,22 +134,8 @@ class DTexture;
 class DMaterial;
 class DMesh;
 class DShader;
-class FDynamicMulticastDelegate
-{
-public:
-    void AddDynamic(DObject* object, const std::string& functionName);
-    void Clear();
-    bool IsBound() const;
-    size_t GetBindingCount() const;
-    void Broadcast() const;
-    void BroadcastWithParams(void* params, unsigned int expectedParamCount) const;
-};
-class FDynamicDelegate : public FDynamicMulticastDelegate
-{
-public:
-    void Execute() const;
-    void ExecuteWithParams(void* params, unsigned int expectedParamCount) const;
-};
+class FDynamicMulticastDelegate {};
+class FDynamicDelegate : public FDynamicMulticastDelegate {};
 class TestComponent;
 class TestComponent2;
 struct DXGraphicsContext;
