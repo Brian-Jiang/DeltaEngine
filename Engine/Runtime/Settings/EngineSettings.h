@@ -56,4 +56,10 @@ DELTAENGINE_API void SaveEngineSettings(const EngineSettings& settings);
 /// Returns defaults if the file is missing or malformed.
 DELTAENGINE_API EngineSettings LoadEngineSettings();
 
+/// Loads from path; if missing, writes defaults to that path and returns them.
+DELTAENGINE_API EngineSettings LoadOrCreateEngineSettingsFromPath(const std::filesystem::path& path);
+
+/// Loads from Settings/EngineSettings.json; creates the file with defaults if missing.
+DELTAENGINE_API EngineSettings LoadOrCreateEngineSettings();
+
 DELTA_ENGINE_NS_END
