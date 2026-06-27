@@ -300,7 +300,12 @@ def resolve_type(cursor_type, field_name="", class_name="", *,
 
 
 def resolve_type_from_string(type_str: str, field_name: str = "", class_name: str = "") -> tuple | None:
-    s = _strip_const(type_str.strip())
+    s = type_str.strip()
+    if s.endswith("&&"):
+        s = s[:-2].strip()
+    elif s.endswith("&"):
+        s = s[:-1].strip()
+    s = _strip_const(s.strip())
     for prefix in ("class ", "struct "):
         if s.startswith(prefix):
             s = s[len(prefix):].strip()
