@@ -127,15 +127,18 @@ void EditorRenderManager::PrepareViewportSceneTexture(CommandList& commandList)
     }
     else
     {
-        const D3D12_CPU_DESCRIPTOR_HANDLE finalSrv = m_sceneRenderer->GetFinalSceneSRV();
-        if (finalSrv.ptr != 0)
-        {
-            m_device->GetD3D12Device()->CopyDescriptorsSimple(1, m_imguiSrvCpuHandle, finalSrv, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        // Copy scene color into a transient display texture (like the post-process path).
+        // The scene color is written on a different command list; reusing its SRV directly
+        // leaves the resource untracked here, causing a state hazard on the GPU.
+        const DXGI_FORMAT srcFormat = offscreenColor->GetD3D12ResourceDesc().Format;
+        const auto colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(srcFormat, width, height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE);
+        displayTexture = m_sceneRenderer->GetTransientPool().Acquire(colorDesc, "Viewport Display Target");
+        if (!displayTexture)
             return;
-        }
-        commandList.TransitionBarrier(offscreenColor, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+        commandList.CopyResource(displayTexture, offscreenColor);
+        commandList.TransitionBarrier(displayTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         commandList.FlushResourceBarriers();
-        displayTexture = offscreenColor;
     }
 
     const D3D12_CPU_DESCRIPTOR_HANDLE srcSrv = displayTexture->GetShaderResourceView();
