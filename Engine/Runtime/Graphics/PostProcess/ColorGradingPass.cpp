@@ -25,6 +25,8 @@ struct ColorGradingConstants
 {
     float saturation;
     float contrast;
+    float padding0;
+    float padding1;
     DirectX::XMFLOAT4 lift;
     DirectX::XMFLOAT4 gamma;
     DirectX::XMFLOAT4 gain;
