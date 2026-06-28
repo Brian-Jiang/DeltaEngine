@@ -37,18 +37,22 @@ class EnvContext:
         if os.environ.get("VSCMD_ARG_TGT_ARCH"):
             wrapped = command
         else:
-            vs_devcmd = str(self.vs_devcmd).replace('"', '""')
-            wrapped = f'call "{vs_devcmd}" -arch=amd64 >nul 2>&1 && {command}'
+            # Pass the wrapped string to cmd via shell=True. Do NOT build a
+            # ["cmd", "/c", wrapped] argv list: list2cmdline escapes the quotes
+            # around the (space-containing) VsDevCmd path as \", which cmd.exe
+            # does not understand, breaking the activation. VsDevCmd output is
+            # left visible so activation failures surface in the log.
+            wrapped = f'call "{self.vs_devcmd}" -arch=amd64 && {command}'
 
-        argv = ["cmd", "/c", wrapped]
         if self.session is not None:
             return _delta_cmd_logging().run_subprocess_with_tee(
-                argv, cwd=self.project_root, session=self.session
+                wrapped, cwd=self.project_root, session=self.session, shell=True
             )
 
         result = subprocess.run(
-            argv,
+            wrapped,
             cwd=self.project_root,
+            shell=True,
         )
         return result.returncode
 

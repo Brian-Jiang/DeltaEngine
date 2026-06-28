@@ -112,10 +112,11 @@ class SessionLog:
 
 
 def run_subprocess_with_tee(
-    argv: list[str],
+    argv: list[str] | str,
     *,
     cwd: Path,
     session: SessionLog,
+    shell: bool = False,
 ) -> int:
     process = subprocess.Popen(
         argv,
@@ -124,13 +125,17 @@ def run_subprocess_with_tee(
         stderr=subprocess.STDOUT,
         text=True,
         bufsize=1,
+        shell=shell,
     )
     assert process.stdout is not None
 
     def _pump_output() -> None:
+        # Write to the original stream (not sys.stdout): sys.stdout is the
+        # installed _TeeStream, which would append to the log itself and
+        # duplicate every line. Append once here instead.
         for line in process.stdout:
-            sys.stdout.write(line)
-            sys.stdout.flush()
+            session._original_stdout.write(line)
+            session._original_stdout.flush()
             session.append(line)
 
     reader = threading.Thread(target=_pump_output, daemon=True)

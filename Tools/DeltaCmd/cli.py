@@ -228,6 +228,13 @@ def main(argv: list[str] | None = None) -> int:
         exit_code = exc.code if isinstance(exc.code, int) else 1
     except KeyboardInterrupt:
         exit_code = 130
+    except Exception:
+        # Tee is still installed here, so the traceback lands in the session log.
+        import traceback
+
+        print("ERROR: Unhandled DeltaCmd exception:", file=sys.stderr)
+        traceback.print_exc()
+        exit_code = 1
     finally:
         session.restore_streams()
         session.write_footer(exit_code)
