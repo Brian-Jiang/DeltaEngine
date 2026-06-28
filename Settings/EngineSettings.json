@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "graphics": {
+    "renderPath": "Deferred",
+    "vsync": false,
+    "shadowAtlas": {
+      "atlasSize": 4096,
+      "directionalTileSize": 2048,
+      "spotTileSize": 1024,
+      "pointFaceSize": 512,
+      "pointCubeCount": 8
+    }
+  }
+}

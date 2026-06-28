@@ -18,13 +18,14 @@
 
 using namespace DeltaEngine;
 
-void ShadowPassManager::Initialize(Device& device)
+void ShadowPassManager::Initialize(Device& device, const ShadowAtlasSettings& atlasConfig)
 {
     Shutdown();
+    m_atlasConfig = atlasConfig;
     m_skipRenderIssuesLogged = false;
-    m_directionalAtlas.Initialize(device, kAtlasSize, "ShadowAtlas Directional");
-    m_spotAtlas.Initialize(device, kAtlasSize, "ShadowAtlas Spot");
-    m_pointCubes.Initialize(device, kPointFaceSize, kPointCubeCount, "ShadowCubeArray Point");
+    m_directionalAtlas.Initialize(device, m_atlasConfig.atlasSize, "ShadowAtlas Directional");
+    m_spotAtlas.Initialize(device, m_atlasConfig.atlasSize, "ShadowAtlas Spot");
+    m_pointCubes.Initialize(device, m_atlasConfig.pointFaceSize, m_atlasConfig.pointCubeCount, "ShadowCubeArray Point");
     try
     {
         m_shadowDepthPso = std::make_unique<ShadowDepthPSO>(device);
@@ -56,7 +57,8 @@ void ShadowPassManager::Initialize(Device& device)
     {
         DLOG(LogShadow, ELogLevel::Log,
             "ShadowPassManager initialized (atlasSize={}, directionalTilePx={}, spotTilePx={}, pointFacePx={}, pointCubes={})",
-            kAtlasSize, kDirectionalTileSize, kSpotTileSize, kPointFaceSize, kPointCubeCount);
+            m_atlasConfig.atlasSize, m_atlasConfig.directionalTileSize, m_atlasConfig.spotTileSize,
+            m_atlasConfig.pointFaceSize, m_atlasConfig.pointCubeCount);
     }
 }
 
@@ -131,9 +133,9 @@ void ShadowPassManager::Render(std::shared_ptr<DXGraphicsContext> ctx, DWorld& w
     auto* d3dCL = commandList.GetD3D12CommandList().Get();
     PIXBeginEvent(d3dCL, PIX_COLOR_DEFAULT, L"ShadowPass");
 
-    m_directionalAllocator.Reset(kAtlasSize, kAtlasSize, kDirectionalTileSize);
-    m_spotAllocator.Reset(kAtlasSize, kAtlasSize, kSpotTileSize);
-    m_pointAllocator.Reset(kPointCubeCount);
+    m_directionalAllocator.Reset(m_atlasConfig.atlasSize, m_atlasConfig.atlasSize, m_atlasConfig.directionalTileSize);
+    m_spotAllocator.Reset(m_atlasConfig.atlasSize, m_atlasConfig.atlasSize, m_atlasConfig.spotTileSize);
+    m_pointAllocator.Reset(m_pointCubes.GetCubeCount());
 
     m_warnedDirectional.clear();
     m_warnedSpot.clear();
@@ -222,7 +224,7 @@ void ShadowPassManager::Render(std::shared_ptr<DXGraphicsContext> ctx, DWorld& w
                 {
                     DLOG(LogShadow, ELogLevel::Warning,
                         "Point shadow allocation failed (lightIndex={}, cube slots={})",
-                        view.lightIndex, kPointCubeCount);
+                        view.lightIndex, m_atlasConfig.pointCubeCount);
                 }
                 continue;
             }
@@ -295,13 +297,13 @@ void ShadowPassManager::Render(std::shared_ptr<DXGraphicsContext> ctx, DWorld& w
         D3D12_VIEWPORT viewport = {};
         viewport.TopLeftX = 0.0f;
         viewport.TopLeftY = 0.0f;
-        viewport.Width = static_cast<float>(kPointFaceSize);
-        viewport.Height = static_cast<float>(kPointFaceSize);
+        viewport.Width = static_cast<float>(m_atlasConfig.pointFaceSize);
+        viewport.Height = static_cast<float>(m_atlasConfig.pointFaceSize);
         viewport.MinDepth = 0.0f;
         viewport.MaxDepth = 1.0f;
 
         const D3D12_RECT scissor = { 0, 0,
-            static_cast<LONG>(kPointFaceSize), static_cast<LONG>(kPointFaceSize) };
+            static_cast<LONG>(m_atlasConfig.pointFaceSize), static_cast<LONG>(m_atlasConfig.pointFaceSize) };
 
         for (const PointJob& job : pointJobs)
         {
@@ -319,7 +321,7 @@ void ShadowPassManager::Render(std::shared_ptr<DXGraphicsContext> ctx, DWorld& w
     for (const DirJob& job : dirJobs)
     {
         ShadowAllocation alloc {};
-        ShadowMapAllocator::FillAtlasUVRect(kAtlasSize, kAtlasSize, job.region, alloc);
+        ShadowMapAllocator::FillAtlasUVRect(m_atlasConfig.atlasSize, m_atlasConfig.atlasSize, job.region, alloc);
         if (job.view.shadowParamsWriter)
             job.view.shadowParamsWriter->WriteShadowParams(ctx, alloc);
     }
@@ -327,7 +329,7 @@ void ShadowPassManager::Render(std::shared_ptr<DXGraphicsContext> ctx, DWorld& w
     for (const SpotJob& job : spotJobs)
     {
         ShadowAllocation alloc {};
-        ShadowMapAllocator::FillAtlasUVRect(kAtlasSize, kAtlasSize, job.region, alloc);
+        ShadowMapAllocator::FillAtlasUVRect(m_atlasConfig.atlasSize, m_atlasConfig.atlasSize, job.region, alloc);
         if (job.view.shadowParamsWriter)
             job.view.shadowParamsWriter->WriteShadowParams(ctx, alloc);
     }

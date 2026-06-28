@@ -6,6 +6,10 @@
       "description": "Project name, root path, engine version, and configuration",
       "params": {}
     },
+    "settings": {
+      "description": "Loaded engine settings from Settings/EngineSettings.json (version, graphics.renderPath, vsync, shadowAtlas)",
+      "params": {}
+    },
     "open_scenes": {
       "description": "List of currently loaded scene assets",
       "params": {}
