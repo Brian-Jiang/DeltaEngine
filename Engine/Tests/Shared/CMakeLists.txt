@@ -15,6 +15,7 @@ target_link_libraries(DeltaTestEnvironmentSupport PRIVATE DeltaEngine ThirdParty
 target_compile_options(DeltaTestEnvironmentSupport PRIVATE
     "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->"
     "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/WX->"
+    "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/wd6326>"
 )
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES
     TestEnvironment.cpp
@@ -33,6 +34,7 @@ target_link_libraries(DeltaEditorSerializationTestSupport PRIVATE DeltaEditor Th
 target_compile_options(DeltaEditorSerializationTestSupport PRIVATE
     "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->"
     "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/WX->"
+    "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/wd6326>"
 )
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES
     SerializationTestSupport.cpp
@@ -54,6 +56,7 @@ target_link_libraries(DeltaGpuTestSupport PRIVATE DeltaEngine ThirdParty::gtest)
 target_compile_options(DeltaGpuTestSupport PRIVATE
     "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->"
     "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/WX->"
+    "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/wd6326>"
 )
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES
     GpuD3D12Validation.cpp
@@ -79,6 +82,7 @@ target_link_libraries(DeltaGpuAssetTestSupport PRIVATE DeltaEditor DeltaEngine T
 target_compile_options(DeltaGpuAssetTestSupport PRIVATE
     "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->"
     "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/WX->"
+    "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/wd6326>"
 )
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES
     GpuReadback.cpp

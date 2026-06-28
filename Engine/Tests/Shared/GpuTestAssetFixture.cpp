@@ -181,14 +181,32 @@ void GpuTestAssetFixture::RenderSceneFrame()
     renderManager.PrepareFrame();
     AssertGpuValidationClean(GetDevice()->GetD3D12Device().Get());
 
-    renderManager.RenderScene([this](const std::shared_ptr<DXGraphicsContext>& context)
-    {
-        m_engine->RecordSceneDraws(context);
-    });
+    renderManager.RenderScene(
+        [this](const std::shared_ptr<DXGraphicsContext>& context)
+        {
+            m_engine->RecordSceneDraws(context);
+        },
+        [this](const std::shared_ptr<DXGraphicsContext>& context)
+        {
+            m_engine->RecordTransparentDraws(context);
+        });
     AssertGpuValidationClean(GetDevice()->GetD3D12Device().Get());
 
     renderManager.RenderFrame();
     SubmitAndFlush();
+}
+
+void GpuTestAssetFixture::InitializeEngineWithRenderPath(const RenderPath path)
+{
+    m_engine = std::make_unique<EngineMain>();
+    m_engine->CreateWorld();
+
+    auto renderManager = CreateRenderManager(path);
+    m_engine->Initialize(renderManager);
+    m_engine->GetRenderManager()->InitWorldRenderers(*m_engine->GetWorld());
+
+    GetDevice()->Flush();
+    AssertGpuValidationClean(GetDevice()->GetD3D12Device().Get());
 }
 
 void GpuTestAssetFixture::SetUp()
@@ -201,15 +219,7 @@ void GpuTestAssetFixture::SetUp()
     m_locatorScope = std::make_unique<ScopedAssetDatabaseLocatorRegistration>(m_assetDatabase.get());
     m_assetDatabase->ScanAssetsFolder(importedRoot);
 
-    m_engine = std::make_unique<EngineMain>();
-    m_engine->CreateWorld();
-
-    auto renderManager = CreateRenderManager();
-    m_engine->Initialize(renderManager);
-    m_engine->GetRenderManager()->InitWorldRenderers(*m_engine->GetWorld());
-
-    GetDevice()->Flush();
-    AssertGpuValidationClean(GetDevice()->GetD3D12Device().Get());
+    InitializeEngineWithRenderPath(GetInitialRenderPath());
 }
 
 void GpuTestAssetFixture::TearDown()

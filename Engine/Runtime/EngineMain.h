@@ -54,6 +54,9 @@ public:
     /// Records scene draw calls into the provided graphics context.
     DELTAENGINE_API void RecordSceneDraws(std::shared_ptr<DXGraphicsContext> context);
 
+    /// Records transparent scene draw calls sorted back-to-front.
+    DELTAENGINE_API void RecordTransparentDraws(std::shared_ptr<DXGraphicsContext> context);
+
     /// Creates the editor world used by the runtime.
     DELTAENGINE_API void CreateWorld();
 

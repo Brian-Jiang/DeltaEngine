@@ -5,6 +5,7 @@
 #include <string>
 
 #include "SimpleMath.h"
+#include "Runtime/Core/Delegates/DynamicDelegate.h"
 #include "Runtime/Core/SceneComponent.h"
 #include "Runtime/Graphics/DXGraphicsContext.h"
 
@@ -15,6 +16,8 @@ DELTA_ENGINE_NS_BEGIN
 
 class DTexture;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FTestComponentEvent, int, Value);
+
 DCLASS()
 class TestComponent : public DComponent
 {
@@ -22,15 +25,36 @@ class TestComponent : public DComponent
 
 public:
     DFUNCTION(ShowAsButton)
-    void TestFunction();
+    DELTAENGINE_API void TestFunction();
 
     DFUNCTION()
-    int TestAdd(int a, int b);
+    DELTAENGINE_API int TestAdd(int a, int b);
 
     DFUNCTION()
-    float TestMultiply(float x, bool negate);
+    DELTAENGINE_API float TestMultiply(float x, bool negate);
+
+    DFUNCTION()
+    DELTAENGINE_API void OnIntEvent(int value);
+
+    DFUNCTION()
+    DELTAENGINE_API void OnTwoArgEvent(int a, float b);
+
+    DFUNCTION()
+    DELTAENGINE_API void OnTestEventReceived(int value);
+
+    DELTAENGINE_API void BroadcastTestEvent(int value);
+
+    static int GetLastReceivedValue() { return s_lastReceivedValue; }
+    static int GetReceiveCount() { return s_receiveCount; }
+    DELTAENGINE_API static void ResetEventReceiveTracking();
 
 private:
+    DELTAENGINE_API static int s_lastReceivedValue;
+    DELTAENGINE_API static int s_receiveCount;
+
+    DPROPERTY()
+    FTestComponentEvent OnTestEvent;
+
     DPROPERTY()
     float m_testFloat = 0.0f;
 
@@ -64,5 +88,8 @@ private:
     DPROPERTY(EditorOnly, HideInDetails)
     float m_editorOnlyAndHiddenFloat = 0.0f;
 };
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnIntEvent, int, value);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnTwoArgEvent, int, a, float, b);
 
 DELTA_ENGINE_NS_END

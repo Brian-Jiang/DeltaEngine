@@ -367,6 +367,19 @@ std::vector<ScriptPointer> DPrimaryAsset::CollectExternalReferences() const
                 if (sp.IsExternal(GetAssetId()))
                     refs.push_back(sp);
             });
+
+        VisitUnresolvedDelegateBindingsInStruct(obj->GetClass(), obj,
+            [&](DDelegatePropertyBase* prop, void* fieldAddr)
+            {
+                if (const std::vector<FUnresolvedDelegateBinding>* bindings = prop->GetUnresolvedBindings(fieldAddr))
+                {
+                    for (const FUnresolvedDelegateBinding& binding : *bindings)
+                    {
+                        if (binding.m_object.IsExternal(GetAssetId()))
+                            refs.push_back(binding.m_object);
+                    }
+                }
+            });
     }
 
     return refs;

@@ -181,7 +181,7 @@
     {
       "_class": "Camera",
       "_objectId": "f06a1959-f14e-459a-813b-f96e6cb30528",
-      "m_aspectRatio": 0.9616888165473938,
+      "m_aspectRatio": 1.3425774574279785,
       "m_children": [],
       "m_far": 1000.0,
       "m_fov": 0.7853981852531433,
@@ -404,6 +404,7 @@
       "m_shadowSlopeBias": 1.0
     },
     {
+      "OnTestEvent": [],
       "_class": "TestComponent",
       "_objectId": "693d859e-7a40-4cf7-b30c-85a861bd06b6",
       "m_editorOnlyAndHiddenFloat": 0.0,

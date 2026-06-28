@@ -2,6 +2,7 @@
 
 #include "Editor/EditorCore.h"
 #include "Editor/Mcp/McpAnimationDefaults.h"
+#include "Editor/Mcp/McpProtocol.h"
 #include "Editor/Mcp/McpRegistry.h"
 
 #include "Runtime/Core/UUID.h"
@@ -17,15 +18,15 @@ void McpLightsSystem::RegisterTools(McpRegistry& registry)
 nlohmann::json McpLightsSystem::CommandSetIntensity(EditorCore& core, const nlohmann::json& params)
 {
     if (!params.contains("assetId") || !params.contains("objectId") || !params.contains("value"))
-        return {{"ok", false}, {"error", "required params: assetId, objectId, value"}};
+        return MakeMcpError("required params: assetId, objectId, value");
 
     const AssetId  assetId  = DeltaEngine::UUID::FromString(params["assetId"].get<std::string>());
     if (assetId.IsNull())
-        return {{"ok", false}, {"error", "invalid assetId"}};
+        return MakeMcpError("invalid assetId");
 
     const ObjectId objectId = DeltaEngine::UUID::FromString(params["objectId"].get<std::string>());
     if (objectId.IsNull())
-        return {{"ok", false}, {"error", "invalid objectId"}};
+        return MakeMcpError("invalid objectId");
 
     const float target   = params["value"].get<float>();
     const float duration = params.value("duration_seconds", kDefaultAnimationDurationSeconds);
@@ -43,6 +44,7 @@ nlohmann::json McpLightsSystem::CommandSetIntensity(EditorCore& core, const nloh
             {"valueAfter",   target}
         };
         core.EnqueueSerializedCommand(envelope.dump());
+        return {{"ok", true}, {"queued", true}, {"expects_result", true}};
     }
     else
     {
@@ -56,7 +58,6 @@ nlohmann::json McpLightsSystem::CommandSetIntensity(EditorCore& core, const nloh
         envelope["targetValue"]  = target;
         envelope["duration"]     = duration;
         core.EnqueueSerializedCommand(envelope.dump());
+        return {{"ok", true}, {"queued", true}, {"expects_result", false}};
     }
-
-    return {{"ok", true}, {"queued", true}};
 }

@@ -18,13 +18,15 @@ from pathlib import Path
 
 
 def _contains_reflected_macro(path: Path) -> bool:
-    """Return True if the file uses DCLASS() or DSTRUCT() outside of a preprocessor directive."""
+    """Return True if the file uses reflection or dynamic delegate macros."""
     try:
         for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
             stripped = line.lstrip()
             if stripped.startswith("#"):
                 continue
             if "DCLASS(" in stripped or "DSTRUCT(" in stripped:
+                return True
+            if "DECLARE_DYNAMIC_DELEGATE" in stripped or "DECLARE_DYNAMIC_MULTICAST_DELEGATE" in stripped:
                 return True
         return False
     except OSError:
@@ -89,11 +91,18 @@ def _process_one(job):
             for cls in result.classes
         ]
 
-        if not result.classes:
+        engine_include_root = input_dir.parent
+        rel = header_path.relative_to(engine_include_root)
+        parent_part = rel.parent.as_posix()
+        header_include_path = (
+            f"{parent_part}/{stem}.h" if parent_part != "." else f"{stem}.h"
+        )
+
+        if not result.classes and not result.delegates:
             return (
                 stem, None, None,
-                f"WARNING: {header_path.name} contains DCLASS(/DSTRUCT( but no "
-                "reflected classes were found by libclang",
+                f"WARNING: {header_path.name} contains reflected macros but no "
+                "classes or dynamic delegates were found",
                 class_super_pairs, diag_list,
             )
 
@@ -101,8 +110,11 @@ def _process_one(job):
             result.classes,
             result.source_includes,
             result.forward_decls,
+            result.delegates,
         )
-        source_text = generate_source_file(result.classes, stem, type_to_header)
+        source_text = generate_source_file(
+            result.classes, stem, type_to_header, result.delegates, header_include_path,
+        )
 
         return (stem, header_text, source_text, None,
                 class_super_pairs, diag_list)

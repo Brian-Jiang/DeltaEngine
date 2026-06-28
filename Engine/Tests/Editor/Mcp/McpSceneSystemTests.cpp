@@ -1,5 +1,7 @@
 #include "Editor/Mcp/McpCoreFixture.h"
 
+#include "Editor/Mcp/McpQueryRouter.h"
+
 #include "Editor/Assets/EditorAssetDatabase.h"
 #include "Runtime/Assets/PA_DScene.h"
 #include "Runtime/Core/DWorld.h"
@@ -164,6 +166,7 @@ TEST_F(McpSceneSystemTests, CommandCreateGameObject_CreatesObject)
     auto dispatchRes = Dispatch("scene", "CreateGameObject", {{"name", "New GameObject"}});
     EXPECT_TRUE(dispatchRes["ok"].get<bool>());
     EXPECT_TRUE(dispatchRes.value("queued", false));
+    EXPECT_TRUE(dispatchRes.value("expects_result", false));
 
     std::vector<std::string> responses;
     m_core->DrainCommandQueue(responses);
@@ -173,6 +176,67 @@ TEST_F(McpSceneSystemTests, CommandCreateGameObject_CreatesObject)
     EXPECT_FALSE(r.value("objectId", std::string{}).empty());
 
     EXPECT_EQ(m_core->GetWorld()->GetGameObjects().size(), 1u);
+}
+
+TEST_F(McpSceneSystemTests, CommandCreateGameObject_CustomName_SinglePhase2)
+{
+    auto dispatchRes = Dispatch("scene", "CreateGameObject", {{"name", "MyCustomCube"}});
+    EXPECT_TRUE(dispatchRes["ok"].get<bool>());
+    EXPECT_TRUE(dispatchRes.value("queued", false));
+    EXPECT_TRUE(dispatchRes.value("expects_result", false));
+
+    std::vector<std::string> responses;
+    m_core->DrainCommandQueue(responses);
+    ASSERT_EQ(responses.size(), 1u);
+    auto r = json::parse(responses[0]);
+    EXPECT_TRUE(r["ok"].get<bool>());
+    const std::string objectId = r.value("objectId", std::string{});
+    EXPECT_FALSE(objectId.empty());
+    EXPECT_FALSE(r.contains("error"));
+
+    auto queryRes = Dispatch("scene", "game_objects");
+    ASSERT_EQ(queryRes["game_objects"].size(), 1u);
+    EXPECT_EQ(queryRes["game_objects"][0]["object_id"].get<std::string>(), objectId);
+    EXPECT_EQ(queryRes["game_objects"][0]["name"].get<std::string>(), "MyCustomCube");
+}
+
+TEST_F(McpSceneSystemTests, CommandCreateGameObject_CustomName_ExpectsResultTrue)
+{
+    auto* reg = m_core->GetMcpRegistry();
+    ASSERT_NE(reg, nullptr);
+    const McpQueryRouter router(*m_core, *reg);
+
+    json env;
+    env["type"]        = "command";
+    env["system"]      = "scene";
+    env["command"]     = "CreateGameObject";
+    env["params"]      = {{"name", "CustomNameGO"}};
+    env["request_id"]  = "req-custom-name";
+
+    const json accept = json::parse(router.Route(env.dump()));
+    EXPECT_EQ(accept["phase"].get<std::string>(), "accept");
+    EXPECT_EQ(accept["request_id"].get<std::string>(), "req-custom-name");
+    EXPECT_TRUE(accept["expects_result"].get<bool>());
+    EXPECT_TRUE(accept["queued"].get<bool>());
+}
+
+TEST_F(McpSceneSystemTests, CommandCreateGameObject_RenameFailure_ReportsErrorInResult)
+{
+    json envelope;
+    envelope["type"]               = "auxiliary";
+    envelope["name"]               = "CreateGameObjectWithRename";
+    envelope["desiredName"]        = "ShouldFailRename";
+    envelope["forceRenameFailure"] = true;
+    m_core->EnqueueSerializedCommand(envelope.dump());
+
+    std::vector<std::string> responses;
+    m_core->DrainCommandQueue(responses);
+    ASSERT_EQ(responses.size(), 1u);
+    auto r = json::parse(responses[0]);
+    EXPECT_TRUE(r["ok"].get<bool>());
+    EXPECT_FALSE(r.value("objectId", std::string{}).empty());
+    ASSERT_TRUE(r.contains("error"));
+    EXPECT_NE(r["error"].get<std::string>().find("rename failed"), std::string::npos);
 }
 
 TEST_F(McpSceneSystemTests, CommandDeleteGameObject_RemovesObject)
@@ -316,6 +380,7 @@ TEST_F(McpSceneSystemTests, CommandSetPosition_Immediate_SetsLocalPosition)
          {"space", "local"},
          {"duration_seconds", 0.0f}});
     EXPECT_TRUE(dispatchRes["ok"].get<bool>());
+    EXPECT_TRUE(dispatchRes.value("expects_result", false));
 
     std::vector<std::string> responses;
     m_core->DrainCommandQueue(responses);
@@ -407,6 +472,7 @@ TEST_F(McpSceneSystemTests, CommandSetPosition_WithDuration_QueuesAnimation)
          {"duration_seconds", 1.0f}});
     EXPECT_TRUE(dispatchRes["ok"].get<bool>());
     EXPECT_TRUE(dispatchRes.value("queued", false));
+    EXPECT_FALSE(dispatchRes.value("expects_result", true));
 
     // Drain queues the auxiliary and executes it (headless mode → immediate SetProperty).
     std::vector<std::string> responses;

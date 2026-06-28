@@ -7,6 +7,7 @@
 #include "Runtime/EngineMain.h"
 #include "Runtime/Graphics/DXRenderManager.h"
 #include "Runtime/Graphics/DirectX/DirectX12Texture.h"
+#include "Runtime/Graphics/RenderPath.h"
 #include "Runtime/IO/IOManager.h"
 #include "Shared/GpuGraphicsFixture.h"
 
@@ -23,6 +24,7 @@ class GpuTestAssetFixture : public GpuGraphicsFixture
 protected:
     void SetUp() override;
     void TearDown() override;
+    virtual RenderPath GetInitialRenderPath() const { return RenderPath::Forward; }
 
     EngineMain& GetEngine() { return *m_engine; }
     DXRenderManager& GetRenderManager();
@@ -35,6 +37,7 @@ protected:
     void SubmitAndFlush();
     void ReinitializeRenderPipeline();
     std::shared_ptr<DirectX12Texture> GetFinalColorTexture() const;
+    void InitializeEngineWithRenderPath(RenderPath path);
 
 private:
     struct ScopedAssetDatabaseLocatorRegistration

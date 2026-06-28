@@ -134,6 +134,8 @@ class DTexture;
 class DMaterial;
 class DMesh;
 class DShader;
+class FDynamicMulticastDelegate {};
+class FDynamicDelegate : public FDynamicMulticastDelegate {};
 class TestComponent;
 class TestComponent2;
 struct DXGraphicsContext;
@@ -156,6 +158,12 @@ struct TBulkData;
 #define DFUNCTION(...)
 #define DGENERATED_BODY(ClassName)
 #define DGENERATED_BODY_STRUCT(StructName)
+#define DECLARE_DYNAMIC_DELEGATE(...)
+#define DECLARE_DYNAMIC_DELEGATE_OneParam(...)
+#define DECLARE_DYNAMIC_DELEGATE_TwoParams(...)
+#define DECLARE_DYNAMIC_MULTICAST_DELEGATE(...)
+#define DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(...)
+#define DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(...)
 
 #define DELTA_ENGINE_NS_BEGIN  namespace DeltaEngine {
 #define DELTA_ENGINE_NS_END    }
@@ -233,6 +241,20 @@ class FunctionInfo:
 
 
 @dataclass
+class DelegateInfo:
+    name: str
+    is_multicast: bool
+    params: list[ParamInfo] = field(default_factory=list)
+    source_line: int = 0
+
+    @property
+    def needs_codegen(self) -> bool:
+        if self.is_multicast and not self.params:
+            return False
+        return True
+
+
+@dataclass
 class ClassInfo:
     name: str
     source_file: Path
@@ -256,6 +278,7 @@ class ForwardDeclInfo:
 class ParseResult:
     """Result of parsing one header: reflected classes plus file-level data."""
     classes: list[ClassInfo]
+    delegates: list[DelegateInfo]
     source_includes: list[str]
     forward_decls: list[ForwardDeclInfo]
     diagnostics: DiagnosticCollector = field(default_factory=DiagnosticCollector)
@@ -645,7 +668,8 @@ def _parse_function(tu, method_cursor, class_name, diag=None, source_file=""):
 
 
 def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
-                  is_struct=False, is_abstract=False, metadata=None, diag=None):
+                  is_struct=False, is_abstract=False, metadata=None, diag=None,
+                  delegate_names: set[str] | None = None):
     class_name = class_cursor.spelling
     file_name = str(source_file)
     info = ClassInfo(
@@ -688,6 +712,19 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
                                     diag=diag, source_file=file_name,
                                     line=child.location.line - _PREAMBLE_LINE_COUNT,
                                     tu=tu)
+            if resolved is None and delegate_names:
+                type_name = child.type.spelling
+                for prefix in ("class ", "struct "):
+                    if type_name.startswith(prefix):
+                        type_name = type_name[len(prefix):].strip()
+                        break
+                if "::" in type_name:
+                    type_name = type_name.rsplit("::", 1)[-1]
+                canonical = child.type.get_canonical().spelling
+                if "::" in canonical:
+                    canonical = canonical.rsplit("::", 1)[-1]
+                if type_name in delegate_names or canonical in delegate_names:
+                    resolved = ("DDelegateProperty", False, "")
             if resolved is None:
                 continue
             is_dstruct_field = len(resolved) == 4 and resolved[0] == "DStructProperty"
@@ -841,6 +878,149 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
     return info
 
 
+# ── dynamic delegate declarations ──────────────────────────────
+
+_DECLARE_DYNAMIC_DELEGATE_RE = re.compile(
+    r"DECLARE_DYNAMIC_(MULTICAST_)?DELEGATE(?:_(OneParam|TwoParams))?\s*\(([^)]*)\)"
+)
+
+
+def _split_macro_args(args_str: str) -> list[str]:
+    parts: list[str] = []
+    current: list[str] = []
+    depth_angle = 0
+    depth_paren = 0
+    for ch in args_str:
+        if ch == "<":
+            depth_angle += 1
+        elif ch == ">":
+            depth_angle = max(0, depth_angle - 1)
+        elif ch == "(":
+            depth_paren += 1
+        elif ch == ")":
+            depth_paren = max(0, depth_paren - 1)
+        elif ch == "," and depth_angle == 0 and depth_paren == 0:
+            part = "".join(current).strip()
+            if part:
+                parts.append(part)
+            current = []
+            continue
+        current.append(ch)
+    tail = "".join(current).strip()
+    if tail:
+        parts.append(tail)
+    return parts
+
+
+def _param_info_from_type_string(type_str: str, name: str, source_file: str, line: int,
+                                 diag: DiagnosticCollector | None) -> ParamInfo | None:
+    resolved = resolve_type_from_string(type_str, name, "")
+    if resolved is None:
+        if diag:
+            diag.warn(source_file, line,
+                      f"No corresponding property type found for delegate param type '{type_str}'")
+        return None
+
+    if len(resolved) == 4 and resolved[0] == "DStructProperty":
+        return None
+
+    if len(resolved) >= 7:
+        return ParamInfo(
+            name=name,
+            cpp_type=type_str.strip(),
+            property_class=resolved[0],
+            is_vector=True,
+            inner_cpp_type=resolved[3],
+            inner_property_class=resolved[4],
+            inner_is_object_ptr=resolved[5],
+            inner_pointee_type=resolved[6],
+        )
+
+    prop_class, is_obj_ptr, pointee = resolved[0], resolved[1], resolved[2]
+    return ParamInfo(
+        name=name,
+        cpp_type=type_str.strip(),
+        property_class=prop_class,
+        is_vector=False,
+        inner_is_object_ptr=is_obj_ptr,
+        inner_pointee_type=pointee,
+    )
+
+
+def _collect_dynamic_delegate_declarations(raw: str, source_file: Path,
+                                           diag: DiagnosticCollector) -> list[DelegateInfo]:
+    results: list[DelegateInfo] = []
+    file_name = str(source_file)
+    seen_names: set[str] = set()
+
+    for line_no, line in enumerate(raw.splitlines(), start=1):
+        stripped = line.lstrip()
+        if stripped.startswith("#"):
+            continue
+        for match in _DECLARE_DYNAMIC_DELEGATE_RE.finditer(line):
+            is_multicast = match.group(1) is not None
+            variant = match.group(2) or ""
+            args = _split_macro_args(match.group(3))
+            if not args:
+                diag.warn(file_name, line_no, "DECLARE_DYNAMIC_* macro has no arguments")
+                continue
+
+            delegate_name = args[0].strip()
+            if delegate_name in seen_names:
+                diag.warn(file_name, line_no,
+                          f"Duplicate dynamic delegate declaration '{delegate_name}'")
+                continue
+            seen_names.add(delegate_name)
+
+            expected_pairs = {"OneParam": 1, "TwoParams": 2}.get(variant, 0)
+            expected_len = 1 + expected_pairs * 2
+            if len(args) != expected_len:
+                diag.warn(file_name, line_no,
+                          f"DECLARE_DYNAMIC_* macro '{delegate_name}' expected {expected_len} "
+                          f"argument(s), got {len(args)}")
+                continue
+
+            params: list[ParamInfo] = []
+            ok = True
+            for i in range(expected_pairs):
+                type_str = args[1 + i * 2].strip()
+                param_name = args[2 + i * 2].strip()
+                param = _param_info_from_type_string(type_str, param_name, file_name, line_no, diag)
+                if param is None:
+                    ok = False
+                    break
+                params.append(param)
+
+            if not ok:
+                continue
+
+            results.append(DelegateInfo(
+                name=delegate_name,
+                is_multicast=is_multicast,
+                params=params,
+                source_line=line_no,
+            ))
+
+    return results
+
+
+def _delegate_names(delegates: list[DelegateInfo]) -> set[str]:
+    return {d.name for d in delegates}
+
+
+def _delegate_preamble_block(delegates: list[DelegateInfo]) -> str:
+    """Forward-declare generated delegate types so libclang does not treat unknown
+    spellings (e.g. FTestComponentEvent) as int during stripped-header parsing."""
+    if not delegates:
+        return ""
+    lines = ["namespace DeltaEngine {"]
+    for delegate in delegates:
+        base = "FDynamicMulticastDelegate" if delegate.is_multicast else "FDynamicDelegate"
+        lines.append(f"class {delegate.name} : public {base} {{}};")
+    lines.append("}")
+    return "\n".join(lines) + "\n\n"
+
+
 # ── public API ───────────────────────────────────────────────
 
 
@@ -859,7 +1039,13 @@ def parse_header(
 
     raw = file_path.read_text(encoding="utf-8", errors="replace")
     source_includes = _collect_source_includes(raw, file_path)
-    stripped_source = _PREAMBLE + _INCLUDE_RE.sub("", raw)
+    delegates = _collect_dynamic_delegate_declarations(raw, file_path, diag)
+    delegate_names = _delegate_names(delegates)
+    stripped_source = (
+        _PREAMBLE
+        + _delegate_preamble_block(delegates)
+        + _INCLUDE_RE.sub("", raw)
+    )
 
     args = ["-std=c++23", "-x", "c++", "-w", "-ferror-limit=0"]
     parse_options = (
@@ -928,10 +1114,12 @@ def parse_header(
             is_abstract=is_abstract,
             metadata=class_metadata,
             diag=diag,
+            delegate_names=delegate_names,
         ))
 
     return ParseResult(
         classes=results,
+        delegates=delegates,
         source_includes=source_includes,
         forward_decls=forward_decls,
         diagnostics=diag,

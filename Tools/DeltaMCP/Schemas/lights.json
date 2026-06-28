@@ -6,6 +6,8 @@
     "SetIntensity": {
       "description": "Set or animate the intensity of a light component. With duration_seconds > 0 the value tweens using cubic ease-out; completion commits one undoable SetProperty command. A second call mid-tween preempts, starting from the current interpolated value.",
       "undoable": true,
+      "expects_result": true,
+      "expects_result_note": "false when duration_seconds > 0 (animated); true when duration_seconds <= 0 (immediate)",
       "params": {
         "assetId": {
           "type": "string",

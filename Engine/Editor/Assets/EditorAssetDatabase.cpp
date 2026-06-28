@@ -448,6 +448,12 @@ void EditorAssetDatabase::ResolvePendingBatch()
                     DObject* resolved = FindObject(sp.m_assetId, sp.m_objectId);
                     ptrProp->ResolvePointer(valueAddress, resolved);
                 });
+
+            ResolveUnresolvedDelegateBindingsInStruct(obj->GetClass(), obj,
+                [&](const ScriptPointer& sp) -> DObject*
+                {
+                    return FindObject(sp.m_assetId, sp.m_objectId);
+                });
         }
     }
     m_newlyLoadedBatch.clear();

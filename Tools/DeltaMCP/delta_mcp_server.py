@@ -1,6 +1,7 @@
 import json
 import pathlib
 import socket
+import time
 
 from mcp.server.fastmcp import FastMCP
 
@@ -113,13 +114,104 @@ def _handle_local_meta(payload: dict) -> dict:
 
 mcp_server = FastMCP("DeltaEditor")
 
+ACCEPT_TIMEOUT_S = 5.0
+EXEC_RESULT_TIMEOUT_S = 30.0
+
 _sock: socket.socket | None = None
 _buf: str = ""
+_request_id_counter = 0
+_orphan_buffer: list[dict] = []
+
+_STRIP_KEYS = frozenset({"phase", "request_id", "queued", "expects_result"})
 
 
-def _send_command(payload: dict) -> dict:
+def _next_request_id() -> str:
+    global _request_id_counter
+    _request_id_counter += 1
+    return str(_request_id_counter)
+
+
+def _ensure_connected() -> dict | None:
     global _sock, _buf
 
+    if _sock is not None:
+        return None
+
+    port_file = _find_repo_root() / "Intermediate" / "EditorState" / "DeltaEditor.port"
+    if not port_file.exists():
+        return {
+            "ok": False,
+            "error": "DeltaEditor is not running. Launch the editor and try again.",
+        }
+
+    _sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    _sock.settimeout(ACCEPT_TIMEOUT_S)
+    _sock.connect(("127.0.0.1", int(port_file.read_text().strip())))
+    _buf = ""
+    return None
+
+
+def _close_connection() -> None:
+    global _sock, _buf
+
+    if _sock:
+        try:
+            _sock.close()
+        except Exception:
+            pass
+    _sock = None
+    _buf = ""
+
+
+def _read_line(timeout_s: float) -> dict:
+    global _buf, _sock
+
+    if _sock is None:
+        raise RuntimeError("Editor disconnected")
+
+    deadline = time.monotonic() + timeout_s
+    while True:
+        if "\n" in _buf:
+            response_line, _buf = _buf.split("\n", 1)
+            return json.loads(response_line)
+
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError(f"Timed out after {timeout_s}s waiting for response line")
+
+        _sock.settimeout(remaining)
+        chunk = _sock.recv(4096).decode()
+        if not chunk:
+            raise RuntimeError("Editor disconnected")
+        _buf += chunk
+
+
+def _strip_response(data: dict) -> dict:
+    return {k: v for k, v in data.items() if k not in _STRIP_KEYS}
+
+
+def _read_matching_line(phase: str, request_id: str, timeout_s: float) -> dict | None:
+    global _orphan_buffer
+
+    deadline = time.monotonic() + timeout_s
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return None
+
+        try:
+            line = _read_line(remaining)
+        except TimeoutError:
+            return None
+
+        if line.get("phase") == phase and line.get("request_id") == request_id:
+            return line
+
+        if line.get("phase") == "result":
+            _orphan_buffer.append(line)
+
+
+def _send_query(payload: dict) -> dict:
     if (
         payload.get("type") == "query"
         and payload.get("system") == "meta"
@@ -128,37 +220,50 @@ def _send_command(payload: dict) -> dict:
         return _handle_local_meta(payload)
 
     try:
-        if _sock is None:
-            port_file = (
-                _find_repo_root() / "Intermediate" / "EditorState" / "DeltaEditor.port"
-            )
-            if not port_file.exists():
-                return {
-                    "ok": False,
-                    "error": "DeltaEditor is not running. "
-                    "Launch the editor and try again.",
-                }
-            _sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            _sock.settimeout(5.0)
-            _sock.connect(("127.0.0.1", int(port_file.read_text().strip())))
-            _buf = ""
-        line = json.dumps(payload) + "\n"
-        _sock.sendall(line.encode())
-        while "\n" not in _buf:
-            chunk = _sock.recv(4096).decode()
-            if not chunk:
-                raise RuntimeError("Editor disconnected")
-            _buf += chunk
-        response_line, _buf = _buf.split("\n", 1)
-        return json.loads(response_line)
+        err = _ensure_connected()
+        if err is not None:
+            return err
+        _sock.sendall((json.dumps(payload) + "\n").encode())
+        return _read_line(ACCEPT_TIMEOUT_S)
     except Exception as e:
-        if _sock:
-            try:
-                _sock.close()
-            except Exception:
-                pass
-        _sock = None
-        _buf = ""
+        _close_connection()
+        return {"ok": False, "error": str(e)}
+
+
+def _send_mcp_command(payload: dict) -> dict:
+    envelope = dict(payload)
+    request_id = _next_request_id()
+    envelope["request_id"] = request_id
+
+    try:
+        err = _ensure_connected()
+        if err is not None:
+            return err
+        _sock.sendall((json.dumps(envelope) + "\n").encode())
+
+        accept = _read_matching_line("accept", request_id, ACCEPT_TIMEOUT_S)
+        if accept is None:
+            return {
+                "ok": False,
+                "error": f"Timed out after {ACCEPT_TIMEOUT_S}s waiting for command accept",
+            }
+
+        if not accept.get("ok") or not accept.get("expects_result"):
+            return _strip_response(accept)
+
+        result = _read_matching_line("result", request_id, EXEC_RESULT_TIMEOUT_S)
+        if result is not None:
+            return _strip_response(result)
+
+        return {
+            **_strip_response(accept),
+            "execution_pending": True,
+            "timeout_message": (
+                f"Timed out after {EXEC_RESULT_TIMEOUT_S}s waiting for command result"
+            ),
+        }
+    except Exception as e:
+        _close_connection()
         return {"ok": False, "error": str(e)}
 
 
@@ -238,6 +343,16 @@ def execute_batch(operations: list[dict]) -> dict:
       Example:
         {"type":"command","system":"scene","command":"CreateGameObject","params":{"name":"Sun"}}
 
+    Commands use the two-phase wire protocol internally (see PROTOCOL.md):
+      - Queries: one synchronous response.
+      - Commands: immediate accept envelope, then optional result after editor
+        main-thread execution when expects_result is true.
+      - Caller-visible results strip wire fields (phase, request_id, queued,
+        expects_result).
+      - On result timeout (30s), the command entry returns the stripped accept
+        plus execution_pending:true and timeout_message; the TCP socket stays
+        open. Re-query scene state rather than retrying the same command.
+
     Terminology:
       - query     = read-only operation
       - command   = mutating operation
@@ -260,13 +375,16 @@ def execute_batch(operations: list[dict]) -> dict:
     results = []
     for op in operations:
         if _is_local_meta_query(op):
-            results.append(_send_command(op))
+            results.append(_handle_local_meta(op))
             continue
         error = validate_operation(op, _SCHEMAS["systems"])
         if error is not None:
             results.append(error)
             continue
-        results.append(_send_command(op))
+        if op.get("type") == "command":
+            results.append(_send_mcp_command(op))
+        else:
+            results.append(_send_query(op))
     all_ok = all(r.get("ok", False) for r in results)
     return {"ok": all_ok, "results": results}
 
