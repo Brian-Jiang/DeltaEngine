@@ -1,6 +1,7 @@
 #include "Runtime/Graphics/PostProcess/PostProcessPass.h"
 
 #include "Runtime/Core/DShader.h"
+#include "Runtime/Core/GC/DObjectRegistry.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
 
 using namespace DeltaEngine;
@@ -38,6 +39,12 @@ DShader* PostProcessPass::ResolveShader(const std::filesystem::path& fallbackPat
             return nullptr;
         }
         m_fallbackShader->Initialize(fallbackPath, vsEntry, psEntry, vsProfile, psProfile);
+
+        // Root the fallback shader: it is referenced only by this raw pointer (not a
+        // DPROPERTY), so without a root the GC would reclaim it as unreachable and leave
+        // m_fallbackShader dangling.
+        m_fallbackShaderRoot = m_fallbackShader->GetGCHandle();
+        GetDObjectRegistry().AddRoot(m_fallbackShaderRoot);
     }
 
     if (!PostProcessShaderBlobValid(m_fallbackShader->GetVertexShaderBlob())
@@ -54,9 +61,18 @@ DShader* PostProcessPass::ResolveShader(const std::filesystem::path& fallbackPat
 
 void PostProcessPass::ReleaseFallbackShader()
 {
-    if (m_fallbackShader)
+    if (m_fallbackShaderRoot.IsSet())
     {
-        GetReflectionRegistry().DestroyObject(m_fallbackShader);
-        m_fallbackShader = nullptr;
+        DObjectRegistry& registry = GetDObjectRegistry();
+        registry.RemoveRoot(m_fallbackShaderRoot);
+
+        // Resolve through the registry so a shader already reclaimed by a final
+        // shutdown sweep is not double-freed.
+        if (DObject* shader = registry.Resolve(m_fallbackShaderRoot))
+            GetReflectionRegistry().DestroyObject(shader);
+
+        m_fallbackShaderRoot = {};
     }
+
+    m_fallbackShader = nullptr;
 }

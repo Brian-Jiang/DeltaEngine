@@ -31,10 +31,27 @@ static constexpr float       kCompIconSz = 18.f;
 EditorWindow_ComponentsHierarchy::EditorWindow_ComponentsHierarchy()
 {
     m_title = "Components Hierarchy";
+
+    if (g_editorCore)
+    {
+        if (EditorSelectionState* sel = g_editorCore->GetSelectionState())
+            m_onSelectionChangedHandle = sel->OnSelectionChanged.AddRaw(this, &EditorWindow_ComponentsHierarchy::HandleSelectionChanged);
+    }
 }
 
 EditorWindow_ComponentsHierarchy::~EditorWindow_ComponentsHierarchy()
 {
+    if (g_editorCore)
+    {
+        if (EditorSelectionState* sel = g_editorCore->GetSelectionState())
+            sel->OnSelectionChanged.Remove(m_onSelectionChangedHandle);
+    }
+}
+
+void EditorWindow_ComponentsHierarchy::HandleSelectionChanged()
+{
+    m_renameComponentId = ObjectId::Null();
+    m_inlineRename.Clear();
 }
 
 void EditorWindow_ComponentsHierarchy::OnRenameCommitted(DObject* obj)

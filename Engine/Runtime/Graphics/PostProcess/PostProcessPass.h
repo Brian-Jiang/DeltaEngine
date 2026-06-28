@@ -52,7 +52,8 @@ protected:
     void ReleaseFallbackShader();
 
 private:
-    DShader* m_fallbackShader = nullptr;
+    DShader*      m_fallbackShader = nullptr;
+    DObjectHandle m_fallbackShaderRoot;
 };
 
 DELTA_ENGINE_NS_END

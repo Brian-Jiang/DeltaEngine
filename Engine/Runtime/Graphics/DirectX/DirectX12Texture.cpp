@@ -31,7 +31,9 @@ void DirectX12Texture::Resize(uint32_t width, uint32_t height, uint32_t depthOrA
         resDesc.Width = std::max(width, 1u);
         resDesc.Height = std::max(height, 1u);
         resDesc.DepthOrArraySize = depthOrArraySize;
-        resDesc.MipLevels = resDesc.SampleDesc.Count > 1 ? 1 : 0;
+        // Preserve the original mip count; MSAA resources can only have one mip.
+        if (resDesc.SampleDesc.Count > 1)
+            resDesc.MipLevels = 1;
 
         auto d3d12Device = m_Device.GetD3D12Device();
         auto heapPorp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);

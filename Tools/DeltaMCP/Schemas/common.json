@@ -6,6 +6,7 @@
     "RenameObject": {
       "description": "Rename a GameObject or component",
       "undoable": true,
+      "expects_result": true,
       "params": {
         "objectId": {
           "type": "string",
@@ -25,6 +26,7 @@
     "SetProperty": {
       "description": "Set a reflected property on any DObject",
       "undoable": true,
+      "expects_result": true,
       "params": {
         "objectId": {
           "type": "string",
@@ -48,6 +50,7 @@
     "SaveProject": {
       "description": "Save the whole project",
       "undoable": false,
+      "expects_result": false,
       "params": {}
     }
   }

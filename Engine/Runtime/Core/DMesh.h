@@ -71,6 +71,9 @@ public:
     DFUNCTION()
     DELTAENGINE_API int GetSubMeshCount() const;
 
+    /// Returns the cached local-space AABB center of a submesh, or the origin if the index is invalid.
+    DELTAENGINE_API DirectX::XMFLOAT3 GetSubMeshLocalCenter(int index) const;
+
     /// Packs runtime geometry into bulk-data fields before serialization.
     void OnBeforeSerialize() override;
     /// Restores runtime geometry from bulk-data fields after deserialization.
@@ -79,6 +82,9 @@ public:
 private:
     std::vector<std::vector<Vertex>> m_vertices;
     std::vector<std::vector<unsigned int>> m_indices;
+
+    /// Per-submesh local-space AABB centers, lazily rebuilt from m_vertices when stale.
+    mutable std::vector<DirectX::XMFLOAT3> m_subMeshLocalCenters;
 
     DPROPERTY()
     TBulkData m_vertexData;

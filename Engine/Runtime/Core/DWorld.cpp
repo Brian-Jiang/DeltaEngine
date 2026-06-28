@@ -9,8 +9,11 @@
 #include "Runtime/Assets/DPrimaryAsset.h"
 #include "Runtime/Graphics/DXGraphicsContext.h"
 #include "Runtime/Graphics/Light/LightComponent.h"
+#include "Runtime/Graphics/RenderProxy/MeshRenderProxy.h"
 #include "Runtime/Graphics/RenderProxy/RenderProxy.h"
+#include "Runtime/Graphics/Renderer/MeshRenderer.h"
 #include "Runtime/Graphics/Renderer/Renderer.h"
+#include "Runtime/Graphics/TransparentDrawEntry.h"
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
 
@@ -19,7 +22,33 @@
 #include <functional>
 #include <stack>
 
+using namespace DirectX;
 using namespace DeltaEngine;
+
+namespace
+{
+void ForEachRenderer(const SceneComponent* root, const std::function<void(Renderer*)>& visitor)
+{
+    if (!root)
+        return;
+
+    std::stack<const SceneComponent*> stack;
+    stack.push(root);
+
+    while (!stack.empty())
+    {
+        const SceneComponent* current = stack.top();
+        stack.pop();
+
+        if (Renderer* renderer = dynamic_cast<Renderer*>(const_cast<SceneComponent*>(current)))
+            visitor(renderer);
+
+        const std::vector<SceneComponent*>& children = current->GetChildren();
+        for (size_t i = children.size(); i-- > 0;)
+            stack.push(children[i]);
+    }
+}
+}
 
 DWorld::DWorld()
     : m_rootSceneComponent(nullptr)
@@ -174,26 +203,42 @@ void DWorld::GatherOpaqueDrawCalls(std::shared_ptr<DXGraphicsContext> context) c
 
     DELTA_ASSERT(m_rootSceneComponent != nullptr);
 
-    std::stack<SceneComponent*> stack;
-    stack.push(m_rootSceneComponent);
-
-    while (!stack.empty())
+    ForEachRenderer(m_rootSceneComponent, [&](Renderer* renderer)
     {
-        SceneComponent* current = stack.top();
-        stack.pop();
+        renderer->GatherDrawCalls(context);
+    });
+}
 
-        if (Renderer* renderer = dynamic_cast<Renderer*>(current))
-        {
-            renderer->GatherDrawCalls(context);
-        }
+void DWorld::GatherTransparentDrawCalls(std::shared_ptr<DXGraphicsContext> context) const
+{
+    if (!DELTA_ENSURE(context != nullptr))
+        return;
 
-        size_t childCount = current->m_children.size();
-        for (int i = static_cast<int>(childCount) - 1; i >= 0; --i)
-        {
-            SceneComponent* child = current->m_children[i];
-            stack.push(child);
-        }
+    DELTA_ASSERT(m_rootSceneComponent != nullptr);
+
+    XMVECTOR cameraPosition = XMVectorZero();
+    if (context->activeRenderCamera.has_value())
+        cameraPosition = context->activeRenderCamera->cb.position;
+
+    std::vector<TransparentDrawEntry> entries;
+    ForEachRenderer(m_rootSceneComponent, [&](Renderer* renderer)
+    {
+        if (MeshRenderer* meshRenderer = dynamic_cast<MeshRenderer*>(renderer))
+            meshRenderer->CollectTransparentDrawEntries(entries, cameraPosition);
+    });
+
+    SortTransparentDrawEntriesDescending(entries);
+
+    const ScenePassType previousPass = context->activePass;
+    context->activePass = ScenePassType::Transparent;
+
+    for (const TransparentDrawEntry& entry : entries)
+    {
+        if (entry.proxy)
+            entry.proxy->DrawSubmesh(context, entry.submeshIndex);
     }
+
+    context->activePass = previousPass;
 }
 
 void DWorld::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> context) const

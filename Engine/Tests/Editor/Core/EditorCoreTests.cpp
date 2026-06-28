@@ -113,6 +113,53 @@ TEST_F(EditorCoreTests, DrainCommandQueue_UnknownCommand_ReturnsErrorEnvelope)
     EXPECT_EQ(j.value("commandType", std::string{}), "EditorCommand_NoSuchThing");
 }
 
+TEST_F(EditorCoreTests, DrainCommandQueue_WithEmbeddedRequestId_WrapsResult)
+{
+    const AssetId sceneId = GetActiveSceneAssetId();
+    nlohmann::json data;
+    data["sceneAssetId"] = sceneId.ToString();
+    data["className"] = "GameObject";
+    nlohmann::json envelope;
+    envelope["type"] = "EditorCommand_CreateGameObject";
+    envelope["data"] = data;
+    envelope["request_id"] = "req-direct-1";
+
+    m_core->EnqueueSerializedCommand(envelope.dump());
+
+    std::vector<std::string> responses;
+    m_core->DrainCommandQueue(responses);
+
+    ASSERT_EQ(responses.size(), 1u);
+    const auto j = nlohmann::json::parse(responses[0]);
+    EXPECT_EQ(j["phase"].get<std::string>(), "result");
+    EXPECT_EQ(j["request_id"].get<std::string>(), "req-direct-1");
+    EXPECT_TRUE(j["ok"].get<bool>());
+    EXPECT_EQ(j["commandType"].get<std::string>(), "EditorCommand_CreateGameObject");
+    EXPECT_FALSE(j["objectId"].get<std::string>().empty());
+}
+
+TEST_F(EditorCoreTests, EnqueueSerializedCommand_ActiveRequestId_EmbedsInEnvelope)
+{
+    m_core->SetActiveMcpRequestId("req-active-2");
+
+    nlohmann::json envelope;
+    envelope["type"] = "auxiliary";
+    envelope["name"] = "SaveDirtyAssets";
+    m_core->EnqueueSerializedCommand(envelope.dump());
+
+    m_core->ClearActiveMcpRequestId();
+
+    std::vector<std::string> responses;
+    m_core->DrainCommandQueue(responses);
+
+    ASSERT_EQ(responses.size(), 1u);
+    const auto j = nlohmann::json::parse(responses[0]);
+    EXPECT_EQ(j["phase"].get<std::string>(), "result");
+    EXPECT_EQ(j["request_id"].get<std::string>(), "req-active-2");
+    EXPECT_TRUE(j["ok"].get<bool>());
+    EXPECT_EQ(j["commandType"].get<std::string>(), "SaveDirtyAssets");
+}
+
 TEST_F(EditorCoreTests, LoadScene_NonExistentPath_DoesNothing)
 {
     const auto missing = m_tempDir / "missing_scene.dasset.json";

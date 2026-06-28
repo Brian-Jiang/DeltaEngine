@@ -23,6 +23,7 @@ enum class ERenderMode : uint32_t
 {
     Opaque = 0,
     Masked = 1,
+    Transparent = 2,
 };
 
 DCLASS()
@@ -41,10 +42,10 @@ public:
     DFUNCTION()
     DELTAENGINE_API void SetShader(DShader* shader);
 
-    /// Sets the pipeline blend state used by this material.
+    /// Sets the pipeline blend state. Ignored for Transparent render mode (render mode owns it).
     DELTAENGINE_API void SetBlendState(const CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC& blendDesc);
 
-    /// Sets the pipeline depth-stencil state used by this material.
+    /// Sets the pipeline depth-stencil state. Ignored for Transparent render mode (render mode owns it).
     DELTAENGINE_API void SetDepthStencilState(const CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL& depthStencilState);
 
     DFUNCTION()
@@ -65,6 +66,9 @@ public:
     DFUNCTION()
     DELTAENGINE_API void SetAlphaMaskTexture(DTexture* texture);
 
+    DFUNCTION()
+    DELTAENGINE_API void SetRenderMode(uint32_t mode);
+
     /// Returns the texture at the requested slot, or nullptr.
     DFUNCTION()
     DELTAENGINE_API DTexture* GetTexture(int slot) const;
@@ -84,6 +88,7 @@ public:
 
 private:
     MaterialFlags ComputeFlags() const;
+    void ApplyRenderModePipelineState();
 
 private:
     DPROPERTY()

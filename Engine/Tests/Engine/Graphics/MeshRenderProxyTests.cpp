@@ -105,6 +105,64 @@ TEST(MeshRenderProxyTests, SubmeshContributesToGBuffer_AlphaBlendMaterial_Return
     EXPECT_FALSE(MeshRenderProxy::SubmeshContributesToGBuffer(&material));
 }
 
+TEST(MeshRenderProxyTests, SubmeshContributesToOpaquePass_NullMaterial_ReturnsTrue)
+{
+    EXPECT_TRUE(MeshRenderProxy::SubmeshContributesToOpaquePass(nullptr));
+}
+
+TEST(MeshRenderProxyTests, SubmeshContributesToOpaquePass_OpaqueMaterial_ReturnsTrue)
+{
+    DMaterial material;
+    EXPECT_TRUE(MeshRenderProxy::SubmeshContributesToOpaquePass(&material));
+}
+
+TEST(MeshRenderProxyTests, SubmeshContributesToOpaquePass_AlphaBlendMaterial_ReturnsFalse)
+{
+    DMaterial material;
+    CD3DX12_BLEND_DESC blendDesc(D3D12_DEFAULT);
+    blendDesc.RenderTarget[0].BlendEnable = TRUE;
+    material.SetBlendState(CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC(blendDesc));
+
+    EXPECT_FALSE(MeshRenderProxy::SubmeshContributesToOpaquePass(&material));
+}
+
+TEST(MeshRenderProxyTests, SubmeshContributesToOpaquePass_TransparentRenderMode_ReturnsFalse)
+{
+    DMaterial material;
+    material.SetRenderMode(static_cast<uint32_t>(ERenderMode::Transparent));
+
+    EXPECT_FALSE(MeshRenderProxy::SubmeshContributesToOpaquePass(&material));
+}
+
+TEST(MeshRenderProxyTests, SubmeshContributesToTransparentPass_NullMaterial_ReturnsFalse)
+{
+    EXPECT_FALSE(MeshRenderProxy::SubmeshContributesToTransparentPass(nullptr));
+}
+
+TEST(MeshRenderProxyTests, SubmeshContributesToTransparentPass_OpaqueMaterial_ReturnsFalse)
+{
+    DMaterial material;
+    EXPECT_FALSE(MeshRenderProxy::SubmeshContributesToTransparentPass(&material));
+}
+
+TEST(MeshRenderProxyTests, SubmeshContributesToTransparentPass_AlphaBlendMaterial_ReturnsTrue)
+{
+    DMaterial material;
+    CD3DX12_BLEND_DESC blendDesc(D3D12_DEFAULT);
+    blendDesc.RenderTarget[0].BlendEnable = TRUE;
+    material.SetBlendState(CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC(blendDesc));
+
+    EXPECT_TRUE(MeshRenderProxy::SubmeshContributesToTransparentPass(&material));
+}
+
+TEST(MeshRenderProxyTests, SubmeshContributesToTransparentPass_TransparentRenderMode_ReturnsTrue)
+{
+    DMaterial material;
+    material.SetRenderMode(static_cast<uint32_t>(ERenderMode::Transparent));
+
+    EXPECT_TRUE(MeshRenderProxy::SubmeshContributesToTransparentPass(&material));
+}
+
 TEST(MeshRenderProxyTests, MeshRenderProxy_InitializeWithNullMesh_DoesNotCrash)
 {
     // Arrange

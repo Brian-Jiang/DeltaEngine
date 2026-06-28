@@ -170,7 +170,8 @@ void McpSocketServer::HandleIncomingLine(const std::string& line)
         }
         else
         {
-            m_onCommand(line);
+            std::string response = m_onCommand(line);
+            DoWrite(std::move(response));
         }
     }
     catch (const std::exception& e)

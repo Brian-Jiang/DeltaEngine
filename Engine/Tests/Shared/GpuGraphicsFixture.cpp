@@ -76,7 +76,7 @@ uint64_t GpuGraphicsFixture::SubmitAndWait(std::shared_ptr<CommandList> commandL
     return fenceValue;
 }
 
-std::shared_ptr<DeltaEngine::DXRenderManager> GpuGraphicsFixture::CreateRenderManager()
+std::shared_ptr<DeltaEngine::DXRenderManager> GpuGraphicsFixture::CreateRenderManager(const RenderPath path)
 {
     return std::make_shared<DeltaEngine::DXRenderManager>(
         s_device, s_renderTarget, 64u, 64u, DeltaEngine::RenderPath::Forward);

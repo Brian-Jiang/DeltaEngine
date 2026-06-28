@@ -19,6 +19,7 @@
 #include "Graphics/MaterialConstants.h"
 #include "Graphics/Structures/RootParameterType.h"
 #include "Graphics/Structures/GBufferRootParameterType.h"
+#include "Graphics/Structures/Vertex.h"
 #include "Graphics/Shadow/ShadowDepthPSO.h"
 #include "Graphics/Shadow/ShadowView.h"
 #include "Core/DMaterial.h"
@@ -263,17 +264,10 @@ void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext>
     }
 }
 
-void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext)
+void MeshRenderProxy::EnsureDrawResourcesReady(std::shared_ptr<DXGraphicsContext> renderContext)
 {
-    if (!m_mesh)
+    if (!m_mesh || !DELTA_ENSURE(renderContext && renderContext->commandList))
         return;
-
-    if (!DELTA_ENSURE(renderContext && renderContext->commandList))
-    {
-        DLOG(LogRenderer, ELogLevel::Warning,
-            "MeshRenderProxy::GatherDrawCalls skipped: renderContext or commandList is null");
-        return;
-    }
 
     std::shared_ptr<CommandList> commandList = renderContext->commandList;
 
@@ -282,7 +276,7 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
         m_VertexBuffers.clear();
         m_IndexBuffers.clear();
 
-        int submeshCount = m_mesh->GetSubMeshCount();
+        const int submeshCount = m_mesh->GetSubMeshCount();
         for (int i = 0; i < submeshCount; ++i)
         {
             std::shared_ptr<VertexBuffer> vertexBuffer = commandList->CopyVertexBuffer(m_mesh->GetVertices()[i]);
@@ -301,10 +295,12 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
     }
     else if (ShadersChanged())
     {
-        // A material's shader was reimported; rebuild PSOs from the new bytecode (VB/IB untouched).
         Initialize(renderContext);
     }
+}
 
+void MeshRenderProxy::BindObjectConstantBuffer(std::shared_ptr<DXGraphicsContext> renderContext) const
+{
     struct ObjectData
     {
         DirectX::XMMATRIX worldMatrix;
@@ -317,10 +313,20 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
     obj.useInstanceMatrix = 0;
 
     const bool gbufferPass = renderContext->activePass == ScenePassType::GBuffer;
-    const auto& activePsos = gbufferPass ? m_gbufferPipelineStateObjects : m_pipelineStateObjects;
     const uint32_t objectCbSlot = gbufferPass
         ? static_cast<uint32_t>(GBufferRootParameterType::ObjectCB)
         : static_cast<uint32_t>(RootParameterType::ObjectCB);
+
+    renderContext->commandList->SetGraphicsDynamicConstantBuffer(objectCbSlot, obj);
+}
+
+void MeshRenderProxy::DrawSubmeshInternal(std::shared_ptr<DXGraphicsContext> renderContext, size_t submeshIndex)
+{
+    if (!m_mesh || !renderContext || !renderContext->commandList)
+        return;
+
+    const bool gbufferPass = renderContext->activePass == ScenePassType::GBuffer;
+    const auto& activePsos = gbufferPass ? m_gbufferPipelineStateObjects : m_pipelineStateObjects;
     const uint32_t materialCbSlot = gbufferPass
         ? static_cast<uint32_t>(GBufferRootParameterType::MaterialCB)
         : static_cast<uint32_t>(RootParameterType::MaterialCB);
@@ -328,10 +334,135 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
         ? static_cast<uint32_t>(GBufferRootParameterType::Texture)
         : static_cast<uint32_t>(RootParameterType::Texture);
 
-    commandList->SetGraphicsDynamicConstantBuffer(objectCbSlot, obj);
+    if (submeshIndex >= activePsos.size() || submeshIndex >= m_VertexBuffers.size()
+        || submeshIndex >= m_IndexBuffers.size())
+    {
+        return;
+    }
+
+    if (!activePsos[submeshIndex])
+        return;
+
+    std::shared_ptr<CommandList> commandList = renderContext->commandList;
+    DMaterial* material = m_mesh->GetMaterial(static_cast<int>(submeshIndex));
+
+    commandList->SetPipelineState(activePsos[submeshIndex]);
+    commandList->SetPrimitiveTopology(m_PrimitiveTopology);
+
+    if (material)
+    {
+        MaterialCB materialCB {};
+        material->FillMaterialCB(materialCB);
+        commandList->SetGraphicsDynamicConstantBuffer(materialCbSlot, sizeof(MaterialCB), &materialCB);
+    }
 
     const uint32_t slotCount = static_cast<uint32_t>(MaterialTextureSlot::Count);
     const D3D12_CPU_DESCRIPTOR_HANDLE whiteSRV = DefaultTextures::GetWhiteSRV();
+    auto submeshIt = m_textures.find(static_cast<uint32_t>(submeshIndex));
+    for (uint32_t slot = 0; slot < slotCount; ++slot)
+    {
+        std::shared_ptr<DirectX12Texture> tex;
+        if (submeshIt != m_textures.end())
+        {
+            auto slotIt = submeshIt->second.find(slot);
+            if (slotIt != submeshIt->second.end())
+                tex = slotIt->second;
+        }
+
+        if (tex)
+        {
+            commandList->SetShaderResourceView(textureSlot, slot, tex,
+                D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        }
+        else
+        {
+            commandList->SetShaderResourceView(textureSlot, slot, whiteSRV);
+        }
+    }
+
+    commandList->SetVertexBuffer(0, m_VertexBuffers[submeshIndex]);
+
+    const auto indexCount = m_IndexBuffers[submeshIndex]->GetNumIndices();
+    const auto vertexCount = m_VertexBuffers[submeshIndex]->GetNumVertices();
+
+    if (indexCount > 0)
+    {
+        commandList->SetIndexBuffer(m_IndexBuffers[submeshIndex]);
+        commandList->DrawIndexed(indexCount, 1u, 0u, 0u, 0u);
+    }
+    else if (vertexCount > 0)
+    {
+        commandList->Draw(vertexCount, 1u, 0u, 0u);
+    }
+}
+
+void MeshRenderProxy::DrawSubmesh(std::shared_ptr<DXGraphicsContext> renderContext, size_t submeshIndex)
+{
+    if (!m_mesh)
+        return;
+
+    if (!DELTA_ENSURE(renderContext && renderContext->commandList))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning,
+            "MeshRenderProxy::DrawSubmesh skipped: renderContext or commandList is null");
+        return;
+    }
+
+    EnsureDrawResourcesReady(renderContext);
+    BindObjectConstantBuffer(renderContext);
+    DrawSubmeshInternal(renderContext, submeshIndex);
+}
+
+float MeshRenderProxy::ComputeSubmeshSortDepth(const DMesh* mesh, int submeshIndex, XMMATRIX worldMatrix,
+    XMVECTOR cameraPosition)
+{
+    XMFLOAT3 center { 0.0f, 0.0f, 0.0f };
+    if (mesh && submeshIndex >= 0 && submeshIndex < mesh->GetSubMeshCount())
+        center = mesh->GetSubMeshLocalCenter(submeshIndex);
+
+    const XMVECTOR centerWorld = XMVector3TransformCoord(XMLoadFloat3(&center), worldMatrix);
+    const XMVECTOR delta = XMVectorSubtract(centerWorld, cameraPosition);
+    return XMVectorGetX(XMVector3Length(delta));
+}
+
+void MeshRenderProxy::AppendTransparentDrawEntries(std::vector<TransparentDrawEntry>& out,
+    XMVECTOR cameraPosition) const
+{
+    if (!m_mesh)
+        return;
+
+    const int submeshCount = m_mesh->GetSubMeshCount();
+    for (int i = 0; i < submeshCount; ++i)
+    {
+        DMaterial* material = m_mesh->GetMaterial(i);
+        if (!SubmeshContributesToTransparentPass(material))
+            continue;
+
+        TransparentDrawEntry entry {};
+        entry.proxy = const_cast<MeshRenderProxy*>(this);
+        entry.submeshIndex = static_cast<size_t>(i);
+        entry.sortDepth = ComputeSubmeshSortDepth(m_mesh, i, m_worldMatrix, cameraPosition);
+        out.push_back(entry);
+    }
+}
+
+void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext)
+{
+    if (!m_mesh)
+        return;
+
+    if (!DELTA_ENSURE(renderContext && renderContext->commandList))
+    {
+        DLOG(LogRenderer, ELogLevel::Warning,
+            "MeshRenderProxy::GatherDrawCalls skipped: renderContext or commandList is null");
+        return;
+    }
+
+    EnsureDrawResourcesReady(renderContext);
+    BindObjectConstantBuffer(renderContext);
+
+    const bool gbufferPass = renderContext->activePass == ScenePassType::GBuffer;
+    const auto& activePsos = gbufferPass ? m_gbufferPipelineStateObjects : m_pipelineStateObjects;
 
     if (activePsos.size() != m_VertexBuffers.size() || m_IndexBuffers.size() != activePsos.size())
     {
@@ -344,57 +475,19 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
     for (size_t i = 0; i < drawCount; ++i)
     {
         DMaterial* material = m_mesh ? m_mesh->GetMaterial(static_cast<int>(i)) : nullptr;
-        if (gbufferPass && !SubmeshContributesToGBuffer(material))
-            continue;
-
-        if (!activePsos[i])
-            continue;
-        commandList->SetPipelineState(activePsos[i]);
-        commandList->SetPrimitiveTopology(m_PrimitiveTopology);
-
-        if (material)
+        const ScenePassType pass = renderContext->activePass;
+        if (pass == ScenePassType::Forward || pass == ScenePassType::GBuffer)
         {
-            MaterialCB materialCB {};
-            material->FillMaterialCB(materialCB);
-            commandList->SetGraphicsDynamicConstantBuffer(materialCbSlot, sizeof(MaterialCB), &materialCB);
+            if (!SubmeshContributesToOpaquePass(material))
+                continue;
+        }
+        else if (pass == ScenePassType::Transparent)
+        {
+            if (!SubmeshContributesToTransparentPass(material))
+                continue;
         }
 
-        auto submeshIt = m_textures.find(static_cast<uint32_t>(i));
-        for (uint32_t slot = 0; slot < slotCount; ++slot)
-        {
-            std::shared_ptr<DirectX12Texture> tex;
-            if (submeshIt != m_textures.end())
-            {
-                auto slotIt = submeshIt->second.find(slot);
-                if (slotIt != submeshIt->second.end())
-                    tex = slotIt->second;
-            }
-
-            if (tex)
-            {
-                commandList->SetShaderResourceView(textureSlot, slot, tex,
-                    D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-            }
-            else
-            {
-                commandList->SetShaderResourceView(textureSlot, slot, whiteSRV);
-            }
-        }
-
-        commandList->SetVertexBuffer(0, m_VertexBuffers[i]);
-
-        auto indexCount = m_IndexBuffers[i]->GetNumIndices();
-        auto vertexCount = m_VertexBuffers[i]->GetNumVertices();
-
-        if (indexCount > 0)
-        {
-            commandList->SetIndexBuffer(m_IndexBuffers[i]);
-            commandList->DrawIndexed(indexCount, 1u, 0u, 0u, 0u);
-        }
-        else if (vertexCount > 0)
-        {
-            commandList->Draw(vertexCount, 1u, 0u, 0u);
-        }
+        DrawSubmeshInternal(renderContext, i);
     }
 }
 
@@ -419,14 +512,24 @@ bool MeshRenderProxy::ShadersChanged() const
     return false;
 }
 
-bool MeshRenderProxy::SubmeshContributesToShadowMap(const DMaterial* material)
+bool MeshRenderProxy::SubmeshContributesToOpaquePass(const DMaterial* material)
 {
     return !(material && HasAny(material->GetFlags(), MaterialFlags::AlphaBlend));
 }
 
+bool MeshRenderProxy::SubmeshContributesToTransparentPass(const DMaterial* material)
+{
+    return material && HasAny(material->GetFlags(), MaterialFlags::AlphaBlend);
+}
+
+bool MeshRenderProxy::SubmeshContributesToShadowMap(const DMaterial* material)
+{
+    return SubmeshContributesToOpaquePass(material);
+}
+
 bool MeshRenderProxy::SubmeshContributesToGBuffer(const DMaterial* material)
 {
-    return SubmeshContributesToShadowMap(material);
+    return SubmeshContributesToOpaquePass(material);
 }
 
 void MeshRenderProxy::GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext, const ShadowView& view)

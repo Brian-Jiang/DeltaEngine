@@ -83,6 +83,41 @@ TEST(MeshShadowSubmissionTests, AlphaBlendSubmeshExcludedFromShadowMap)
     EXPECT_FALSE(MeshRenderProxy::SubmeshContributesToShadowMap(&mat));
 }
 
+TEST(MeshShadowSubmissionTests, TransparentRenderMode_SetsAlphaBlendFlagAndPipelineState)
+{
+    DShader shader;
+    DMaterial mat;
+    mat.Initialize(&shader);
+
+    SetUInt32Property(mat, "m_renderMode", static_cast<uint32_t>(ERenderMode::Transparent));
+
+    EXPECT_TRUE(HasAny(mat.GetFlags(), MaterialFlags::AlphaBlend));
+    EXPECT_FALSE(HasAny(mat.GetFlags(), MaterialFlags::AlphaTest));
+
+    const CD3DX12_BLEND_DESC blend = mat.GetBlendState();
+    EXPECT_TRUE(blend.RenderTarget[0].BlendEnable);
+    EXPECT_EQ(blend.RenderTarget[0].SrcBlend, D3D12_BLEND_SRC_ALPHA);
+    EXPECT_EQ(blend.RenderTarget[0].DestBlend, D3D12_BLEND_INV_SRC_ALPHA);
+
+    const CD3DX12_DEPTH_STENCIL_DESC depth = mat.GetDepthStencilState();
+    EXPECT_TRUE(depth.DepthEnable);
+    EXPECT_EQ(depth.DepthWriteMask, D3D12_DEPTH_WRITE_MASK_ZERO);
+}
+
+TEST(MeshShadowSubmissionTests, TransparentMaterial_ExcludedFromOpaqueGBufferAndShadow)
+{
+    DShader shader;
+    DMaterial mat;
+    mat.Initialize(&shader);
+
+    mat.SetRenderMode(static_cast<uint32_t>(ERenderMode::Transparent));
+
+    EXPECT_FALSE(MeshRenderProxy::SubmeshContributesToOpaquePass(&mat));
+    EXPECT_FALSE(MeshRenderProxy::SubmeshContributesToGBuffer(&mat));
+    EXPECT_FALSE(MeshRenderProxy::SubmeshContributesToShadowMap(&mat));
+    EXPECT_TRUE(MeshRenderProxy::SubmeshContributesToTransparentPass(&mat));
+}
+
 TEST(MeshShadowSubmissionTests, MeshRendererSkipsShadowDispatchWhenCastShadowOff)
 {
     MeshRendererShadowHarness renderer;

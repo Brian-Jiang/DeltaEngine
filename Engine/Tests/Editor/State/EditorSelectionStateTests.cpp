@@ -1,8 +1,214 @@
 #include "Editor/EditorSelectionState.h"
 
+#include "Runtime/Core/Delegates/MulticastDelegate.h"
+
 #include <gtest/gtest.h>
 
 using namespace DeltaEngine;
+
+// --- OnSelectionChanged ---
+
+TEST(EditorSelectionStateTests, OnSelectionChanged_FiresOnSetSelectedGameObject)
+{
+    EditorSelectionState state;
+    int callCount = 0;
+    state.OnSelectionChanged.AddLambda([&callCount]() { ++callCount; });
+
+    state.SetSelectedGameObject(ObjectId::Generate());
+    EXPECT_EQ(callCount, 1);
+}
+
+TEST(EditorSelectionStateTests, OnSelectionChanged_SingleBroadcastOnSetSelectedGameObject)
+{
+    EditorSelectionState state;
+    int callCount = 0;
+    state.OnSelectionChanged.AddLambda([&callCount]() { ++callCount; });
+
+    state.SetSelectedAsset(AssetId::Generate());
+    callCount = 0;
+
+    state.SetSelectedGameObject(ObjectId::Generate());
+    EXPECT_EQ(callCount, 1);
+}
+
+TEST(EditorSelectionStateTests, OnSelectionChanged_FiresOnAddSelectedComponent)
+{
+    EditorSelectionState state;
+    int callCount = 0;
+    state.OnSelectionChanged.AddLambda([&callCount]() { ++callCount; });
+
+    state.AddSelectedComponent(ObjectId::Generate());
+    EXPECT_EQ(callCount, 1);
+}
+
+TEST(EditorSelectionStateTests, OnSelectionChanged_FiresOnSetSelectedAsset)
+{
+    EditorSelectionState state;
+    int callCount = 0;
+    state.OnSelectionChanged.AddLambda([&callCount]() { ++callCount; });
+
+    state.SetSelectedAsset(AssetId::Generate());
+    EXPECT_EQ(callCount, 1);
+}
+
+TEST(EditorSelectionStateTests, OnSelectionChanged_FiresOnSetSelectedFolder)
+{
+    EditorSelectionState state;
+    int callCount = 0;
+    state.OnSelectionChanged.AddLambda([&callCount]() { ++callCount; });
+
+    state.SetSelectedFolder("Materials");
+    EXPECT_EQ(callCount, 1);
+}
+
+TEST(EditorSelectionStateTests, OnSelectionChanged_FiresOnClearAll)
+{
+    EditorSelectionState state;
+    int callCount = 0;
+    state.OnSelectionChanged.AddLambda([&callCount]() { ++callCount; });
+
+    state.SetSelectedGameObject(ObjectId::Generate());
+    state.SetSelectedComponent(ObjectId::Generate());
+    callCount = 0;
+
+    state.ClearAll();
+    EXPECT_EQ(callCount, 1);
+}
+
+TEST(EditorSelectionStateTests, OnSelectionChanged_FiresOnCrossDomainIndirectClear)
+{
+    EditorSelectionState state;
+    int callCount = 0;
+    state.OnSelectionChanged.AddLambda([&callCount]() { ++callCount; });
+
+    state.SetSelectedGameObject(ObjectId::Generate());
+    callCount = 0;
+
+    state.SetSelectedAsset(AssetId::Generate());
+    EXPECT_EQ(callCount, 1);
+}
+
+TEST(EditorSelectionStateTests, OnSelectionChanged_DoesNotFireOnDuplicateAdd)
+{
+    EditorSelectionState state;
+    const ObjectId go = ObjectId::Generate();
+    int callCount = 0;
+    state.OnSelectionChanged.AddLambda([&callCount]() { ++callCount; });
+
+    state.SetSelectedGameObject(go);
+    callCount = 0;
+
+    state.AddSelectedGameObject(go);
+    EXPECT_EQ(callCount, 0);
+}
+
+TEST(EditorSelectionStateTests, OnSelectionChanged_DoesNotFireOnNoOpRemove)
+{
+    EditorSelectionState state;
+    int callCount = 0;
+    state.OnSelectionChanged.AddLambda([&callCount]() { ++callCount; });
+
+    state.SetSelectedGameObject(ObjectId::Generate());
+    callCount = 0;
+
+    state.RemoveSelectedGameObject(ObjectId::Generate());
+    EXPECT_EQ(callCount, 0);
+}
+
+TEST(EditorSelectionStateTests, OnSelectionChanged_FiresOnNotifyObjectDestroyedSelectedId)
+{
+    EditorSelectionState state;
+    const ObjectId go = ObjectId::Generate();
+    int callCount = 0;
+    state.OnSelectionChanged.AddLambda([&callCount]() { ++callCount; });
+
+    state.SetSelectedGameObject(go);
+    callCount = 0;
+
+    state.NotifyObjectDestroyed(go);
+    EXPECT_EQ(callCount, 1);
+    EXPECT_FALSE(state.HasGameObjectSelection());
+}
+
+TEST(EditorSelectionStateTests, OnSelectionChanged_DoesNotFireOnUnrelatedNotifyObjectDestroyed)
+{
+    EditorSelectionState state;
+    int callCount = 0;
+    state.OnSelectionChanged.AddLambda([&callCount]() { ++callCount; });
+
+    state.SetSelectedGameObject(ObjectId::Generate());
+    callCount = 0;
+
+    state.NotifyObjectDestroyed(ObjectId::Generate());
+    EXPECT_EQ(callCount, 0);
+}
+
+TEST(EditorSelectionStateTests, OnSelectionChanged_DoesNotFireOnNullNotifyObjectDestroyed)
+{
+    EditorSelectionState state;
+    int callCount = 0;
+    state.OnSelectionChanged.AddLambda([&callCount]() { ++callCount; });
+
+    state.SetSelectedGameObject(ObjectId::Generate());
+    callCount = 0;
+
+    state.NotifyObjectDestroyed(ObjectId::Null());
+    EXPECT_EQ(callCount, 0);
+}
+
+TEST(EditorSelectionStateTests, OnSelectionChanged_MultiSelectPartialDestroy)
+{
+    EditorSelectionState state;
+    const ObjectId go1 = ObjectId::Generate();
+    const ObjectId go2 = ObjectId::Generate();
+    int callCount = 0;
+    state.OnSelectionChanged.AddLambda([&callCount]() { ++callCount; });
+
+    state.SetSelectedGameObject(go1);
+    state.AddSelectedGameObject(go2);
+    callCount = 0;
+
+    state.NotifyObjectDestroyed(go1);
+    EXPECT_EQ(callCount, 1);
+    EXPECT_FALSE(state.IsGameObjectSelected(go1));
+    EXPECT_TRUE(state.IsGameObjectSelected(go2));
+}
+
+TEST(EditorSelectionStateTests, OnSelectionChanged_MultipleSubscribersInRegistrationOrder)
+{
+    EditorSelectionState state;
+    std::vector<int> callOrder;
+
+    state.OnSelectionChanged.AddLambda([&callOrder]() { callOrder.push_back(1); });
+    state.OnSelectionChanged.AddLambda([&callOrder]() { callOrder.push_back(2); });
+    state.OnSelectionChanged.AddLambda([&callOrder]() { callOrder.push_back(3); });
+
+    state.SetSelectedGameObject(ObjectId::Generate());
+
+    ASSERT_EQ(callOrder.size(), 3u);
+    EXPECT_EQ(callOrder[0], 1);
+    EXPECT_EQ(callOrder[1], 2);
+    EXPECT_EQ(callOrder[2], 3);
+}
+
+TEST(EditorSelectionStateTests, OnSelectionChanged_RemoveHandleStopsFutureBroadcasts)
+{
+    EditorSelectionState state;
+    int counter = 0;
+
+    state.OnSelectionChanged.AddLambda([&counter]() { ++counter; });
+    const FDelegateHandle middleHandle = state.OnSelectionChanged.AddLambda([&counter]() { counter += 10; });
+    state.OnSelectionChanged.AddLambda([&counter]() { counter += 100; });
+
+    state.SetSelectedGameObject(ObjectId::Generate());
+    EXPECT_EQ(counter, 111);
+
+    EXPECT_TRUE(state.OnSelectionChanged.Remove(middleHandle));
+
+    counter = 0;
+    state.SetSelectedGameObject(ObjectId::Generate());
+    EXPECT_EQ(counter, 101);
+}
 
 // --- GameObject selection ---
 

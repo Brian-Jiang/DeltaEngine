@@ -3,6 +3,7 @@
 #include "EditorCore.h"
 #include "EditorSelectionState.h"
 #include "Assets/EditorAssetDatabase.h"
+#include "Mcp/McpProtocol.h"
 #include "Mcp/McpRegistry.h"
 
 #include "Runtime/Core/DObject.h"
@@ -113,10 +114,10 @@ nlohmann::json McpSelectionSystem::CommandSelectObject(EditorCore& core, const n
 {
     auto* sel = core.GetSelectionState();
     if (!sel)
-        return {{"ok", false}, {"error", "no selection state"}};
+        return MakeMcpError("no selection state");
 
     if (!params.contains("object_ids") || !params["object_ids"].is_array())
-        return {{"ok", false}, {"error", "missing or invalid object_ids"}};
+        return MakeMcpError("missing or invalid object_ids");
 
     const bool addToSelection = params.value("add_to_selection", false);
     const auto& idsJson = params["object_ids"];
@@ -129,7 +130,7 @@ nlohmann::json McpSelectionSystem::CommandSelectObject(EditorCore& core, const n
             sel->ClearComponentSelection();
             sel->ClearAssetSelection();
         }
-        return {{"ok", true}};
+        return {{"ok", true}, {"expects_result", false}};
     }
 
     enum class Kind : uint8_t { GameObject, Component, Asset };
@@ -197,7 +198,7 @@ nlohmann::json McpSelectionSystem::CommandSelectObject(EditorCore& core, const n
         }
     }
 
-    nlohmann::json out{{"ok", true}, {"count", resolved.size()}};
+    nlohmann::json out{{"ok", true}, {"count", resolved.size()}, {"expects_result", false}};
     if (!unknown.empty())
         out["unknown_object_ids"] = std::move(unknown);
     return out;
