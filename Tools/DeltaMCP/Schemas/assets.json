@@ -17,7 +17,7 @@
       }
     },
     "get": {
-      "description": "Full metadata for a single asset",
+      "description": "Full metadata for a single asset with an objects array (object_id + reflected class) for resolving inner object IDs.",
       "params": {
         "asset_id":       { "type": "string", "required": true },
         "include_fields": { "type": "array",  "optional": true,

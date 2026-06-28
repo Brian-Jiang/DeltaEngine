@@ -26,6 +26,32 @@ TEST_F(McpAssetsSystemTests, QueryGet_WithSceneAssetId_ReturnsDetails)
     EXPECT_TRUE(res["ok"].get<bool>());
     EXPECT_EQ(res["asset_id"].get<std::string>(), sceneId.ToString());
     EXPECT_EQ(res["type"].get<std::string>(), "scene");
+
+    ASSERT_TRUE(res["objects"].is_array());
+    EXPECT_FALSE(res["objects"].empty());
+    for (const auto& obj : res["objects"])
+    {
+        EXPECT_TRUE(obj.contains("object_id"));
+        EXPECT_TRUE(obj["object_id"].is_string());
+        EXPECT_FALSE(obj["object_id"].get<std::string>().empty());
+        EXPECT_TRUE(obj.contains("class"));
+        EXPECT_TRUE(obj["class"].is_string());
+        EXPECT_FALSE(obj["class"].get<std::string>().empty());
+    }
+}
+
+TEST_F(McpAssetsSystemTests, QueryGet_ObjectsAvailableWithoutPropertiesField)
+{
+    const AssetId sceneId = GetActiveSceneAssetId();
+    ASSERT_FALSE(sceneId.IsNull());
+
+    auto res = Dispatch("assets", "get",
+                        {{"asset_id", sceneId.ToString()},
+                         {"include_fields", json::array({"dependencies"})}});
+    EXPECT_TRUE(res["ok"].get<bool>());
+    ASSERT_TRUE(res["objects"].is_array());
+    EXPECT_FALSE(res["objects"].empty());
+    EXPECT_FALSE(res.contains("properties"));
 }
 
 TEST_F(McpAssetsSystemTests, QueryGet_InvalidId_ReturnsError)

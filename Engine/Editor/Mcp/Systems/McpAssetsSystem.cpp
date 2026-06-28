@@ -173,6 +173,24 @@ nlohmann::json SerializeProperties(
     return props;
 }
 
+nlohmann::json CollectAssetObjects(const DPrimaryAsset* asset)
+{
+    nlohmann::json objects = nlohmann::json::array();
+    if (!asset)
+        return objects;
+
+    for (DObject* obj : asset->GetObjects())
+    {
+        if (!obj || !obj->GetClass())
+            continue;
+        objects.push_back({
+            {"object_id", obj->GetObjectId().ToString()},
+            {"class", obj->GetClass()->GetName()},
+        });
+    }
+    return objects;
+}
+
 template <typename Fn>
 void VisitResolvedObjectReferencesInProperty(DProperty* prop, void* containerPtr, Fn&& fn)
 {
@@ -452,6 +470,7 @@ nlohmann::json McpAssetsSystem::QueryGet(EditorCore& core, const nlohmann::json&
     result["asset_id"]  = assetId.ToString();
     result["class"]     = asset->GetHeader().m_className;
     result["type"]      = ClassNameToAssetType(asset->GetHeader().m_className);
+    result["objects"]   = CollectAssetObjects(asset);
 
     if (includeFields.contains("properties"))
     {
