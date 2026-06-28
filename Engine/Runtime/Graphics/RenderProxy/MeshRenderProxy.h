@@ -25,7 +25,8 @@ class MeshRenderProxy : public RenderProxy
 {
 public:
     DELTAENGINE_API MeshRenderProxy();
-    DELTAENGINE_API MeshRenderProxy(DMesh* mesh, std::shared_ptr<MeshRendererSettings> settings);
+    DELTAENGINE_API MeshRenderProxy(DMesh* mesh, std::shared_ptr<MeshRendererSettings> settings,
+        const std::vector<DMaterial*>& materialOverrides = {});
     DELTAENGINE_API ~MeshRenderProxy() override;
 
     /// Replaces the mesh used by the render proxy.
@@ -57,6 +58,9 @@ public:
     DELTAENGINE_API static bool SubmeshContributesToOpaquePass(const DMaterial* material);
     DELTAENGINE_API static bool SubmeshContributesToTransparentPass(const DMaterial* material);
 
+    DELTAENGINE_API static DMaterial* ResolveSubmeshMaterial(const DMesh* mesh, int submeshIndex,
+        const std::vector<DMaterial*>& materialOverrides);
+
     /// Returns the number of indices in the first index buffer.
     DELTAENGINE_API size_t GetIndexCount() const;
 
@@ -73,8 +77,10 @@ private:
     void EnsureDrawResourcesReady(std::shared_ptr<DXGraphicsContext> renderContext);
     void BindObjectConstantBuffer(std::shared_ptr<DXGraphicsContext> renderContext) const;
     void DrawSubmeshInternal(std::shared_ptr<DXGraphicsContext> renderContext, size_t submeshIndex);
+    DMaterial* GetEffectiveMaterial(int submeshIndex) const;
 
     DMesh* m_mesh;
+    std::vector<DMaterial*> m_materialOverrides;
     std::shared_ptr<MeshRendererSettings> m_settings;
 
     std::vector<std::shared_ptr<VertexBuffer>> m_VertexBuffers;

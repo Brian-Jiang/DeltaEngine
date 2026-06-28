@@ -28,7 +28,7 @@ void MeshRenderer::PostEditChangeProperty(const DProperty* prop)
 {
     SceneComponent::PostEditChangeProperty(prop);
 
-    if (prop && prop->GetName() == "m_mesh")
+    if (prop && (prop->GetName() == "m_mesh" || prop->GetName() == "m_materialOverrides"))
         CreateRenderProxy();
 }
 
@@ -50,7 +50,8 @@ void MeshRenderer::CreateRenderProxy()
         return;
     }
 
-    m_meshRenderProxy = std::make_shared<MeshRenderProxy>(m_mesh, std::make_shared<MeshRendererSettings>(m_settings));
+    m_meshRenderProxy = std::make_shared<MeshRenderProxy>(m_mesh,
+        std::make_shared<MeshRendererSettings>(m_settings), m_materialOverrides);
     DLOG(LogRenderer, ELogLevel::Verbose, "MeshRenderer::CreateRenderProxy built proxy for mesh '{}'",
         m_mesh->GetSourcePath().stem().string());
 }

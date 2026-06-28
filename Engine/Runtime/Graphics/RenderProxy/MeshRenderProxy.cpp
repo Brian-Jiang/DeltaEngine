@@ -41,8 +41,10 @@ MeshRenderProxy::MeshRenderProxy()
 {
 }
 
-DeltaEngine::MeshRenderProxy::MeshRenderProxy(DMesh* mesh, std::shared_ptr<MeshRendererSettings> settings)
+DeltaEngine::MeshRenderProxy::MeshRenderProxy(DMesh* mesh, std::shared_ptr<MeshRendererSettings> settings,
+    const std::vector<DMaterial*>& materialOverrides)
     : m_mesh(mesh)
+    , m_materialOverrides(materialOverrides)
     , m_settings(settings)
     , m_PrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST) // todo : get primitive topology from mesh
     , m_worldMatrix(DirectX::XMMatrixIdentity())
@@ -63,6 +65,27 @@ bool MeshRenderProxy::HasExclusiveGPUResources() const
 void MeshRenderProxy::ReleaseSharedReferences()
 {
     m_textures.clear();
+}
+
+DMaterial* MeshRenderProxy::ResolveSubmeshMaterial(const DMesh* mesh, int submeshIndex,
+    const std::vector<DMaterial*>& materialOverrides)
+{
+    if (!mesh || submeshIndex < 0 || submeshIndex >= mesh->GetSubMeshCount())
+        return nullptr;
+
+    if (materialOverrides.empty())
+        return mesh->GetMaterial(submeshIndex);
+
+    const size_t index = static_cast<size_t>(submeshIndex);
+    if (index < materialOverrides.size() && materialOverrides[index])
+        return materialOverrides[index];
+
+    return mesh->GetMaterial(submeshIndex);
+}
+
+DMaterial* MeshRenderProxy::GetEffectiveMaterial(int submeshIndex) const
+{
+    return ResolveSubmeshMaterial(m_mesh, submeshIndex, m_materialOverrides);
 }
 
 void DeltaEngine::MeshRenderProxy::SetMesh(DMesh* mesh)
@@ -151,7 +174,7 @@ void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext>
 
     for (int i = 0; i < m_mesh->GetSubMeshCount(); ++i)
     {
-        auto material = m_mesh->GetMaterial(i);
+        auto material = GetEffectiveMaterial(i);
         // Record the shader generation for this submesh in every branch (skip or build) to stay index-aligned.
         DShader* submeshShader = material ? material->GetShader() : nullptr;
         m_builtShaderGenerations.push_back(submeshShader ? submeshShader->GetCompileGeneration() : 0u);
@@ -344,7 +367,7 @@ void MeshRenderProxy::DrawSubmeshInternal(std::shared_ptr<DXGraphicsContext> ren
         return;
 
     std::shared_ptr<CommandList> commandList = renderContext->commandList;
-    DMaterial* material = m_mesh->GetMaterial(static_cast<int>(submeshIndex));
+    DMaterial* material = GetEffectiveMaterial(static_cast<int>(submeshIndex));
 
     commandList->SetPipelineState(activePsos[submeshIndex]);
     commandList->SetPrimitiveTopology(m_PrimitiveTopology);
@@ -434,7 +457,7 @@ void MeshRenderProxy::AppendTransparentDrawEntries(std::vector<TransparentDrawEn
     const int submeshCount = m_mesh->GetSubMeshCount();
     for (int i = 0; i < submeshCount; ++i)
     {
-        DMaterial* material = m_mesh->GetMaterial(i);
+        DMaterial* material = GetEffectiveMaterial(i);
         if (!SubmeshContributesToTransparentPass(material))
             continue;
 
@@ -474,7 +497,7 @@ void MeshRenderProxy::GatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderC
 
     for (size_t i = 0; i < drawCount; ++i)
     {
-        DMaterial* material = m_mesh ? m_mesh->GetMaterial(static_cast<int>(i)) : nullptr;
+        DMaterial* material = m_mesh ? GetEffectiveMaterial(static_cast<int>(i)) : nullptr;
         const ScenePassType pass = renderContext->activePass;
         if (pass == ScenePassType::Forward || pass == ScenePassType::GBuffer)
         {
@@ -502,7 +525,7 @@ bool MeshRenderProxy::ShadersChanged() const
 
     for (int i = 0; i < submeshCount; ++i)
     {
-        DMaterial* material = m_mesh->GetMaterial(i);
+        DMaterial* material = GetEffectiveMaterial(i);
         DShader* shader = material ? material->GetShader() : nullptr;
         const uint32_t gen = shader ? shader->GetCompileGeneration() : 0u;
         if (gen != m_builtShaderGenerations[static_cast<size_t>(i)])
@@ -587,7 +610,7 @@ void MeshRenderProxy::GatherShadowDrawCalls(std::shared_ptr<DXGraphicsContext> r
     const int submeshCount = m_mesh->GetSubMeshCount();
     for (int i = 0; i < submeshCount; ++i)
     {
-        DMaterial* material = m_mesh->GetMaterial(i);
+        DMaterial* material = GetEffectiveMaterial(i);
         if (!SubmeshContributesToShadowMap(material))
             continue;
 

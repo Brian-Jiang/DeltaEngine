@@ -4,6 +4,7 @@
 
 #include <memory>
 #include <optional>
+#include <vector>
 
 #include "Runtime/Core/SceneComponent.h"
 #include "Runtime/Graphics/RenderResourceReleaseQueue.h"
@@ -13,6 +14,7 @@
 
 DELTA_ENGINE_NS_BEGIN
 
+class DMaterial;
 class DWorld;
 class RenderProxy;
 struct DXGraphicsContext;
@@ -42,6 +44,10 @@ protected:
 
     /** Moves the owned render proxy out for deferred GPU release during GC sweep. */
     virtual std::shared_ptr<RenderProxy> DetachRenderProxyForRelease() = 0;
+
+protected:
+    DPROPERTY()
+    std::vector<DMaterial*> m_materialOverrides;
 
 private:
     std::optional<RenderResourceReleaseToken> m_renderReleaseToken;
