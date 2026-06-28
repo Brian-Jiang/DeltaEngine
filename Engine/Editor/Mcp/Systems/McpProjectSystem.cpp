@@ -4,6 +4,8 @@
 #include "Editor/Assets/EditorAssetDatabase.h"
 #include "Mcp/McpRegistry.h"
 #include "Runtime/Assets/DPrimaryAsset.h"
+#include "Runtime/IO/IOManager.h"
+#include "Runtime/Settings/EngineSettings.h"
 
 #include <filesystem>
 
@@ -44,9 +46,11 @@ nlohmann::json McpProjectSystem::QueryInfo(EditorCore&, const nlohmann::json&)
 
 nlohmann::json McpProjectSystem::QuerySettings(EditorCore&, const nlohmann::json&)
 {
+    const EngineSettings settings = LoadEngineSettings();
     return {
         {"ok", true},
-        {"settings", nlohmann::json::object()}
+        {"settings", EngineSettingsToJson(settings)},
+        {"settingsFilePath", IOManager::GetEngineSettingsPath().string()}
     };
 }
 

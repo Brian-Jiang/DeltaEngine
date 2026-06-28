@@ -78,11 +78,8 @@ uint64_t GpuGraphicsFixture::SubmitAndWait(std::shared_ptr<CommandList> commandL
 
 std::shared_ptr<DeltaEngine::DXRenderManager> GpuGraphicsFixture::CreateRenderManager(const RenderPath path)
 {
-    auto manager = std::make_shared<DeltaEngine::DXRenderManager>(s_device, s_renderTarget, 64u, 64u);
-    manager->SetRenderPath(path);
-    manager->LoadPipeline();
-    manager->LoadAssets();
-    return manager;
+    return std::make_shared<DeltaEngine::DXRenderManager>(
+        s_device, s_renderTarget, 64u, 64u, DeltaEngine::RenderPath::Forward);
 }
 
 void GpuGraphicsFixture::DestroyRenderManager(std::shared_ptr<DeltaEngine::DXRenderManager>& manager)

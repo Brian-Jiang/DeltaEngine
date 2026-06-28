@@ -8,6 +8,7 @@
 #include "Runtime/Graphics/Shadow/ShadowSettings.h"
 #include "Runtime/Graphics/Shadow/ShadowDepthPSO.h"
 #include "Runtime/Graphics/Shadow/ShadowMapAllocator.h"
+#include "Runtime/Settings/ShadowAtlasSettings.h"
 
 #include <memory>
 #include <unordered_set>
@@ -22,7 +23,7 @@ struct DXGraphicsContext;
 class ShadowPassManager
 {
 public:
-    DELTAENGINE_API void Initialize(Device& device);
+    DELTAENGINE_API void Initialize(Device& device, const ShadowAtlasSettings& atlasConfig = ShadowAtlasSettings{});
     DELTAENGINE_API void Shutdown();
     DELTAENGINE_API void Render(std::shared_ptr<DXGraphicsContext> ctx, DWorld& world);
 
@@ -37,13 +38,9 @@ public:
     DELTAENGINE_API ShadowSettings& GetSettings() { return m_settings; }
 
 private:
-    static constexpr uint32_t kAtlasSize = 4096;
-    static constexpr uint32_t kDirectionalTileSize = 2048;
-    static constexpr uint32_t kSpotTileSize = 1024;
-    static constexpr uint32_t kPointFaceSize = 512;
-    static constexpr uint32_t kPointCubeCount = 8;
     static constexpr uint32_t kDefaultShadowMapEdge = 1024;
 
+    ShadowAtlasSettings m_atlasConfig;
     ShadowAtlas m_directionalAtlas;
     ShadowAtlas m_spotAtlas;
     ShadowCubeArray m_pointCubes;
