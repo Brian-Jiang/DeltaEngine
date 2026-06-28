@@ -36,6 +36,9 @@ public:
 
     DELTAENGINE_API void Initialize(const std::filesystem::path& sourcePath);
 
+    /// Replaces all geometry with a single submesh built from raw vertices and indices.
+    DELTAENGINE_API void SetGeometry(std::vector<Vertex> vertices, std::vector<unsigned int> indices);
+
     DELTAENGINE_API void ImportFromAbsolutePath(const std::filesystem::path& absolutePath);
 
     DFUNCTION()

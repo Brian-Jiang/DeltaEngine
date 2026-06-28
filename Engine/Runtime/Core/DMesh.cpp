@@ -493,6 +493,15 @@ void DMesh::Initialize(const std::filesystem::path& sourcePath)
     ImportMesh();
 }
 
+void DMesh::SetGeometry(std::vector<Vertex> vertices, std::vector<unsigned int> indices)
+{
+    m_vertices.clear();
+    m_indices.clear();
+    m_subMeshLocalCenters.clear();
+    m_vertices.push_back(std::move(vertices));
+    m_indices.push_back(std::move(indices));
+}
+
 void DMesh::ImportFromAbsolutePath(const std::filesystem::path& absolutePath)
 {
     m_sourcePath = absolutePath;

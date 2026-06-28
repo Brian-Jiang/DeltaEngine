@@ -750,6 +750,37 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
 
  void EditorCore::CreateAssets()
  {
+     // Run once to author the default plane asset, then comment out.
+     //{
+     //    constexpr float kHalf = 500.0f; // 1000x1000 units, centered at origin on the XZ plane
+     //    const DirectX::XMFLOAT4 white { 1.0f, 1.0f, 1.0f, 1.0f };
+     //    const DirectX::XMFLOAT3 up { 0.0f, 1.0f, 0.0f };
+     //    const DirectX::XMFLOAT3 tangent { 1.0f, 0.0f, 0.0f };
+
+     //    std::vector<Vertex> vertices {
+     //        { { -kHalf, 0.0f, -kHalf }, white, up, tangent, { 0.0f, 0.0f } },
+     //        { { -kHalf, 0.0f,  kHalf }, white, up, tangent, { 0.0f, 1.0f } },
+     //        { {  kHalf, 0.0f,  kHalf }, white, up, tangent, { 1.0f, 1.0f } },
+     //        { {  kHalf, 0.0f, -kHalf }, white, up, tangent, { 1.0f, 0.0f } },
+     //    };
+     //    std::vector<unsigned int> indices { 0, 1, 2, 0, 2, 3 };
+
+     //    DMesh* mesh = CreateDObject<DMesh>();
+     //    mesh->SetGeometry(std::move(vertices), std::move(indices));
+
+     //    DMaterial* material = CreateDObject<DMaterial>();
+     //    m_assetDatabase->CreateAsset(
+     //        IOManager::GetEngineImportedAssetFullPath("PlaneMaterial"),
+     //        PA_Material::Create(material));
+
+     //    std::vector<DMaterial*> materials { material };
+     //    mesh->SetMaterials(materials);
+
+     //    m_assetDatabase->CreateAsset(
+     //        IOManager::GetEngineImportedAssetFullPath("PlaneMesh"),
+     //        PA_StaticMesh::Create(mesh));
+     //}
+
      //{
      //    DMesh *mesh = CreateDObject<DMesh>();
      //    mesh->Initialize(std::wstring(L"sphere.fbx"));

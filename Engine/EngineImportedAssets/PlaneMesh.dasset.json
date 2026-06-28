@@ -1,0 +1,58 @@
+{
+  "header": {
+    "assetId": "88c5a858-78c1-4dcb-b1b8-e15192fd172d",
+    "bulkDataMap": {
+      "0": {
+        "file": "PlaneMesh_Bulk0.bin",
+        "size": 248
+      },
+      "1": {
+        "file": "PlaneMesh_Bulk1.bin",
+        "size": 32
+      }
+    },
+    "className": "PA_StaticMesh",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "meta": {
+    "dynamic": {
+      "desc": "",
+      "tags": []
+    },
+    "static": {
+      "m_aabb": [
+        0.0,
+        0.0,
+        0.0,
+        500.0,
+        0.0,
+        500.0
+      ],
+      "m_indexCount": 6,
+      "m_vertexCount": 4
+    }
+  },
+  "objects": [
+    {
+      "_class": "DMesh",
+      "_objectId": "aced7614-8b2c-4e01-8fac-01f953958ea8",
+      "m_indexData": {
+        "_bulk": 1,
+        "size": 32
+      },
+      "m_materials": [
+        {
+          "assetId": "1a4c4c4e-a03d-425e-85c7-b1b8a157905b",
+          "objectId": "3e81a495-2eed-4288-b904-a73b7d1080be"
+        }
+      ],
+      "m_sourcePath": "",
+      "m_textures": [],
+      "m_vertexData": {
+        "_bulk": 0,
+        "size": 248
+      }
+    }
+  ]
+}
