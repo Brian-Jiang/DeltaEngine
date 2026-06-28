@@ -47,7 +47,9 @@ private:
     void RenderSingleProperty(DObject* instance, DProperty* prop, int depth);
     void DrawFunctionButtons(DObject* instance, DClass* dclass);
     void DrawReadOnlyProperty(const std::string& label, const std::string& value) const;
-    void DrawVectorElements(const DVectorPropertyBase* vectorProp, void* vectorAddr, DObject* parentObject, int depth);
+    void DrawVectorElements(DVectorPropertyBase* vectorProp, void* vectorAddr,
+        DObject* ownerObject, const DProperty* rootProp, int depth);
+    void CommitVectorPropertyEdit(DObject* owner, const DProperty* rootProp, nlohmann::json before);
 
     WidgetEditEvent DrawIntProperty(DObject* instance, DProperty* prop);
     WidgetEditEvent DrawFloatProperty(DObject* instance, DProperty* prop);

@@ -1,5 +1,6 @@
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DProperty.h"
+#include "Runtime/Reflection/DVectorProperty.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
 #include "Runtime/Serialization/JsonAssetArchive.h"
 #include "Runtime/Serialization/TBulkData.h"
@@ -230,6 +231,40 @@ TEST(ReflectionPropertyTests, Regression_BulkClearPreviouslyLeftStaleHandle)
     void* bv = bulkProp->GetValue(obj);
     ASSERT_NE(bv, nullptr);
     EXPECT_EQ(static_cast<TBulkData*>(bv)->m_bulkId, 0u);
+
+    registry.DestroyObject(obj);
+}
+
+TEST(ReflectionPropertyTests, VectorProperty_PushRemoveClear_MutatesIntVector)
+{
+    auto& registry = GetReflectionRegistry();
+    DClass* cls = registry.FindClassByName("ReflectionTestObject");
+    ASSERT_NE(cls, nullptr);
+    ReflectionTestObject* obj =
+        registry.CreateObject<ReflectionTestObject>("ReflectionTestObject");
+    ASSERT_NE(obj, nullptr);
+
+    DProperty* vecProp = cls->FindPropertyByName("m_rIntVec");
+    ASSERT_NE(vecProp, nullptr);
+    auto* vectorProp = dynamic_cast<DVectorPropertyBase*>(vecProp);
+    ASSERT_NE(vectorProp, nullptr);
+
+    void* storage = vecProp->GetValue(obj);
+    EXPECT_EQ(vectorProp->GetSize(storage), 0u);
+
+    vectorProp->PushDefaultElement(storage);
+    vectorProp->PushDefaultElement(storage);
+    ASSERT_EQ(vectorProp->GetSize(storage), 2u);
+
+    *static_cast<int*>(vectorProp->GetElementAddress(storage, 0)) = 7;
+    *static_cast<int*>(vectorProp->GetElementAddress(storage, 1)) = 42;
+
+    vectorProp->RemoveElementAt(storage, 0);
+    ASSERT_EQ(vectorProp->GetSize(storage), 1u);
+    EXPECT_EQ(*static_cast<int*>(vectorProp->GetElementAddress(storage, 0)), 42);
+
+    vectorProp->ClearElements(storage);
+    EXPECT_EQ(vectorProp->GetSize(storage), 0u);
 
     registry.DestroyObject(obj);
 }

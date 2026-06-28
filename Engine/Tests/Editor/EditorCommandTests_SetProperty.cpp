@@ -9,6 +9,7 @@
 
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Core/SceneComponent.h"
+#include "Runtime/Test/SerializationTestTypes.h"
 
 #include <DirectXMath.h>
 
@@ -172,4 +173,64 @@ TEST_F(EditorCommandTests_SetProperty, EditorCommand_SetProperty_SceneComponent_
     ASSERT_TRUE(m_core->GetCommandManager().Undo(ctx));
     const XMMATRIX worldRestored = root->GetWorldTransform();
     EXPECT_TRUE(Float4x4ApproxEqual(worldBefore, worldRestored));
+}
+
+TEST_F(EditorCommandTests_SetProperty, PropertyValueIO_ScalarVector_RoundTripsAndResizes)
+{
+    auto* obj = CreateDObject<DTestObjectA>();
+    const ObjectId objectId = ObjectId::Generate();
+    obj->SetObjectId(objectId);
+    obj->m_weights = { 1.0f, 2.0f };
+    m_core->GetActiveSceneAsset()->AddObject(obj);
+
+    DProperty* weightsProp = FindPropertyOnObject(obj, "m_weights");
+    ASSERT_NE(weightsProp, nullptr);
+
+    const nlohmann::json snapshot = PropertyToJson(obj, weightsProp, *m_core);
+    ASSERT_TRUE(snapshot.is_array());
+    ASSERT_EQ(snapshot.size(), 2u);
+
+    const nlohmann::json expanded = nlohmann::json::array({ 1.0f, 2.0f, 0.0f });
+    ASSERT_TRUE(SetPropertyFromJson(obj, weightsProp, expanded, *m_core));
+    ASSERT_EQ(obj->m_weights.size(), 3u);
+    EXPECT_FLOAT_EQ(obj->m_weights[2], 0.0f);
+
+    const nlohmann::json matrixJson = nlohmann::json::array({
+        nlohmann::json::array({ 1.0f, 2.0f }),
+        nlohmann::json::array({ 3.0f, 4.0f, 5.0f })
+    });
+    DProperty* matrixProp = FindPropertyOnObject(obj, "m_weightMatrix");
+    ASSERT_NE(matrixProp, nullptr);
+    ASSERT_TRUE(SetPropertyFromJson(obj, matrixProp, matrixJson, *m_core));
+    ASSERT_EQ(obj->m_weightMatrix.size(), 2u);
+    ASSERT_EQ(obj->m_weightMatrix[1].size(), 3u);
+    EXPECT_FLOAT_EQ(obj->m_weightMatrix[1][2], 5.0f);
+}
+
+TEST_F(EditorCommandTests_SetProperty, EditorCommand_SetProperty_VectorAdd_UndoRestores)
+{
+    EditorCommandContext ctx{ *m_core };
+    const AssetId sceneId = GetActiveSceneAssetId();
+
+    auto* obj = CreateDObject<DTestObjectA>();
+    const ObjectId objectId = ObjectId::Generate();
+    obj->SetObjectId(objectId);
+    obj->m_weights = { 1.0f, 2.0f };
+    m_core->GetActiveSceneAsset()->AddObject(obj);
+
+    DProperty* weightsProp = FindPropertyOnObject(obj, "m_weights");
+    ASSERT_NE(weightsProp, nullptr);
+
+    const nlohmann::json before = PropertyToJson(obj, weightsProp, *m_core);
+    const nlohmann::json after = nlohmann::json::array({ 1.0f, 2.0f, 0.0f });
+
+    auto cmd = std::make_unique<EditorCommand_SetProperty>(
+        sceneId, objectId, "m_weights", before, after);
+    ASSERT_TRUE(m_core->GetCommandManager().Execute(std::move(cmd), ctx));
+    ASSERT_EQ(obj->m_weights.size(), 3u);
+
+    ASSERT_TRUE(m_core->GetCommandManager().Undo(ctx));
+    ASSERT_EQ(obj->m_weights.size(), 2u);
+    EXPECT_FLOAT_EQ(obj->m_weights[0], 1.0f);
+    EXPECT_FLOAT_EQ(obj->m_weights[1], 2.0f);
 }

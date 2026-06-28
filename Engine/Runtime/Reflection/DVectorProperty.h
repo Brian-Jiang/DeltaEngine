@@ -23,6 +23,10 @@ public:
     virtual size_t GetSize(const void* instance) const = 0;
     virtual void* GetElementAddress(void* instance, size_t index) const = 0;
     virtual const DProperty* GetInnerProperty() const = 0;
+
+    virtual void PushDefaultElement(void* instance) = 0;
+    virtual void RemoveElementAt(void* instance, size_t index) = 0;
+    virtual void ClearElements(void* instance) = 0;
 };
 
 template <typename T>
@@ -127,6 +131,35 @@ public:
     }
 
     const DProperty* GetInnerProperty() const override { return m_innerProperty.get(); }
+
+    void PushDefaultElement(void* instance) override
+    {
+        auto* vec = static_cast<std::vector<T>*>(instance);
+        vec->emplace_back();
+        if (m_innerProperty)
+            m_innerProperty->InitializeValue(&vec->back());
+    }
+
+    void RemoveElementAt(void* instance, size_t index) override
+    {
+        auto* vec = static_cast<std::vector<T>*>(instance);
+        if (index >= vec->size())
+            return;
+        if (m_innerProperty)
+            m_innerProperty->DestroyValue(&(*vec)[index]);
+        vec->erase(vec->begin() + static_cast<std::ptrdiff_t>(index));
+    }
+
+    void ClearElements(void* instance) override
+    {
+        auto* vec = static_cast<std::vector<T>*>(instance);
+        if (m_innerProperty)
+        {
+            for (auto& elem : *vec)
+                m_innerProperty->DestroyValue(&elem);
+        }
+        vec->clear();
+    }
 
 private:
     std::unique_ptr<DProperty> m_innerProperty;

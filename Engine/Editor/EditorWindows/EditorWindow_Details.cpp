@@ -685,9 +685,35 @@ void EditorWindow_Details::DrawReadOnlyProperty(const std::string& label, const 
     EndPropertyRow();
 }
 
-void EditorWindow_Details::DrawVectorElements(const DVectorPropertyBase* vectorProp, void* vectorAddr, DObject* parentObject, int depth)
+void EditorWindow_Details::CommitVectorPropertyEdit(DObject* owner, const DProperty* rootProp, nlohmann::json before)
 {
-    if (!vectorProp || !vectorAddr)
+    if (!owner || !rootProp)
+        return;
+
+    owner->MarkDirty();
+    owner->PostEditChangeProperty(rootProp);
+
+    if (!g_editorCore)
+        return;
+
+    const nlohmann::json after = PropertyToJson(owner, rootProp, *g_editorCore);
+    if (before == after)
+        return;
+
+    const auto [assetId, objectId] = g_editorCore->GetIdsForObject(owner);
+    if (assetId.IsNull())
+        return;
+
+    auto cmd = std::make_unique<EditorCommand_SetProperty>(
+        assetId, objectId, std::string(rootProp->GetName()), std::move(before), after);
+    EditorCommandContext ctx{ *g_editorCore };
+    g_editorCore->GetCommandManager().Execute(std::move(cmd), ctx);
+}
+
+void EditorWindow_Details::DrawVectorElements(DVectorPropertyBase* vectorProp, void* vectorAddr,
+    DObject* ownerObject, const DProperty* rootProp, int depth)
+{
+    if (!vectorProp || !vectorAddr || !ownerObject || !rootProp)
         return;
 
     constexpr int kMaxDepth = 8;
@@ -695,89 +721,120 @@ void EditorWindow_Details::DrawVectorElements(const DVectorPropertyBase* vectorP
     if (!innerProp)
         return;
 
-    const size_t count = vectorProp->GetSize(vectorAddr);
-    for (size_t index = 0; index < count; ++index)
+    const auto snapshotBefore = [&]() -> nlohmann::json
     {
-        void* elementAddr = vectorProp->GetElementAddress(vectorAddr, index);
-        if (!elementAddr)
-            continue;
+        if (g_editorCore)
+            return PropertyToJson(ownerObject, rootProp, *g_editorCore);
+        return nlohmann::json{};
+    };
 
-        ImGui::PushID(static_cast<int>(index));
-        const std::string label = "[" + std::to_string(index) + "]";
+    const auto deleteBtnSize = ImGui::GetFrameHeight();
 
-        switch (innerProp->GetPropertyType())
+    ImGui::PushID(vectorAddr);
+    const bool tableOpen = ImGui::BeginTable(
+        "VectorElements",
+        2,
+        ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_PadOuterX);
+    if (tableOpen)
+    {
+        ImGui::TableSetupColumn("content", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("delete", ImGuiTableColumnFlags_WidthFixed, deleteBtnSize);
+
+        std::optional<size_t> pendingDelete;
+
+        for (size_t index = 0; index < vectorProp->GetSize(vectorAddr); ++index)
         {
-        case EPropertyType::Vector:
-        {
-            const auto* nestedVector = dynamic_cast<const DVectorPropertyBase*>(innerProp);
-            if (!nestedVector || depth >= kMaxDepth)
+            void* elementAddr = vectorProp->GetElementAddress(vectorAddr, index);
+            if (!elementAddr)
+                continue;
+
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::PushID(static_cast<int>(index));
+            const std::string label = "[" + std::to_string(index) + "]";
+
+            switch (innerProp->GetPropertyType())
             {
+            case EPropertyType::Vector:
+            {
+                auto* nestedVector = dynamic_cast<DVectorPropertyBase*>(const_cast<DProperty*>(innerProp));
+                if (!nestedVector || depth >= kMaxDepth)
+                {
+                    DrawReadOnlyProperty(label, innerProp->ToString(elementAddr));
+                    break;
+                }
+
+                if (ImGui::TreeNodeEx(label.c_str(), ImGuiTreeNodeFlags_DefaultOpen, "%s", label.c_str()))
+                {
+                    DrawVectorElements(nestedVector, elementAddr, ownerObject, rootProp, depth + 1);
+                    ImGui::TreePop();
+                }
+                break;
+            }
+            case EPropertyType::ObjectPtr:
+            {
+                DObject* current = innerProp->GetObjectPointer(elementAddr);
+
+                std::string typeStr = innerProp->GetType();
+                if (!typeStr.empty() && typeStr.back() == '*')
+                    typeStr.pop_back();
+                const DClass* targetClass = GetReflectionRegistry().FindClassByName(typeStr);
+
+                auto selection = m_objPtrField.Draw(label.c_str(), current, targetClass, "##ObjPick");
+
+                if (selection.has_value())
+                {
+                    DObject* picked = selection.value();
+                    auto* ptrProp = const_cast<DObjectPtrPropertyBase*>(
+                        static_cast<const DObjectPtrPropertyBase*>(innerProp));
+
+                    const nlohmann::json before = snapshotBefore();
+                    ptrProp->ResolvePointer(elementAddr, picked);
+                    CommitVectorPropertyEdit(ownerObject, rootProp, before);
+                }
+                break;
+            }
+            default:
                 DrawReadOnlyProperty(label, innerProp->ToString(elementAddr));
                 break;
             }
 
-            if (ImGui::TreeNodeEx(label.c_str(), ImGuiTreeNodeFlags_DefaultOpen, "%s", label.c_str()))
-            {
-                DrawVectorElements(nestedVector, elementAddr, parentObject, depth + 1);
-                ImGui::TreePop();
-            }
-            break;
+            ImGui::PopID();
+
+            ImGui::TableNextColumn();
+            ImGui::PushID(static_cast<int>(index));
+            if (ImGui::Button("X", ImVec2(deleteBtnSize, deleteBtnSize)))
+                pendingDelete = index;
+            ImGui::PopID();
         }
-        case EPropertyType::ObjectPtr:
+
+        ImGui::EndTable();
+
+        if (pendingDelete.has_value())
         {
-            DObject* current = innerProp->GetObjectPointer(elementAddr);
-
-            std::string typeStr = innerProp->GetType();
-            if (!typeStr.empty() && typeStr.back() == '*')
-                typeStr.pop_back();
-            const DClass* targetClass = GetReflectionRegistry().FindClassByName(typeStr);
-
-            auto selection = m_objPtrField.Draw(label.c_str(), current, targetClass, "##ObjPick");
-
-            if (selection.has_value())
-            {
-                DObject* picked = selection.value();
-                auto* ptrProp = const_cast<DObjectPtrPropertyBase*>(
-                    static_cast<const DObjectPtrPropertyBase*>(innerProp));
-
-                // Record undo only when this is a top-level vector property on parentObject
-                const bool isTopLevel = (vectorAddr == static_cast<void*>(parentObject));
-                if (isTopLevel && parentObject && g_editorCore)
-                {
-                    auto [aId, oId] = g_editorCore->GetIdsForObject(parentObject);
-                    if (!aId.IsNull())
-                    {
-                        nlohmann::json before = PropertyToJson(parentObject, vectorProp, *g_editorCore);
-                        ptrProp->ResolvePointer(elementAddr, picked);
-                        nlohmann::json after = PropertyToJson(parentObject, vectorProp, *g_editorCore);
-                        if (before != after)
-                        {
-                            auto cmd = std::make_unique<EditorCommand_SetProperty>(
-                                aId, oId, std::string(vectorProp->GetName()), std::move(before), std::move(after));
-                            EditorCommandContext ctx{ *g_editorCore };
-                            g_editorCore->GetCommandManager().Execute(std::move(cmd), ctx);
-                        }
-                        else
-                        {
-                            parentObject->MarkDirty();
-                        }
-                        break;
-                    }
-                }
-
-                ptrProp->ResolvePointer(elementAddr, picked);
-                if (parentObject)
-                    parentObject->MarkDirty();
-            }
-            break;
+            const nlohmann::json before = snapshotBefore();
+            vectorProp->RemoveElementAt(vectorAddr, *pendingDelete);
+            CommitVectorPropertyEdit(ownerObject, rootProp, before);
         }
-        default:
-            DrawReadOnlyProperty(label, innerProp->ToString(elementAddr));
-            break;
-        }
-
-        ImGui::PopID();
     }
+    ImGui::PopID();
+
+    const size_t count = vectorProp->GetSize(vectorAddr);
+    if (ImGui::Button("Add"))
+    {
+        const nlohmann::json before = snapshotBefore();
+        vectorProp->PushDefaultElement(vectorAddr);
+        CommitVectorPropertyEdit(ownerObject, rootProp, before);
+    }
+    ImGui::SameLine();
+    ImGui::BeginDisabled(count == 0);
+    if (ImGui::Button("Clear"))
+    {
+        const nlohmann::json before = snapshotBefore();
+        vectorProp->ClearElements(vectorAddr);
+        CommitVectorPropertyEdit(ownerObject, rootProp, before);
+    }
+    ImGui::EndDisabled();
 }
 
 WidgetEditEvent EditorWindow_Details::DrawStructPropertyEditor(DObject* instance, DStructProperty* dsp)
@@ -1165,7 +1222,7 @@ bool EditorWindow_Details::DrawBulkDataProperty(DObject* instance, DProperty* pr
 
 bool EditorWindow_Details::DrawVectorProperty(DObject* instance, DProperty* prop, int depth)
 {
-    const auto* vectorProp = dynamic_cast<const DVectorPropertyBase*>(prop);
+    auto* vectorProp = dynamic_cast<DVectorPropertyBase*>(prop);
     if (!vectorProp)
     {
         DrawReadOnlyProperty(FormatPropertyInspectorLabel(prop->GetName()), prop->ToString(prop->GetValue(instance)));
@@ -1178,7 +1235,7 @@ bool EditorWindow_Details::DrawVectorProperty(DObject* instance, DProperty* prop
     if (ImGui::TreeNodeEx(displayName.c_str(), ImGuiTreeNodeFlags_DefaultOpen,
         "%s [%zu]", displayName.c_str(), count))
     {
-        DrawVectorElements(vectorProp, vectorStorage, instance, depth + 1);
+        DrawVectorElements(vectorProp, vectorStorage, instance, prop, depth + 1);
         ImGui::TreePop();
     }
     return false;

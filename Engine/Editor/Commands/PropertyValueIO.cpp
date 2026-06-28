@@ -143,6 +143,253 @@ bool SetStructFieldsFromJson(void* basePtr, DStruct* ds, const nlohmann::json& v
     return ok;
 }
 
+nlohmann::json VectorElementToJson(void* elemAddr, const DProperty* inner, EditorCore& core)
+{
+    if (!inner || !elemAddr)
+        return nullptr;
+
+    switch (inner->GetPropertyType())
+    {
+    case EPropertyType::Float:
+        return *static_cast<float*>(elemAddr);
+    case EPropertyType::Int:
+        return *static_cast<int*>(elemAddr);
+    case EPropertyType::Bool:
+        return *static_cast<bool*>(elemAddr);
+    case EPropertyType::Double:
+        return *static_cast<double*>(elemAddr);
+    case EPropertyType::String:
+        return *static_cast<std::string*>(elemAddr);
+    case EPropertyType::FilesystemPath:
+        return inner->ToString(elemAddr);
+    case EPropertyType::Vector3:
+    {
+        const auto& v = *static_cast<const Vector3*>(elemAddr);
+        return nlohmann::json::array({ v.x, v.y, v.z });
+    }
+    case EPropertyType::Quaternion:
+    {
+        const auto& q = *static_cast<const Quaternion*>(elemAddr);
+        return nlohmann::json::array({ q.x, q.y, q.z, q.w });
+    }
+    case EPropertyType::Float4:
+    {
+        const auto& f = *static_cast<const XMFLOAT4*>(elemAddr);
+        return nlohmann::json::array({ f.x, f.y, f.z, f.w });
+    }
+    case EPropertyType::Float4x4:
+    {
+        const auto& m = *static_cast<const XMFLOAT4X4*>(elemAddr);
+        nlohmann::json arr = nlohmann::json::array();
+        for (int r = 0; r < 4; ++r)
+            for (int c = 0; c < 4; ++c)
+                arr.push_back(m.m[r][c]);
+        return arr;
+    }
+    case EPropertyType::BoundingBox:
+    {
+        const auto& b = *static_cast<const DirectX::BoundingBox*>(elemAddr);
+        return nlohmann::json::array({
+            b.Center.x,  b.Center.y,  b.Center.z,
+            b.Extents.x, b.Extents.y, b.Extents.z });
+    }
+    case EPropertyType::Struct:
+    {
+        auto* dsp = static_cast<const DStructProperty*>(inner);
+        return StructFieldsToJson(elemAddr, dsp->GetSchema());
+    }
+    case EPropertyType::ObjectPtr:
+    {
+        DObject* pointed = inner->GetObjectPointer(elemAddr);
+        if (!pointed || !pointed->GetOwningAsset())
+            return nullptr;
+        return nlohmann::json{
+            {"assetId",  pointed->GetOwningAsset()->GetAssetId().ToString()},
+            {"objectId", pointed->GetObjectId().ToString()}
+        };
+    }
+    case EPropertyType::Vector:
+    {
+        const auto* vecProp = static_cast<const DVectorPropertyBase*>(inner);
+        const DProperty* nestedInner = vecProp->GetInnerProperty();
+        if (!nestedInner)
+            return nullptr;
+        nlohmann::json arr = nlohmann::json::array();
+        const size_t count = vecProp->GetSize(elemAddr);
+        for (size_t i = 0; i < count; ++i)
+        {
+            void* nestedElem = vecProp->GetElementAddress(elemAddr, i);
+            arr.push_back(VectorElementToJson(nestedElem, nestedInner, core));
+        }
+        return arr;
+    }
+    default:
+        DLOG(LogEditorCommand, ELogLevel::Warning,
+             "[PropertyValueIO] VectorElementToJson skipped unsupported inner type {}",
+             static_cast<int>(inner->GetPropertyType()));
+        return nullptr;
+    }
+}
+
+nlohmann::json VectorToJson(void* vecStorage, const DVectorPropertyBase* vecProp, EditorCore& core)
+{
+    const DProperty* inner = vecProp->GetInnerProperty();
+    if (!inner || !vecStorage)
+        return nullptr;
+
+    nlohmann::json arr = nlohmann::json::array();
+    const size_t count = vecProp->GetSize(vecStorage);
+    for (size_t i = 0; i < count; ++i)
+    {
+        void* elemAddr = vecProp->GetElementAddress(vecStorage, i);
+        arr.push_back(VectorElementToJson(elemAddr, inner, core));
+    }
+    return arr;
+}
+
+bool SetVectorElementFromJson(void* elemAddr, const DProperty* inner, const nlohmann::json& value, EditorCore& core)
+{
+    if (!inner || !elemAddr)
+        return false;
+
+    switch (inner->GetPropertyType())
+    {
+    case EPropertyType::Float:
+        *static_cast<float*>(elemAddr) = value.get<float>();
+        return true;
+    case EPropertyType::Int:
+        *static_cast<int*>(elemAddr) = value.get<int>();
+        return true;
+    case EPropertyType::Bool:
+        *static_cast<bool*>(elemAddr) = value.get<bool>();
+        return true;
+    case EPropertyType::Double:
+        *static_cast<double*>(elemAddr) = value.get<double>();
+        return true;
+    case EPropertyType::String:
+        *static_cast<std::string*>(elemAddr) = value.get<std::string>();
+        return true;
+    case EPropertyType::FilesystemPath:
+    {
+        const std::string s = value.get<std::string>();
+        *static_cast<std::filesystem::path*>(elemAddr) =
+            std::filesystem::path(std::u8string(reinterpret_cast<const char8_t*>(s.data()), s.size()));
+        return true;
+    }
+    case EPropertyType::Vector3:
+    {
+        auto& v = *static_cast<Vector3*>(elemAddr);
+        v.x = value.at(0).get<float>();
+        v.y = value.at(1).get<float>();
+        v.z = value.at(2).get<float>();
+        return true;
+    }
+    case EPropertyType::Quaternion:
+    {
+        auto& q = *static_cast<Quaternion*>(elemAddr);
+        q.x = value.at(0).get<float>();
+        q.y = value.at(1).get<float>();
+        q.z = value.at(2).get<float>();
+        q.w = value.at(3).get<float>();
+        return true;
+    }
+    case EPropertyType::Float4:
+    {
+        auto& f = *static_cast<XMFLOAT4*>(elemAddr);
+        f.x = value.at(0).get<float>();
+        f.y = value.at(1).get<float>();
+        f.z = value.at(2).get<float>();
+        f.w = value.at(3).get<float>();
+        return true;
+    }
+    case EPropertyType::Float4x4:
+    {
+        auto& m = *static_cast<XMFLOAT4X4*>(elemAddr);
+        for (int r = 0; r < 4; ++r)
+            for (int c = 0; c < 4; ++c)
+                m.m[r][c] = value.at(static_cast<size_t>(r * 4 + c)).get<float>();
+        return true;
+    }
+    case EPropertyType::BoundingBox:
+    {
+        auto& b = *static_cast<DirectX::BoundingBox*>(elemAddr);
+        b.Center.x  = value.at(0).get<float>();
+        b.Center.y  = value.at(1).get<float>();
+        b.Center.z  = value.at(2).get<float>();
+        b.Extents.x = value.at(3).get<float>();
+        b.Extents.y = value.at(4).get<float>();
+        b.Extents.z = value.at(5).get<float>();
+        return true;
+    }
+    case EPropertyType::Struct:
+    {
+        auto* dsp = static_cast<const DStructProperty*>(inner);
+        return SetStructFieldsFromJson(elemAddr, dsp->GetSchema(), value);
+    }
+    case EPropertyType::ObjectPtr:
+    {
+        auto* ptrProp = const_cast<DObjectPtrPropertyBase*>(
+            static_cast<const DObjectPtrPropertyBase*>(inner));
+        if (value.is_null())
+        {
+            ptrProp->ResolvePointer(elemAddr, nullptr);
+            return true;
+        }
+        if (!value.is_object())
+            return false;
+        const AssetId assetId = AssetId::FromString(value.at("assetId").get<std::string>());
+        const ObjectId objectId = ObjectId::FromString(value.at("objectId").get<std::string>());
+        DObject* target = core.ResolveObject(assetId, objectId);
+        ptrProp->ResolvePointer(elemAddr, target);
+        return true;
+    }
+    case EPropertyType::Vector:
+    {
+        if (!value.is_array())
+            return false;
+        auto* vecProp = const_cast<DVectorPropertyBase*>(
+            static_cast<const DVectorPropertyBase*>(inner));
+        const DProperty* nestedInner = vecProp->GetInnerProperty();
+        if (!nestedInner)
+            return false;
+        vecProp->ClearElements(elemAddr);
+        for (const auto& nestedElem : value)
+        {
+            vecProp->PushDefaultElement(elemAddr);
+            void* nestedAddr = vecProp->GetElementAddress(elemAddr, vecProp->GetSize(elemAddr) - 1);
+            if (!SetVectorElementFromJson(nestedAddr, nestedInner, nestedElem, core))
+                return false;
+        }
+        return true;
+    }
+    default:
+        DLOG(LogEditorCommand, ELogLevel::Error,
+             "[PropertyValueIO] SetVectorElementFromJson unsupported inner type {}",
+             static_cast<int>(inner->GetPropertyType()));
+        return false;
+    }
+}
+
+bool SetVectorFromJson(void* vecStorage, DVectorPropertyBase* vecProp, const nlohmann::json& value, EditorCore& core)
+{
+    if (!vecStorage || !vecProp || !value.is_array())
+        return false;
+
+    const DProperty* inner = vecProp->GetInnerProperty();
+    if (!inner)
+        return false;
+
+    vecProp->ClearElements(vecStorage);
+    for (const auto& elem : value)
+    {
+        vecProp->PushDefaultElement(vecStorage);
+        void* elemAddr = vecProp->GetElementAddress(vecStorage, vecProp->GetSize(vecStorage) - 1);
+        if (!SetVectorElementFromJson(elemAddr, inner, elem, core))
+            return false;
+    }
+    return true;
+}
+
 }
 
 nlohmann::json DeltaEngine::PropertyToJson(const DObject* obj, const DProperty* prop)
@@ -365,7 +612,7 @@ bool DeltaEngine::SetPropertyFromJson(DObject* obj, const DProperty* prop, const
     }
 }
 
-nlohmann::json DeltaEngine::PropertyToJson(const DObject* obj, const DProperty* prop, EditorCore& /*core*/)
+nlohmann::json DeltaEngine::PropertyToJson(const DObject* obj, const DProperty* prop, EditorCore& core)
 {
     if (!obj)
     {
@@ -393,25 +640,8 @@ nlohmann::json DeltaEngine::PropertyToJson(const DObject* obj, const DProperty* 
     if (prop->GetPropertyType() == EPropertyType::Vector)
     {
         const auto* vecProp = static_cast<const DVectorPropertyBase*>(prop);
-        const DProperty* inner = vecProp->GetInnerProperty();
-        if (!inner || inner->GetPropertyType() != EPropertyType::ObjectPtr)
-            return nullptr;
         void* vecStorage = vecProp->GetValue(const_cast<DObject*>(obj));
-        const size_t count = vecProp->GetSize(vecStorage);
-        nlohmann::json arr = nlohmann::json::array();
-        for (size_t i = 0; i < count; ++i)
-        {
-            void* elemAddr = vecProp->GetElementAddress(vecStorage, i);
-            DObject* pointed = inner->GetObjectPointer(elemAddr);
-            if (!pointed || !pointed->GetOwningAsset())
-                arr.push_back(nullptr);
-            else
-                arr.push_back({
-                    {"assetId",  pointed->GetOwningAsset()->GetAssetId().ToString()},
-                    {"objectId", pointed->GetObjectId().ToString()}
-                });
-        }
-        return arr;
+        return VectorToJson(vecStorage, vecProp, core);
     }
     return PropertyToJson(obj, prop);
 }
@@ -462,39 +692,20 @@ bool DeltaEngine::SetPropertyFromJson(DObject* obj, const DProperty* prop, const
         }
         if (prop->GetPropertyType() == EPropertyType::Vector)
         {
-            const auto* vecProp = static_cast<const DVectorPropertyBase*>(prop);
-            const DProperty* inner = vecProp->GetInnerProperty();
-            if (!inner || inner->GetPropertyType() != EPropertyType::ObjectPtr)
-                return SetPropertyFromJson(obj, prop, value);
             if (!value.is_array())
             {
                 DLOG(LogEditorCommand, ELogLevel::Error,
-                     "[PropertyValueIO] ObjectPtr vector JSON must be array (got {}) — property '{}'",
+                     "[PropertyValueIO] Vector JSON must be array (got {}) — property '{}'",
                      value.type_name(),
                      prop->GetName());
                 return false;
             }
 
-            auto* ptrProp = const_cast<DObjectPtrPropertyBase*>(
-                static_cast<const DObjectPtrPropertyBase*>(inner));
+            auto* vecProp = const_cast<DVectorPropertyBase*>(
+                static_cast<const DVectorPropertyBase*>(prop));
             void* vecStorage = vecProp->GetValue(obj);
-            const size_t count = std::min(value.size(), vecProp->GetSize(vecStorage));
-            for (size_t i = 0; i < count; ++i)
-            {
-                void* elemAddr = vecProp->GetElementAddress(vecStorage, i);
-                const nlohmann::json& elem = value[i];
-                if (elem.is_null())
-                    ptrProp->ResolvePointer(elemAddr, nullptr);
-                else
-                {
-                    const std::string assetStr = elem.at("assetId").get<std::string>();
-                    const std::string objectStr = elem.at("objectId").get<std::string>();
-                    AssetId aId = AssetId::FromString(assetStr);
-                    ObjectId oId = ObjectId::FromString(objectStr);
-                    DObject* target = core.ResolveObject(aId, oId);
-                    ptrProp->ResolvePointer(elemAddr, target);
-                }
-            }
+            if (!SetVectorFromJson(vecStorage, vecProp, value, core))
+                return false;
             obj->MarkDirty();
             obj->PostEditChangeProperty(prop);
             return true;
