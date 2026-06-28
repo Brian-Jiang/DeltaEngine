@@ -6,6 +6,7 @@
 
 #include <exception>
 #include <fstream>
+#include <system_error>
 
 using namespace DeltaEngine;
 
@@ -104,7 +105,19 @@ nlohmann::json DeltaEngine::EngineSettingsToJson(const EngineSettings& settings)
 void DeltaEngine::SaveEngineSettingsToPath(const EngineSettings& settings,
     const std::filesystem::path& path)
 {
-    std::filesystem::create_directories(path.parent_path());
+    const std::filesystem::path parent = path.parent_path();
+    if (!parent.empty())
+    {
+        std::error_code ec;
+        std::filesystem::create_directories(parent, ec);
+        if (ec)
+        {
+            DLOG(LogIO, ELogLevel::Error,
+                "SaveEngineSettingsToPath failed: could not create directory '{}': {}",
+                parent.string(), ec.message());
+            return;
+        }
+    }
 
     const nlohmann::json root = EngineSettingsToJson(settings);
 
@@ -128,12 +141,20 @@ void DeltaEngine::SaveEngineSettingsToPath(const EngineSettings& settings,
 bool DeltaEngine::LoadEngineSettingsFromPath(EngineSettings& settings,
     const std::filesystem::path& path)
 {
-    if (!std::filesystem::exists(path))
+    std::error_code ec;
+    if (!std::filesystem::exists(path, ec) || ec)
         return false;
 
     try
     {
         std::ifstream file(path);
+        if (!file.is_open())
+        {
+            DLOG(LogIO, ELogLevel::Error,
+                "LoadEngineSettingsFromPath failed: could not open '{}' for read",
+                path.string());
+            return false;
+        }
         const nlohmann::json root = nlohmann::json::parse(file);
         if (!root.is_object())
         {
