@@ -116,6 +116,8 @@ DShader* DMaterial::GetShader() const { return m_shader; }
 
 CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC DMaterial::GetBlendState() const
 {
+    // Transparent owns its blend state: m_renderMode is serialized but m_blendDesc is not,
+    // so derive here to keep deserialized materials correct (overrides SetBlendState).
     if (static_cast<ERenderMode>(m_renderMode) == ERenderMode::Transparent)
         return CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC(MakeTransparentBlendDesc());
     return m_blendDesc;
@@ -123,6 +125,7 @@ CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC DMaterial::GetBlendState() const
 
 CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL DMaterial::GetDepthStencilState() const
 {
+    // See GetBlendState: Transparent owns its depth-stencil state, overriding SetDepthStencilState.
     if (static_cast<ERenderMode>(m_renderMode) == ERenderMode::Transparent)
         return CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL(MakeTransparentDepthStencilDesc());
     return m_depthStencilState;
