@@ -20,6 +20,8 @@ private:
     nlohmann::json QuerySettings(EditorCore&, const nlohmann::json& params);
     nlohmann::json QueryOpenScenes(EditorCore&, const nlohmann::json& params);
     nlohmann::json QueryBuildState(EditorCore&, const nlohmann::json& params);
+
+    nlohmann::json CommandLoadScene(EditorCore&, const nlohmann::json& params);
 };
 
 DELTA_ENGINE_NS_END

@@ -32,7 +32,6 @@ private:
     nlohmann::json CommandSetPosition(EditorCore&, const nlohmann::json& params);
     nlohmann::json CommandSetRotation(EditorCore&, const nlohmann::json& params);
     nlohmann::json CommandSetScale(EditorCore&, const nlohmann::json& params);
-    nlohmann::json CommandLoadScene(EditorCore&, const nlohmann::json& params);
 };
 
 DELTA_ENGINE_NS_END

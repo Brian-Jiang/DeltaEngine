@@ -4,6 +4,7 @@
 #include "Editor/Assets/EditorAssetDatabase.h"
 #include "Mcp/McpRegistry.h"
 #include "Runtime/Assets/DPrimaryAsset.h"
+#include "Runtime/Core/UUID.h"
 #include "Runtime/IO/IOManager.h"
 #include "Runtime/Settings/EngineSettings.h"
 
@@ -26,6 +27,9 @@ void McpProjectSystem::RegisterTools(McpRegistry& registry)
         [this](EditorCore& c, const nlohmann::json& p) { return QueryOpenScenes(c, p); });
     registry.RegisterQuery("project", "build_state",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryBuildState(c, p); });
+
+    registry.RegisterCommand("project", "LoadScene",
+        [this](EditorCore& c, const nlohmann::json& p) { return CommandLoadScene(c, p); });
 }
 
 nlohmann::json McpProjectSystem::QueryInfo(EditorCore&, const nlohmann::json&)
@@ -91,4 +95,32 @@ nlohmann::json McpProjectSystem::QueryBuildState(EditorCore&, const nlohmann::js
             {"status", "Default"}
         }}
     };
+}
+
+nlohmann::json McpProjectSystem::CommandLoadScene(EditorCore& core, const nlohmann::json& params)
+{
+    if (!params.contains("asset_id"))
+        return MakeError("missing required param: asset_id");
+
+    const std::string assetIdStr = params["asset_id"].get<std::string>();
+    const AssetId assetId = UUID::FromString(assetIdStr);
+    if (assetId.IsNull())
+        return MakeError("invalid asset_id: " + assetIdStr);
+
+    EditorAssetDatabase* db = core.GetAssetDatabase();
+    if (!db)
+        return MakeError("no asset database");
+
+    const std::filesystem::path scenePath = db->GetAssetPath(assetId);
+    if (scenePath.empty())
+        return MakeError("no scene asset registered for asset_id: " + assetIdStr);
+
+    // Reuse the ready LoadScene auxiliary (keyed by path) that the scene system drives.
+    nlohmann::json envelope;
+    envelope["type"]      = "auxiliary";
+    envelope["name"]      = "LoadScene";
+    envelope["scenePath"] = scenePath.string();
+
+    core.EnqueueSerializedCommand(envelope.dump());
+    return { {"ok", true}, {"queued", true}, {"command", "LoadScene"}, {"expects_result", false} };
 }

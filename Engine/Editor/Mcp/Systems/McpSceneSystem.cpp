@@ -181,8 +181,6 @@ void McpSceneSystem::RegisterTools(McpRegistry& registry)
         [this](EditorCore& c, const nlohmann::json& p) { return CommandSetRotation(c, p); });
     registry.RegisterCommand("scene", "SetScale",
         [this](EditorCore& c, const nlohmann::json& p) { return CommandSetScale(c, p); });
-    registry.RegisterCommand("scene", "LoadScene",
-        [this](EditorCore& c, const nlohmann::json& p) { return CommandLoadScene(c, p); });
 }
 
 // ─── game_objects ───────────────────────────────────────────────────────────
@@ -803,20 +801,4 @@ nlohmann::json McpSceneSystem::CommandSetScale(EditorCore& core, const nlohmann:
     envelope["duration"]   = duration;
     core.EnqueueSerializedCommand(envelope.dump());
     return {{"ok", true}, {"queued", true}, {"expects_result", false}};
-}
-
-// ─── LoadScene ──────────────────────────────────────────────────────────────
-
-nlohmann::json McpSceneSystem::CommandLoadScene(EditorCore& core, const nlohmann::json& params)
-{
-    if (!params.contains("scenePath"))
-        return MakeMcpError("missing required param: scenePath");
-
-    nlohmann::json envelope;
-    envelope["type"]      = "auxiliary";
-    envelope["name"]      = "LoadScene";
-    envelope["scenePath"] = params["scenePath"].get<std::string>();
-
-    core.EnqueueSerializedCommand(envelope.dump());
-    return { {"ok", true}, {"queued", true}, {"command", "LoadScene"}, {"expects_result", false} };
 }

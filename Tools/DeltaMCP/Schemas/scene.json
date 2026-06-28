@@ -278,18 +278,6 @@
         }
       },
       "returns": { "objectId": "string" }
-    },
-    "LoadScene": {
-      "description": "Close the current scene and load a different one. Not undoable; clears the undo stack.",
-      "undoable": false,
-      "expects_result": false,
-      "params": {
-        "scenePath": {
-          "type": "string",
-          "required": true,
-          "description": "Filesystem path to the target .dasset.json scene file"
-        }
-      }
     }
   }
 }
