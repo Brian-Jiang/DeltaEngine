@@ -404,6 +404,7 @@
       "m_shadowSlopeBias": 1.0
     },
     {
+      "OnTestEvent": [],
       "_class": "TestComponent",
       "_objectId": "693d859e-7a40-4cf7-b30c-85a861bd06b6",
       "m_editorOnlyAndHiddenFloat": 0.0,

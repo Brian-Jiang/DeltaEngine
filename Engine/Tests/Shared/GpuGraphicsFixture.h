@@ -7,6 +7,7 @@
 #include "Runtime/Graphics/DirectX/CommandQueue.h"
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/DirectX/RenderTarget.h"
+#include "Runtime/Graphics/RenderPath.h"
 
 #include <gtest/gtest.h>
 #include <memory>
@@ -30,7 +31,8 @@ protected:
     static std::shared_ptr<RenderTarget> GetRenderTarget() { return s_renderTarget; }
     static CommandQueue& GetDirectQueue() { return *s_directQueue; }
     static uint64_t SubmitAndWait(std::shared_ptr<CommandList> commandList);
-    static std::shared_ptr<DeltaEngine::DXRenderManager> CreateRenderManager();
+    static std::shared_ptr<DeltaEngine::DXRenderManager> CreateRenderManager(
+        RenderPath path = RenderPath::Forward);
     static void DestroyRenderManager(std::shared_ptr<DeltaEngine::DXRenderManager>& manager);
 
     static std::shared_ptr<Adapter> s_adapter;

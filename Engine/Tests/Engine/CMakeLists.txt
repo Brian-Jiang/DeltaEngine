@@ -18,6 +18,7 @@ set(DELTA_ENGINE_TEST_SOURCES
     Graphics/MeshRenderProxyTests.cpp
     Graphics/RenderResourceReleaseQueueTests.cpp
     Graphics/MeshShadowSubmissionTests.cpp
+    Graphics/TransparentDrawSortTests.cpp
     Graphics/PostProcessTests_DataModel.cpp
     Graphics/PostProcessStackHardeningTests.cpp
     Graphics/PostProcessRenderGraphCompileTests.cpp
@@ -34,6 +35,7 @@ set(DELTA_ENGINE_TEST_SOURCES
     Graphics/Gpu/GpuLifecycleTests.cpp
     Graphics/Gpu/GpuMeshAndShadowTests.cpp
     Graphics/Gpu/GpuPostProcessTests.cpp
+    Graphics/Gpu/GpuTransparentRenderTests.cpp
     Graphics/GBufferRenderGraphCompileTests.cpp
     Graphics/RenderPathGraphCompileTests.cpp
     Graphics/RenderGraphCompileTests.cpp
