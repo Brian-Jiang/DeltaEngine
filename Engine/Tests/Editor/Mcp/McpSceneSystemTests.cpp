@@ -256,6 +256,84 @@ TEST_F(McpSceneSystemTests, CommandDeleteGameObject_RemovesObject)
     EXPECT_EQ(m_core->GetWorld()->GetGameObjects().size(), 0u);
 }
 
+TEST_F(McpSceneSystemTests, CommandDuplicateGameObject_CreatesIndependentCopy)
+{
+    const std::string goId = CreateLegacyGameObject();
+    ASSERT_FALSE(goId.empty());
+
+    // Add a PointLight so the duplicate has a component subtree to clone.
+    json data;
+    data["sceneAssetId"] = GetActiveSceneAssetId().ToString();
+    data["gameObjectId"] = goId;
+    data["className"]    = "PointLight";
+    json env;
+    env["type"] = "EditorCommand_CreateComponent";
+    env["data"] = data;
+    m_core->EnqueueSerializedCommand(env.dump());
+    std::vector<std::string> cr;
+    m_core->DrainCommandQueue(cr);
+    const std::string plId = json::parse(cr[0]).value("objectId", std::string{});
+    ASSERT_FALSE(plId.empty());
+
+    auto dispatchRes = Dispatch("scene", "DuplicateGameObject",
+                                {{"objectId", goId}, {"newName", "Copy"}});
+    EXPECT_TRUE(dispatchRes["ok"].get<bool>());
+    EXPECT_TRUE(dispatchRes.value("expects_result", false));
+
+    std::vector<std::string> responses;
+    m_core->DrainCommandQueue(responses);
+    ASSERT_EQ(responses.size(), 1u);
+    const json reply = json::parse(responses[0]);
+    EXPECT_TRUE(reply["ok"].get<bool>());
+    const std::string dupId = reply.value("objectId", std::string{});
+    ASSERT_FALSE(dupId.empty());
+    EXPECT_NE(dupId, goId);
+
+    EXPECT_EQ(m_core->GetWorld()->GetGameObjects().size(), 2u);
+
+    // The duplicate carries the new name and a freshly-id'd PointLight component.
+    auto dupRes = Dispatch("scene", "game_object", {{"object_id", dupId}});
+    ASSERT_TRUE(dupRes["ok"].get<bool>());
+    EXPECT_EQ(dupRes["game_object"]["name"].get<std::string>(), "Copy");
+
+    bool foundFreshPointLight = false;
+    for (const auto& c : dupRes["game_object"]["components"])
+    {
+        if (c.value("class", "") == "PointLight")
+        {
+            foundFreshPointLight = true;
+            EXPECT_NE(c["object_id"].get<std::string>(), plId);
+        }
+    }
+    EXPECT_TRUE(foundFreshPointLight);
+}
+
+TEST_F(McpSceneSystemTests, CommandDuplicateGameObject_Undo_RemovesCopy)
+{
+    const std::string goId = CreateLegacyGameObject();
+    ASSERT_FALSE(goId.empty());
+
+    auto dispatchRes = Dispatch("scene", "DuplicateGameObject", {{"objectId", goId}});
+    EXPECT_TRUE(dispatchRes["ok"].get<bool>());
+
+    std::vector<std::string> responses;
+    m_core->DrainCommandQueue(responses);
+    ASSERT_EQ(responses.size(), 1u);
+    ASSERT_TRUE(json::parse(responses[0])["ok"].get<bool>());
+    EXPECT_EQ(m_core->GetWorld()->GetGameObjects().size(), 2u);
+
+    auto undoRes = Dispatch("undo_history", "Undo");
+    EXPECT_TRUE(undoRes["ok"].get<bool>());
+    EXPECT_EQ(m_core->GetWorld()->GetGameObjects().size(), 1u);
+}
+
+TEST_F(McpSceneSystemTests, CommandDuplicateGameObject_MissingObjectId_ReturnsError)
+{
+    auto res = Dispatch("scene", "DuplicateGameObject");
+    EXPECT_FALSE(res["ok"].get<bool>());
+    EXPECT_TRUE(res.contains("error"));
+}
+
 TEST_F(McpSceneSystemTests, CommandCreateComponent_AddsPointLight)
 {
     const std::string goId = CreateLegacyGameObject();

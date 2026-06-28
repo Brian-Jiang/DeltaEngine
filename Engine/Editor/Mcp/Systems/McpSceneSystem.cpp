@@ -167,6 +167,8 @@ void McpSceneSystem::RegisterTools(McpRegistry& registry)
         [this](EditorCore& c, const nlohmann::json& p) { return CommandCreateGameObject(c, p); });
     registry.RegisterCommand("scene", "DeleteGameObject",
         [this](EditorCore& c, const nlohmann::json& p) { return CommandDeleteGameObject(c, p); });
+    registry.RegisterCommand("scene", "DuplicateGameObject",
+        [this](EditorCore& c, const nlohmann::json& p) { return CommandDuplicateGameObject(c, p); });
     registry.RegisterCommand("scene", "ReparentSceneComponent",
         [this](EditorCore& c, const nlohmann::json& p) { return CommandReparentSceneComponent(c, p); });
     registry.RegisterCommand("scene", "CreateComponent",
@@ -507,6 +509,23 @@ nlohmann::json McpSceneSystem::CommandDeleteGameObject(EditorCore& core, const n
     nlohmann::json data;
     data["gameObjectId"] = params["objectId"].get<std::string>();
     return EnqueueMcpCommand(core, "scene", "EditorCommand_DeleteGameObject", std::move(data), true);
+}
+
+// ─── Command: DuplicateGameObject ───────────────────────────────────────────
+
+nlohmann::json McpSceneSystem::CommandDuplicateGameObject(EditorCore& core, const nlohmann::json& params)
+{
+    if (!params.contains("objectId"))
+        return MakeMcpError("missing required param: objectId");
+
+    nlohmann::json data;
+    data["sourceObjectId"] = params["objectId"].get<std::string>();
+    if (params.contains("newName") && params["newName"].is_string())
+        data["newName"] = params["newName"].get<std::string>();
+    if (params.contains("offset_position") && params["offset_position"].is_array())
+        data["offsetPosition"] = params["offset_position"];
+
+    return EnqueueMcpCommand(core, "scene", "EditorCommand_DuplicateGameObject", std::move(data), true);
 }
 
 // ─── Command: ReparentSceneComponent ────────────────────────────────────────

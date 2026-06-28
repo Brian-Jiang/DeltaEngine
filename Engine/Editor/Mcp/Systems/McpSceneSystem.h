@@ -25,6 +25,7 @@ private:
 
     nlohmann::json CommandCreateGameObject(EditorCore&, const nlohmann::json& params);
     nlohmann::json CommandDeleteGameObject(EditorCore&, const nlohmann::json& params);
+    nlohmann::json CommandDuplicateGameObject(EditorCore&, const nlohmann::json& params);
     nlohmann::json CommandReparentSceneComponent(EditorCore&, const nlohmann::json& params);
     nlohmann::json CommandCreateComponent(EditorCore&, const nlohmann::json& params);
     nlohmann::json CommandDeleteComponent(EditorCore&, const nlohmann::json& params);

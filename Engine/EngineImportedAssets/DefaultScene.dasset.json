@@ -53,6 +53,10 @@
         {
           "assetId": "097992b4-c850-4c69-a612-ec83528b0c30",
           "objectId": "c28f3125-1774-4d0d-894c-190955f803c8"
+        },
+        {
+          "assetId": "097992b4-c850-4c69-a612-ec83528b0c30",
+          "objectId": "c4e05e1e-8f96-4ac8-973f-2e82a411468c"
         }
       ],
       "m_name": "DefaultScene",
@@ -586,6 +590,56 @@
       "m_mesh": {
         "assetId": "88c5a858-78c1-4dcb-b1b8-e15192fd172d",
         "objectId": "aced7614-8b2c-4e01-8fac-01f953958ea8"
+      },
+      "m_name": "New MeshRenderer",
+      "m_settings": {}
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "c4e05e1e-8f96-4ac8-973f-2e82a411468c",
+      "m_components": [],
+      "m_name": "Sphere (Copy)",
+      "m_rootSceneComponent": {
+        "assetId": "097992b4-c850-4c69-a612-ec83528b0c30",
+        "objectId": "4983b25d-0619-4c67-8580-67cb1e0f16ba"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "097992b4-c850-4c69-a612-ec83528b0c30",
+          "objectId": "4983b25d-0619-4c67-8580-67cb1e0f16ba"
+        }
+      ]
+    },
+    {
+      "_class": "MeshRenderer",
+      "_objectId": "4983b25d-0619-4c67-8580-67cb1e0f16ba",
+      "m_castShadow": true,
+      "m_children": [],
+      "m_gameObject": {
+        "assetId": "097992b4-c850-4c69-a612-ec83528b0c30",
+        "objectId": "c4e05e1e-8f96-4ac8-973f-2e82a411468c"
+      },
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -586.6781005859375,
+        229.10000610351563,
+        118.07997131347656,
+        1.0
+      ],
+      "m_mesh": {
+        "assetId": "9bdff5d8-c0e0-4964-bcec-519fbfef987a",
+        "objectId": "d08c2038-5fd0-4cb7-9845-45fc48452f60"
       },
       "m_name": "New MeshRenderer",
       "m_settings": {}
