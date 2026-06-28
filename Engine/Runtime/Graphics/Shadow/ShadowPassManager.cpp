@@ -135,7 +135,7 @@ void ShadowPassManager::Render(std::shared_ptr<DXGraphicsContext> ctx, DWorld& w
 
     m_directionalAllocator.Reset(m_atlasConfig.atlasSize, m_atlasConfig.atlasSize, m_atlasConfig.directionalTileSize);
     m_spotAllocator.Reset(m_atlasConfig.atlasSize, m_atlasConfig.atlasSize, m_atlasConfig.spotTileSize);
-    m_pointAllocator.Reset(m_atlasConfig.pointCubeCount);
+    m_pointAllocator.Reset(m_pointCubes.GetCubeCount());
 
     m_warnedDirectional.clear();
     m_warnedSpot.clear();

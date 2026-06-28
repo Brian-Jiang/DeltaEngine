@@ -27,7 +27,7 @@
 #include "Runtime/Graphics/RenderGraph/TransientTexturePool.h"
 #include "Runtime/Graphics/RenderResourceReleaseQueue.h"
 #include "Runtime/Graphics/RenderPath.h"
-#include "Runtime/Settings/EngineSettings.h"
+#include "Runtime/Settings/ShadowAtlasSettings.h"
 #include "Runtime/Graphics/Shadow/ShadowPassManager.h"
 
 #include <slang-com-ptr.h>

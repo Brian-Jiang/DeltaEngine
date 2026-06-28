@@ -8,7 +8,7 @@
 #include "Runtime/Graphics/Shadow/ShadowSettings.h"
 #include "Runtime/Graphics/Shadow/ShadowDepthPSO.h"
 #include "Runtime/Graphics/Shadow/ShadowMapAllocator.h"
-#include "Runtime/Settings/EngineSettings.h"
+#include "Runtime/Settings/ShadowAtlasSettings.h"
 
 #include <memory>
 #include <unordered_set>
