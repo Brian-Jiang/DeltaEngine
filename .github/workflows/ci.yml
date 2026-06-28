@@ -25,6 +25,10 @@ jobs:
         with:
           lfs: true
 
+      - name: Run delta cmd tests
+        shell: cmd
+        run: Tools\Scripts\test-delta-cmd.bat --automatic
+
       - name: Run delta mcp tests
         shell: cmd
         run: Tools\Scripts\test-delta-mcp.bat --automatic

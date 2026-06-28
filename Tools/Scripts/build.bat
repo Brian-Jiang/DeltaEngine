@@ -1,2 +1,3 @@
 @echo off
-call "%~dp0build-x64-debug.bat" %*
+call "%~dp0DeltaCmd.bat" build editor %*
+exit /b %ERRORLEVEL%
