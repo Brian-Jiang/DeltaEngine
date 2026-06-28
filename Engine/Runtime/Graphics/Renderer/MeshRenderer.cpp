@@ -52,6 +52,7 @@ void MeshRenderer::CreateRenderProxy()
 
     m_meshRenderProxy = std::make_shared<MeshRenderProxy>(m_mesh,
         std::make_shared<MeshRendererSettings>(m_settings), m_materialOverrides);
+    m_meshRenderProxy->UpdateWorldTransform(GetWorldTransform());
     DLOG(LogRenderer, ELogLevel::Verbose, "MeshRenderer::CreateRenderProxy built proxy for mesh '{}'",
         m_mesh->GetSourcePath().stem().string());
 }
