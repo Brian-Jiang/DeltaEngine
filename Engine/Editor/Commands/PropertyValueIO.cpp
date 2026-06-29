@@ -247,6 +247,36 @@ nlohmann::json VectorToJson(void* vecStorage, const DVectorPropertyBase* vecProp
     return arr;
 }
 
+bool ResolveObjectPtrReference(
+    EditorCore& core,
+    const nlohmann::json& value,
+    DObject*& outTarget,
+    std::string_view contextLabel)
+{
+    if (value.is_null())
+    {
+        outTarget = nullptr;
+        return true;
+    }
+    if (!value.is_object())
+        return false;
+
+    const AssetId assetId = AssetId::FromString(value.at("assetId").get<std::string>());
+    const ObjectId objectId = ObjectId::FromString(value.at("objectId").get<std::string>());
+    DObject* target = core.ResolveObject(assetId, objectId);
+    if (!target)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error,
+             "[PropertyValueIO] {}: ResolveObject failed for assetId='{}' objectId='{}'",
+             contextLabel,
+             assetId.ToString(),
+             objectId.ToString());
+        return false;
+    }
+    outTarget = target;
+    return true;
+}
+
 bool SetVectorElementFromJson(void* elemAddr, const DProperty* inner, const nlohmann::json& value, EditorCore& core)
 {
     if (!inner || !elemAddr)
@@ -330,16 +360,9 @@ bool SetVectorElementFromJson(void* elemAddr, const DProperty* inner, const nloh
     {
         auto* ptrProp = const_cast<DObjectPtrPropertyBase*>(
             static_cast<const DObjectPtrPropertyBase*>(inner));
-        if (value.is_null())
-        {
-            ptrProp->ResolvePointer(elemAddr, nullptr);
-            return true;
-        }
-        if (!value.is_object())
+        DObject* target = nullptr;
+        if (!ResolveObjectPtrReference(core, value, target, "SetVectorElementFromJson ObjectPtr"))
             return false;
-        const AssetId assetId = AssetId::FromString(value.at("assetId").get<std::string>());
-        const ObjectId objectId = ObjectId::FromString(value.at("objectId").get<std::string>());
-        DObject* target = core.ResolveObject(assetId, objectId);
         ptrProp->ResolvePointer(elemAddr, target);
         return true;
     }
@@ -668,7 +691,9 @@ bool DeltaEngine::SetPropertyFromJson(DObject* obj, const DProperty* prop, const
             auto* ptrProp = const_cast<DObjectPtrPropertyBase*>(
                 static_cast<const DObjectPtrPropertyBase*>(prop));
             if (value.is_null())
+            {
                 ptrProp->ResolvePointer(ptrProp->GetValue(obj), nullptr);
+            }
             else
             {
                 if (!value.is_object())
@@ -679,11 +704,10 @@ bool DeltaEngine::SetPropertyFromJson(DObject* obj, const DProperty* prop, const
                          value.type_name());
                     return false;
                 }
-                const std::string assetStr = value.at("assetId").get<std::string>();
-                const std::string objectStr = value.at("objectId").get<std::string>();
-                const AssetId assetId = AssetId::FromString(assetStr);
-                const ObjectId objectId = ObjectId::FromString(objectStr);
-                DObject* target = core.ResolveObject(assetId, objectId);
+                DObject* target = nullptr;
+                if (!ResolveObjectPtrReference(core, value, target,
+                        std::string("SetPropertyFromJson ObjectPtr '") + prop->GetName() + "'"))
+                    return false;
                 ptrProp->ResolvePointer(ptrProp->GetValue(obj), target);
             }
             obj->MarkDirty();
