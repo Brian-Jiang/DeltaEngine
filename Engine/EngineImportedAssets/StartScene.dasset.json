@@ -1,0 +1,28 @@
+{
+  "header": {
+    "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+    "className": "PA_DScene",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "meta": {
+    "dynamic": {
+      "desc": "",
+      "tags": []
+    },
+    "static": {}
+  },
+  "objects": [
+    {
+      "_class": "DScene",
+      "_objectId": "27458575-4648-4d18-972c-c19f2895e59a",
+      "m_components": [],
+      "m_gameObjects": [],
+      "m_name": "StartScene",
+      "m_skybox": {
+        "assetId": "8d7b931f-d6e7-43e8-85ec-e3ab6349ed85",
+        "objectId": "5a26843e-603e-4256-8fac-d4509864161f"
+      }
+    }
+  ]
+}
