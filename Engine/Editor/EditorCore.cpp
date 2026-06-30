@@ -78,14 +78,14 @@ void EditorCore::Initialize(EngineMain& engine, bool headless, std::filesystem::
 
     if (!assetRootOverride.empty())
     {
-        const std::filesystem::path root = std::filesystem::weakly_canonical(assetRootOverride);
+        m_assetRoot = std::filesystem::weakly_canonical(assetRootOverride);
         PA_DScene* defaultScene = PA_DScene::Create("DefaultScene");
-        m_assetDatabase->CreateAsset(root / "DefaultScene.dasset.json", defaultScene);
+        m_assetDatabase->CreateAsset(m_assetRoot / "DefaultScene.dasset.json", defaultScene);
 
-        m_assetDatabase->ScanAssetsFolder(root);
+        m_assetDatabase->ScanAssetsFolder(m_assetRoot);
 
         PA_DScene* sceneAsset = m_assetDatabase->LoadAsset<PA_DScene>(
-            m_assetDatabase->FindAssetIdByPath(root / "DefaultScene.dasset.json"));
+            m_assetDatabase->FindAssetIdByPath(m_assetRoot / "DefaultScene.dasset.json"));
         if (sceneAsset)
             m_engine->LoadScene(sceneAsset->GetAssetId());
         else
@@ -95,7 +95,9 @@ void EditorCore::Initialize(EngineMain& engine, bool headless, std::filesystem::
     }
     else
     {
-        m_assetDatabase->ScanAssetsFolder(IOManager::GetEngineImportedAssetsFolder());
+        m_assetRoot = std::filesystem::weakly_canonical(
+            std::filesystem::path(IOManager::GetEngineImportedAssetsFolder()));
+        m_assetDatabase->ScanAssetsFolder(m_assetRoot);
 
         AssetId sceneId;
         const EditorSessionState session = LoadEditorSessionState();
@@ -337,12 +339,6 @@ std::string TrimAssetPathSlashes(std::string s)
     return s;
 }
 
-std::filesystem::path GetImportedAssetRoot()
-{
-    return std::filesystem::weakly_canonical(
-        std::filesystem::path(IOManager::GetEngineImportedAssetsFolder()));
-}
-
 bool IsPathUnderRoot(const std::filesystem::path& root, const std::filesystem::path& candidate)
 {
     std::error_code ec;
@@ -388,7 +384,7 @@ nlohmann::json EditorCore::DuplicateAsset(
     if (newPathVirtual.has_value())
     {
         const std::string folderNorm = TrimAssetPathSlashes(*newPathVirtual);
-        const std::filesystem::path assetRoot = GetImportedAssetRoot();
+        const std::filesystem::path assetRoot = m_assetRoot;
         std::filesystem::path targetFolder = folderNorm.empty()
             ? assetRoot
             : assetRoot / std::filesystem::path(folderNorm).generic_string();
@@ -418,7 +414,7 @@ nlohmann::json EditorCore::DuplicateAsset(
     const std::filesystem::path absPath = db->GetAssetPath(duplicatedId);
     std::string relPath = absPath.generic_string();
     std::error_code relEc;
-    const auto relative = std::filesystem::relative(absPath, GetImportedAssetRoot(), relEc);
+    const auto relative = std::filesystem::relative(absPath, m_assetRoot, relEc);
     if (!relEc)
         relPath = relative.generic_string();
 

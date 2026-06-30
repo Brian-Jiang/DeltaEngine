@@ -86,6 +86,8 @@ public:
         const std::optional<std::string>& newName,
         const std::optional<std::string>& newPathVirtual);
 
+    DELTAEDITOR_API const std::filesystem::path& GetAssetRoot() const { return m_assetRoot; }
+
     DELTAEDITOR_API McpRegistry* GetMcpRegistry() { return m_mcpRegistry.get(); }
     DELTAEDITOR_API EditorAnimationManager* GetAnimationManager() { return m_animationManager.get(); }
 
@@ -105,6 +107,7 @@ private:
     std::unique_ptr<EditorAnimationManager> m_animationManager;
     bool m_headless = false;
     std::string m_activeMcpRequestId;
+    std::filesystem::path m_assetRoot;
 };
 
 DELTA_ENGINE_NS_END
