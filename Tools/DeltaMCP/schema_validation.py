@@ -13,6 +13,8 @@ OPERATION_KEYS = frozenset(
     {"description", "params", "undoable", "expects_result", "expects_result_note", "returns"}
 )
 PARAM_KEYS = frozenset({"type", "required", "description", "default", "options", "items"})
+# Canonical param types: int for integers, float for floating-point scalars.
+# LEGACY_PARAM_TYPES (integer, number) are rejected in strict mode via legacy_param_type.
 TARGET_PARAM_TYPES = frozenset({"string", "bool", "int", "float", "array", "object", "any"})
 LEGACY_PARAM_TYPES = frozenset({"integer", "number"})
 ALL_PARAM_TYPES = TARGET_PARAM_TYPES | LEGACY_PARAM_TYPES
@@ -154,7 +156,7 @@ def _validate_param(
             path,
             "missing_param_type",
             "Param must specify 'type'",
-            strict=strict,
+            strict=True,
         )
     elif type_name in LEGACY_PARAM_TYPES:
         _add(
@@ -213,6 +215,16 @@ def _validate_param(
                 "'items' must be an object with a 'type' key",
                 strict=True,
             )
+        else:
+            item_type = items["type"]
+            if item_type not in TARGET_PARAM_TYPES:
+                _add(
+                    violations,
+                    f"{path}/items",
+                    "invalid_items_type",
+                    f"Invalid items type '{item_type}'",
+                    strict=strict,
+                )
 
     if "default" in param:
         _validate_default_value(

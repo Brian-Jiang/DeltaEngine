@@ -3,14 +3,9 @@ assets.json/queries/has_static_meta_schema/params/asset_id	required_false_withou
 assets.json/queries/has_static_meta_schema/params/class	required_false_without_default
 common.json/commands/RenameObject/params/assetId	required_false_without_default
 common.json/commands/SetProperty/params/assetId	required_false_without_default
-common.json/commands/SetProperty/params/valueAfter	missing_param_type
-lights.json/commands/SetIntensity/params/duration_seconds	legacy_param_type
-lights.json/commands/SetIntensity/params/value	legacy_param_type
 log.json/queries/read/params/category	required_false_without_default
-log.json/queries/read/params/count	legacy_param_type
 log.json/queries/read/params/count	required_false_without_default
 log.json/queries/read/params/min_severity	required_false_without_default
-log.json/queries/read/params/since_seconds	legacy_param_type
 log.json/queries/read/params/since_seconds	required_false_without_default
 log.json/queries/read/params/text_search	required_false_without_default
 meta.json/queries/capabilities/params/system_filter	required_false_without_default
@@ -19,7 +14,6 @@ reflection.json/queries/find_classes_with_property/params/property_name	required
 reflection.json/queries/find_classes_with_property/params/property_type	required_false_without_default
 scene.json/commands/DuplicateGameObject/params/newName	required_false_without_default
 scene.json/commands/DuplicateGameObject/params/offset_position	required_false_without_default
-scene.json/queries/find_by_property/params/value	missing_param_type
 scene.json/queries/game_objects/params/class_filter	required_false_without_default
 scene.json/queries/game_objects/params/name_filter	required_false_without_default
 scene.json/queries/hierarchy/params/root_object_id	required_false_without_default

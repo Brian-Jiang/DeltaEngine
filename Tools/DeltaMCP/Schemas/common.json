@@ -37,6 +37,7 @@
           "required": true
         },
         "valueAfter": {
+          "type": "any",
           "required": true,
           "description": "float→number, Vec3→[x,y,z], Quat→[x,y,z,w], ref→{objectId,assetId}"
         },
