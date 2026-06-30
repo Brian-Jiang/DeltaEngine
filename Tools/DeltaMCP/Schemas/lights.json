@@ -26,9 +26,9 @@
         },
         "duration_seconds": {
           "type": "number",
-          "optional": true,
           "default": 1.0,
-          "description": "Tween duration in seconds. Defaults to 1.0 (animated); <= 0 = immediate commit."
+          "description": "Tween duration in seconds. Defaults to 1.0 (animated); <= 0 = immediate commit.",
+          "required": false
         }
       },
       "returns": {

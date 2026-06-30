@@ -85,15 +85,15 @@ EXPECTED_COMMAND_NAMES = {
     "viewport": ["SetViewportCamera"],
 }
 
-# Baseline permissive-mode violation counts (Phase 1 pre-migration).
+# Baseline permissive-mode violation counts (Phase 2 post required/optional migration).
 EXPECTED_VIOLATION_COUNTS = {
-    "legacy_optional": 46,
+    "legacy_optional": 0,
     "legacy_param_type": 4,
     "missing_commands_key": 0,
-    "missing_param_required": 4,
+    "missing_param_required": 0,
     "missing_param_type": 2,
-    "required_false_without_default": 7,
-    "unknown_param_key": 46,
+    "required_false_without_default": 22,
+    "unknown_param_key": 0,
 }
 
 
@@ -144,16 +144,9 @@ def test_permissive_violation_baseline():
     report = validate_all_schemas(SCHEMAS_DIR, strict=False)
     counts = report.violation_counts()
 
-    assert counts["legacy_optional"] >= 1
+    assert counts["legacy_optional"] == 0
     assert counts["missing_param_type"] >= 1
-    assert counts["unknown_param_key"] >= 1
-
-    optional_unknown = [
-        v
-        for v in report.violations
-        if v.code == "unknown_param_key" and v.path.endswith("/optional")
-    ]
-    assert len(optional_unknown) == counts["legacy_optional"]
+    assert counts["unknown_param_key"] == 0
 
     for code, expected in EXPECTED_VIOLATION_COUNTS.items():
         assert counts[code] == expected, f"{code}: got {counts[code]}, expected {expected}"
