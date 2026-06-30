@@ -23,5 +23,6 @@
                            "description": "Limit to a single system" }
       }
     }
-  }
+  },
+  "commands": {}
 }
