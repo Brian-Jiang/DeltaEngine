@@ -15,7 +15,7 @@
           "description": "VeryVerbose|Verbose|Log|Display|Warning|Error|Fatal (default Log)"
         },
         "count": {
-          "type": "integer",
+          "type": "int",
           "required": false,
           "description": "Max entries 1..5000 (default 200, clamped)"
         },
@@ -30,7 +30,7 @@
           "description": "Case-insensitive substring filter on the log category name"
         },
         "since_seconds": {
-          "type": "integer",
+          "type": "int",
           "required": false,
           "description": "Only include entries whose [HH:MM:SS] timestamp is within the last N seconds (wall-clock). Lines with unparseable timestamps are skipped when this is set."
         }

@@ -94,7 +94,9 @@
           "required": true
         },
         "value": {
-          "required": true
+          "type": "any",
+          "required": true,
+          "description": "Property value to match (JSON scalar, array, or object per reflected property type)"
         }
       }
     }
