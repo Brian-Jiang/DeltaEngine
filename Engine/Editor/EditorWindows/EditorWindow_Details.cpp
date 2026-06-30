@@ -470,6 +470,8 @@ void EditorWindow_Details::DrawPropertyEditor(DObject* instance, DClass* dclass,
     if (depth >= kMaxDepth)
         return;
 
+    ImGui::PushID(static_cast<void*>(instance));
+
     if (depth == 0 && m_activeEditProp && m_activeEditObject != instance)
     {
         m_activeEditProp   = nullptr;
@@ -522,6 +524,8 @@ void EditorWindow_Details::DrawPropertyEditor(DObject* instance, DClass* dclass,
 
     if (depth == 0)
         DrawFunctionButtons(instance, dclass);
+
+    ImGui::PopID();
 }
 
 void EditorWindow_Details::RenderSingleProperty(DObject* instance, DProperty* prop, int depth)
