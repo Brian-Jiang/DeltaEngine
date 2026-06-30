@@ -26,6 +26,10 @@
           "required": false
         }
       }
+    },
+    "active_systems": {
+      "description": "Return active vs stub-only MCP systems. Handled locally by the Python MCP server (not forwarded to editor TCP).",
+      "params": {}
     }
   },
   "commands": {}
