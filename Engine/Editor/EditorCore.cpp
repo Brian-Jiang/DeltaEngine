@@ -325,6 +325,110 @@ nlohmann::json EditorCore::ReimportAssets(const std::vector<AssetId>& assetIds)
     return { {"ok", true}, {"reimported", reimported}, {"skipped", skipped} };
 }
 
+namespace
+{
+
+std::string TrimAssetPathSlashes(std::string s)
+{
+    while (!s.empty() && (s.front() == '/' || s.front() == '\\'))
+        s.erase(0, 1);
+    while (!s.empty() && (s.back() == '/' || s.back() == '\\'))
+        s.pop_back();
+    return s;
+}
+
+std::filesystem::path GetImportedAssetRoot()
+{
+    return std::filesystem::weakly_canonical(
+        std::filesystem::path(IOManager::GetEngineImportedAssetsFolder()));
+}
+
+bool IsPathUnderRoot(const std::filesystem::path& root, const std::filesystem::path& candidate)
+{
+    std::error_code ec;
+    const auto rel = std::filesystem::relative(candidate, root, ec);
+    if (ec || rel.empty())
+        return !ec && candidate == root;
+    const std::string relStr = rel.generic_string();
+    return !relStr.starts_with("..");
+}
+
+} // namespace
+
+nlohmann::json EditorCore::DuplicateAsset(
+    AssetId sourceId,
+    const std::optional<std::string>& newName,
+    const std::optional<std::string>& newPathVirtual)
+{
+    EditorAssetDatabase* db = m_assetDatabase.get();
+    if (!db)
+        return { {"ok", false}, {"error", "no asset database"} };
+
+    if (!db->LoadAsset(sourceId))
+        return { {"ok", false}, {"error", "asset not found or failed to load"} };
+
+    const AssetId duplicatedId = db->DuplicateAsset(sourceId);
+    if (duplicatedId.IsNull())
+        return { {"ok", false}, {"error", "duplicate failed"} };
+
+    auto cleanupOnFailure = [&]()
+    {
+        db->DeleteAsset(duplicatedId);
+    };
+
+    if (newName.has_value())
+    {
+        if (!db->RenameAssetToExactStem(duplicatedId, *newName))
+        {
+            cleanupOnFailure();
+            return { {"ok", false}, {"error", "rename failed: target stem already exists or filesystem error"} };
+        }
+    }
+
+    if (newPathVirtual.has_value())
+    {
+        const std::string folderNorm = TrimAssetPathSlashes(*newPathVirtual);
+        const std::filesystem::path assetRoot = GetImportedAssetRoot();
+        std::filesystem::path targetFolder = folderNorm.empty()
+            ? assetRoot
+            : assetRoot / std::filesystem::path(folderNorm).generic_string();
+
+        std::error_code ec;
+        targetFolder = std::filesystem::weakly_canonical(targetFolder, ec);
+        if (ec || !IsPathUnderRoot(assetRoot, targetFolder))
+        {
+            cleanupOnFailure();
+            return { {"ok", false}, {"error", "new_path is outside the imported-assets root"} };
+        }
+
+        std::filesystem::create_directories(targetFolder, ec);
+        if (ec)
+        {
+            cleanupOnFailure();
+            return { {"ok", false}, {"error", "failed to create target folder: " + ec.message()} };
+        }
+
+        if (!db->MoveAsset(duplicatedId, targetFolder))
+        {
+            cleanupOnFailure();
+            return { {"ok", false}, {"error", "move failed: target path may already exist or filesystem error"} };
+        }
+    }
+
+    const std::filesystem::path absPath = db->GetAssetPath(duplicatedId);
+    std::string relPath = absPath.generic_string();
+    std::error_code relEc;
+    const auto relative = std::filesystem::relative(absPath, GetImportedAssetRoot(), relEc);
+    if (!relEc)
+        relPath = relative.generic_string();
+
+    return {
+        {"ok", true},
+        {"asset_id", duplicatedId.ToString()},
+        {"path", std::move(relPath)},
+    };
+}
+
 void EditorCore::SetActiveMcpRequestId(std::string requestId)
 {
     m_activeMcpRequestId = std::move(requestId);
@@ -671,6 +775,30 @@ void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
 
                 nlohmann::json result = ReimportAssets(ids);
                 result["commandType"] = "ReimportAssets";
+                emitResponse(envelope, std::move(result));
+                continue;
+            }
+            if (name == "DuplicateAsset")
+            {
+                const AssetId sourceId = UUID::FromString(envelope.value("assetId", ""));
+                if (sourceId.IsNull())
+                {
+                    emitResponse(envelope,
+                        {{"ok", false}, {"commandType", "DuplicateAsset"},
+                         {"error", "Missing or invalid assetId"}});
+                    continue;
+                }
+
+                std::optional<std::string> newName;
+                if (envelope.contains("newName") && envelope["newName"].is_string())
+                    newName = envelope["newName"].get<std::string>();
+
+                std::optional<std::string> newPath;
+                if (envelope.contains("newPath") && envelope["newPath"].is_string())
+                    newPath = envelope["newPath"].get<std::string>();
+
+                nlohmann::json result = DuplicateAsset(sourceId, newName, newPath);
+                result["commandType"] = "DuplicateAsset";
                 emitResponse(envelope, std::move(result));
                 continue;
             }
