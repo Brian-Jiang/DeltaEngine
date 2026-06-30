@@ -7,18 +7,18 @@
       "params": {
         "include_fields": {
           "type": "array",
-          "optional": true,
           "default": [],
-          "description": "Fields to include per object. Field names should be the same as reflected DProperty names in GameObject. When empty, includes all fields"
+          "description": "Fields to include per object. Field names should be the same as reflected DProperty names in GameObject. When empty, includes all fields",
+          "required": false
         },
         "name_filter": {
           "type": "string",
-          "optional": true
+          "required": false
         },
         "class_filter": {
           "type": "string",
-          "optional": true,
-          "description": "Only objects that have this component class"
+          "description": "Only objects that have this component class",
+          "required": false
         }
       }
     },
@@ -31,9 +31,9 @@
         },
         "include_fields": {
           "type": "array",
-          "optional": true,
           "default": [],
-          "description": "Fields to include. Field names should be the same as reflected DProperty names in GameObject. When empty, includes all fields"
+          "description": "Fields to include. Field names should be the same as reflected DProperty names in GameObject. When empty, includes all fields",
+          "required": false
         }
       }
     },
@@ -42,8 +42,8 @@
       "params": {
         "root_object_id": {
           "type": "string",
-          "optional": true,
-          "description": "Subtree root. Omit for entire world."
+          "description": "Subtree root. Omit for entire world.",
+          "required": false
         }
       }
     },
@@ -56,15 +56,15 @@
         },
         "include_schema": {
           "type": "bool",
-          "optional": true,
           "default": false,
-          "description": "Also return property type metadata"
+          "description": "Also return property type metadata",
+          "required": false
         },
         "include_fields": {
           "type": "array",
-          "optional": true,
           "default": [],
-          "description": "Fields to include per object. Field names should be the same as reflected DProperty names in this component. When empty, includes all fields"
+          "description": "Fields to include per object. Field names should be the same as reflected DProperty names in this component. When empty, includes all fields",
+          "required": false
         }
       }
     },
@@ -77,8 +77,8 @@
         },
         "include_properties": {
           "type": "bool",
-          "optional": true,
-          "default": false
+          "default": false,
+          "required": false
         }
       }
     },
@@ -93,7 +93,9 @@
           "type": "string",
           "required": true
         },
-        "value": { "required": true }
+        "value": {
+          "required": true
+        }
       }
     }
   },
@@ -109,11 +111,13 @@
         },
         "parentObjectId": {
           "type": "string",
-          "optional": true,
-          "default": ""
+          "default": "",
+          "required": false
         }
       },
-      "returns": { "objectId": "string" }
+      "returns": {
+        "objectId": "string"
+      }
     },
     "DeleteGameObject": {
       "description": "Delete a GameObject and all its components",
@@ -141,7 +145,8 @@
         },
         "keepWorldTransform": {
           "type": "bool",
-          "default": true
+          "default": true,
+          "required": false
         }
       }
     },
@@ -159,7 +164,9 @@
           "required": true
         }
       },
-      "returns": { "objectId": "string" }
+      "returns": {
+        "objectId": "string"
+      }
     },
     "DeleteComponent": {
       "description": "Remove a component",
@@ -178,7 +185,10 @@
       "expects_result": true,
       "expects_result_note": "false when duration_seconds > 0 (animated); true when duration_seconds <= 0 (immediate)",
       "params": {
-        "objectId": { "type": "string", "required": true },
+        "objectId": {
+          "type": "string",
+          "required": true
+        },
         "value": {
           "type": "array",
           "required": true,
@@ -186,20 +196,23 @@
         },
         "space": {
           "type": "string",
-          "optional": true,
-          "options": [ "local", "world" ],
-          "default": "local"
+          "options": [
+            "local",
+            "world"
+          ],
+          "default": "local",
+          "required": false
         },
         "duration_seconds": {
           "type": "float",
-          "optional": true,
           "default": 1.0,
-          "description": "Tween duration in seconds. Defaults to 1.0 (animated); <= 0 = immediate"
+          "description": "Tween duration in seconds. Defaults to 1.0 (animated); <= 0 = immediate",
+          "required": false
         },
         "easing": {
           "type": "string",
-          "optional": true,
-          "default": "ease_out_cubic"
+          "default": "ease_out_cubic",
+          "required": false
         }
       }
     },
@@ -209,7 +222,10 @@
       "expects_result": true,
       "expects_result_note": "false when duration_seconds > 0 (animated); true when duration_seconds <= 0 (immediate)",
       "params": {
-        "objectId": { "type": "string", "required": true },
+        "objectId": {
+          "type": "string",
+          "required": true
+        },
         "value": {
           "type": "array",
           "required": true,
@@ -217,20 +233,23 @@
         },
         "space": {
           "type": "string",
-          "optional": true,
-          "options": [ "local", "world" ],
-          "default": "local"
+          "options": [
+            "local",
+            "world"
+          ],
+          "default": "local",
+          "required": false
         },
         "duration_seconds": {
           "type": "float",
-          "optional": true,
           "default": 1.0,
-          "description": "Tween duration in seconds. Defaults to 1.0 (animated); <= 0 = immediate"
+          "description": "Tween duration in seconds. Defaults to 1.0 (animated); <= 0 = immediate",
+          "required": false
         },
         "easing": {
           "type": "string",
-          "optional": true,
-          "default": "ease_out_cubic"
+          "default": "ease_out_cubic",
+          "required": false
         }
       }
     },
@@ -240,7 +259,10 @@
       "expects_result": true,
       "expects_result_note": "false when duration_seconds > 0 (animated); true when duration_seconds <= 0 (immediate)",
       "params": {
-        "objectId": { "type": "string", "required": true },
+        "objectId": {
+          "type": "string",
+          "required": true
+        },
         "value": {
           "type": "array",
           "required": true,
@@ -248,14 +270,14 @@
         },
         "duration_seconds": {
           "type": "float",
-          "optional": true,
           "default": 1.0,
-          "description": "Tween duration in seconds. Defaults to 1.0 (animated); <= 0 = immediate"
+          "description": "Tween duration in seconds. Defaults to 1.0 (animated); <= 0 = immediate",
+          "required": false
         },
         "easing": {
           "type": "string",
-          "optional": true,
-          "default": "ease_out_cubic"
+          "default": "ease_out_cubic",
+          "required": false
         }
       }
     },
@@ -269,15 +291,17 @@
         },
         "newName": {
           "type": "string",
-          "optional": true
+          "required": false
         },
         "offset_position": {
           "type": "array",
-          "optional": true,
-          "description": "[x,y,z] world offset"
+          "description": "[x,y,z] world offset",
+          "required": false
         }
       },
-      "returns": { "objectId": "string" }
+      "returns": {
+        "objectId": "string"
+      }
     }
   }
 }

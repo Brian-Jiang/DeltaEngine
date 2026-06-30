@@ -5,32 +5,66 @@
     "classes": {
       "description": "List all registered reflected classes",
       "params": {
-        "base_class_filter": { "type": "string", "optional": true,
-                               "description": "Only classes inheriting from this base" },
-        "include_abstract":  { "type": "bool",   "optional": true, "default": true }
+        "base_class_filter": {
+          "type": "string",
+          "description": "Only classes inheriting from this base",
+          "required": false
+        },
+        "include_abstract": {
+          "type": "bool",
+          "default": true,
+          "required": false
+        }
       }
     },
     "class_schema": {
       "description": "Full property and function metadata for a class",
       "params": {
-        "class_name":         { "type": "string", "required": true },
-        "include_inherited":  { "type": "bool",   "optional": true, "default": true },
-        "include_functions":  { "type": "bool",   "optional": true, "default": false }
+        "class_name": {
+          "type": "string",
+          "required": true
+        },
+        "include_inherited": {
+          "type": "bool",
+          "default": true,
+          "required": false
+        },
+        "include_functions": {
+          "type": "bool",
+          "default": false,
+          "required": false
+        }
       }
     },
     "inheritance_chain": {
       "description": "Ordered list of base classes from the given class up to DObject",
       "params": {
-        "class_name": { "type": "string", "required": true }
+        "class_name": {
+          "type": "string",
+          "required": true
+        }
       }
     },
     "find_classes_with_property": {
       "description": "Find all classes that declare a property with the given name or type",
       "params": {
-        "property_name": { "type": "string", "optional": true },
-        "property_type": { "type": "string", "optional": true },
-        "match_mode":    { "type": "string", "optional": true, "default": "exact",
-                           "options": ["exact","contains"] }
+        "property_name": {
+          "type": "string",
+          "required": false
+        },
+        "property_type": {
+          "type": "string",
+          "required": false
+        },
+        "match_mode": {
+          "type": "string",
+          "default": "exact",
+          "options": [
+            "exact",
+            "contains"
+          ],
+          "required": false
+        }
       }
     }
   },

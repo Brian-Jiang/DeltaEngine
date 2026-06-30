@@ -19,8 +19,11 @@
     "capabilities": {
       "description": "Full capability dump — all systems, queries, and commands",
       "params": {
-        "system_filter": { "type": "string", "optional": true,
-                           "description": "Limit to a single system" }
+        "system_filter": {
+          "type": "string",
+          "description": "Limit to a single system",
+          "required": false
+        }
       }
     }
   },
