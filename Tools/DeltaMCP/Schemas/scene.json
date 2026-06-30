@@ -13,10 +13,12 @@
         },
         "name_filter": {
           "type": "string",
+          "default": "",
           "required": false
         },
         "class_filter": {
           "type": "string",
+          "default": "",
           "description": "Only objects that have this component class",
           "required": false
         }
@@ -293,6 +295,7 @@
         },
         "newName": {
           "type": "string",
+          "default": "",
           "required": false
         },
         "offset_position": {

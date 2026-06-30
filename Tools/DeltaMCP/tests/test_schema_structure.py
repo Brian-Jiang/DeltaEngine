@@ -1,8 +1,11 @@
 from pathlib import Path
 
+import json
+
 from schema_validation import (
     ALL_PARAM_TYPES,
     LEGACY_PARAM_TYPES,
+    NO_DEFAULT_EXCEPTIONS,
     OPERATION_KEYS,
     PARAM_KEYS,
     SYSTEM_KEYS,
@@ -85,16 +88,29 @@ EXPECTED_COMMAND_NAMES = {
     "viewport": ["SetViewportCamera"],
 }
 
-# Baseline permissive-mode violation counts (Phase 3 post type normalization).
+# Baseline permissive-mode violation counts (Phase 4 post default migration).
 EXPECTED_VIOLATION_COUNTS = {
     "legacy_optional": 0,
     "legacy_param_type": 0,
     "missing_commands_key": 0,
     "missing_param_required": 0,
     "missing_param_type": 0,
-    "required_false_without_default": 22,
+    "required_false_without_default": 0,
     "unknown_param_key": 0,
 }
+
+
+def _iter_all_param_paths(schemas_dir: Path):
+    """Yield (path, param_spec) for every param in every schema file."""
+    for path in sorted(schemas_dir.glob("*.json")):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        for kind in ("queries", "commands"):
+            for op_name, op_spec in data.get(kind, {}).items():
+                for param_name, param_spec in op_spec.get("params", {}).items():
+                    yield (
+                        f"{path.name}/{kind}/{op_name}/params/{param_name}",
+                        param_spec,
+                    )
 
 
 def test_allowed_key_constants_documented():
@@ -160,11 +176,29 @@ def test_every_param_has_canonical_type():
     assert counts.get("legacy_param_type", 0) == 0
 
 
-def test_strict_mode_would_fail():
-    # Documents pre-migration state; strict cleanliness is a later phase.
+def test_strict_mode_passes():
     report = validate_all_schemas(SCHEMAS_DIR, strict=True)
-    assert report.ok is False
-    assert len(report.errors) > 0
+    assert report.ok is True, report.violations
+    assert report.violation_counts().get("required_false_without_default", 0) == 0
+    assert report.violation_counts().get("required_true_with_default", 0) == 0
+
+
+def test_no_default_exceptions_are_documented():
+    all_paths = {path for path, _ in _iter_all_param_paths(SCHEMAS_DIR)}
+    for exc_path in NO_DEFAULT_EXCEPTIONS:
+        assert exc_path in all_paths, f"exception path not in schemas: {exc_path}"
+
+
+def test_required_true_params_have_no_default():
+    for path, spec in _iter_all_param_paths(SCHEMAS_DIR):
+        if spec.get("required") is True:
+            assert "default" not in spec, f"{path} has required:true with default"
+
+
+def test_default_values_match_declared_type():
+    report = validate_all_schemas(SCHEMAS_DIR, strict=True)
+    mismatches = [v for v in report.violations if v.code == "default_type_mismatch"]
+    assert mismatches == []
 
 
 def _format_violation_snapshot(report) -> str:

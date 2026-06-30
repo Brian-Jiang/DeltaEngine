@@ -21,6 +21,7 @@
       "params": {
         "system_filter": {
           "type": "string",
+          "default": "",
           "description": "Limit to a single system",
           "required": false
         }
