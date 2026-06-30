@@ -33,5 +33,6 @@
                            "options": ["exact","contains"] }
       }
     }
-  }
+  },
+  "commands": {}
 }
