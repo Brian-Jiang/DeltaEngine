@@ -11,21 +11,34 @@
       "params": {
         "min_severity": {
           "type": "string",
+          "default": "Log",
+          "options": [
+            "VeryVerbose",
+            "Verbose",
+            "Log",
+            "Display",
+            "Warning",
+            "Error",
+            "Fatal"
+          ],
           "required": false,
-          "description": "VeryVerbose|Verbose|Log|Display|Warning|Error|Fatal (default Log)"
+          "description": "Minimum log level to include"
         },
         "count": {
           "type": "int",
+          "default": 200,
           "required": false,
-          "description": "Max entries 1..5000 (default 200, clamped)"
+          "description": "Max entries 1..5000 (clamped)"
         },
         "text_search": {
           "type": "string",
+          "default": "",
           "required": false,
           "description": "Case-insensitive substring filter on the full log line"
         },
         "category": {
           "type": "string",
+          "default": "",
           "required": false,
           "description": "Case-insensitive substring filter on the log category name"
         },

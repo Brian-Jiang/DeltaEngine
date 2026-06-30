@@ -7,6 +7,7 @@
       "params": {
         "base_class_filter": {
           "type": "string",
+          "default": "",
           "description": "Only classes inheriting from this base",
           "required": false
         },
@@ -50,10 +51,12 @@
       "params": {
         "property_name": {
           "type": "string",
+          "default": "",
           "required": false
         },
         "property_type": {
           "type": "string",
+          "default": "",
           "required": false
         },
         "match_mode": {

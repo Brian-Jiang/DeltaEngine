@@ -19,6 +19,22 @@ TARGET_PARAM_TYPES = frozenset({"string", "bool", "int", "float", "array", "obje
 LEGACY_PARAM_TYPES = frozenset({"integer", "number"})
 ALL_PARAM_TYPES = TARGET_PARAM_TYPES | LEGACY_PARAM_TYPES
 
+# required: false params that correctly omit "default" — no static C++ default exists.
+# Runtime-resolved, mode-switching, merge-into-current, or mutually-exclusive params.
+NO_DEFAULT_EXCEPTIONS = frozenset({
+    "assets.json/queries/get_assets_metadata/params/asset_ids",
+    "assets.json/queries/has_static_meta_schema/params/asset_id",
+    "assets.json/queries/has_static_meta_schema/params/class",
+    "common.json/commands/RenameObject/params/assetId",
+    "common.json/commands/SetProperty/params/assetId",
+    "log.json/queries/read/params/since_seconds",
+    "scene.json/commands/DuplicateGameObject/params/offset_position",
+    "scene.json/queries/hierarchy/params/root_object_id",
+    "viewport.json/commands/SetViewportCamera/params/fov",
+    "viewport.json/commands/SetViewportCamera/params/position",
+    "viewport.json/commands/SetViewportCamera/params/rotation",
+})
+
 
 def _is_int(v):
     return isinstance(v, int) and not isinstance(v, bool)
@@ -185,7 +201,7 @@ def _validate_param(
             strict=strict,
         )
 
-    if required_val is False and "default" not in param:
+    if required_val is False and "default" not in param and path not in NO_DEFAULT_EXCEPTIONS:
         _add(
             violations,
             path,
