@@ -112,11 +112,6 @@
         "name": {
           "type": "string",
           "required": true
-        },
-        "parentObjectId": {
-          "type": "string",
-          "default": "",
-          "required": false
         }
       },
       "returns": {
@@ -146,11 +141,6 @@
         "newParentId": {
           "type": "string",
           "required": true
-        },
-        "keepWorldTransform": {
-          "type": "bool",
-          "default": true,
-          "required": false
         }
       }
     },
@@ -212,11 +202,6 @@
           "default": 1.0,
           "description": "Tween duration in seconds. Defaults to 1.0 (animated); <= 0 = immediate",
           "required": false
-        },
-        "easing": {
-          "type": "string",
-          "default": "ease_out_cubic",
-          "required": false
         }
       }
     },
@@ -249,11 +234,6 @@
           "default": 1.0,
           "description": "Tween duration in seconds. Defaults to 1.0 (animated); <= 0 = immediate",
           "required": false
-        },
-        "easing": {
-          "type": "string",
-          "default": "ease_out_cubic",
-          "required": false
         }
       }
     },
@@ -276,11 +256,6 @@
           "type": "float",
           "default": 1.0,
           "description": "Tween duration in seconds. Defaults to 1.0 (animated); <= 0 = immediate",
-          "required": false
-        },
-        "easing": {
-          "type": "string",
-          "default": "ease_out_cubic",
           "required": false
         }
       }

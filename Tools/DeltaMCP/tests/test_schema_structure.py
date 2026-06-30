@@ -20,7 +20,7 @@ EXPECTED_SYSTEM_COUNTS = {
     "common": (0, 3),
     "lights": (0, 1),
     "log": (2, 0),
-    "meta": (3, 0),
+    "meta": (4, 0),
     "project": (4, 1),
     "reflection": (4, 0),
     "scene": (6, 9),
@@ -43,7 +43,7 @@ EXPECTED_QUERY_NAMES = {
     "common": [],
     "lights": [],
     "log": ["file_location", "read"],
-    "meta": ["capabilities", "describe_operations", "list_operations"],
+    "meta": ["active_systems", "capabilities", "describe_operations", "list_operations"],
     "project": ["build_state", "info", "open_scenes", "settings"],
     "reflection": [
         "class_schema",
@@ -140,7 +140,7 @@ def test_all_schema_files_load_permissive():
     assert report.ok is True
     assert len(report.files) == 11
     assert report.system_count == 11
-    assert report.total_queries == 32
+    assert report.total_queries == 33
     assert report.total_commands == 20
 
 
