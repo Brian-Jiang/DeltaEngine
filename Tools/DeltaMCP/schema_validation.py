@@ -13,11 +13,7 @@ OPERATION_KEYS = frozenset(
     {"description", "params", "undoable", "expects_result", "expects_result_note", "returns"}
 )
 PARAM_KEYS = frozenset({"type", "required", "description", "default", "options", "items"})
-# Canonical param types: int for integers, float for floating-point scalars.
-# LEGACY_PARAM_TYPES (integer, number) are rejected in strict mode via legacy_param_type.
 TARGET_PARAM_TYPES = frozenset({"string", "bool", "int", "float", "array", "object", "any"})
-LEGACY_PARAM_TYPES = frozenset({"integer", "number"})
-ALL_PARAM_TYPES = TARGET_PARAM_TYPES | LEGACY_PARAM_TYPES
 
 # required: false params that correctly omit "default" — no static C++ default exists.
 # Runtime-resolved, mode-switching, merge-into-current, or mutually-exclusive params.
@@ -48,9 +44,7 @@ _DEFAULT_TYPE_VALIDATORS = {
     "string": lambda v: isinstance(v, str),
     "bool": lambda v: isinstance(v, bool),
     "int": _is_int,
-    "integer": _is_int,
     "float": _is_number,
-    "number": _is_number,
     "array": lambda v: isinstance(v, list),
     "object": lambda v: isinstance(v, dict),
     "any": lambda v: True,
@@ -62,7 +56,7 @@ class Violation:
     path: str
     code: str
     message: str
-    severity: str
+    severity: str = "error"
 
 
 @dataclass
@@ -82,23 +76,18 @@ class SchemaValidationReport:
 
     @property
     def ok(self) -> bool:
-        return not any(v.severity == "error" for v in self.violations)
+        return len(self.violations) == 0
 
     @property
     def errors(self) -> list[Violation]:
-        return [v for v in self.violations if v.severity == "error"]
-
-    @property
-    def warnings(self) -> list[Violation]:
-        return [v for v in self.violations if v.severity == "warning"]
+        return self.violations
 
     def violation_counts(self) -> Counter[str]:
         return Counter(v.code for v in self.violations)
 
 
-def _add(violations: list[Violation], path: str, code: str, message: str, *, strict: bool) -> None:
-    severity = "error" if strict else "warning"
-    violations.append(Violation(path=path, code=code, message=message, severity=severity))
+def _add(violations: list[Violation], path: str, code: str, message: str) -> None:
+    violations.append(Violation(path=path, code=code, message=message))
 
 
 def _validate_default_value(
@@ -106,8 +95,6 @@ def _validate_default_value(
     path: str,
     type_name: str | None,
     default,
-    *,
-    strict: bool,
 ) -> None:
     if type_name is None:
         return
@@ -120,19 +107,12 @@ def _validate_default_value(
             path,
             "default_type_mismatch",
             f"default value {default!r} is incompatible with type '{type_name}'",
-            strict=strict,
         )
 
 
-def _validate_param(
-    violations: list[Violation],
-    path: str,
-    param: dict,
-    *,
-    strict: bool,
-) -> None:
+def _validate_param(violations: list[Violation], path: str, param: dict) -> None:
     if not isinstance(param, dict):
-        _add(violations, path, "invalid_param", "Param must be a JSON object", strict=True)
+        _add(violations, path, "invalid_param", "Param must be a JSON object")
         return
 
     for key in param:
@@ -142,27 +122,14 @@ def _validate_param(
                 f"{path}/{key}",
                 "unknown_param_key",
                 f"Unknown param key '{key}'",
-                strict=strict,
             )
 
-    if "optional" in param:
-        _add(
-            violations,
-            path,
-            "legacy_optional",
-            "Use 'required: false' instead of 'optional: true'",
-            strict=strict,
-        )
-
-    has_required = "required" in param
-    has_optional = "optional" in param
-    if not has_required and not has_optional:
+    if "required" not in param:
         _add(
             violations,
             path,
             "missing_param_required",
             "Param must specify 'required' (true or false)",
-            strict=strict,
         )
 
     type_name = param.get("type")
@@ -172,15 +139,6 @@ def _validate_param(
             path,
             "missing_param_type",
             "Param must specify 'type'",
-            strict=True,
-        )
-    elif type_name in LEGACY_PARAM_TYPES:
-        _add(
-            violations,
-            path,
-            "legacy_param_type",
-            f"Legacy type '{type_name}' (use int or float)",
-            strict=strict,
         )
     elif type_name not in TARGET_PARAM_TYPES:
         _add(
@@ -188,7 +146,6 @@ def _validate_param(
             path,
             "invalid_param_type",
             f"Invalid type '{type_name}'",
-            strict=strict,
         )
 
     required_val = param.get("required")
@@ -198,7 +155,6 @@ def _validate_param(
             path,
             "required_true_with_default",
             "required: true must not have a default",
-            strict=strict,
         )
 
     if required_val is False and "default" not in param and path not in NO_DEFAULT_EXCEPTIONS:
@@ -207,7 +163,6 @@ def _validate_param(
             path,
             "required_false_without_default",
             "required: false should include a default when C++ applies one",
-            strict=strict,
         )
 
     options = param.get("options")
@@ -218,7 +173,6 @@ def _validate_param(
                 path,
                 "invalid_options",
                 "'options' must be a non-empty list",
-                strict=True,
             )
 
     items = param.get("items")
@@ -229,7 +183,6 @@ def _validate_param(
                 path,
                 "invalid_items",
                 "'items' must be an object with a 'type' key",
-                strict=True,
             )
         else:
             item_type = items["type"]
@@ -239,28 +192,15 @@ def _validate_param(
                     f"{path}/items",
                     "invalid_items_type",
                     f"Invalid items type '{item_type}'",
-                    strict=strict,
                 )
 
     if "default" in param:
-        _validate_default_value(
-            violations,
-            path,
-            type_name,
-            param["default"],
-            strict=strict,
-        )
+        _validate_default_value(violations, path, type_name, param["default"])
 
 
-def _validate_operation(
-    violations: list[Violation],
-    path: str,
-    operation: dict,
-    *,
-    strict: bool,
-) -> None:
+def _validate_operation(violations: list[Violation], path: str, operation: dict) -> None:
     if not isinstance(operation, dict):
-        _add(violations, path, "invalid_operation", "Operation must be a JSON object", strict=True)
+        _add(violations, path, "invalid_operation", "Operation must be a JSON object")
         return
 
     for key in operation:
@@ -270,7 +210,6 @@ def _validate_operation(
                 f"{path}/{key}",
                 "unknown_operation_key",
                 f"Unknown operation key '{key}'",
-                strict=strict,
             )
 
     description = operation.get("description")
@@ -280,7 +219,6 @@ def _validate_operation(
             path,
             "missing_operation_description",
             "Operation must have a string 'description'",
-            strict=True,
         )
 
     params = operation.get("params")
@@ -290,7 +228,6 @@ def _validate_operation(
             path,
             "missing_operation_params",
             "Operation must have a 'params' object",
-            strict=True,
         )
         return
 
@@ -300,20 +237,19 @@ def _validate_operation(
             path,
             "invalid_operation_params",
             "'params' must be a JSON object",
-            strict=True,
         )
         return
 
     for param_name, param_spec in params.items():
-        _validate_param(violations, f"{path}/params/{param_name}", param_spec, strict=strict)
+        _validate_param(violations, f"{path}/params/{param_name}", param_spec)
 
 
-def validate_schema_file(path: Path, data: dict, *, strict: bool = False) -> list[Violation]:
+def validate_schema_file(path: Path, data: dict) -> list[Violation]:
     violations: list[Violation] = []
     file_label = path.name
 
     if not isinstance(data, dict):
-        _add(violations, file_label, "invalid_root", "Schema root must be a JSON object", strict=True)
+        _add(violations, file_label, "invalid_root", "Schema root must be a JSON object")
         return violations
 
     for key in data:
@@ -323,7 +259,6 @@ def validate_schema_file(path: Path, data: dict, *, strict: bool = False) -> lis
                 f"{file_label}/{key}",
                 "unknown_system_key",
                 f"Unknown system key '{key}'",
-                strict=strict,
             )
 
     system_name = data.get("system")
@@ -333,7 +268,6 @@ def validate_schema_file(path: Path, data: dict, *, strict: bool = False) -> lis
             file_label,
             "missing_system_name",
             "System must have a non-empty string 'system'",
-            strict=True,
         )
 
     if not isinstance(data.get("description"), str):
@@ -342,7 +276,6 @@ def validate_schema_file(path: Path, data: dict, *, strict: bool = False) -> lis
             file_label,
             "missing_system_description",
             "System must have a string 'description'",
-            strict=True,
         )
 
     if "commands" not in data:
@@ -351,7 +284,6 @@ def validate_schema_file(path: Path, data: dict, *, strict: bool = False) -> lis
             file_label,
             "missing_commands_key",
             "System should include an explicit 'commands' key",
-            strict=strict,
         )
 
     for kind in ("queries", "commands"):
@@ -364,7 +296,6 @@ def validate_schema_file(path: Path, data: dict, *, strict: bool = False) -> lis
                 f"{file_label}/{kind}",
                 f"invalid_{kind}",
                 f"'{kind}' must be a JSON object",
-                strict=True,
             )
             continue
         for op_name, op_spec in block.items():
@@ -372,20 +303,19 @@ def validate_schema_file(path: Path, data: dict, *, strict: bool = False) -> lis
                 violations,
                 f"{file_label}/{kind}/{op_name}",
                 op_spec,
-                strict=strict,
             )
 
     return violations
 
 
-def validate_all_schemas(schemas_dir: Path, *, strict: bool = False) -> SchemaValidationReport:
+def validate_all_schemas(schemas_dir: Path) -> SchemaValidationReport:
     report = SchemaValidationReport()
 
     for path in sorted(schemas_dir.glob("*.json")):
         data = json.loads(path.read_text(encoding="utf-8"))
         report.files.append(path.name)
 
-        file_violations = validate_schema_file(path, data, strict=strict)
+        file_violations = validate_schema_file(path, data)
         report.violations.extend(file_violations)
 
         if not isinstance(data, dict) or "system" not in data:
@@ -409,8 +339,7 @@ def _print_report(report: SchemaValidationReport) -> None:
     print(f"Systems: {report.system_count}")
     print(f"Queries: {report.total_queries}")
     print(f"Commands: {report.total_commands}")
-    print(f"Violations: {len(report.violations)} "
-          f"({len(report.errors)} errors, {len(report.warnings)} warnings)")
+    print(f"Violations: {len(report.violations)}")
 
     counts = report.violation_counts()
     if counts:
@@ -420,17 +349,12 @@ def _print_report(report: SchemaValidationReport) -> None:
 
     if report.violations:
         print("\nDetails:")
-        for v in sorted(report.violations, key=lambda x: (x.severity, x.path, x.code)):
-            print(f"  [{v.severity}] {v.path}: {v.code} — {v.message}")
+        for v in sorted(report.violations, key=lambda x: (x.path, x.code)):
+            print(f"  {v.path}: {v.code} — {v.message}")
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Validate DeltaMCP schema JSON structure")
-    parser.add_argument(
-        "--strict",
-        action="store_true",
-        help="Treat legacy/unknown keys as errors",
-    )
     parser.add_argument(
         "--schemas-dir",
         type=Path,
@@ -440,7 +364,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     schemas_dir = args.schemas_dir or (Path(__file__).resolve().parent / "Schemas")
-    report = validate_all_schemas(schemas_dir, strict=args.strict)
+    report = validate_all_schemas(schemas_dir)
     _print_report(report)
     return 0 if report.ok else 1
 

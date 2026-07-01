@@ -3,8 +3,6 @@ from pathlib import Path
 import json
 
 from schema_validation import (
-    ALL_PARAM_TYPES,
-    LEGACY_PARAM_TYPES,
     NO_DEFAULT_EXCEPTIONS,
     OPERATION_KEYS,
     PARAM_KEYS,
@@ -88,17 +86,6 @@ EXPECTED_COMMAND_NAMES = {
     "viewport": ["SetViewportCamera"],
 }
 
-# Baseline permissive-mode violation counts (Phase 4 post default migration).
-EXPECTED_VIOLATION_COUNTS = {
-    "legacy_optional": 0,
-    "legacy_param_type": 0,
-    "missing_commands_key": 0,
-    "missing_param_required": 0,
-    "missing_param_type": 0,
-    "required_false_without_default": 0,
-    "unknown_param_key": 0,
-}
-
 
 def _iter_all_param_paths(schemas_dir: Path):
     """Yield (path, param_spec) for every param in every schema file."""
@@ -131,13 +118,11 @@ def test_allowed_key_constants_documented():
     assert TARGET_PARAM_TYPES == frozenset(
         {"string", "bool", "int", "float", "array", "object", "any"}
     )
-    assert LEGACY_PARAM_TYPES == frozenset({"integer", "number"})
-    assert ALL_PARAM_TYPES == TARGET_PARAM_TYPES | LEGACY_PARAM_TYPES
 
 
-def test_all_schema_files_load_permissive():
-    report = validate_all_schemas(SCHEMAS_DIR, strict=False)
-    assert report.ok is True
+def test_all_schema_files_load():
+    report = validate_all_schemas(SCHEMAS_DIR)
+    assert report.ok is True, report.violations
     assert len(report.files) == 11
     assert report.system_count == 11
     assert report.total_queries == 33
@@ -145,7 +130,7 @@ def test_all_schema_files_load_permissive():
 
 
 def test_per_system_operation_counts():
-    report = validate_all_schemas(SCHEMAS_DIR, strict=False)
+    report = validate_all_schemas(SCHEMAS_DIR)
     assert set(report.systems.keys()) == set(EXPECTED_SYSTEM_COUNTS.keys())
 
     for system, (query_count, command_count) in EXPECTED_SYSTEM_COUNTS.items():
@@ -156,28 +141,15 @@ def test_per_system_operation_counts():
         assert summary.commands == EXPECTED_COMMAND_NAMES[system], system
 
 
-def test_permissive_violation_baseline():
-    report = validate_all_schemas(SCHEMAS_DIR, strict=False)
-    counts = report.violation_counts()
-
-    assert counts["legacy_optional"] == 0
-    assert counts.get("missing_param_type", 0) == 0
-    assert counts.get("legacy_param_type", 0) == 0
-    assert counts["unknown_param_key"] == 0
-
-    for code, expected in EXPECTED_VIOLATION_COUNTS.items():
-        assert counts[code] == expected, f"{code}: got {counts[code]}, expected {expected}"
-
-
 def test_every_param_has_canonical_type():
-    report = validate_all_schemas(SCHEMAS_DIR, strict=False)
+    report = validate_all_schemas(SCHEMAS_DIR)
     counts = report.violation_counts()
     assert counts.get("missing_param_type", 0) == 0
-    assert counts.get("legacy_param_type", 0) == 0
+    assert counts.get("invalid_param_type", 0) == 0
 
 
-def test_strict_mode_passes():
-    report = validate_all_schemas(SCHEMAS_DIR, strict=True)
+def test_schema_validation_passes():
+    report = validate_all_schemas(SCHEMAS_DIR)
     assert report.ok is True, report.violations
     assert report.violation_counts().get("required_false_without_default", 0) == 0
     assert report.violation_counts().get("required_true_with_default", 0) == 0
@@ -196,27 +168,23 @@ def test_required_true_params_have_no_default():
 
 
 def test_default_values_match_declared_type():
-    report = validate_all_schemas(SCHEMAS_DIR, strict=True)
+    report = validate_all_schemas(SCHEMAS_DIR)
     mismatches = [v for v in report.violations if v.code == "default_type_mismatch"]
     assert mismatches == []
 
 
-def _format_violation_snapshot(report) -> str:
-    lines = []
-    for v in sorted(report.violations, key=lambda x: (x.path, x.code)):
-        lines.append(f"{v.path}\t{v.code}")
-    return "\n".join(lines) + "\n"
+def test_no_legacy_optional_key():
+    for path, spec in _iter_all_param_paths(SCHEMAS_DIR):
+        assert "optional" not in spec, f"{path} uses legacy 'optional' key"
 
 
-def test_permissive_violation_snapshot(snapshot_dir, snapshot_update):
-    report = validate_all_schemas(SCHEMAS_DIR, strict=False)
-    snapshot_path = snapshot_dir / "violations_permissive.txt"
-    content = _format_violation_snapshot(report)
+def test_every_param_has_type_and_required():
+    for path, spec in _iter_all_param_paths(SCHEMAS_DIR):
+        assert "type" in spec, f"{path} missing 'type'"
+        assert "required" in spec, f"{path} missing 'required'"
 
-    if snapshot_update:
-        snapshot_dir.mkdir(parents=True, exist_ok=True)
-        snapshot_path.write_text(content, encoding="utf-8")
-        return
 
-    assert snapshot_path.is_file(), "missing snapshot; run pytest with --snapshot-update"
-    assert content == snapshot_path.read_text(encoding="utf-8")
+def test_no_unknown_param_keys_in_schemas():
+    for path, spec in _iter_all_param_paths(SCHEMAS_DIR):
+        unknown = set(spec.keys()) - PARAM_KEYS
+        assert not unknown, f"{path} has unknown param keys: {unknown}"

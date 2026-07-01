@@ -5,6 +5,7 @@ import time
 
 from mcp.server.fastmcp import FastMCP
 
+from schema_validation import validate_all_schemas
 from validation import validate_operation
 
 
@@ -21,6 +22,11 @@ def _find_repo_root() -> pathlib.Path:
 
 def _load_schemas() -> dict:
     schemas_dir = pathlib.Path(__file__).resolve().parent / "Schemas"
+    report = validate_all_schemas(schemas_dir)
+    if not report.ok:
+        details = "; ".join(f"{v.path}: {v.code}" for v in report.violations[:5])
+        raise RuntimeError(f"Invalid MCP schemas ({len(report.violations)} violations): {details}")
+
     systems: dict = {}
     for path in sorted(schemas_dir.glob("*.json")):
         data = json.loads(path.read_text(encoding="utf-8"))

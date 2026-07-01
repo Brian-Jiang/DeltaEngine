@@ -44,6 +44,35 @@ Each command in a batch is its own undo entry. Commands that need a result (crea
 
 Parameter schemas live in `Tools/DeltaMCP/Schemas/*.json` (one file per MCP system).
 
+### Param schema contract
+
+Every param uses this shape (no other keys):
+
+```json
+"paramName": {
+  "type": "string",
+  "required": true,
+  "description": "Human-readable docs"
+}
+```
+
+Allowed param keys: `type`, `required`, `description`, `default`, `options`, `items`.
+
+Allowed types: `string`, `bool`, `int`, `float`, `array`, `object`, `any`.
+
+Rules:
+
+- `required: true` — caller must supply the param; no `default`.
+- `required: false` — caller may omit; include `default` when C++ applies one (see `NO_DEFAULT_EXCEPTIONS` in `schema_validation.py` for params with no static default).
+- `options` — scalar enums only.
+- `items` — array element typing only (`{ "type": "..." }`).
+
+Validate locally:
+
+```
+Tools/Python/python.exe Tools/DeltaMCP/schema_validation.py
+```
+
 ## Tests
 
 ```
