@@ -68,7 +68,7 @@ TEST(DEnumPropertyTests, GetPropertyType_IsEnum)
 
 TEST(DEnumPropertyTests, GetEnum_ResolvesFromProperty)
 {
-    DEnum* fromProperty = s_enumProperty.GetEnum();
+    DEnum* fromProperty = s_enumProperty.GetEnumSchema();
     DEnum* fromRegistry = GetReflectionRegistry().FindEnumByName("EReflectionTestEnum");
     EXPECT_EQ(fromProperty, fromRegistry);
 }

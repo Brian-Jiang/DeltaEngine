@@ -1,4 +1,6 @@
 #include "Runtime/Reflection/DEnum.h"
+#include "Runtime/Reflection/DEnumProperty.h"
+#include "Runtime/Reflection/ReflectionRegistry.h"
 
 using namespace DeltaEngine;
 
@@ -22,4 +24,18 @@ const DEnumEntry* DEnum::FindEntryByValue(int64_t value) const
     }
 
     return nullptr;
+}
+
+DEnumPropertyBase::DEnumPropertyBase(
+    std::string name,
+    std::string enumTypeName,
+    uint32_t offset,
+    uint32_t size)
+    : DProperty(std::move(name), std::move(enumTypeName), offset, size)
+{
+}
+
+DEnum* DEnumPropertyBase::GetEnumSchema() const
+{
+    return GetReflectionRegistry().FindEnumByName(GetType());
 }

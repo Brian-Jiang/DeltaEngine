@@ -31,7 +31,7 @@ public:
     /// Adds a reflected class if it has not been registered yet.
     void RegisterDClass(DClass* dclass);
     /// Adds a reflected enum if it has not been registered yet.
-    void RegisterDEnum(DEnum* denum);
+    DELTAENGINE_API void RegisterDEnum(DEnum* denum);
     /// Resolves reflected base-type links after static registration completes.
     DELTAENGINE_API void FinalizeRegistration();
 

@@ -7,15 +7,22 @@
 
 DELTA_ENGINE_NS_BEGIN
 
+class DELTAENGINE_API DEnumPropertyBase : public DProperty
+{
+public:
+    DEnumPropertyBase(std::string name, std::string enumTypeName, uint32_t offset, uint32_t size);
+
+    DELTAENGINE_API DEnum* GetEnumSchema() const;
+};
+
 template <typename T>
-class DEnumProperty : public DProperty
+class DEnumProperty : public DEnumPropertyBase
 {
     static_assert(std::is_enum_v<T>, "DEnumProperty requires an enum type");
 
 public:
     DEnumProperty(std::string name, uint32_t offset, std::string enumTypeName)
-        : DProperty(std::move(name), enumTypeName, offset, sizeof(T)),
-          m_enumTypeName(std::move(enumTypeName))
+        : DEnumPropertyBase(std::move(name), std::move(enumTypeName), offset, sizeof(T))
     {
     }
 
@@ -55,7 +62,7 @@ public:
         using Underlying = std::underlying_type_t<T>;
         const Underlying underlying = static_cast<Underlying>(*static_cast<const T*>(address));
 
-        if (DEnum* schema = GetEnum())
+        if (DEnum* schema = GetEnumSchema())
         {
             if (const DEnumEntry* entry = schema->FindEntryByValue(static_cast<int64_t>(underlying)))
                 return entry->name;
@@ -90,14 +97,6 @@ public:
         if (ar.IsLoading())
             field = static_cast<T>(static_cast<Underlying>(wire));
     }
-
-    DEnum* GetEnum() const
-    {
-        return GetReflectionRegistry().FindEnumByName(m_enumTypeName);
-    }
-
-private:
-    std::string m_enumTypeName;
 };
 
 DELTA_ENGINE_NS_END
