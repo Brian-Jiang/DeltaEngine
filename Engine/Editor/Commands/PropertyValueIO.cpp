@@ -1,6 +1,7 @@
 #include "Editor/Commands/PropertyValueIO.h"
 
 #include "Editor/Commands/EditorCommand.h"
+#include "Editor/Commands/EnumPropertyWire.h"
 #include "Editor/EditorCore.h"
 
 #include "Runtime/Reflection/DClass.h"
@@ -67,6 +68,9 @@ nlohmann::json StructFieldsToJson(void* basePtr, DStruct* ds)
             j[prop->GetName()] = StructFieldsToJson(nestedBase, nestedSchema);
             break;
         }
+        case EPropertyType::Enum:
+            j[prop->GetName()] = ReadEnumUnderlyingAsInt64(prop, prop->GetValue(basePtr));
+            break;
         default:
             DLOG(LogEditorCommand, ELogLevel::Warning,
                  "[PropertyValueIO] StructFieldsToJson skipped nested property '{}' "
@@ -130,6 +134,9 @@ bool SetStructFieldsFromJson(void* basePtr, DStruct* ds, const nlohmann::json& v
                 ok = false;
             break;
         }
+        case EPropertyType::Enum:
+            WriteEnumUnderlyingFromInt64(prop, addr, it->get<int64_t>());
+            break;
         default:
             ok = false;
             DLOG(LogEditorCommand, ELogLevel::Error,
@@ -488,6 +495,8 @@ nlohmann::json DeltaEngine::PropertyToJson(const DObject* obj, const DProperty* 
                 b.Center.x,  b.Center.y,  b.Center.z,
                 b.Extents.x, b.Extents.y, b.Extents.z });
         }
+        case EPropertyType::Enum:
+            return ReadEnumUnderlyingAsInt64(prop, addr);
         default:
             DLOG(LogEditorCommand, ELogLevel::Warning,
                  "[PropertyValueIO] PropertyToJson: unsupported scalar type '{}' (property '{}' on class '{}')",
@@ -609,6 +618,11 @@ bool DeltaEngine::SetPropertyFromJson(DObject* obj, const DProperty* prop, const
             b.Extents.z = value.at(5).get<float>();
             break;
         }
+        case EPropertyType::Enum:
+            if (!value.is_number())
+                return false;
+            WriteEnumUnderlyingFromInt64(prop, addr, value.get<int64_t>());
+            break;
         default:
             DLOG(LogEditorCommand, ELogLevel::Error,
                  "[PropertyValueIO] SetPropertyFromJson: unsupported scalar type discriminator {} "
