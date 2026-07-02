@@ -1,6 +1,6 @@
 #include "Runtime/Macros.h"
 #include "Runtime/Reflection/DEnum.h"
-#include "Runtime/Reflection/DProperty.h"
+#include "Runtime/Reflection/DEnumProperty.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
 #include "Runtime/Serialization/JsonAssetArchive.h"
 
