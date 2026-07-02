@@ -146,7 +146,7 @@ def test_generate_dynamic_delegate_markers(fixtures_dir):
         result.classes, result.source_includes, result.forward_decls, result.delegates,
     )
     cpp = generate_source_file(
-        result.classes, path.stem, {}, result.delegates, f"{path.stem}.h",
+        result.classes, path.stem, {}, result.delegates, f"{path.stem}.h", result.enums,
     )
 
     assert "struct FOnOneInt_Params" in h
@@ -166,3 +166,35 @@ def test_generate_dynamic_delegate_markers(fixtures_dir):
     assert "ExecuteWithParams(&params, 1);" in cpp
     assert "new DDelegateProperty(" in cpp
     assert '"m_onOneInt"' in cpp
+
+
+@requires_libclang
+def test_generate_denum_property_markers(fixtures_dir):
+    require_libclang()
+    path = fixtures_dir / "denum_property.h"
+    result = parse_header(path, fixtures_dir)
+    cpp = generate_source_file(
+        result.classes, path.stem, {}, result.delegates, f"{path.stem}.h", result.enums,
+    )
+
+    assert "Register_TestColor" in cpp
+    assert 'e->AddEntry("Red", 0)' in cpp
+    assert 'e->AddEntry("Green", 1)' in cpp
+    assert "registration_TestColor" in cpp
+    assert "DEnumProperty<TestColor>" in cpp
+    assert '"m_color"' in cpp
+    assert 'new DEnum("TestColor", "uint8_t")' in cpp
+
+
+@requires_libclang
+def test_generate_simple_enum_only(fixtures_dir):
+    require_libclang()
+    path = fixtures_dir / "simple_enum.h"
+    result = parse_header(path, fixtures_dir)
+    cpp = generate_source_file(
+        result.classes, path.stem, {}, result.delegates, f"{path.stem}.h", result.enums,
+    )
+
+    assert "Register_TestOnlyEnum" in cpp
+    assert "registration_TestOnlyEnum" in cpp
+    assert 'new DEnum("TestOnlyEnum", "int")' in cpp

@@ -276,3 +276,61 @@ def test_test_component_delegate_property_resolution(fixtures_dir):
     host = next(c for c in result.classes if c.name == "TestComponent")
     by_name = {p.name: p for p in host.properties}
     assert by_name["OnTestEvent"].property_class == "DDelegateProperty"
+
+
+@pytest.fixture
+def parse_denum_property(fixtures_dir):
+    require_libclang()
+    return parse_header(fixtures_dir / "denum_property.h", fixtures_dir)
+
+
+@pytest.fixture
+def parse_simple_enum(fixtures_dir):
+    require_libclang()
+    return parse_header(fixtures_dir / "simple_enum.h", fixtures_dir)
+
+
+@pytest.fixture
+def parse_denum_unscoped(fixtures_dir):
+    require_libclang()
+    return parse_header(fixtures_dir / "denum_unscoped.h", fixtures_dir)
+
+
+@requires_libclang
+def test_denum_enum_info(parse_denum_property):
+    r = parse_denum_property
+    assert len(r.enums) == 1
+    enum = r.enums[0]
+    assert enum.name == "TestColor"
+    assert enum.underlying_type == "uint8_t"
+    assert len(enum.entries) == 2
+    assert enum.entries[0].name == "Red"
+    assert enum.entries[0].value == 0
+    assert enum.entries[1].name == "Green"
+    assert enum.entries[1].value == 1
+
+
+@requires_libclang
+def test_denum_property_field(parse_denum_property):
+    c = parse_denum_property.classes[0]
+    assert c.name == "Foo"
+    prop = next(p for p in c.properties if p.name == "m_color")
+    assert prop.is_enum is True
+    assert prop.enum_type_name == "TestColor"
+    assert prop.property_class == "DEnumProperty<TestColor>"
+
+
+@requires_libclang
+def test_simple_enum_only(parse_simple_enum):
+    r = parse_simple_enum
+    assert len(r.enums) == 1
+    assert r.enums[0].name == "TestOnlyEnum"
+    assert r.enums[0].underlying_type == "int"
+    assert len(r.classes) == 0
+
+
+@requires_libclang
+def test_denum_unscoped_warns_and_skips(parse_denum_unscoped):
+    r = parse_denum_unscoped
+    assert len(r.enums) == 0
+    assert any("enum class" in w.message for w in r.diagnostics.warnings)
