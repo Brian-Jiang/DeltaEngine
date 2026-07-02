@@ -76,3 +76,38 @@ TEST_F(McpReflectionSystemTests, QueryFindClassesWithProperty_FindsMatchingClass
     ASSERT_TRUE(res["matches"].is_array());
     EXPECT_GE(res["matches"].size(), 1u);
 }
+
+namespace {
+
+const json* FindSchemaProperty(const json& properties, const char* name)
+{
+    for (const auto& prop : properties)
+        if (prop.value("name", "") == name)
+            return &prop;
+    return nullptr;
+}
+
+void ExpectEnumPropertyMetadata(const json& enumProp)
+{
+    EXPECT_EQ(enumProp.at("type").get<std::string>(), "enum");
+    EXPECT_EQ(enumProp.at("enum_name").get<std::string>(), "EReflectionTestEnum");
+    ASSERT_TRUE(enumProp.at("values").is_array());
+    ASSERT_EQ(enumProp.at("values").size(), 3u);
+    EXPECT_EQ(enumProp.at("values")[1].at("name").get<std::string>(), "Bar");
+    EXPECT_EQ(enumProp.at("values")[1].at("value").get<int64_t>(), 1);
+}
+
+} // namespace
+
+TEST_F(McpReflectionSystemTests, QueryClassSchema_ReflectionTestObject_EnumProperty_HasMetadata)
+{
+    auto res = Dispatch("reflection", "class_schema",
+                        {{"class_name", "ReflectionTestObject"}});
+    EXPECT_TRUE(res["ok"].get<bool>());
+    ASSERT_TRUE(res.contains("schema"));
+    ASSERT_TRUE(res["schema"]["properties"].is_array());
+
+    const json* enumProp = FindSchemaProperty(res["schema"]["properties"], "m_rEnum");
+    ASSERT_NE(enumProp, nullptr);
+    ExpectEnumPropertyMetadata(*enumProp);
+}

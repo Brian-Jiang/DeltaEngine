@@ -803,6 +803,16 @@ void EditorWindow_Details::DrawVectorElements(DVectorPropertyBase* vectorProp, v
                 }
                 break;
             }
+            case EPropertyType::Enum:
+            {
+                const nlohmann::json before = snapshotBefore();
+                WidgetEditEvent evt = DrawEnumPropertyAt(
+                    elementAddr,
+                    const_cast<DProperty*>(innerProp));
+                if (evt.valueChanged)
+                    CommitVectorPropertyEdit(ownerObject, rootProp, before);
+                break;
+            }
             default:
                 DrawReadOnlyProperty(label, innerProp->ToString(elementAddr));
                 break;

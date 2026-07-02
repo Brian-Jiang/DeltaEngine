@@ -184,6 +184,9 @@ def test_generate_denum_property_markers(fixtures_dir):
     assert "DEnumProperty<TestColor>" in cpp
     assert '"m_color"' in cpp
     assert 'new DEnum("TestColor", "uint8_t")' in cpp
+    assert '"m_colors"' in cpp
+    assert 'new DEnumProperty<TestColor>("m_colors_elem", 0, "TestColor")' in cpp
+    assert "DVectorProperty<TestColor>" in cpp
 
 
 @requires_libclang

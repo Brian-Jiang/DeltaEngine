@@ -25,6 +25,7 @@ from templates import (
     DPROPERTY_VECTOR_OBJECT_PTR,
     DPROPERTY_DSTRUCT,
     DPROPERTY_VECTOR_DSTRUCT,
+    DPROPERTY_VECTOR_ENUM,
     DFUNCTION_VOID_NO_PARAMS,
     DFUNCTION_WITH_PARAMS,
     DFUNCTION_SET_METADATA,
@@ -614,6 +615,14 @@ def _generate_vector_prop_code(prop, class_name: str) -> str:
             class_name=class_name,
             inner_cpp_type=prop.inner_cpp_type,
             dstruct_type_name=prop.inner_pointee_type or prop.inner_cpp_type,
+        )
+    elif prop.inner_property_class.startswith("DEnumProperty<"):
+        return DPROPERTY_VECTOR_ENUM.substitute(
+            enum_type=prop.inner_pointee_type,
+            enum_type_name=prop.inner_pointee_type,
+            field_name=prop.name,
+            class_name=class_name,
+            inner_cpp_type=prop.inner_cpp_type,
         )
     elif prop.inner_property_class == "DVectorProperty":
         # Nested vector: the inner_cpp_type is std::vector<U>.

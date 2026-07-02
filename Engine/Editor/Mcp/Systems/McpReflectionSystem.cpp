@@ -5,6 +5,7 @@
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DProperty.h"
 #include "Runtime/Reflection/DFunction.h"
+#include "Runtime/Reflection/DEnumProperty.h"
 
 #include <unordered_set>
 
@@ -30,8 +31,12 @@ static const char* PropertyTypeName(EPropertyType t)
     case EPropertyType::Vector:     return "Vector";
     case EPropertyType::Struct:     return "Struct";
     case EPropertyType::Delegate:   return "Delegate";
+    case EPropertyType::Enum:       return "enum";
     default:
-        DELTA_UNREACHABLE();
+        DELTA_CHECK_MSG(false,
+            "EPropertyType {} not enumerated for MCP property schema",
+            static_cast<int>(t));
+        return "unknown";
     }
 }
 
@@ -42,11 +47,26 @@ static nlohmann::json MakeError(const std::string& msg)
 
 static nlohmann::json SerializePropertySchema(const DProperty* p)
 {
-    return {
+    nlohmann::json entry = {
         {"name", p->GetName()},
         {"cpp_type", p->GetType()},
         {"type", PropertyTypeName(p->GetPropertyType())}
     };
+
+    if (p->GetPropertyType() == EPropertyType::Enum)
+    {
+        const auto* enumProp = static_cast<const DEnumPropertyBase*>(p);
+        if (const DEnum* schema = enumProp->GetEnumSchema())
+        {
+            entry["enum_name"] = schema->GetName();
+            nlohmann::json values = nlohmann::json::array();
+            for (const DEnumEntry& e : schema->GetEntries())
+                values.push_back({ {"name", e.name}, {"value", e.value} });
+            entry["values"] = std::move(values);
+        }
+    }
+
+    return entry;
 }
 
 static nlohmann::json SerializeFunctionSchema(const DFunction* f)

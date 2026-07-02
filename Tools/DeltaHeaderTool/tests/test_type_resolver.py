@@ -116,3 +116,15 @@ def test_enum_property_resolves_via_parser(fixtures_dir):
     assert prop.property_class == "DEnumProperty<TestColor>"
     assert prop.is_enum is True
     assert prop.enum_type_name == "TestColor"
+
+
+@requires_libclang
+def test_vector_enum_property_resolves_via_parser(fixtures_dir):
+    require_libclang()
+    from parser import parse_header
+
+    result = parse_header(fixtures_dir / "denum_property.h", fixtures_dir)
+    prop = next(p for p in result.classes[0].properties if p.name == "m_colors")
+    assert prop.is_vector is True
+    assert prop.inner_property_class == "DEnumProperty<TestColor>"
+    assert prop.inner_cpp_type == "TestColor"

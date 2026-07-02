@@ -104,6 +104,9 @@ private:
     EReflectionTestEnum m_rEnum{ EReflectionTestEnum::Foo };
 
     DPROPERTY()
+    std::vector<EReflectionTestEnum> m_rEnumVec;
+
+    DPROPERTY()
     TBulkData m_rBulk;
 };
 
