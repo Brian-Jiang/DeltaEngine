@@ -218,6 +218,33 @@ def resolve_type(cursor_type, field_name="", class_name="", *,
         return resolve_type(cursor_type.get_pointee(), field_name, class_name,
                             diag=diag, source_file=source_file, line=line, tu=tu)
 
+    if cursor_type.kind == TypeKind.ENUM:
+        decl = cursor_type.get_declaration()
+        if tu is None or not is_annotated(tu, decl, "DENUM"):
+            if diag:
+                diag.warn(source_file, line,
+                          f"enum '{decl.spelling}' on property '{field_name}' is missing DENUM()")
+            else:
+                print(
+                    f"WARNING: enum '{decl.spelling}' on property '{field_name}' "
+                    f"in '{class_name}' is missing DENUM() — skipping",
+                    file=sys.stderr,
+                )
+            return None
+        if not decl.is_scoped_enum():
+            if diag:
+                diag.warn(source_file, line,
+                          f"enum '{decl.spelling}' on property '{field_name}' must be enum class")
+            else:
+                print(
+                    f"WARNING: enum '{decl.spelling}' on property '{field_name}' "
+                    f"in '{class_name}' must be enum class — skipping",
+                    file=sys.stderr,
+                )
+            return None
+        name = _strip_namespaces(decl.spelling)
+        return (f"DEnumProperty<{name}>", False, "", name)
+
     if cursor_type.kind == TypeKind.POINTER:
         pointee = cursor_type.get_pointee()
         decl = pointee.get_declaration()

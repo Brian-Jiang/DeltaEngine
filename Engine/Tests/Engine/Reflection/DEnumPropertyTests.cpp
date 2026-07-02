@@ -1,11 +1,10 @@
-#include "Runtime/Macros.h"
-#include "Runtime/Reflection/DEnum.h"
+#include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DEnumProperty.h"
+#include "Runtime/Reflection/DProperty.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
 #include "Runtime/Serialization/JsonAssetArchive.h"
+#include "Runtime/Test/ReflectionTestObject.h"
 
-#include <cstddef>
-#include <cstdint>
 #include <gtest/gtest.h>
 
 using namespace DeltaEngine;
@@ -13,34 +12,13 @@ using namespace DeltaEngine;
 namespace
 {
 
-DENUM()
-enum class EReflectionTestEnum : uint32_t
+DProperty* GetReflectionTestEnumProperty()
 {
-    Foo = 0,
-    Bar = 1,
-    Baz = 2,
-};
-
-static void RegisterReflectionTestEnum()
-{
-    auto* e = new DEnum("EReflectionTestEnum", "uint32_t");
-    e->AddEntry("Foo", 0);
-    e->AddEntry("Bar", 1);
-    e->AddEntry("Baz", 2);
-    GetReflectionRegistry().RegisterDEnum(e);
+    DClass* cls = GetReflectionRegistry().FindClassByName("ReflectionTestObject");
+    if (cls == nullptr)
+        return nullptr;
+    return cls->FindPropertyByName("m_rEnum");
 }
-
-static ReflectionRegistration s_reg(&RegisterReflectionTestEnum);
-
-struct FEnumPropertyTestPayload
-{
-    EReflectionTestEnum m_mode{ EReflectionTestEnum::Foo };
-};
-
-static DEnumProperty<EReflectionTestEnum> s_enumProperty(
-    "m_mode",
-    offsetof(FEnumPropertyTestPayload, m_mode),
-    "EReflectionTestEnum");
 
 }
 
@@ -63,70 +41,108 @@ TEST(DEnumPropertyTests, FindEnumByName_ReturnsRegisteredMetadata)
 
 TEST(DEnumPropertyTests, GetPropertyType_IsEnum)
 {
-    EXPECT_EQ(s_enumProperty.GetPropertyType(), EPropertyType::Enum);
+    DProperty* prop = GetReflectionTestEnumProperty();
+    ASSERT_NE(prop, nullptr);
+    EXPECT_EQ(prop->GetPropertyType(), EPropertyType::Enum);
 }
 
 TEST(DEnumPropertyTests, GetEnum_ResolvesFromProperty)
 {
-    DEnum* fromProperty = s_enumProperty.GetEnumSchema();
+    DProperty* prop = GetReflectionTestEnumProperty();
+    ASSERT_NE(prop, nullptr);
+    auto* enumProp = static_cast<DEnumPropertyBase*>(prop);
+    DEnum* fromProperty = enumProp->GetEnumSchema();
     DEnum* fromRegistry = GetReflectionRegistry().FindEnumByName("EReflectionTestEnum");
     EXPECT_EQ(fromProperty, fromRegistry);
 }
 
 TEST(DEnumPropertyTests, RoundTripsIntegerJson)
 {
-    FEnumPropertyTestPayload payload;
-    payload.m_mode = EReflectionTestEnum::Bar;
+    auto& registry = GetReflectionRegistry();
+    ReflectionTestObject* obj =
+        registry.CreateObject<ReflectionTestObject>("ReflectionTestObject");
+    ASSERT_NE(obj, nullptr);
+
+    DProperty* prop = GetReflectionTestEnumProperty();
+    ASSERT_NE(prop, nullptr);
+
+    EReflectionTestEnum value = EReflectionTestEnum::Bar;
+    prop->SetValue(obj, &value);
 
     JsonAssetArchive writer;
-    s_enumProperty.Serialize(writer, &payload);
+    prop->Serialize(writer, obj);
 
     const nlohmann::json& root = writer.GetRoot();
-    ASSERT_TRUE(root.contains("m_mode"));
-    EXPECT_EQ(root["m_mode"].get<int>(), 1);
+    ASSERT_TRUE(root.contains("m_rEnum"));
+    EXPECT_EQ(root["m_rEnum"].get<int>(), 1);
 
-    payload.m_mode = EReflectionTestEnum::Foo;
+    EReflectionTestEnum reset = EReflectionTestEnum::Foo;
+    prop->SetValue(obj, &reset);
 
     JsonAssetArchive reader(root, {});
-    s_enumProperty.Serialize(reader, &payload);
+    prop->Serialize(reader, obj);
 
-    EXPECT_EQ(payload.m_mode, EReflectionTestEnum::Bar);
+    EXPECT_EQ(*static_cast<EReflectionTestEnum*>(prop->GetValue(obj)), EReflectionTestEnum::Bar);
+
+    registry.DestroyObject(obj);
 }
 
 TEST(DEnumPropertyTests, Identical_SameValue)
 {
+    DProperty* prop = GetReflectionTestEnumProperty();
+    ASSERT_NE(prop, nullptr);
+
     EReflectionTestEnum a = EReflectionTestEnum::Bar;
     EReflectionTestEnum b = EReflectionTestEnum::Bar;
-    EXPECT_TRUE(s_enumProperty.Identical(&a, &b));
+    EXPECT_TRUE(prop->Identical(&a, &b));
 }
 
 TEST(DEnumPropertyTests, Identical_DifferentValue)
 {
+    DProperty* prop = GetReflectionTestEnumProperty();
+    ASSERT_NE(prop, nullptr);
+
     EReflectionTestEnum a = EReflectionTestEnum::Foo;
     EReflectionTestEnum b = EReflectionTestEnum::Baz;
-    EXPECT_FALSE(s_enumProperty.Identical(&a, &b));
+    EXPECT_FALSE(prop->Identical(&a, &b));
 }
 
 TEST(DEnumPropertyTests, ToString_KnownEnumerator)
 {
+    DProperty* prop = GetReflectionTestEnumProperty();
+    ASSERT_NE(prop, nullptr);
+
     EReflectionTestEnum value = EReflectionTestEnum::Bar;
-    EXPECT_EQ(s_enumProperty.ToString(&value), "Bar");
+    EXPECT_EQ(prop->ToString(&value), "Bar");
 }
 
 TEST(DEnumPropertyTests, ToString_UnknownValue)
 {
+    DProperty* prop = GetReflectionTestEnumProperty();
+    ASSERT_NE(prop, nullptr);
+
     EReflectionTestEnum value = static_cast<EReflectionTestEnum>(99);
-    EXPECT_EQ(s_enumProperty.ToString(&value), "99");
+    EXPECT_EQ(prop->ToString(&value), "99");
 }
 
 TEST(DEnumPropertyTests, MissingKey_LeavesValueUntouched)
 {
-    FEnumPropertyTestPayload payload;
-    payload.m_mode = EReflectionTestEnum::Baz;
+    auto& registry = GetReflectionRegistry();
+    ReflectionTestObject* obj =
+        registry.CreateObject<ReflectionTestObject>("ReflectionTestObject");
+    ASSERT_NE(obj, nullptr);
+
+    DProperty* prop = GetReflectionTestEnumProperty();
+    ASSERT_NE(prop, nullptr);
+
+    EReflectionTestEnum value = EReflectionTestEnum::Baz;
+    prop->SetValue(obj, &value);
 
     const nlohmann::json root = nlohmann::json::object();
     JsonAssetArchive reader(root, {});
-    s_enumProperty.Serialize(reader, &payload);
+    prop->Serialize(reader, obj);
 
-    EXPECT_EQ(payload.m_mode, EReflectionTestEnum::Baz);
+    EXPECT_EQ(*static_cast<EReflectionTestEnum*>(prop->GetValue(obj)), EReflectionTestEnum::Baz);
+
+    registry.DestroyObject(obj);
 }
