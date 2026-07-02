@@ -5,6 +5,7 @@
 #include "Runtime/Core/GC/DObjectRegistry.h"
 #include "Runtime/Core/GC/GCManager.h"
 #include "Runtime/Reflection/DClass.h"
+#include "Runtime/Reflection/DEnum.h"
 #include "Runtime/Reflection/DStruct.h"
 
 using namespace DeltaEngine;
@@ -32,6 +33,19 @@ void ReflectionRegistry::RegisterDClass(DClass* cls)
     if (!inserted)
         DLOG(LogReflection, ELogLevel::Warning,
              "Ignored duplicate Reflection class registration name='{}'; expected single definition (keeping first)",
+             name);
+}
+
+void ReflectionRegistry::RegisterDEnum(DEnum* denum)
+{
+    DELTA_VERIFY(denum != nullptr);
+    const std::string& name = denum->GetName();
+    DELTA_VERIFY(!name.empty());
+
+    auto [it, inserted] = m_enumMap.try_emplace(name, denum);
+    if (!inserted)
+        DLOG(LogReflection, ELogLevel::Warning,
+             "Ignored duplicate Reflection enum registration name='{}'; expected single definition (keeping first)",
              name);
 }
 
@@ -121,6 +135,22 @@ DClass* ReflectionRegistry::FindClassByName(const std::string& name) const
 
     auto it = m_classMap.find(name);
     if (it != m_classMap.end())
+        return it->second;
+
+    return nullptr;
+}
+
+DEnum* ReflectionRegistry::FindEnumByName(const std::string& name) const
+{
+    if (name.empty())
+    {
+        DLOG(LogReflection, ELogLevel::Warning,
+             "FindEnumByName failed: requested name was empty (expected non-empty)");
+        return nullptr;
+    }
+
+    auto it = m_enumMap.find(name);
+    if (it != m_enumMap.end())
         return it->second;
 
     return nullptr;

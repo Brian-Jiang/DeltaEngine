@@ -9,6 +9,7 @@ DELTA_ENGINE_NS_BEGIN
 
 class DStruct;
 class DClass;
+class DEnum;
 class DObject;
 
 class ReflectionRegistration
@@ -29,6 +30,8 @@ public:
     void RegisterDStruct(DStruct* dstruct);
     /// Adds a reflected class if it has not been registered yet.
     void RegisterDClass(DClass* dclass);
+    /// Adds a reflected enum if it has not been registered yet.
+    DELTAENGINE_API void RegisterDEnum(DEnum* denum);
     /// Resolves reflected base-type links after static registration completes.
     DELTAENGINE_API void FinalizeRegistration();
 
@@ -36,6 +39,8 @@ public:
     DELTAENGINE_API DStruct* FindStructByName(const std::string& name) const;
     /// Finds a reflected class by name.
     DELTAENGINE_API DClass* FindClassByName(const std::string& name) const;
+    /// Finds a reflected enum by name.
+    DELTAENGINE_API DEnum* FindEnumByName(const std::string& name) const;
     /// Returns the registered reflected classes keyed by class name.
     DELTAENGINE_API const std::unordered_map<std::string, DClass*>& GetAllClasses() const;
 
@@ -55,6 +60,7 @@ public:
 private:
     std::unordered_map<std::string, DStruct*> m_structMap;
     std::unordered_map<std::string, DClass*> m_classMap;
+    std::unordered_map<std::string, DEnum*> m_enumMap;
 };
 
 /// Returns the global reflection registry instance.
