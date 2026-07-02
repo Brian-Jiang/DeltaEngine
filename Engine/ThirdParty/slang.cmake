@@ -2,13 +2,9 @@ message(STATUS "====== Delta Engine ====== Configuring slang ======")
 
 set(_slang_root "${CMAKE_CURRENT_SOURCE_DIR}/slang")
 
-add_custom_target(CopySlangBin ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
+delta_add_sync_directory_target(CopySlangBin
     "${_slang_root}/bin"
-    "${CMAKE_BINARY_DIR}/bin"
-    COMMENT "Copying Slang binaries from ${_slang_root}/bin to ${CMAKE_BINARY_DIR}/bin"
-)
-set_target_properties(CopySlangBin PROPERTIES FOLDER ${utility_folder})
+    "${CMAKE_BINARY_DIR}/bin")
 
 add_library(slang INTERFACE)
 target_include_directories(slang SYSTEM INTERFACE
