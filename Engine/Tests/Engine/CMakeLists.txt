@@ -50,6 +50,7 @@ set(DELTA_ENGINE_TEST_SOURCES
     Reflection/ReflectionRegistryHardeningTests.cpp
     Reflection/ReflectionStructClassTests.cpp
     Reflection/ReflectionPropertyTests.cpp
+    Reflection/DEnumPropertyTests.cpp
     Reflection/DynamicDelegatePropertyTests.cpp
     Reflection/ReflectionReferenceTraversalTests.cpp
     Serialization/Core/UuidTests.cpp

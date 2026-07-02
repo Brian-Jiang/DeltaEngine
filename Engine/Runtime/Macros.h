@@ -21,6 +21,7 @@
 // Reflection macros
 #define DCLASS(...)
 #define DSTRUCT(...)
+#define DENUM(...)
 #define DFUNCTION(...)
 #define DPROPERTY(...)
 #define DGENERATED_BODY(ClassName) \
