@@ -23,3 +23,8 @@ TEST(EditorDetailsPropertyFormattingTests, IsUndoableInspectorPropertyType_Objec
 {
     EXPECT_FALSE(IsUndoableInspectorPropertyType(EPropertyType::ObjectPtr));
 }
+
+TEST(EditorDetailsPropertyFormattingTests, IsUndoableInspectorPropertyType_Enum_ReturnsTrue)
+{
+    EXPECT_TRUE(IsUndoableInspectorPropertyType(EPropertyType::Enum));
+}

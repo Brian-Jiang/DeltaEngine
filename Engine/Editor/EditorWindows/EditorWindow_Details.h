@@ -14,6 +14,7 @@
 #include "UIComponents/PropertyWidgets/StringField.h"
 #include "UIComponents/PropertyWidgets/ObjectPtrField.h"
 #include "UIComponents/PropertyWidgets/ReferenceField.h"
+#include "UIComponents/PropertyWidgets/EnumField.h"
 #include "UIComponents/WidgetEditEvent.h"
 
 #include <nlohmann/json.hpp>
@@ -74,6 +75,9 @@ private:
     WidgetEditEvent DrawBoolPropertyAt(void* container, DProperty* prop);
     WidgetEditEvent DrawStringPropertyAt(void* container, DProperty* prop);
     WidgetEditEvent DrawFilesystemPathPropertyAt(void* container, DProperty* prop);
+    WidgetEditEvent DrawEnumPropertyAt(void* container, DProperty* prop);
+
+    WidgetEditEvent DrawEnumProperty(DObject* instance, DProperty* prop);
 
     const DProperty* m_activeEditProp   = nullptr;
     nlohmann::json   m_activeEditBefore = {};
@@ -89,6 +93,7 @@ private:
     StringField    m_stringField;
     ReferenceField m_refField;
     ObjectPtrField m_objPtrField;
+    EnumField      m_enumField;
 
     FDelegateHandle m_onSelectionChangedHandle;
 };
