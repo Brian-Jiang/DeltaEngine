@@ -7,10 +7,10 @@
 
 DELTA_ENGINE_NS_BEGIN
 
-class DELTAENGINE_API DEnumPropertyBase : public DProperty
+class DEnumPropertyBase : public DProperty
 {
 public:
-    DEnumPropertyBase(std::string name, std::string enumTypeName, uint32_t offset, uint32_t size);
+    DELTAENGINE_API DEnumPropertyBase(std::string name, std::string enumTypeName, uint32_t offset, uint32_t size);
 
     DELTAENGINE_API DEnum* GetEnumSchema() const;
 };
