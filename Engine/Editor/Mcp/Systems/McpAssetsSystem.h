@@ -25,6 +25,7 @@ private:
     nlohmann::json QueryGetAssetsMetadata(EditorCore&, const nlohmann::json& params);
     nlohmann::json CommandSetAssetDynamicMetadata(EditorCore&, const nlohmann::json& params);
     nlohmann::json CommandReimportAssets(EditorCore&, const nlohmann::json& params);
+    nlohmann::json CommandDuplicateAsset(EditorCore&, const nlohmann::json& params);
     nlohmann::json QueryHasStaticMetaSchema(EditorCore&, const nlohmann::json& params);
 };
 

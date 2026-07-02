@@ -340,6 +340,8 @@ void McpAssetsSystem::RegisterTools(McpRegistry& registry)
         [this](EditorCore& c, const nlohmann::json& p) { return CommandSetAssetDynamicMetadata(c, p); });
     registry.RegisterCommand("assets", "reimport_assets",
         [this](EditorCore& c, const nlohmann::json& p) { return CommandReimportAssets(c, p); });
+    registry.RegisterCommand("assets", "duplicate_asset",
+        [this](EditorCore& c, const nlohmann::json& p) { return CommandDuplicateAsset(c, p); });
 }
 
 nlohmann::json McpAssetsSystem::QueryList(EditorCore& core, const nlohmann::json& params)
@@ -888,6 +890,43 @@ nlohmann::json McpAssetsSystem::CommandReimportAssets(EditorCore& core, const nl
 
     core.EnqueueSerializedCommand(envelope.dump());
     return { {"ok", true}, {"queued", true}, {"command", "ReimportAssets"}, {"expects_result", true} };
+}
+
+nlohmann::json McpAssetsSystem::CommandDuplicateAsset(EditorCore& core, const nlohmann::json& params)
+{
+    if (!params.contains("asset_id") || !params["asset_id"].is_string())
+        return MakeError("missing required param: asset_id");
+
+    const std::string assetIdStr = params["asset_id"].get<std::string>();
+    const AssetId assetId = UUID::FromString(assetIdStr);
+    if (assetId.IsNull())
+        return MakeError("invalid asset_id");
+
+    if (params.contains("new_name"))
+    {
+        if (!params["new_name"].is_string())
+            return MakeError("new_name must be a string");
+        const std::string newName = params["new_name"].get<std::string>();
+        if (newName.empty())
+            return MakeError("new_name must be non-empty");
+        if (newName.find('/') != std::string::npos || newName.find('\\') != std::string::npos)
+            return MakeError("new_name must not contain path separators");
+    }
+
+    if (params.contains("new_path") && !params["new_path"].is_string())
+        return MakeError("new_path must be a string");
+
+    nlohmann::json envelope;
+    envelope["type"]    = "auxiliary";
+    envelope["name"]    = "DuplicateAsset";
+    envelope["assetId"] = assetIdStr;
+    if (params.contains("new_name") && params["new_name"].is_string())
+        envelope["newName"] = params["new_name"].get<std::string>();
+    if (params.contains("new_path") && params["new_path"].is_string())
+        envelope["newPath"] = params["new_path"].get<std::string>();
+
+    core.EnqueueSerializedCommand(envelope.dump());
+    return { {"ok", true}, {"queued", true}, {"command", "DuplicateAsset"}, {"expects_result", true} };
 }
 
 nlohmann::json McpAssetsSystem::QueryHasStaticMetaSchema(EditorCore& core, const nlohmann::json& params)
