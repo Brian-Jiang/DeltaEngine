@@ -19,6 +19,7 @@ DELTA_ENGINE_NS_BEGIN
 class DShader;
 class DTexture;
 
+DENUM()
 enum class ERenderMode : uint32_t
 {
     Opaque = 0,
@@ -66,8 +67,7 @@ public:
     DFUNCTION()
     DELTAENGINE_API void SetAlphaMaskTexture(DTexture* texture);
 
-    DFUNCTION()
-    DELTAENGINE_API void SetRenderMode(uint32_t mode);
+    DELTAENGINE_API void SetRenderMode(ERenderMode mode);
 
     /// Returns the texture at the requested slot, or nullptr.
     DFUNCTION()
@@ -138,7 +138,7 @@ private:
     bool m_doubleSided { false };
 
     DPROPERTY()
-    uint32_t m_renderMode { 0u };
+    ERenderMode m_renderMode { ERenderMode::Opaque };
 };
 
 DELTA_ENGINE_NS_END

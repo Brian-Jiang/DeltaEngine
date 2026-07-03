@@ -417,6 +417,7 @@ DeltaEngine has a full static reflection system. Source classes annotated with m
 |---|---|---|
 | `DCLASS()` | class | Marks for reflection; DeltaHeaderTool generates `.generated.h/.cpp` |
 | `DSTRUCT()` | struct | Same as DCLASS, generates DStruct metadata instead of DClass |
+| `DENUM()` | `enum class` | Marks an enum for metadata registration (name, underlying type, enumerator list); expands to nothing at compile time |
 | `DPROPERTY()` | field | Reflects the field; type and offset captured via AST. Optional tag `EditorOnly` (`DPROPERTY(EditorOnly)`) sets `DProperty::bEditorOnly = true`, hiding the property from runtime serialization |
 | `DFUNCTION()` | method | Reflects the method; thunk + params struct generated |
 | `DGENERATED_BODY(Name)` | class body | Injects `friend` declaration and `GetClass()` override |
@@ -427,9 +428,10 @@ All annotation macros expand to nothing at compile time — they are only tokens
 
 - **`DStruct`** — metadata for structs: name, super name, size, alignment, linked list of `DProperty`
 - **`DClass`** — extends `DStruct` for classes: adds `DFunction` map, constructor/destructor/copy lambdas, abstract flag
-- **`DProperty`** — abstract base for field metadata; offset-based access; concrete subclasses include scalar/string/math types plus `DObjectPtrProperty<T>`, `DBulkDataProperty`, and `DVectorProperty<T>`
+- **`DProperty`** — abstract base for field metadata; offset-based access; concrete subclasses include scalar/string/math types plus `DObjectPtrProperty<T>`, `DBulkDataProperty<T>`, `DVectorProperty<T>`, and `DEnumProperty<T>` (`EPropertyType::Enum`)
+- **`DEnum`** / **`DEnumEntry`** — enum metadata: name, underlying type, and `{name, value}` enumerator list; registered via `ReflectionRegistry::RegisterDEnum` / looked up with `FindEnumByName`
 - **`DFunction`** — method metadata: name, native thunk pointer, param list (`DProperty*`), optional return property; `Invoke(DObject*, void*)` dispatches via thunk
-- **`ReflectionRegistry`** — singleton (`GetReflectionRegistry()`); maps name → `DStruct*` / `DClass*`; `CreateObject(name)` and `DestroyObject()` for runtime instantiation
+- **`ReflectionRegistry`** — singleton (`GetReflectionRegistry()`); maps name → `DStruct*` / `DClass*` / `DEnum*`; `CreateObject(name)` and `DestroyObject()` for runtime instantiation
 
 ### How Reflection Registration Works
 
@@ -451,11 +453,21 @@ Generated:  Intermediate/DeltaHeaderTool/Generated/Foo.generated.h
 
 `Foo.generated.h` is `#include`d at the top of `Foo.h` (before the class body) to expose forward declarations required by `DGENERATED_BODY`. The generated `.cpp` files are compiled as part of `DeltaEngine` via the manifest.
 
+### Enum Reflection (`DENUM()`)
+
+- **`enum class` only** — unscoped enums are rejected by DeltaHeaderTool.
+- Annotate the enum with `DENUM()` and use it as a `DPROPERTY()` field type; codegen maps the field to `DEnumProperty<T>` and registers `DEnum` metadata at startup.
+- **Serialization** — assets, undo JSON, and MCP all read/write the **underlying integer** (e.g. `"m_renderMode": 2`), not enumerator name strings.
+- **Editor** — the Details panel renders an ImGui combo built from `DEnum` metadata (enumerator display names, integer wire values).
+- **`std::vector<EnumType>`** is supported for enum properties.
+- **Production example:** `DMaterial::m_renderMode` is `ERenderMode` (`Opaque=0`, `Masked=1`, `Transparent=2`).
+- **Non-goals (initial rollout):** unscoped enum, string-based enum serialization, `DFUNCTION()` enum params.
+
 ### Currently Reflected Classes (40)
 
 Core / Scene: `DObject`, `GameObject`, `DComponent`, `SceneComponent`, `DWorld`, `Camera`, `DScene`
 Skybox: `Skybox`
-Rendering: `Renderer`, `MeshRenderer` (DSTRUCT), `DMesh`, `DMaterial` (PBR properties: baseColor, metallic, roughness, emissive; flags via `MaterialFlags`), `DTexture`, `DShader`
+Rendering: `Renderer`, `MeshRenderer` (DSTRUCT), `DMesh`, `DMaterial` (PBR properties: baseColor, metallic, roughness, emissive; `m_renderMode` as `ERenderMode` enum; flags via `MaterialFlags`), `DTexture`, `DShader`
 Post-processing: `PostProcessPass` (abstract), `PostProcessStack`, `PassthroughPass`, `TonemapPass`
 Assets: `DPrimaryAsset`, `PA_DScene`, `PA_Shader`, `PA_Material`, `PA_Texture`, `PA_StaticMesh`, `PA_Skybox`, `PA_PostProcessStack`
 Lighting: `LightComponent`, `DirectionalLight`, `PointLight`, `SpotLight`
@@ -464,7 +476,7 @@ Test / Serialization: `TestComponent`, `TestComponent2`, `DTestObjectA`, `DTestO
 ### Reflection Limitations
 
 - `std::vector<T>` properties are supported, including nested vectors such as `std::vector<std::vector<float>>`.
-- Vector elements may be value types, reflected raw pointers (`T*`), or nested vectors.
+- Vector elements may be value types, reflected raw pointers (`T*`), nested vectors, or reflected `enum class` types.
 - Template class reflection is **not** supported.
 - Nested class reflection is **not** supported.
 - Method overloads are tracked by index but discrimination is limited.

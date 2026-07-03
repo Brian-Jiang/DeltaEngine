@@ -23,7 +23,7 @@ void SetBoolProperty(DObject& obj, const char* name, bool value)
     prop->SetValue(&obj, &value);
 }
 
-void SetUInt32Property(DObject& obj, const char* name, uint32_t value)
+void SetEnumProperty(DObject& obj, const char* name, auto value)
 {
     DClass* cls = obj.GetClass();
     ASSERT_NE(cls, nullptr);
@@ -54,7 +54,7 @@ TEST(MeshShadowSubmissionTests, MaskedMaterial_ContributesToGBuffer)
     DMaterial mat;
     mat.Initialize(&shader);
 
-    SetUInt32Property(mat, "m_renderMode", static_cast<uint32_t>(ERenderMode::Masked));
+    SetEnumProperty(mat, "m_renderMode", ERenderMode::Masked);
 
     EXPECT_TRUE(HasAny(mat.GetFlags(), MaterialFlags::AlphaTest));
     EXPECT_FALSE(HasAny(mat.GetFlags(), MaterialFlags::AlphaBlend));
@@ -89,7 +89,7 @@ TEST(MeshShadowSubmissionTests, TransparentRenderMode_SetsAlphaBlendFlagAndPipel
     DMaterial mat;
     mat.Initialize(&shader);
 
-    SetUInt32Property(mat, "m_renderMode", static_cast<uint32_t>(ERenderMode::Transparent));
+    SetEnumProperty(mat, "m_renderMode", ERenderMode::Transparent);
 
     EXPECT_TRUE(HasAny(mat.GetFlags(), MaterialFlags::AlphaBlend));
     EXPECT_FALSE(HasAny(mat.GetFlags(), MaterialFlags::AlphaTest));
@@ -110,7 +110,7 @@ TEST(MeshShadowSubmissionTests, TransparentMaterial_ExcludedFromOpaqueGBufferAnd
     DMaterial mat;
     mat.Initialize(&shader);
 
-    mat.SetRenderMode(static_cast<uint32_t>(ERenderMode::Transparent));
+    mat.SetRenderMode(ERenderMode::Transparent);
 
     EXPECT_FALSE(MeshRenderProxy::SubmeshContributesToOpaquePass(&mat));
     EXPECT_FALSE(MeshRenderProxy::SubmeshContributesToGBuffer(&mat));
