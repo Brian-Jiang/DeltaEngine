@@ -321,6 +321,16 @@ def test_denum_property_field(parse_denum_property):
 
 
 @requires_libclang
+def test_denum_vector_property_field(parse_denum_property):
+    c = parse_denum_property.classes[0]
+    prop = next(p for p in c.properties if p.name == "m_colors")
+    assert prop.is_vector is True
+    assert prop.inner_property_class == "DEnumProperty<TestColor>"
+    assert prop.inner_cpp_type == "TestColor"
+    assert prop.inner_pointee_type == "TestColor"
+
+
+@requires_libclang
 def test_simple_enum_only(parse_simple_enum):
     r = parse_simple_enum
     assert len(r.enums) == 1

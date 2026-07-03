@@ -15,6 +15,9 @@ class Foo : public DObject
 public:
     DPROPERTY()
     TestColor m_color;
+
+    DPROPERTY()
+    std::vector<TestColor> m_colors;
 };
 
 }

@@ -215,6 +215,8 @@ nlohmann::json VectorElementToJson(void* elemAddr, const DProperty* inner, Edito
             {"objectId", pointed->GetObjectId().ToString()}
         };
     }
+    case EPropertyType::Enum:
+        return ReadEnumUnderlyingAsInt64(inner, elemAddr);
     case EPropertyType::Vector:
     {
         const auto* vecProp = static_cast<const DVectorPropertyBase*>(inner);
@@ -373,6 +375,11 @@ bool SetVectorElementFromJson(void* elemAddr, const DProperty* inner, const nloh
         ptrProp->ResolvePointer(elemAddr, target);
         return true;
     }
+    case EPropertyType::Enum:
+        if (!value.is_number())
+            return false;
+        WriteEnumUnderlyingFromInt64(inner, elemAddr, value.get<int64_t>());
+        return true;
     case EPropertyType::Vector:
     {
         if (!value.is_array())

@@ -142,6 +142,33 @@ def _resolve_vector_inner(inner_type: str) -> tuple | None:
 
 def _resolve_vector_inner_from_type(tu, inner_t, field_name, class_name, diag, source_file, line):
     import clang.cindex as ci
+    if inner_t.kind == TypeKind.ENUM:
+        enum_decl = inner_t.get_declaration()
+        if not is_annotated(tu, enum_decl, "DENUM"):
+            if diag:
+                diag.warn(source_file, line,
+                          f"enum '{enum_decl.spelling}' in std::vector on property '{field_name}' is missing DENUM()")
+            else:
+                print(
+                    f"WARNING: enum '{enum_decl.spelling}' in std::vector on property '{field_name}' "
+                    f"in '{class_name}' is missing DENUM() — skipping",
+                    file=sys.stderr,
+                )
+            return None
+        if not enum_decl.is_scoped_enum():
+            if diag:
+                diag.warn(source_file, line,
+                          f"enum '{enum_decl.spelling}' in std::vector on property '{field_name}' must be enum class")
+            else:
+                print(
+                    f"WARNING: enum '{enum_decl.spelling}' in std::vector on property '{field_name}' "
+                    f"in '{class_name}' must be enum class — skipping",
+                    file=sys.stderr,
+                )
+            return None
+        name = _strip_namespaces(enum_decl.spelling)
+        return (f"DEnumProperty<{name}>", name, False, name)
+
     if inner_t.kind == TypeKind.POINTER:
         pointee = inner_t.get_pointee()
         decl = pointee.get_declaration()
@@ -187,7 +214,7 @@ def _try_resolve_vector(spelling, field_name, class_name, *, diag=None, source_f
     if resolved is None:
         msg = (f"std::vector<{inner_type}> on property '{field_name}' — "
                f"inner type '{inner_type}' has no supported DProperty subclass. "
-               f"Supported: value types, T*, std::vector<T>, DSTRUCT.")
+               f"Supported: value types, T*, std::vector<T>, DSTRUCT, DENUM enum class.")
         if diag:
             diag.warn(source_file, line, msg)
         else:
