@@ -68,7 +68,7 @@ void DMaterial::SetDepthStencilState(const CD3DX12_PIPELINE_STATE_STREAM_DEPTH_S
     m_depthStencilState = depthStencilState;
 }
 
-void DMaterial::SetRenderMode(uint32_t mode)
+void DMaterial::SetRenderMode(ERenderMode mode)
 {
     m_renderMode = mode;
     ApplyRenderModePipelineState();
@@ -76,7 +76,7 @@ void DMaterial::SetRenderMode(uint32_t mode)
 
 void DMaterial::ApplyRenderModePipelineState()
 {
-    switch (static_cast<ERenderMode>(m_renderMode))
+    switch (m_renderMode)
     {
     case ERenderMode::Transparent:
         m_blendDesc = CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC(MakeTransparentBlendDesc());
@@ -118,7 +118,7 @@ CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC DMaterial::GetBlendState() const
 {
     // Transparent owns its blend state: m_renderMode is serialized but m_blendDesc is not,
     // so derive here to keep deserialized materials correct (overrides SetBlendState).
-    if (static_cast<ERenderMode>(m_renderMode) == ERenderMode::Transparent)
+    if (m_renderMode == ERenderMode::Transparent)
         return CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC(MakeTransparentBlendDesc());
     return m_blendDesc;
 }
@@ -126,7 +126,7 @@ CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC DMaterial::GetBlendState() const
 CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL DMaterial::GetDepthStencilState() const
 {
     // See GetBlendState: Transparent owns its depth-stencil state, overriding SetDepthStencilState.
-    if (static_cast<ERenderMode>(m_renderMode) == ERenderMode::Transparent)
+    if (m_renderMode == ERenderMode::Transparent)
         return CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL(MakeTransparentDepthStencilDesc());
     return m_depthStencilState;
 }
@@ -141,9 +141,9 @@ MaterialFlags DMaterial::ComputeFlags() const
     if (m_emissiveMaskTexture)      flags |= MaterialFlags::HasEmissiveMap;
     if (m_alphaMaskTexture)         flags |= MaterialFlags::HasAlphaMask;
     if (m_doubleSided)              flags |= MaterialFlags::DoubleSided;
-    if (static_cast<ERenderMode>(m_renderMode) == ERenderMode::Masked)
+    if (m_renderMode == ERenderMode::Masked)
         flags |= MaterialFlags::AlphaTest;
-    if (static_cast<ERenderMode>(m_renderMode) == ERenderMode::Transparent)
+    if (m_renderMode == ERenderMode::Transparent)
         flags |= MaterialFlags::AlphaBlend;
     else
     {
