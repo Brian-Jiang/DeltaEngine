@@ -20,7 +20,8 @@
         "add_to_selection": {
           "type": "bool",
           "default": false,
-          "description": "If true, adds the specified objects to the current selection instead of replacing it"
+          "description": "If true, adds the specified objects to the current selection instead of replacing it",
+          "required": false
         }
       }
     }

@@ -19,9 +19,18 @@
     "capabilities": {
       "description": "Full capability dump — all systems, queries, and commands",
       "params": {
-        "system_filter": { "type": "string", "optional": true,
-                           "description": "Limit to a single system" }
+        "system_filter": {
+          "type": "string",
+          "default": "",
+          "description": "Limit to a single system",
+          "required": false
+        }
       }
+    },
+    "active_systems": {
+      "description": "Return active vs stub-only MCP systems. Handled locally by the Python MCP server (not forwarded to editor TCP).",
+      "params": {}
     }
-  }
+  },
+  "commands": {}
 }
