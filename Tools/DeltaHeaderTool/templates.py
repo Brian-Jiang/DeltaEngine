@@ -217,8 +217,7 @@ DPROPERTY_VECTOR_DSTRUCT = Template("""\
 
 DPROPERTY_VECTOR_ENUM = Template("""\
     {
-        auto* _innerProp = new DEnumProperty<${enum_type}>(
-            "${field_name}_elem", 0, "${enum_type_name}");
+        auto* _innerProp = new DEnumProperty<${enum_type}>("${field_name}_elem", 0, "${enum_type_name}");
         cls->AddProperty(new DVectorProperty<${inner_cpp_type}>(
             "${field_name}",
             offsetof(${class_name}, ${field_name}),
