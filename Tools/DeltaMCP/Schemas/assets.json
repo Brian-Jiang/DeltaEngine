@@ -195,6 +195,19 @@
           "description": "Asset UUID strings."
         }
       }
+    },
+    "duplicate_asset": {
+      "description": "Duplicate an asset to a new file (non-undoable). Optional rename and/or move.",
+      "undoable": false,
+      "expects_result": true,
+      "params": {
+        "asset_id":  { "type": "string", "required": true },
+        "new_name":  { "type": "string", "optional": true,
+                       "description": "File stem without .dasset.json" },
+        "new_path":  { "type": "string", "optional": true,
+                       "description": "Folder under imported-assets root" }
+      },
+      "returns": { "asset_id": "string", "path": "string" }
     }
   }
 }

@@ -7,14 +7,9 @@ endif()
 set(_pix_root "${CMAKE_CURRENT_SOURCE_DIR}/pix")
 set(_pix_dll_src "${_pix_root}/bin/x64/WinPixEventRuntime.dll")
 
-add_custom_target(CopyPixBin ALL
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/bin"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${_pix_dll_src}"
-        "${CMAKE_BINARY_DIR}/bin/WinPixEventRuntime.dll"
-    COMMENT "Copying WinPixEventRuntime.dll to ${CMAKE_BINARY_DIR}/bin"
-)
-set_target_properties(CopyPixBin PROPERTIES FOLDER ${utility_folder})
+delta_add_sync_directory_target(CopyPixBin
+    "${_pix_dll_src}"
+    "${CMAKE_BINARY_DIR}/bin/WinPixEventRuntime.dll")
 
 add_library(pix INTERFACE)
 target_include_directories(pix SYSTEM INTERFACE

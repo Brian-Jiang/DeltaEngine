@@ -33,6 +33,10 @@ jobs:
         shell: cmd
         run: Tools\Scripts\test-delta-mcp.bat --automatic
 
+      - name: Run delta build tool tests
+        shell: cmd
+        run: Tools\Scripts\test-delta-build-tool.bat --automatic
+
       - name: Resolve cache branch id
         id: cache-branch
         shell: cmd

@@ -2,6 +2,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include <filesystem>
 #include <string>
 
 using json = nlohmann::json;
@@ -146,4 +147,104 @@ TEST_F(McpAssetsSystemTests, ReimportAssets_UnknownId_QueuedAndSkipped)
     EXPECT_TRUE(drained["ok"].get<bool>());
     ASSERT_EQ(drained["skipped"].size(), 1u);
     EXPECT_EQ(drained["skipped"][0]["asset_id"].get<std::string>(), unknownId);
+}
+
+TEST_F(McpAssetsSystemTests, DuplicateAsset_MissingParam_ReturnsError)
+{
+    auto res = Dispatch("assets", "duplicate_asset");
+    EXPECT_FALSE(res["ok"].get<bool>());
+    EXPECT_TRUE(res.contains("error"));
+}
+
+TEST_F(McpAssetsSystemTests, DuplicateAsset_InvalidId_ReturnsError)
+{
+    auto res = Dispatch("assets", "duplicate_asset",
+                        {{"asset_id", "00000000-0000-0000-0000-000000000000"}});
+    EXPECT_FALSE(res["ok"].get<bool>());
+    EXPECT_TRUE(res.contains("error"));
+}
+
+TEST_F(McpAssetsSystemTests, DuplicateAsset_Default_QueuedAndCreatesDuplicate)
+{
+    const AssetId sceneId = GetActiveSceneAssetId();
+    ASSERT_FALSE(sceneId.IsNull());
+
+    auto res = Dispatch("assets", "duplicate_asset", {{"asset_id", sceneId.ToString()}});
+    ASSERT_TRUE(res["ok"].get<bool>());
+    EXPECT_TRUE(res.value("queued", false));
+
+    std::vector<std::string> responses;
+    m_core->DrainCommandQueue(responses);
+    ASSERT_EQ(responses.size(), 1u);
+
+    const json drained = json::parse(responses[0]);
+    ASSERT_TRUE(drained["ok"].get<bool>());
+    EXPECT_NE(drained["asset_id"].get<std::string>(), sceneId.ToString());
+    EXPECT_TRUE(drained["path"].get<std::string>().find("_duplicated") != std::string::npos);
+    EXPECT_TRUE(std::filesystem::exists(m_tempDir / drained["path"].get<std::string>()));
+}
+
+TEST_F(McpAssetsSystemTests, DuplicateAsset_WithNewName_RenamesDuplicate)
+{
+    const AssetId sceneId = GetActiveSceneAssetId();
+    ASSERT_FALSE(sceneId.IsNull());
+
+    auto res = Dispatch("assets", "duplicate_asset",
+                        {{"asset_id", sceneId.ToString()}, {"new_name", "McpCopy"}});
+    ASSERT_TRUE(res["ok"].get<bool>());
+
+    std::vector<std::string> responses;
+    m_core->DrainCommandQueue(responses);
+    ASSERT_EQ(responses.size(), 1u);
+
+    const json drained = json::parse(responses[0]);
+    ASSERT_TRUE(drained["ok"].get<bool>());
+    EXPECT_EQ(drained["path"].get<std::string>(), "McpCopy.dasset.json");
+}
+
+TEST_F(McpAssetsSystemTests, DuplicateAsset_WithNewPath_MovesToFolder)
+{
+    const AssetId sceneId = GetActiveSceneAssetId();
+    ASSERT_FALSE(sceneId.IsNull());
+
+    auto res = Dispatch("assets", "duplicate_asset",
+                        {{"asset_id", sceneId.ToString()}, {"new_path", "SubFolder"}});
+    ASSERT_TRUE(res["ok"].get<bool>());
+
+    std::vector<std::string> responses;
+    m_core->DrainCommandQueue(responses);
+    ASSERT_EQ(responses.size(), 1u);
+
+    const json drained = json::parse(responses[0]);
+    ASSERT_TRUE(drained["ok"].get<bool>());
+    EXPECT_TRUE(drained["path"].get<std::string>().starts_with("SubFolder/"));
+    EXPECT_TRUE(std::filesystem::exists(m_tempDir / drained["path"].get<std::string>()));
+}
+
+TEST_F(McpAssetsSystemTests, DuplicateAsset_NameCollision_ReturnsError)
+{
+    const AssetId sceneId = GetActiveSceneAssetId();
+    ASSERT_FALSE(sceneId.IsNull());
+
+    auto first = Dispatch("assets", "duplicate_asset",
+                          {{"asset_id", sceneId.ToString()}, {"new_name", "McpCollision"}});
+    ASSERT_TRUE(first["ok"].get<bool>());
+
+    std::vector<std::string> responses;
+    m_core->DrainCommandQueue(responses);
+    ASSERT_EQ(responses.size(), 1u);
+    const json firstResult = json::parse(responses[0]);
+    ASSERT_TRUE(firstResult["ok"].get<bool>());
+
+    auto second = Dispatch("assets", "duplicate_asset",
+                           {{"asset_id", sceneId.ToString()}, {"new_name", "McpCollision"}});
+    ASSERT_TRUE(second["ok"].get<bool>());
+
+    responses.clear();
+    m_core->DrainCommandQueue(responses);
+    ASSERT_EQ(responses.size(), 1u);
+    const json secondResult = json::parse(responses[0]);
+    EXPECT_FALSE(secondResult["ok"].get<bool>());
+    EXPECT_TRUE(secondResult.contains("error"));
+    EXPECT_TRUE(std::filesystem::exists(m_tempDir / "McpCollision.dasset.json"));
 }

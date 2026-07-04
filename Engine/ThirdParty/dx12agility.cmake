@@ -1,13 +1,8 @@
 message(STATUS "====== Delta Engine ====== Configuring dx12 agility ======")
 
-add_custom_target(CopyDx12AgilityBin ALL
-                   COMMAND ${CMAKE_COMMAND} -E copy_directory
-                   "${CMAKE_CURRENT_SOURCE_DIR}/dx12agility/bin/x64"
-                   "${CMAKE_BINARY_DIR}/bin/D3D12"
-                   COMMENT "Copying DX12 Agility binaries from ${CMAKE_CURRENT_SOURCE_DIR}/dx12agility/bin/x64 to ${CMAKE_BINARY_DIR}/bin/D3D12"
-)
-
-set_target_properties(CopyDx12AgilityBin PROPERTIES FOLDER ${utility_folder})
+delta_add_sync_directory_target(CopyDx12AgilityBin
+    "${CMAKE_CURRENT_SOURCE_DIR}/dx12agility/bin/x64"
+    "${CMAKE_BINARY_DIR}/bin/D3D12")
 
 set(_dx12_agility_root "${CMAKE_CURRENT_SOURCE_DIR}/dx12agility")
 add_library(dx12agility INTERFACE)
