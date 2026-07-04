@@ -1,5 +1,7 @@
 import difflib
 
+from schema_validation import TARGET_PARAM_TYPES
+
 
 def _is_int(v):
     return isinstance(v, int) and not isinstance(v, bool)
@@ -13,9 +15,7 @@ _TYPE_VALIDATORS = {
     "string": lambda v: isinstance(v, str),
     "bool": lambda v: isinstance(v, bool),
     "int": _is_int,
-    "integer": _is_int,
     "float": _is_number,
-    "number": _is_number,
     "array": lambda v: isinstance(v, list),
     "object": lambda v: isinstance(v, dict),
     "any": lambda v: True,
@@ -43,13 +43,22 @@ def _validate_params(params, param_schemas):
 
         type_name = spec.get("type")
         if type_name is not None:
+            if type_name not in TARGET_PARAM_TYPES:
+                errors.append({
+                    "param": name,
+                    "problem": "unknown_type",
+                    "expected": sorted(TARGET_PARAM_TYPES),
+                    "got": type_name,
+                })
+                continue
+
             validator = _TYPE_VALIDATORS.get(type_name)
             if validator is not None and not validator(value):
                 errors.append({
                     "param": name,
                     "problem": "type_mismatch",
                     "expected": type_name,
-                    "got": type(value).__name__,
+                    "got": type(type).__name__,
                 })
                 continue
 

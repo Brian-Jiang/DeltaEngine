@@ -15,9 +15,9 @@
       "params": {
         "include_partial": {
           "type": "bool",
-          "optional": true,
           "default": true,
-          "description": "Include partially visible objects"
+          "description": "Include partially visible objects",
+          "required": false
         }
       }
     }
@@ -30,15 +30,15 @@
       "params": {
         "position": {
           "type": "array",
-          "optional": true
+          "required": false
         },
         "rotation": {
           "type": "array",
-          "optional": true
+          "required": false
         },
         "fov": {
           "type": "float",
-          "optional": true
+          "required": false
         }
       }
     }

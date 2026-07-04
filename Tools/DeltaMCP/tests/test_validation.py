@@ -108,3 +108,26 @@ def test_invalid_type_field(schemas):
     op = {"type": "mutate", "system": "scene", "command": "CreateGameObject"}
     err = validate_operation(op, schemas)
     assert err["stage"] == "envelope"
+
+
+def test_unknown_schema_type_rejected():
+    systems = {
+        "test": {
+            "queries": {
+                "bad_type": {
+                    "description": "test",
+                    "params": {
+                        "value": {
+                            "type": "integer",
+                            "required": True,
+                        },
+                    },
+                },
+            },
+        },
+    }
+    op = {"type": "query", "system": "test", "query": "bad_type", "params": {"value": 1}}
+    err = validate_operation(op, systems)
+    assert err["stage"] == "params"
+    problems = {(e["param"], e["problem"]) for e in err["param_errors"]}
+    assert ("value", "unknown_type") in problems

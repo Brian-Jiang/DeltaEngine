@@ -1,0 +1,96 @@
+from pathlib import Path
+
+import json
+
+from schema_validation import (
+    NO_DEFAULT_EXCEPTIONS,
+    OPERATION_KEYS,
+    PARAM_KEYS,
+    SYSTEM_KEYS,
+    TARGET_PARAM_TYPES,
+    validate_all_schemas,
+)
+
+SCHEMAS_DIR = Path(__file__).resolve().parent.parent / "Schemas"
+
+
+def _iter_all_param_paths(schemas_dir: Path):
+    """Yield (path, param_spec) for every param in every schema file."""
+    for path in sorted(schemas_dir.glob("*.json")):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        for kind in ("queries", "commands"):
+            for op_name, op_spec in data.get(kind, {}).items():
+                for param_name, param_spec in op_spec.get("params", {}).items():
+                    yield (
+                        f"{path.name}/{kind}/{op_name}/params/{param_name}",
+                        param_spec,
+                    )
+
+
+def test_allowed_key_constants_documented():
+    assert SYSTEM_KEYS == frozenset({"system", "description", "queries", "commands"})
+    assert OPERATION_KEYS == frozenset(
+        {
+            "description",
+            "params",
+            "undoable",
+            "expects_result",
+            "expects_result_note",
+            "returns",
+        }
+    )
+    assert PARAM_KEYS == frozenset(
+        {"type", "required", "description", "default", "options", "items"}
+    )
+    assert TARGET_PARAM_TYPES == frozenset(
+        {"string", "bool", "int", "float", "array", "object", "any"}
+    )
+
+
+def test_every_param_has_canonical_type():
+    report = validate_all_schemas(SCHEMAS_DIR)
+    counts = report.violation_counts()
+    assert counts.get("missing_param_type", 0) == 0
+    assert counts.get("invalid_param_type", 0) == 0
+
+
+def test_schema_validation_passes():
+    report = validate_all_schemas(SCHEMAS_DIR)
+    assert report.ok is True, report.violations
+    assert report.violation_counts().get("required_false_without_default", 0) == 0
+    assert report.violation_counts().get("required_true_with_default", 0) == 0
+
+
+def test_no_default_exceptions_are_documented():
+    all_paths = {path for path, _ in _iter_all_param_paths(SCHEMAS_DIR)}
+    for exc_path in NO_DEFAULT_EXCEPTIONS:
+        assert exc_path in all_paths, f"exception path not in schemas: {exc_path}"
+
+
+def test_required_true_params_have_no_default():
+    for path, spec in _iter_all_param_paths(SCHEMAS_DIR):
+        if spec.get("required") is True:
+            assert "default" not in spec, f"{path} has required:true with default"
+
+
+def test_default_values_match_declared_type():
+    report = validate_all_schemas(SCHEMAS_DIR)
+    mismatches = [v for v in report.violations if v.code == "default_type_mismatch"]
+    assert mismatches == []
+
+
+def test_no_legacy_optional_key():
+    for path, spec in _iter_all_param_paths(SCHEMAS_DIR):
+        assert "optional" not in spec, f"{path} uses legacy 'optional' key"
+
+
+def test_every_param_has_type_and_required():
+    for path, spec in _iter_all_param_paths(SCHEMAS_DIR):
+        assert "type" in spec, f"{path} missing 'type'"
+        assert "required" in spec, f"{path} missing 'required'"
+
+
+def test_no_unknown_param_keys_in_schemas():
+    for path, spec in _iter_all_param_paths(SCHEMAS_DIR):
+        unknown = set(spec.keys()) - PARAM_KEYS
+        assert not unknown, f"{path} has unknown param keys: {unknown}"

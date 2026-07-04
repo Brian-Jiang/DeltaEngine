@@ -5,68 +5,158 @@
     "list": {
       "description": "List assets in a folder",
       "params": {
-        "folder":      { "type": "string", "optional": true, "default": "/" },
-        "type_filter": { "type": "string", "optional": true, "default": "any",
-                         "options": ["mesh","material","texture","scene","shader",
-                                     "animation_clip","skeleton","any"] },
-        "recursive":   { "type": "bool",   "optional": true, "default": false },
-        "include_fields": { "type": "array", "optional": true,
-                            "default": ["path","type"],
-                            "options": ["path","type","size","import_date",
-                                        "dependencies","thumbnail_available"] }
+        "folder": {
+          "type": "string",
+          "default": "/",
+          "required": false
+        },
+        "type_filter": {
+          "type": "string",
+          "default": "any",
+          "options": [
+            "mesh",
+            "material",
+            "texture",
+            "scene",
+            "shader",
+            "animation_clip",
+            "skeleton",
+            "any"
+          ],
+          "required": false
+        },
+        "recursive": {
+          "type": "bool",
+          "default": false,
+          "required": false
+        },
+        "include_fields": {
+          "type": "array",
+          "default": [
+            "path",
+            "type"
+          ],
+          "options": [
+            "path",
+            "type",
+            "size",
+            "import_date",
+            "dependencies",
+            "thumbnail_available"
+          ],
+          "required": false
+        }
       }
     },
     "get": {
       "description": "Full metadata for a single asset with an objects array (object_id + reflected class) for resolving inner object IDs.",
       "params": {
-        "asset_id":       { "type": "string", "required": true },
-        "include_fields": { "type": "array",  "optional": true,
-                            "default": ["properties","dependencies"],
-                            "options": ["properties","dependencies","dependents",
-                                        "import_settings","source_path"] }
+        "asset_id": {
+          "type": "string",
+          "required": true
+        },
+        "include_fields": {
+          "type": "array",
+          "default": [
+            "properties",
+            "dependencies"
+          ],
+          "options": [
+            "properties",
+            "dependencies",
+            "dependents",
+            "import_settings",
+            "source_path"
+          ],
+          "required": false
+        }
       }
     },
     "search": {
       "description": "Fuzzy name search across the asset database",
       "params": {
-        "query":       { "type": "string", "required": true },
-        "type_filter": { "type": "string", "optional": true, "default": "any" },
-        "limit":       { "type": "int",    "optional": true, "default": 20 }
+        "query": {
+          "type": "string",
+          "required": true
+        },
+        "type_filter": {
+          "type": "string",
+          "default": "any",
+          "required": false
+        },
+        "limit": {
+          "type": "int",
+          "default": 20,
+          "required": false
+        }
       }
     },
     "folder_tree": {
       "description": "Asset folder hierarchy only (no asset contents)",
       "params": {
-        "root": { "type": "string", "optional": true, "default": "/" }
+        "root": {
+          "type": "string",
+          "default": "/",
+          "required": false
+        }
       }
     },
     "usages": {
       "description": "Find all scene objects referencing a given asset",
       "params": {
-        "asset_id": { "type": "string", "required": true }
+        "asset_id": {
+          "type": "string",
+          "required": true
+        }
       }
     },
     "get_asset_metadata": {
       "description": "Cached static+dynamic meta for a single asset (no asset load)",
       "params": {
-        "asset_id": { "type": "string", "required": true }
+        "asset_id": {
+          "type": "string",
+          "required": true
+        }
       }
     },
     "get_assets_metadata": {
       "description": "Bulk variant; sources from AssetEntry meta cache (no asset load)",
       "params": {
-        "asset_ids":   { "type": "array",  "optional": true,
-                         "items": { "type": "string" } },
-        "type_filter": { "type": "string", "optional": true, "default": "any",
-                         "options": ["mesh","material","texture","scene","shader",
-                                     "animation_clip","skeleton","any"] }
+        "asset_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "required": false
+        },
+        "type_filter": {
+          "type": "string",
+          "default": "any",
+          "options": [
+            "mesh",
+            "material",
+            "texture",
+            "scene",
+            "shader",
+            "animation_clip",
+            "skeleton",
+            "any"
+          ],
+          "required": false
+        }
       }
     },
     "has_static_meta_schema": {
       "description": "Whether the asset's type defines a static-meta DSTRUCT. Type-level only; no asset load.",
       "params": {
-        "asset_id": { "type": "string", "optional": true },
-        "class":    { "type": "string", "optional": true }
+        "asset_id": {
+          "type": "string",
+          "required": false
+        },
+        "class": {
+          "type": "string",
+          "required": false
+        }
       }
     }
   },
@@ -76,10 +166,19 @@
       "undoable": true,
       "expects_result": true,
       "params": {
-        "asset_id":  { "type": "string", "required": true },
-        "json_path": { "type": "string", "required": true,
-                       "description": "Empty, '/dynamic', or '/dynamic/...'." },
-        "new_value": { "type": "any",    "required": true }
+        "asset_id": {
+          "type": "string",
+          "required": true
+        },
+        "json_path": {
+          "type": "string",
+          "required": true,
+          "description": "Empty, '/dynamic', or '/dynamic/...'."
+        },
+        "new_value": {
+          "type": "any",
+          "required": true
+        }
       }
     },
     "reimport_assets": {
@@ -87,9 +186,14 @@
       "undoable": false,
       "expects_result": true,
       "params": {
-        "asset_ids": { "type": "array", "required": true,
-                       "items": { "type": "string" },
-                       "description": "Asset UUID strings." }
+        "asset_ids": {
+          "type": "array",
+          "required": true,
+          "items": {
+            "type": "string"
+          },
+          "description": "Asset UUID strings."
+        }
       }
     },
     "duplicate_asset": {
@@ -97,13 +201,23 @@
       "undoable": false,
       "expects_result": true,
       "params": {
-        "asset_id":  { "type": "string", "required": true },
-        "new_name":  { "type": "string", "optional": true,
-                       "description": "File stem without .dasset.json" },
-        "new_path":  { "type": "string", "optional": true,
-                       "description": "Folder under imported-assets root" }
-      },
-      "returns": { "asset_id": "string", "path": "string" }
+        "asset_id": {
+          "type": "string",
+          "required": true
+        },
+        "new_name": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "File stem without .dasset.json"
+        },
+        "new_path": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "Folder under imported-assets root"
+        }
+      }
     }
   }
 }
