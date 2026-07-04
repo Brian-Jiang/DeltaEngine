@@ -201,13 +201,23 @@
       "undoable": false,
       "expects_result": true,
       "params": {
-        "asset_id":  { "type": "string", "required": true },
-        "new_name":  { "type": "string", "optional": true,
-                       "description": "File stem without .dasset.json" },
-        "new_path":  { "type": "string", "optional": true,
-                       "description": "Folder under imported-assets root" }
-      },
-      "returns": { "asset_id": "string", "path": "string" }
+        "asset_id": {
+          "type": "string",
+          "required": true
+        },
+        "new_name": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "File stem without .dasset.json"
+        },
+        "new_path": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "Folder under imported-assets root"
+        }
+      }
     }
   }
 }

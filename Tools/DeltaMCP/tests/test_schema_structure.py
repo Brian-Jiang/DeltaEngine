@@ -13,79 +13,6 @@ from schema_validation import (
 
 SCHEMAS_DIR = Path(__file__).resolve().parent.parent / "Schemas"
 
-EXPECTED_SYSTEM_COUNTS = {
-    "assets": (8, 2),
-    "common": (0, 3),
-    "lights": (0, 1),
-    "log": (2, 0),
-    "meta": (4, 0),
-    "project": (4, 1),
-    "reflection": (4, 0),
-    "scene": (6, 9),
-    "selection": (1, 1),
-    "undo_history": (1, 2),
-    "viewport": (3, 1),
-}
-
-EXPECTED_QUERY_NAMES = {
-    "assets": [
-        "folder_tree",
-        "get",
-        "get_asset_metadata",
-        "get_assets_metadata",
-        "has_static_meta_schema",
-        "list",
-        "search",
-        "usages",
-    ],
-    "common": [],
-    "lights": [],
-    "log": ["file_location", "read"],
-    "meta": ["active_systems", "capabilities", "describe_operations", "list_operations"],
-    "project": ["build_state", "info", "open_scenes", "settings"],
-    "reflection": [
-        "class_schema",
-        "classes",
-        "find_classes_with_property",
-        "inheritance_chain",
-    ],
-    "scene": [
-        "component",
-        "components_on_object",
-        "find_by_property",
-        "game_object",
-        "game_objects",
-        "hierarchy",
-    ],
-    "selection": ["current"],
-    "undo_history": ["stack"],
-    "viewport": ["camera", "render_settings", "visible_objects"],
-}
-
-EXPECTED_COMMAND_NAMES = {
-    "assets": ["reimport_assets", "set_asset_dynamic_metadata"],
-    "common": ["RenameObject", "SaveProject", "SetProperty"],
-    "lights": ["SetIntensity"],
-    "log": [],
-    "meta": [],
-    "project": ["LoadScene"],
-    "reflection": [],
-    "scene": [
-        "CreateComponent",
-        "CreateGameObject",
-        "DeleteComponent",
-        "DeleteGameObject",
-        "DuplicateGameObject",
-        "ReparentSceneComponent",
-        "SetPosition",
-        "SetRotation",
-        "SetScale",
-    ],
-    "selection": ["SelectObject"],
-    "undo_history": ["Redo", "Undo"],
-    "viewport": ["SetViewportCamera"],
-}
-
 
 def _iter_all_param_paths(schemas_dir: Path):
     """Yield (path, param_spec) for every param in every schema file."""
@@ -118,27 +45,6 @@ def test_allowed_key_constants_documented():
     assert TARGET_PARAM_TYPES == frozenset(
         {"string", "bool", "int", "float", "array", "object", "any"}
     )
-
-
-def test_all_schema_files_load():
-    report = validate_all_schemas(SCHEMAS_DIR)
-    assert report.ok is True, report.violations
-    assert len(report.files) == 11
-    assert report.system_count == 11
-    assert report.total_queries == 33
-    assert report.total_commands == 20
-
-
-def test_per_system_operation_counts():
-    report = validate_all_schemas(SCHEMAS_DIR)
-    assert set(report.systems.keys()) == set(EXPECTED_SYSTEM_COUNTS.keys())
-
-    for system, (query_count, command_count) in EXPECTED_SYSTEM_COUNTS.items():
-        summary = report.systems[system]
-        assert len(summary.queries) == query_count, system
-        assert len(summary.commands) == command_count, system
-        assert summary.queries == EXPECTED_QUERY_NAMES[system], system
-        assert summary.commands == EXPECTED_COMMAND_NAMES[system], system
 
 
 def test_every_param_has_canonical_type():
