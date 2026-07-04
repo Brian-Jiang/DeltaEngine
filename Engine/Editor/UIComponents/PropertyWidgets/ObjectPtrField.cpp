@@ -170,6 +170,8 @@ std::optional<DObject*> ObjectPtrField::Draw(
                 sel->SetSelectedGameObject(current->GetObjectId());
             else if (dynamic_cast<DComponent*>(current))
                 sel->SetSelectedComponent(current->GetObjectId());
+            else if (DPrimaryAsset* asset = current->GetOwningAsset())
+                sel->SetSelectedAsset(asset->GetAssetId());
         }
     }
     ImGui::SameLine();
