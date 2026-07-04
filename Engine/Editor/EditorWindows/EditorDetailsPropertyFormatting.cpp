@@ -65,6 +65,7 @@ bool IsUndoableInspectorPropertyType(EPropertyType type)
     case EPropertyType::Float4x4:
     case EPropertyType::BoundingBox:
     case EPropertyType::Struct:
+    case EPropertyType::Enum:
         return true;
     case EPropertyType::ObjectPtr:
     case EPropertyType::BulkData:

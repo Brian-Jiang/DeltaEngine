@@ -112,6 +112,59 @@ TEST_F(McpSceneSystemTests, QueryComponent_ByObjectId_ReturnsProperties)
     EXPECT_EQ(res["component"]["class"].get<std::string>(), "PointLight");
 }
 
+namespace {
+
+const json* FindSchemaProperty(const json& properties, const char* name)
+{
+    for (const auto& prop : properties)
+        if (prop.value("name", "") == name)
+            return &prop;
+    return nullptr;
+}
+
+void ExpectEnumPropertyMetadata(const json& enumProp)
+{
+    EXPECT_EQ(enumProp.at("type").get<std::string>(), "enum");
+    EXPECT_EQ(enumProp.at("enum_name").get<std::string>(), "EReflectionTestEnum");
+    ASSERT_TRUE(enumProp.at("values").is_array());
+    ASSERT_EQ(enumProp.at("values").size(), 3u);
+    EXPECT_EQ(enumProp.at("values")[1].at("name").get<std::string>(), "Bar");
+    EXPECT_EQ(enumProp.at("values")[1].at("value").get<int64_t>(), 1);
+}
+
+} // namespace
+
+TEST_F(McpSceneSystemTests, QueryComponent_IncludeSchema_EnumProperty_HasMetadata)
+{
+    const std::string goId = CreateLegacyGameObject();
+    ASSERT_FALSE(goId.empty());
+
+    json data;
+    data["sceneAssetId"] = GetActiveSceneAssetId().ToString();
+    data["gameObjectId"] = goId;
+    data["className"]    = "ReflectionTestObject";
+    json env;
+    env["type"] = "EditorCommand_CreateComponent";
+    env["data"] = data;
+    m_core->EnqueueSerializedCommand(env.dump());
+    std::vector<std::string> r;
+    m_core->DrainCommandQueue(r);
+    ASSERT_EQ(r.size(), 1u);
+    const std::string compId = json::parse(r[0]).value("objectId", std::string{});
+    ASSERT_FALSE(compId.empty());
+
+    auto res = Dispatch("scene", "component",
+                        {{"object_id", compId}, {"include_schema", true}});
+    EXPECT_TRUE(res["ok"].get<bool>());
+    ASSERT_TRUE(res.contains("component"));
+    EXPECT_EQ(res["component"]["class"].get<std::string>(), "ReflectionTestObject");
+    ASSERT_TRUE(res["component"]["schema"].is_array());
+
+    const json* enumProp = FindSchemaProperty(res["component"]["schema"], "m_rEnum");
+    ASSERT_NE(enumProp, nullptr);
+    ExpectEnumPropertyMetadata(*enumProp);
+}
+
 TEST_F(McpSceneSystemTests, QueryComponentsOnObject_AfterAddingComponent_ListsIt)
 {
     const std::string goId = CreateLegacyGameObject();

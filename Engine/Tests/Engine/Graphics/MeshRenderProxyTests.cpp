@@ -129,7 +129,7 @@ TEST(MeshRenderProxyTests, SubmeshContributesToOpaquePass_AlphaBlendMaterial_Ret
 TEST(MeshRenderProxyTests, SubmeshContributesToOpaquePass_TransparentRenderMode_ReturnsFalse)
 {
     DMaterial material;
-    material.SetRenderMode(static_cast<uint32_t>(ERenderMode::Transparent));
+    material.SetRenderMode(ERenderMode::Transparent);
 
     EXPECT_FALSE(MeshRenderProxy::SubmeshContributesToOpaquePass(&material));
 }
@@ -158,7 +158,7 @@ TEST(MeshRenderProxyTests, SubmeshContributesToTransparentPass_AlphaBlendMateria
 TEST(MeshRenderProxyTests, SubmeshContributesToTransparentPass_TransparentRenderMode_ReturnsTrue)
 {
     DMaterial material;
-    material.SetRenderMode(static_cast<uint32_t>(ERenderMode::Transparent));
+    material.SetRenderMode(ERenderMode::Transparent);
 
     EXPECT_TRUE(MeshRenderProxy::SubmeshContributesToTransparentPass(&material));
 }

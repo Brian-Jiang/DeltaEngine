@@ -5,6 +5,7 @@
 #include "Editor/Commands/EditorCommand_SetProperty.h"
 #include "Editor/Commands/EditorCommandManager.h"
 #include "Editor/Commands/PropertyValueIO.h"
+#include "Editor/Commands/EnumPropertyWire.h"
 #include "Editor/EditorCore.h"
 #include "Editor/EditorMain.h"
 #include "Editor/EditorSelectionState.h"
@@ -23,6 +24,7 @@
 #include "Runtime/Reflection/DFunction.h"
 #include "Runtime/Reflection/DStruct.h"
 #include "Runtime/Reflection/DProperty.h"
+#include "Runtime/Reflection/DEnumProperty.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
 #include "Runtime/Utils/StringUtils.h"
 
@@ -584,6 +586,9 @@ void EditorWindow_Details::RenderSingleProperty(DObject* instance, DProperty* pr
     case EPropertyType::Struct:
         evt = DrawStructPropertyEditor(instance, static_cast<DStructProperty*>(prop));
         break;
+    case EPropertyType::Enum:
+        evt = DrawEnumProperty(instance, prop);
+        break;
     default:
         DrawReadOnlyProperty(FormatPropertyInspectorLabel(prop->GetName()),
             prop->ToString(prop->GetValue(instance)));
@@ -798,6 +803,16 @@ void EditorWindow_Details::DrawVectorElements(DVectorPropertyBase* vectorProp, v
                 }
                 break;
             }
+            case EPropertyType::Enum:
+            {
+                const nlohmann::json before = snapshotBefore();
+                WidgetEditEvent evt = DrawEnumPropertyAt(
+                    elementAddr,
+                    const_cast<DProperty*>(innerProp));
+                if (evt.valueChanged)
+                    CommitVectorPropertyEdit(ownerObject, rootProp, before);
+                break;
+            }
             default:
                 DrawReadOnlyProperty(label, innerProp->ToString(elementAddr));
                 break;
@@ -909,6 +924,9 @@ void EditorWindow_Details::DrawStructSchemaFields(void* structBase, DStruct* ds,
             }
             break;
         }
+        case EPropertyType::Enum:
+            merged.Merge(DrawEnumPropertyAt(structBase, p));
+            break;
         default:
             DrawReadOnlyProperty(FormatPropertyInspectorLabel(p->GetName()),
                 p->ToString(p->GetValue(structBase)));
@@ -1080,6 +1098,25 @@ WidgetEditEvent EditorWindow_Details::DrawFilesystemPathPropertyAt(void* contain
         *addr = std::filesystem::path(std::u8string(reinterpret_cast<const char8_t*>(newVal.data()), newVal.size()));
     }
     return evt;
+}
+
+WidgetEditEvent EditorWindow_Details::DrawEnumPropertyAt(void* container, DProperty* prop)
+{
+    auto* enumProp = static_cast<DEnumPropertyBase*>(prop);
+    void* addr = prop->GetValue(container);
+    int64_t wireValue = ReadEnumUnderlyingAsInt64(prop, addr);
+    WidgetEditEvent evt = m_enumField.Draw(
+        FormatPropertyInspectorLabel(prop->GetName()).c_str(),
+        &wireValue,
+        enumProp->GetEnumSchema());
+    if (evt.valueChanged)
+        WriteEnumUnderlyingFromInt64(prop, addr, wireValue);
+    return evt;
+}
+
+WidgetEditEvent EditorWindow_Details::DrawEnumProperty(DObject* instance, DProperty* prop)
+{
+    return DrawEnumPropertyAt(instance, prop);
 }
 
 WidgetEditEvent EditorWindow_Details::DrawFilesystemPathProperty(DObject* instance, DProperty* prop)

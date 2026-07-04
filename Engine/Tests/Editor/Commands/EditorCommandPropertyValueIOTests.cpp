@@ -11,6 +11,7 @@
 
 #include "Runtime/Core/DComponent.h"
 #include "Runtime/Core/GameObject.h"
+#include "Runtime/Test/ReflectionTestObject.h"
 #include "Runtime/Test/TestComponent.h"
 
 using namespace DeltaEngine;
@@ -26,6 +27,16 @@ protected:
         for (DComponent* c : go->GetComponents())
             if (auto* tc = dynamic_cast<TestComponent*>(c))
                 return tc;
+        return nullptr;
+    }
+
+    static ReflectionTestObject* FindReflectionTestObject(GameObject* go)
+    {
+        if (!go)
+            return nullptr;
+        for (DComponent* c : go->GetComponents())
+            if (auto* rto = dynamic_cast<ReflectionTestObject*>(c))
+                return rto;
         return nullptr;
     }
 };
@@ -103,6 +114,123 @@ TEST_F(EditorCommandPropertyValueIOFixture,
 
     EXPECT_FALSE(SetPropertyFromJson(tc, fp, nlohmann::json("not-a-number")));
     EXPECT_FLOAT_EQ(PropertyToJson(tc, fp).get<float>(), 7.0f);
+}
+
+TEST_F(EditorCommandPropertyValueIOFixture, EditorCommand_PropertyValueIO_EnumRoundTrip_ReturnsEquivalentJson)
+{
+    EditorCommandContext ctx{ *m_core };
+    const AssetId sceneId = GetActiveSceneAssetId();
+    auto& mgr = m_core->GetCommandManager();
+
+    ASSERT_TRUE(mgr.Execute(std::make_unique<EditorCommand_CreateGameObject>(sceneId, "GameObject"), ctx));
+
+    GameObject* go = nullptr;
+    for (auto* g : m_core->GetWorld()->GetGameObjects())
+    {
+        if (g->GetName() == "New GameObject")
+        {
+            go = g;
+            break;
+        }
+    }
+    ASSERT_NE(go, nullptr);
+
+    ASSERT_TRUE(mgr.Execute(
+        std::make_unique<EditorCommand_CreateComponent>(sceneId, go->GetObjectId(), "ReflectionTestObject"), ctx));
+
+    ReflectionTestObject* rto = FindReflectionTestObject(go);
+    ASSERT_NE(rto, nullptr);
+
+    DProperty* ep = FindPropertyOnObject(rto, "m_rEnum");
+    ASSERT_NE(ep, nullptr);
+
+    ASSERT_TRUE(SetPropertyFromJson(rto, ep, nlohmann::json(1)));
+    const nlohmann::json before = PropertyToJson(rto, ep);
+    ASSERT_TRUE(before.is_number_integer());
+    EXPECT_EQ(before.get<int>(), 1);
+
+    ASSERT_TRUE(SetPropertyFromJson(rto, ep, nlohmann::json(0)));
+    ASSERT_TRUE(SetPropertyFromJson(rto, ep, before));
+    ASSERT_TRUE(PropertyToJson(rto, ep).is_number_integer());
+    EXPECT_EQ(PropertyToJson(rto, ep).get<int>(), 1);
+}
+
+TEST_F(EditorCommandPropertyValueIOFixture,
+       EditorCommand_PropertyValueIO_SetEnum_FromStringJson_ReturnsFalseWithoutEscape)
+{
+    EditorCommandContext ctx{ *m_core };
+    const AssetId sceneId = GetActiveSceneAssetId();
+    auto& mgr = m_core->GetCommandManager();
+
+    ASSERT_TRUE(mgr.Execute(std::make_unique<EditorCommand_CreateGameObject>(sceneId, "GameObject"), ctx));
+
+    GameObject* go = nullptr;
+    for (auto* g : m_core->GetWorld()->GetGameObjects())
+    {
+        if (g->GetName() == "New GameObject")
+        {
+            go = g;
+            break;
+        }
+    }
+    ASSERT_NE(go, nullptr);
+
+    ASSERT_TRUE(mgr.Execute(
+        std::make_unique<EditorCommand_CreateComponent>(sceneId, go->GetObjectId(), "ReflectionTestObject"), ctx));
+
+    ReflectionTestObject* rto = FindReflectionTestObject(go);
+    ASSERT_NE(rto, nullptr);
+
+    DProperty* ep = FindPropertyOnObject(rto, "m_rEnum");
+    ASSERT_NE(ep, nullptr);
+
+    ASSERT_TRUE(SetPropertyFromJson(rto, ep, nlohmann::json(0)));
+    ASSERT_TRUE(PropertyToJson(rto, ep).is_number_integer());
+
+    EXPECT_FALSE(SetPropertyFromJson(rto, ep, nlohmann::json("Bar")));
+    EXPECT_EQ(PropertyToJson(rto, ep).get<int>(), 0);
+}
+
+TEST_F(EditorCommandPropertyValueIOFixture, EditorCommand_PropertyValueIO_VectorEnumRoundTrip_ReturnsEquivalentJson)
+{
+    EditorCommandContext ctx{ *m_core };
+    const AssetId sceneId = GetActiveSceneAssetId();
+    auto& mgr = m_core->GetCommandManager();
+
+    ASSERT_TRUE(mgr.Execute(std::make_unique<EditorCommand_CreateGameObject>(sceneId, "GameObject"), ctx));
+
+    GameObject* go = nullptr;
+    for (auto* g : m_core->GetWorld()->GetGameObjects())
+    {
+        if (g->GetName() == "New GameObject")
+        {
+            go = g;
+            break;
+        }
+    }
+    ASSERT_NE(go, nullptr);
+
+    ASSERT_TRUE(mgr.Execute(
+        std::make_unique<EditorCommand_CreateComponent>(sceneId, go->GetObjectId(), "ReflectionTestObject"), ctx));
+
+    ReflectionTestObject* rto = FindReflectionTestObject(go);
+    ASSERT_NE(rto, nullptr);
+
+    DProperty* vecProp = FindPropertyOnObject(rto, "m_rEnumVec");
+    ASSERT_NE(vecProp, nullptr);
+
+    const nlohmann::json target = nlohmann::json::array({ 0, 2, 1 });
+    ASSERT_TRUE(SetPropertyFromJson(rto, vecProp, target, *m_core));
+    const nlohmann::json before = PropertyToJson(rto, vecProp, *m_core);
+    ASSERT_TRUE(before.is_array());
+    ASSERT_EQ(before.size(), 3u);
+    EXPECT_EQ(before[0].get<int>(), 0);
+    EXPECT_EQ(before[1].get<int>(), 2);
+    EXPECT_EQ(before[2].get<int>(), 1);
+
+    ASSERT_TRUE(SetPropertyFromJson(rto, vecProp, nlohmann::json::array(), *m_core));
+    ASSERT_TRUE(SetPropertyFromJson(rto, vecProp, before, *m_core));
+    EXPECT_EQ(PropertyToJson(rto, vecProp, *m_core), before);
 }
 
 TEST_F(EditorCommandPropertyValueIOFixture, EditorCommand_PropertyValueIO_NullProperty_ReturnsNullJson)

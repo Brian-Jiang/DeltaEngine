@@ -42,7 +42,7 @@ DMesh* TryImportStarMesh()
 
 void SetTransparentMaterial(DMaterial& material)
 {
-    material.SetRenderMode(static_cast<uint32_t>(ERenderMode::Transparent));
+    material.SetRenderMode(ERenderMode::Transparent);
 }
 }
 

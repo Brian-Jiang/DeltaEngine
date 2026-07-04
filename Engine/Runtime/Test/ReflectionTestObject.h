@@ -19,6 +19,14 @@ DELTA_ENGINE_NS_BEGIN
 
 class DTexture;
 
+DENUM()
+enum class EReflectionTestEnum : uint32_t
+{
+    Foo = 0,
+    Bar = 1,
+    Baz = 2,
+};
+
 DSTRUCT()
 struct ReflectionTestNestStruct
 {
@@ -91,6 +99,12 @@ private:
 
     DPROPERTY()
     ReflectionTestNestStruct m_rNest = {};
+
+    DPROPERTY()
+    EReflectionTestEnum m_rEnum{ EReflectionTestEnum::Foo };
+
+    DPROPERTY()
+    std::vector<EReflectionTestEnum> m_rEnumVec;
 
     DPROPERTY()
     TBulkData m_rBulk;

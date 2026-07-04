@@ -1,6 +1,13 @@
 import pytest
 
+from tests.clang_util import require_libclang
+from parser import libclang_library_path
 from type_resolver import TYPE_MAP, resolve_type_from_string
+
+requires_libclang = pytest.mark.skipif(
+    not libclang_library_path().is_file(),
+    reason=f"libclang not found at {libclang_library_path()}",
+)
 
 
 @pytest.mark.parametrize(
@@ -97,3 +104,27 @@ def test_type_map_covers_listed_subclasses():
         "DBulkDataProperty",
     }
     assert set(TYPE_MAP.values()) >= expected
+
+
+@requires_libclang
+def test_enum_property_resolves_via_parser(fixtures_dir):
+    require_libclang()
+    from parser import parse_header
+
+    result = parse_header(fixtures_dir / "denum_property.h", fixtures_dir)
+    prop = next(p for p in result.classes[0].properties if p.name == "m_color")
+    assert prop.property_class == "DEnumProperty<TestColor>"
+    assert prop.is_enum is True
+    assert prop.enum_type_name == "TestColor"
+
+
+@requires_libclang
+def test_vector_enum_property_resolves_via_parser(fixtures_dir):
+    require_libclang()
+    from parser import parse_header
+
+    result = parse_header(fixtures_dir / "denum_property.h", fixtures_dir)
+    prop = next(p for p in result.classes[0].properties if p.name == "m_colors")
+    assert prop.is_vector is True
+    assert prop.inner_property_class == "DEnumProperty<TestColor>"
+    assert prop.inner_cpp_type == "TestColor"

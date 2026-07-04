@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from parser import ClassInfo, DelegateInfo, FunctionInfo, ForwardDeclInfo
+from parser import ClassInfo, DelegateInfo, EnumInfo, FunctionInfo, ForwardDeclInfo
 from templates import (
     FILE_HEADER,
     FILE_FOOTER_CLASS,
@@ -25,6 +25,7 @@ from templates import (
     DPROPERTY_VECTOR_OBJECT_PTR,
     DPROPERTY_DSTRUCT,
     DPROPERTY_VECTOR_DSTRUCT,
+    DPROPERTY_VECTOR_ENUM,
     DFUNCTION_VOID_NO_PARAMS,
     DFUNCTION_WITH_PARAMS,
     DFUNCTION_SET_METADATA,
@@ -48,6 +49,10 @@ from templates import (
     DELEGATE_EXECUTE_WITH_PARAMS,
     DELEGATE_EXECUTE_NO_PARAMS,
     DPROPERTY_DELEGATE,
+    DENUM_ADD_ENTRY,
+    DENUM_REGISTRATION,
+    DPROPERTY_ENUM,
+    DPROPERTY_ENUM_WITH_META,
 )
 
 _OBJECT_PTR_PROP_RE = re.compile(r"^DObjectPtrProperty<(.+)>$")
@@ -113,6 +118,11 @@ EXTRA_PROPERTY_HEADERS = {
     "DVectorProperty": "Runtime/Reflection/DVectorProperty.h",
     "DDelegateProperty": "Runtime/Reflection/DProperty.h",
 }
+
+DENUM_PROPERTY_HEADERS = (
+    "Runtime/Reflection/DEnum.h",
+    "Runtime/Reflection/DEnumProperty.h",
+)
 
 
 def _format_meta_init(metadata: dict) -> str:
@@ -268,6 +278,18 @@ def _generate_delegate_dispatch(delegate: DelegateInfo) -> str:
     if delegate.is_multicast:
         return ""
     return DELEGATE_EXECUTE_NO_PARAMS.substitute(delegate_name=delegate.name)
+
+
+def _generate_enum_registration(enum: EnumInfo) -> str:
+    entries = "\n".join(
+        DENUM_ADD_ENTRY.substitute(entry_name=e.name, entry_value=e.value)
+        for e in enum.entries
+    )
+    return DENUM_REGISTRATION.substitute(
+        enum_name=enum.name,
+        underlying_type=enum.underlying_type,
+        entries=entries,
+    )
 
 
 def _forward_decl_line(kind: str, name: str) -> str:
@@ -594,6 +616,14 @@ def _generate_vector_prop_code(prop, class_name: str) -> str:
             inner_cpp_type=prop.inner_cpp_type,
             dstruct_type_name=prop.inner_pointee_type or prop.inner_cpp_type,
         )
+    elif prop.inner_property_class.startswith("DEnumProperty<"):
+        return DPROPERTY_VECTOR_ENUM.substitute(
+            enum_type=prop.inner_pointee_type,
+            enum_type_name=prop.inner_pointee_type,
+            field_name=prop.name,
+            class_name=class_name,
+            inner_cpp_type=prop.inner_cpp_type,
+        )
     elif prop.inner_property_class == "DVectorProperty":
         # Nested vector: the inner_cpp_type is std::vector<U>.
         # We need an inner DVectorProperty with its own simple inner prop.
@@ -678,6 +708,22 @@ def _generate_class_registration(cls: ClassInfo) -> str:
                 field_name=prop.name,
                 class_name=cls.name,
             )
+        elif prop.is_enum:
+            if prop.metadata:
+                code = DPROPERTY_ENUM_WITH_META.substitute(
+                    enum_type=prop.enum_type_name,
+                    field_name=prop.name,
+                    class_name=cls.name,
+                    enum_type_name=prop.enum_type_name,
+                    meta_init=_format_meta_init(prop.metadata),
+                )
+            else:
+                code = DPROPERTY_ENUM.substitute(
+                    enum_type=prop.enum_type_name,
+                    field_name=prop.name,
+                    class_name=cls.name,
+                    enum_type_name=prop.enum_type_name,
+                )
         elif prop.property_class == "DDelegateProperty":
             code = DPROPERTY_DELEGATE.substitute(
                 field_name=prop.name,
@@ -723,16 +769,18 @@ def _generate_class_footer(cls: ClassInfo) -> str:
 
 def generate_source_file(classes: list[ClassInfo], header_stem: str, type_to_header: dict[str, str],
                          delegates: list[DelegateInfo] | None = None,
-                         source_header_path: str | None = None) -> str:
+                         source_header_path: str | None = None,
+                         enums: list[EnumInfo] | None = None) -> str:
     """Generate the entire .generated.cpp for all classes in one header file.
     Emits a single #include block, then per-class thunks/registration/footers."""
     delegates = delegates or []
+    enums = enums or []
     parts: list[str] = []
 
     source_includes = set()
     for cls in classes:
         source_includes.add(f'#include "{cls.include_path}{header_stem}.h"')
-    if not classes and delegates:
+    if not classes and (delegates or enums):
         header_path = source_header_path or f"{header_stem}.h"
         source_includes.add(f'#include "{header_path}"')
     source_header_include = "\n".join(sorted(source_includes))
@@ -742,8 +790,12 @@ def generate_source_file(classes: list[ClassInfo], header_stem: str, type_to_hea
         for prop in cls.properties:
             if prop.property_class in EXTRA_PROPERTY_HEADERS:
                 cpp_full_includes.add(EXTRA_PROPERTY_HEADERS[prop.property_class])
+            if prop.is_enum:
+                cpp_full_includes.update(DENUM_PROPERTY_HEADERS)
     if delegates:
         cpp_full_includes.add("Runtime/Core/Delegates/DynamicDelegate.h")
+    if enums:
+        cpp_full_includes.update(DENUM_PROPERTY_HEADERS)
     cpp_full_includes_block = "\n".join(sorted(f'#include "{p}"' for p in cpp_full_includes))
     if cpp_full_includes_block:
         cpp_full_includes_block += "\n"
@@ -762,6 +814,9 @@ def generate_source_file(classes: list[ClassInfo], header_stem: str, type_to_hea
         dispatch = _generate_delegate_dispatch(delegate)
         if dispatch:
             parts.append(dispatch)
+
+    for enum in enums:
+        parts.append(_generate_enum_registration(enum))
 
     for cls in classes:
         parts.append(_generate_class_registration(cls))

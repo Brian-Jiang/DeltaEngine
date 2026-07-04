@@ -154,6 +154,7 @@ struct TBulkData;
 // --- Reflection macros (redefine to annotate form for libclang) ---
 #define DCLASS(...)
 #define DSTRUCT(...)
+#define DENUM(...)
 #define DPROPERTY(...)
 #define DFUNCTION(...)
 #define DGENERATED_BODY(ClassName)
@@ -205,6 +206,8 @@ class PropertyInfo:
     inner_pointee_type: str = ""
     is_dstruct: bool = False
     dstruct_type_name: str = ""
+    is_enum: bool = False
+    enum_type_name: str = ""
     editor_only: bool = False
     hide_in_details: bool = False
 
@@ -275,10 +278,28 @@ class ForwardDeclInfo:
 
 
 @dataclass
+class EnumEntryInfo:
+    name: str
+    value: int
+
+
+@dataclass
+class EnumInfo:
+    name: str
+    source_file: Path
+    include_path: str
+    underlying_type: str
+    entries: list[EnumEntryInfo]
+    metadata: dict[str, str] = field(default_factory=dict)
+    source_line: int = 0
+
+
+@dataclass
 class ParseResult:
     """Result of parsing one header: reflected classes plus file-level data."""
     classes: list[ClassInfo]
     delegates: list[DelegateInfo]
+    enums: list[EnumInfo]
     source_includes: list[str]
     forward_decls: list[ForwardDeclInfo]
     diagnostics: DiagnosticCollector = field(default_factory=DiagnosticCollector)
@@ -728,11 +749,24 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
             if resolved is None:
                 continue
             is_dstruct_field = len(resolved) == 4 and resolved[0] == "DStructProperty"
+            is_enum_field = len(resolved) == 4 and resolved[0].startswith("DEnumProperty<")
             if is_dstruct_field:
                 prop_class = resolved[0]
                 is_obj_ptr = False
                 pointee = ""
                 dstruct_type_name = resolved[3]
+                enum_type_name = ""
+                is_vec = False
+                inner_cpp = ""
+                inner_prop = ""
+                inner_is_obj_ptr = False
+                inner_pointee = ""
+            elif is_enum_field:
+                prop_class = resolved[0]
+                is_obj_ptr = False
+                pointee = ""
+                dstruct_type_name = ""
+                enum_type_name = resolved[3]
                 is_vec = False
                 inner_cpp = ""
                 inner_prop = ""
@@ -746,6 +780,7 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
                 inner_is_obj_ptr = resolved[5] if len(resolved) >= 7 else False
                 inner_pointee = resolved[6] if len(resolved) >= 7 else ""
                 dstruct_type_name = ""
+                enum_type_name = ""
             offset_bits = class_cursor.type.get_offset(child.spelling)
             offset_bytes = offset_bits // 8 if offset_bits >= 0 else -1
             dprop_args = _extract_macro_args(tu, child, "DPROPERTY") or ""
@@ -767,6 +802,8 @@ def _parse_class(tu, class_cursor, source_file, include_path, source: str, *,
                 inner_pointee_type=inner_pointee,
                 is_dstruct=is_dstruct_field,
                 dstruct_type_name=dstruct_type_name,
+                is_enum=is_enum_field,
+                enum_type_name=enum_type_name,
                 editor_only=editor_only,
                 hide_in_details=hide_in_details,
             ))
@@ -1021,6 +1058,97 @@ def _delegate_preamble_block(delegates: list[DelegateInfo]) -> str:
     return "\n".join(lines) + "\n\n"
 
 
+_ENUM_UNDERLYING_TYPE_MAP = {
+    "int": "int",
+    "signed int": "int",
+    "unsigned int": "uint32_t",
+    "short": "int16_t",
+    "signed short": "int16_t",
+    "unsigned short": "uint16_t",
+    "long": "int32_t",
+    "signed long": "int32_t",
+    "unsigned long": "uint32_t",
+    "long long": "int64_t",
+    "signed long long": "int64_t",
+    "unsigned long long": "uint64_t",
+    "char": "char",
+    "signed char": "int8_t",
+    "unsigned char": "uint8_t",
+    "int8_t": "int8_t",
+    "int16_t": "int16_t",
+    "int32_t": "int32_t",
+    "int64_t": "int64_t",
+    "uint8_t": "uint8_t",
+    "uint16_t": "uint16_t",
+    "uint32_t": "uint32_t",
+    "uint64_t": "uint64_t",
+}
+
+
+def _strip_type_namespaces(name: str) -> str:
+    return name.rsplit("::", 1)[-1] if "::" in name else name
+
+
+def _normalize_enum_underlying_type(spelling: str) -> str:
+    s = spelling.strip()
+    for prefix in ("enum ", "class ", "struct "):
+        if s.startswith(prefix):
+            s = s[len(prefix):].strip()
+    if s.startswith("const "):
+        s = s[6:].strip()
+    return _ENUM_UNDERLYING_TYPE_MAP.get(s, s)
+
+
+def _parse_enums(
+    tu,
+    file_path: Path,
+    include_path: str,
+    file_str: str,
+    diag: DiagnosticCollector,
+) -> list[EnumInfo]:
+    file_name = file_path.name
+    enums: list[EnumInfo] = []
+    for cursor in tu.cursor.walk_preorder():
+        if cursor.location.file is None:
+            continue
+        if str(Path(cursor.location.file.name).resolve()) != file_str:
+            continue
+        if cursor.kind != ci.CursorKind.ENUM_DECL:
+            continue
+        if not cursor.is_definition():
+            continue
+        if not _is_annotated(tu, cursor, "DENUM"):
+            continue
+        src_line = cursor.location.line - _PREAMBLE_LINE_COUNT
+        enum_name = _strip_type_namespaces(cursor.spelling or "")
+        if not enum_name:
+            continue
+        if not cursor.is_scoped_enum():
+            diag.warn(
+                file_name,
+                src_line,
+                f"DENUM requires enum class; '{enum_name}' is an unscoped enum — skipping",
+            )
+            continue
+        underlying = _normalize_enum_underlying_type(cursor.enum_type.spelling)
+        entries: list[EnumEntryInfo] = []
+        for child in cursor.get_children():
+            if child.kind == ci.CursorKind.ENUM_CONSTANT_DECL:
+                entries.append(EnumEntryInfo(name=child.spelling, value=child.enum_value))
+        macro_args = _extract_macro_args(tu, cursor, "DENUM") or ""
+        metadata = _parse_meta_kv(macro_args)
+        enums.append(EnumInfo(
+            name=enum_name,
+            source_file=file_path,
+            include_path=include_path,
+            underlying_type=underlying,
+            entries=entries,
+            metadata=metadata,
+            source_line=src_line,
+        ))
+    return enums
+
+
 # ── public API ───────────────────────────────────────────────
 
 
@@ -1117,9 +1245,12 @@ def parse_header(
             delegate_names=delegate_names,
         ))
 
+    enums = _parse_enums(tu, file_path, include_path, file_str, diag)
+
     return ParseResult(
         classes=results,
         delegates=delegates,
+        enums=enums,
         source_includes=source_includes,
         forward_decls=forward_decls,
         diagnostics=diag,

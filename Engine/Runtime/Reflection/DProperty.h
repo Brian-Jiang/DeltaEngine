@@ -16,6 +16,7 @@ DELTA_ENGINE_NS_BEGIN
 
 class DStruct;
 class DClass;
+class DEnum;
 class AssetArchive;
 
 enum class EPropertyType
@@ -36,6 +37,7 @@ enum class EPropertyType
     Vector,
     Struct,
     Delegate,
+    Enum,
 };
 
 struct FUnresolvedDelegateBinding

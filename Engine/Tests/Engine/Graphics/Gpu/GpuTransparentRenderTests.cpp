@@ -122,7 +122,7 @@ DMaterial* GetMeshMaterial(MeshRenderer* renderer)
 void ConfigureTransparentMaterial(DMaterial* material, const XMFLOAT4& baseColor, const bool doubleSided = false)
 {
     ASSERT_NE(material, nullptr);
-    material->SetRenderMode(static_cast<uint32_t>(ERenderMode::Transparent));
+    material->SetRenderMode(ERenderMode::Transparent);
     SetFloat4Property(*material, "m_baseColor", baseColor);
     SetFloatProperty(*material, "m_metallic", 0.0f);
     SetFloatProperty(*material, "m_roughness", 0.5f);

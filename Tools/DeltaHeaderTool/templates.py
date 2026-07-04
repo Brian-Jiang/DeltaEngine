@@ -215,6 +215,16 @@ DPROPERTY_VECTOR_DSTRUCT = Template("""\
     }
 """)
 
+DPROPERTY_VECTOR_ENUM = Template("""\
+    {
+        auto* _innerProp = new DEnumProperty<${enum_type}>("${field_name}_elem", 0, "${enum_type_name}");
+        cls->AddProperty(new DVectorProperty<${inner_cpp_type}>(
+            "${field_name}",
+            offsetof(${class_name}, ${field_name}),
+            std::unique_ptr<DProperty>(_innerProp)));
+    }
+""")
+
 # ============================================================
 # DFUNCTION REGISTRATION
 # ============================================================
@@ -407,3 +417,36 @@ DPROPERTY_DELEGATE = Template("""\
         "${field_name}",
         offsetof(${class_name}, ${field_name})));
 """)
+
+# ============================================================
+# DENUM REGISTRATION
+# ============================================================
+
+DENUM_ADD_ENTRY = Template('    e->AddEntry("${entry_name}", ${entry_value});')
+
+DENUM_REGISTRATION = Template("""\
+static void Register_${enum_name}()
+{
+    auto* e = new DEnum("${enum_name}", "${underlying_type}");
+${entries}
+    GetReflectionRegistry().RegisterDEnum(e);
+}
+
+static ReflectionRegistration registration_${enum_name}(&Register_${enum_name});
+""")
+
+DPROPERTY_ENUM = Template("""\
+    cls->AddProperty(new DEnumProperty<${enum_type}>(
+        "${field_name}",
+        offsetof(${class_name}, ${field_name}),
+        "${enum_type_name}"));""")
+
+DPROPERTY_ENUM_WITH_META = Template("""\
+    {
+        auto* _prop = new DEnumProperty<${enum_type}>(
+            "${field_name}",
+            offsetof(${class_name}, ${field_name}),
+            "${enum_type_name}");
+        _prop->SetMetadata(${meta_init});
+        cls->AddProperty(_prop);
+    }""")

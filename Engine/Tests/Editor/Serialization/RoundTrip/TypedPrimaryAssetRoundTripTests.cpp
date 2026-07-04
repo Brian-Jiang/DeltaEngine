@@ -8,6 +8,9 @@
 #include "Runtime/Core/DShader.h"
 #include "Runtime/Core/DTexture.h"
 #include "Runtime/Reflection/DClass.h"
+#include "Runtime/Reflection/DProperty.h"
+
+#include <fstream>
 
 using namespace DeltaEngine;
 using namespace DeltaEngine::Tests;
@@ -70,11 +73,24 @@ TEST_F(TypedPrimaryAssetRoundTripTests, MaterialAssetPreservesTypedPrimaryAsset)
 
     DMaterial* material = CreateDObject<DMaterial>();
     const ObjectId materialId = material->GetObjectId();
+
+    ERenderMode transparentMode = ERenderMode::Transparent;
+    DProperty* renderModeProp = FindProperty(material, "m_renderMode");
+    ASSERT_NE(renderModeProp, nullptr);
+    renderModeProp->SetValue(material, &transparentMode);
+
     PA_Material* asset = PA_Material::Create(material);
     const AssetId assetId = asset->GetAssetId();
 
     const auto filePath = tempDir.Path() / "TypedMaterial.dasset.json";
     SaveAssetToFile(asset, filePath);
+
+    std::ifstream savedJson(filePath);
+    ASSERT_TRUE(savedJson.is_open());
+    nlohmann::json jsonDoc = nlohmann::json::parse(savedJson);
+    ASSERT_TRUE(jsonDoc.contains("objects"));
+    ASSERT_FALSE(jsonDoc["objects"].empty());
+    EXPECT_EQ(jsonDoc["objects"][0]["m_renderMode"].get<int>(), 2);
 
     EditorAssetDatabase database;
     database.ScanAssetsFolder(tempDir.Path());
@@ -84,6 +100,11 @@ TEST_F(TypedPrimaryAssetRoundTripTests, MaterialAssetPreservesTypedPrimaryAsset)
     EXPECT_EQ(loaded->GetHeader().m_className, "PA_Material");
     ASSERT_NE(loaded->GetMaterial(), nullptr);
     EXPECT_EQ(loaded->GetMaterial()->GetObjectId(), materialId);
+
+    DProperty* loadedRenderModeProp = FindProperty(loaded->GetMaterial(), "m_renderMode");
+    ASSERT_NE(loadedRenderModeProp, nullptr);
+    EXPECT_EQ(*static_cast<ERenderMode*>(loadedRenderModeProp->GetValue(loaded->GetMaterial())),
+              ERenderMode::Transparent);
 }
 
 TEST_F(TypedPrimaryAssetRoundTripTests, TextureAssetPreservesTypedPrimaryAsset)

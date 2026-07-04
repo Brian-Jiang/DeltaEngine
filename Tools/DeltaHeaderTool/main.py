@@ -26,6 +26,8 @@ def _contains_reflected_macro(path: Path) -> bool:
                 continue
             if "DCLASS(" in stripped or "DSTRUCT(" in stripped:
                 return True
+            if "DENUM(" in stripped:
+                return True
             if "DECLARE_DYNAMIC_DELEGATE" in stripped or "DECLARE_DYNAMIC_MULTICAST_DELEGATE" in stripped:
                 return True
         return False
@@ -98,11 +100,11 @@ def _process_one(job):
             f"{parent_part}/{stem}.h" if parent_part != "." else f"{stem}.h"
         )
 
-        if not result.classes and not result.delegates:
+        if not result.classes and not result.delegates and not result.enums:
             return (
                 stem, None, None,
                 f"WARNING: {header_path.name} contains reflected macros but no "
-                "classes or dynamic delegates were found",
+                "classes, enums, or dynamic delegates were found",
                 class_super_pairs, diag_list,
             )
 
@@ -114,6 +116,7 @@ def _process_one(job):
         )
         source_text = generate_source_file(
             result.classes, stem, type_to_header, result.delegates, header_include_path,
+            result.enums,
         )
 
         return (stem, header_text, source_text, None,
