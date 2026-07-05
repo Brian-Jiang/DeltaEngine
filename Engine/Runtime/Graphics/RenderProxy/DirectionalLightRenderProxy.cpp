@@ -124,6 +124,7 @@ void DirectionalLightRenderProxy::GatherShadowViews(std::shared_ptr<DXGraphicsCo
     const float halfHFar = farClip * tanHalfFov;
     const float halfWFar = halfHFar * aspect;
 
+    // get camera frustum corners in world space
     XMVECTOR cornersCS[8];
     XMVECTOR cornersWS[8];
     XMVECTOR sumWS = XMVectorZero();
@@ -139,6 +140,7 @@ void DirectionalLightRenderProxy::GatherShadowViews(std::shared_ptr<DXGraphicsCo
         sumWS = XMVectorAdd(sumWS, cornersWS[i + 4]);
     }
 
+    // get and cache the bounding sphere radius of the frustum in world space
     if (nearZ != m_cachedNearZ || farClip != m_cachedFarClip ||
         tanHalfFov != m_cachedTanHalfFov || aspect != m_cachedAspect)
     {
@@ -161,6 +163,7 @@ void DirectionalLightRenderProxy::GatherShadowViews(std::shared_ptr<DXGraphicsCo
     }
     const float radius = m_cachedFrustumRadius;
 
+    // get the light's view matrix
     const XMVECTOR centerWS = XMVectorScale(sumWS, 1.0f / 8.0f);
     const XMVECTOR lightDir = XMVector3Normalize(m_direction);
 
@@ -168,22 +171,21 @@ void DirectionalLightRenderProxy::GatherShadowViews(std::shared_ptr<DXGraphicsCo
     if (std::fabs(XMVectorGetX(XMVector3Dot(lightDir, up))) > 0.99f)
         up = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
 
-    const float eyeDistance = radius + m_shadowCasterDistance;
-    const XMVECTOR eye = XMVectorSubtract(centerWS, XMVectorScale(lightDir, eyeDistance));
-    const XMMATRIX lightView = XMMatrixLookToLH(eye, lightDir, up);
+    const XMMATRIX lightView = XMMatrixLookToLH(XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), lightDir, up);
 
     const XMVECTOR centerLS = XMVector3TransformCoord(centerWS, lightView);
     const float cx = XMVectorGetX(centerLS);
     const float cy = XMVectorGetY(centerLS);
     const float cz = XMVectorGetZ(centerLS);
 
+    // get min/max bounds of the orthographic frustum in light space
     const float pad = m_shadowOrthoPadding;
     m_dirMinX = cx - radius - pad;
     m_dirMaxX = cx + radius + pad;
     m_dirMinY = cy - radius - pad;
     m_dirMaxY = cy + radius + pad;
-    m_dirMinZ = 0.0f;
-    m_dirMaxZ = cz + radius;
+    m_dirMinZ = cz - radius - pad;
+    m_dirMaxZ = cz + radius + pad;
     m_dirLightView = lightView;
 
     ShadowView sv{};
@@ -209,14 +211,17 @@ void DirectionalLightRenderProxy::FinishShadowViewProj(uint32_t resolutionW, uin
     if (spanX <= 1e-5f || spanY <= 1e-5f)
         return;
 
+    // get texel size in world space for the shadow map
     const float texelW = spanX / static_cast<float>(resolutionW);
     const float texelH = spanY / static_cast<float>(resolutionH);
 
+    // snap the orthographic bounds to texel size to avoid shimmering
     const float minX = floorf(m_dirMinX / texelW) * texelW;
     const float minY = floorf(m_dirMinY / texelH) * texelH;
     const float maxX = minX + spanX;
     const float maxY = minY + spanY;
 
+    // get the final view projection matrix for the directional light's shadow map
     const XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(minX, maxX, minY, maxY, m_dirMinZ, m_dirMaxZ);
     m_shadowViewProjRow = m_dirLightView * ortho;
     view.viewProj = XMMatrixTranspose(m_shadowViewProjRow);
