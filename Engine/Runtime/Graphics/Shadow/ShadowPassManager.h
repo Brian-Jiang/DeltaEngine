@@ -37,6 +37,9 @@ public:
     DELTAENGINE_API const ShadowSettings& GetSettings() const { return m_settings; }
     DELTAENGINE_API ShadowSettings& GetSettings() { return m_settings; }
 
+    /** Edge length in texels of the square shadow atlas (shared by directional and spot tiles). */
+    DELTAENGINE_API uint32_t GetAtlasSize() const { return m_atlasConfig.atlasSize; }
+
 private:
     static constexpr uint32_t kDefaultShadowMapEdge = 1024;
 

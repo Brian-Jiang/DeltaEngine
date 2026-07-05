@@ -39,7 +39,7 @@ public float PCSS_Directional(float3 worldPos, float3 N, DirectionalLight light)
 
     float zReceiver = ndc.z - ComputeSlopeNdcBias(NdotL, light.shadowSlopeBias) - kSelfShadowNdcEpsilon;
     return PCSS_SoftShadow2D(g_shadowDirectionalAtlas, g_sampler, g_shadowCmpSampler, atlasUv, zReceiver,
-        light.pcssLightSize, light.atlasUVRect.zw);
+        light.pcssLightSize, light.atlasUVRect.zw, false);
 }
 
 public float PCSS_Point(float3 worldPos, float3 N, PointLight light)
@@ -100,5 +100,5 @@ public float PCSS_Spot(float3 worldPos, float3 N, SpotLight light)
 
     float zReceiver = ndc.z - ComputeSlopeNdcBias(NdotL, light.shadowSlopeBias) - kSelfShadowNdcEpsilon;
     return PCSS_SoftShadow2D(g_shadowSpotAtlas, g_sampler, g_shadowCmpSampler, atlasUv, zReceiver,
-        light.pcssLightSize, light.atlasUVRect.zw);
+        light.pcssLightSize, light.atlasUVRect.zw, true);
 }

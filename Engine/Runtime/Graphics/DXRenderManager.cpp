@@ -1054,6 +1054,12 @@ void DXRenderManager::StageShadowDescriptors(CommandList& commandList, int32_t s
     shadowCb.m_pcssBlockerSamples = (std::clamp)(settings.m_pcssBlockerSamples, 1, 32);
     shadowCb.m_pcssPCFSamples = (std::clamp)(settings.m_pcssPCFSamples, 1, 32);
     shadowCb.m_qualityScalar = (std::max)(0.05f, settings.m_qualityScalar);
+    shadowCb.m_penumbraGain = settings.m_penumbraGain;
+    shadowCb.m_penumbraScale = settings.m_penumbraScale;
+    shadowCb.m_minFilterTexels = (std::max)(0.0f, settings.m_minFilterTexels);
+    shadowCb.m_maxFilterTexels = (std::max)(settings.m_minFilterTexels, settings.m_maxFilterTexels);
+    const uint32_t atlasSize = m_shadowPass.GetAtlasSize();
+    shadowCb.m_atlasTexelUv = atlasSize > 0 ? 1.0f / static_cast<float>(atlasSize) : 0.0f;
     commandList.SetGraphicsDynamicConstantBuffer(static_cast<UINT>(shadowCbRootParameter), shadowCb);
 }
 

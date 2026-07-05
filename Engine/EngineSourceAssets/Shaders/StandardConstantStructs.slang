@@ -156,7 +156,11 @@ public struct ShadowGpuParams
     public int m_pcssBlockerSamples;
     public int m_pcssPCFSamples;
     public float m_qualityScalar;
-    public float _pad;
+    public float m_penumbraGain;
+    public float m_penumbraScale;
+    public float m_minFilterTexels;
+    public float m_maxFilterTexels;
+    public float m_atlasTexelUv;
 };
 
 public ConstantBuffer<ShadowGpuParams> ShadowCB : register(b4);

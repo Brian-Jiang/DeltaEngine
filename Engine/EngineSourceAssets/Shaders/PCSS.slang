@@ -19,15 +19,31 @@ static const float2 kPoissonDisk[kMaxPoissonTaps] =
     float2(-0.10665720, -0.79187044), float2(0.51385602, 0.54795743),
 };
 
+// per-pixel rotation of the sample disk; seeded from the receiver's shadow-map texel so the
+// pattern is stable as the camera or objects move (no temporal crawl) but decorrelated between
+// neighbouring pixels (turns fixed-pattern banding into fine dither). returns (cos, sin).
+float2 PCSS_RotationCosSin(float2 seed)
+{
+    float n = frac(52.9829189 * frac(dot(seed, float2(0.06711056, 0.00583715))));
+    float a = n * 6.2831853;
+    return float2(cos(a), sin(a));
+}
+
+float2 PCSS_RotateTap(float2 tap, float2 cs)
+{
+    return float2(tap.x * cs.x - tap.y * cs.y, tap.x * cs.y + tap.y * cs.x);
+}
+
+// get the average depth (blocker to light distance) of blockers in the search region, return -1 if no blockers found
 public float PCSS_BlockerSearch2D(Texture2D<float> shadowMap, SamplerState pointSampler, float2 uv, float zReceiver,
-    float searchRadiusUv, int tapCount)
+    float searchRadiusUv, int tapCount, float2 rotCosSin)
 {
     float sumBlockers = 0.0;
     int count = 0;
     int n = clamp(tapCount, 1, kMaxPoissonTaps);
     for (int i = 0; i < n; ++i)
     {
-        float2 suv = uv + kPoissonDisk[i] * searchRadiusUv;
+        float2 suv = uv + PCSS_RotateTap(kPoissonDisk[i], rotCosSin) * searchRadiusUv;
         float d = shadowMap.SampleLevel(pointSampler, suv, 0.0).r;
         if (d < zReceiver)
         {
@@ -40,32 +56,54 @@ public float PCSS_BlockerSearch2D(Texture2D<float> shadowMap, SamplerState point
     return sumBlockers / float(count);
 }
 
+// get the fraction of samples that are lit in the filter region
 public float PCSS_Filter2D(Texture2D<float> shadowMap, SamplerComparisonState cmpSampler, float2 uv, float zReceiver,
-    float filterRadiusUv, int tapCount)
+    float filterRadiusUv, int tapCount, float2 rotCosSin)
 {
     float sum = 0.0;
     int n = clamp(tapCount, 1, kMaxPoissonTaps);
     for (int i = 0; i < n; ++i)
     {
-        float2 suv = uv + kPoissonDisk[i] * filterRadiusUv;
+        // sample compare the depth, considering interpolation on the shadow map
+        float2 suv = uv + PCSS_RotateTap(kPoissonDisk[i], rotCosSin) * filterRadiusUv;
         sum += shadowMap.SampleCmpLevelZero(cmpSampler, suv, zReceiver);
     }
     return sum / float(n);
 }
 
+// perspective: true for spot/point (rays converge, penumbra normalized by blocker depth), false for
+// directional (parallel rays, orthographic depth is already linear so no normalization)
 public float PCSS_SoftShadow2D(Texture2D<float> shadowMap, SamplerState pointSampler, SamplerComparisonState cmpSampler,
-    float2 atlasUv, float zReceiver, float lightAngularSize, float2 atlasScaleUv)
+    float2 atlasUv, float zReceiver, float lightAngularSize, float2 atlasScaleUv, bool perspective)
 {
     int nBlock = ShadowCB.m_pcssBlockerSamples;
     int nPcf = ShadowCB.m_pcssPCFSamples;
     float q = ShadowCB.m_qualityScalar;
+
+    // rotate the disk per pixel, seeded in shadow-map texel space (atlasUv / texel size)
+    float2 rotCosSin = PCSS_RotationCosSin(atlasUv / max(ShadowCB.m_atlasTexelUv, 1e-8));
+
+    // 0.0015 is the minimum search radius, 0.05 is the scale factor for light angular size, and q is the quality scalar
     float searchR = (0.0015 + lightAngularSize * 0.05) * q * max(atlasScaleUv.x, atlasScaleUv.y);
 
-    float avgBlocker = PCSS_BlockerSearch2D(shadowMap, pointSampler, atlasUv, zReceiver, searchR, nBlock);
+    float avgBlocker = PCSS_BlockerSearch2D(shadowMap, pointSampler, atlasUv, zReceiver, searchR, nBlock, rotCosSin);
     if (avgBlocker < 0.0)
         return 1.0;
 
-    float penumbra = saturate((zReceiver - avgBlocker) * 120.0 * q / max(avgBlocker, 1e-4));
-    float filterR = searchR * (0.5 + penumbra * (2.0 + lightAngularSize * 20.0));
-    return PCSS_Filter2D(shadowMap, cmpSampler, atlasUv, zReceiver, filterR, nPcf);
+    // zReceiver: the depth of the receiver in light space
+    // avgBlocker: the average depth of blockers in light space, should be less than zReceiver because only closer blockers are considered
+    // the receiver-blocker depth gap drives softness: small gap (contact) => hard, large gap => soft
+    float depthGap = zReceiver - avgBlocker;
+    float penumbra = perspective
+        ? saturate(depthGap * ShadowCB.m_penumbraGain * q / max(avgBlocker, 1e-4))
+        : saturate(depthGap * ShadowCB.m_penumbraGain * q);
+
+    // 0.5 is the minimum filter radius; light angular size only feeds in once, through searchR
+    float filterR = searchR * (0.5 + penumbra * ShadowCB.m_penumbraScale);
+
+    // clamp the filter radius to a texel budget so the penumbra can't smear wider than the PCF tap count can resolve
+    float texelUv = ShadowCB.m_atlasTexelUv;
+    filterR = clamp(filterR, ShadowCB.m_minFilterTexels * texelUv, ShadowCB.m_maxFilterTexels * texelUv);
+
+    return PCSS_Filter2D(shadowMap, cmpSampler, atlasUv, zReceiver, filterR, nPcf, rotCosSin);
 }
