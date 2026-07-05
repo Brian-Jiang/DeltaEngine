@@ -723,7 +723,7 @@ void DXRenderManager::AppendPostProcessChain(PostProcessStack* stack, RenderGrap
     for (int i = 0; i < passCount; ++i)
     {
         PostProcessPass* pass = stack->GetPass(i);
-        if (!pass)
+        if (!pass || !pass->m_enabled)
             continue;
 
         m_trackedPasses.insert(pass);
