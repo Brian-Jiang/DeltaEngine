@@ -171,6 +171,19 @@ Slang::ComPtr<ISlangBlob> CompileSlangStage(
     target.format = SLANG_DXIL;
     target.profile = globalSession->findProfile(NormalizeSlangProfile(targetProfile).c_str());
 
+#if defined(_DEBUG)
+    // Embed DXIL debug info + source into the shader blob so PIX/RenderDoc auto-load
+    // source-level debugging straight from a capture (no PDB search path needed).
+    slang::CompilerOptionEntry debugOptions[] = {
+        { slang::CompilerOptionName::DebugInformation,
+            { slang::CompilerOptionValueKind::Int, SLANG_DEBUG_INFO_LEVEL_MAXIMAL } },
+        { slang::CompilerOptionName::Optimization,
+            { slang::CompilerOptionValueKind::Int, SLANG_OPTIMIZATION_LEVEL_NONE } },
+    };
+    target.compilerOptionEntries = debugOptions;
+    target.compilerOptionEntryCount = static_cast<uint32_t>(_countof(debugOptions));
+#endif
+
     const char* searchPaths[] = { searchPath.c_str() };
 
     slang::SessionDesc sessionDesc {};
