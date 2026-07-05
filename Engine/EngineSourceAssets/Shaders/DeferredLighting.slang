@@ -51,14 +51,16 @@ float4 PSMain(VSOut input) : SV_Target
 
     float3 Lo = float3(0, 0, 0);
 
+    float2 pixelCoord = input.pos.xy;
+
     for (uint i = 0; i < LightCB.numDirectionalLights; ++i)
-        Lo += EvaluateDirectionalPBR(DirectionalLights[i], P, N, V, baseColor, metallic, roughness);
+        Lo += EvaluateDirectionalPBR(DirectionalLights[i], P, N, V, baseColor, metallic, roughness, pixelCoord);
 
     for (uint j = 0; j < LightCB.numPointLights; ++j)
         Lo += EvaluatePointPBR(PointLights[j], P, N, V, baseColor, metallic, roughness);
 
     for (uint k = 0; k < LightCB.numSpotLights; ++k)
-        Lo += EvaluateSpotPBR(SpotLights[k], P, N, V, baseColor, metallic, roughness);
+        Lo += EvaluateSpotPBR(SpotLights[k], P, N, V, baseColor, metallic, roughness, pixelCoord);
 
     float NdotV = max(dot(N, V), 0.0);
     float3 R = reflect(-V, N);

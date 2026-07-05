@@ -14,7 +14,7 @@ float ComputeSlopeNdcBias(float NdotL, float slopeBias)
     return slopeBias * tanTerm * kSlopeNdcScale;
 }
 
-public float PCSS_Directional(float3 worldPos, float3 N, DirectionalLight light)
+public float PCSS_Directional(float3 worldPos, float3 N, DirectionalLight light, float2 pixelCoord)
 {
     float3 L_dir = normalize(-light.direction.xyz);
     float NdotL = saturate(dot(N, L_dir));
@@ -39,7 +39,7 @@ public float PCSS_Directional(float3 worldPos, float3 N, DirectionalLight light)
 
     float zReceiver = ndc.z - ComputeSlopeNdcBias(NdotL, light.shadowSlopeBias) - kSelfShadowNdcEpsilon;
     return PCSS_SoftShadow2D(g_shadowDirectionalAtlas, g_sampler, g_shadowCmpSampler, atlasUv, zReceiver,
-        light.pcssLightSize, light.atlasUVRect.zw, false);
+        light.pcssLightSize, light.atlasUVRect.zw, false, pixelCoord);
 }
 
 public float PCSS_Point(float3 worldPos, float3 N, PointLight light)
@@ -73,7 +73,7 @@ public float PCSS_Point(float3 worldPos, float3 N, PointLight light)
     return g_shadowPointCubeArray.SampleCmpLevelZero(g_shadowCmpSampler, sampleCoord, zReceiver);
 }
 
-public float PCSS_Spot(float3 worldPos, float3 N, SpotLight light)
+public float PCSS_Spot(float3 worldPos, float3 N, SpotLight light, float2 pixelCoord)
 {
     float3 toLight = light.position.xyz - worldPos;
     float distRaw = length(toLight);
@@ -100,5 +100,5 @@ public float PCSS_Spot(float3 worldPos, float3 N, SpotLight light)
 
     float zReceiver = ndc.z - ComputeSlopeNdcBias(NdotL, light.shadowSlopeBias) - kSelfShadowNdcEpsilon;
     return PCSS_SoftShadow2D(g_shadowSpotAtlas, g_sampler, g_shadowCmpSampler, atlasUv, zReceiver,
-        light.pcssLightSize, light.atlasUVRect.zw, true);
+        light.pcssLightSize, light.atlasUVRect.zw, true, pixelCoord);
 }

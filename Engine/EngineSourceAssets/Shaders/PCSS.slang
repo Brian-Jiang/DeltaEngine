@@ -19,9 +19,9 @@ static const float2 kPoissonDisk[kMaxPoissonTaps] =
     float2(-0.10665720, -0.79187044), float2(0.51385602, 0.54795743),
 };
 
-// per-pixel rotation of the sample disk; seeded from the receiver's shadow-map texel so the
-// pattern is stable as the camera or objects move (no temporal crawl) but decorrelated between
-// neighbouring pixels (turns fixed-pattern banding into fine dither). returns (cos, sin).
+// per-pixel rotation of the sample disk, seeded in screen space (interleaved gradient noise on the
+// pixel coordinate) so neighbouring pixels decorrelate at pixel frequency and break up the
+// texel-frequency penumbra banding into fine dither. returns (cos, sin).
 float2 PCSS_RotationCosSin(float2 seed)
 {
     float n = frac(52.9829189 * frac(dot(seed, float2(0.06711056, 0.00583715))));
@@ -74,14 +74,14 @@ public float PCSS_Filter2D(Texture2D<float> shadowMap, SamplerComparisonState cm
 // perspective: true for spot/point (rays converge, penumbra normalized by blocker depth), false for
 // directional (parallel rays, orthographic depth is already linear so no normalization)
 public float PCSS_SoftShadow2D(Texture2D<float> shadowMap, SamplerState pointSampler, SamplerComparisonState cmpSampler,
-    float2 atlasUv, float zReceiver, float lightAngularSize, float2 atlasScaleUv, bool perspective)
+    float2 atlasUv, float zReceiver, float lightAngularSize, float2 atlasScaleUv, bool perspective, float2 pixelCoord)
 {
     int nBlock = ShadowCB.m_pcssBlockerSamples;
     int nPcf = ShadowCB.m_pcssPCFSamples;
     float q = ShadowCB.m_qualityScalar;
 
-    // rotate the disk per pixel, seeded in shadow-map texel space (atlasUv / texel size)
-    float2 rotCosSin = PCSS_RotationCosSin(atlasUv / max(ShadowCB.m_atlasTexelUv, 1e-8));
+    // rotate the disk per pixel, seeded in screen space so within-texel pixels decorrelate
+    float2 rotCosSin = PCSS_RotationCosSin(pixelCoord);
 
     // 0.0015 is the minimum search radius, 0.05 is the scale factor for light angular size, and q is the quality scalar
     float searchR = (0.0015 + lightAngularSize * 0.05) * q * max(atlasScaleUv.x, atlasScaleUv.y);

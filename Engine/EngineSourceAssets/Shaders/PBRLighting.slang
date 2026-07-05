@@ -58,7 +58,7 @@ public float3 EvaluateDirectLight(
 public float3 EvaluateDirectionalPBR(
     DirectionalLight light,
     float3 P, float3 N, float3 V,
-    float3 baseColor, float metallic, float roughness)
+    float3 baseColor, float metallic, float roughness, float2 pixelCoord)
 {
     float3 L           = normalize(-light.direction.xyz);
     float3 lightColor  = light.color.rgb;
@@ -66,7 +66,7 @@ public float3 EvaluateDirectionalPBR(
 
     float vis = 1.0;
     if (light.shadowEnabled != 0)
-        vis = PCSS_Directional(P, N, light);
+        vis = PCSS_Directional(P, N, light, pixelCoord);
 
     return EvaluateDirectLight(N, V, L, lightColor, attenuation, baseColor, metallic, roughness) * vis;
 }
@@ -96,7 +96,7 @@ public float3 EvaluatePointPBR(
 public float3 EvaluateSpotPBR(
     SpotLight light,
     float3 P, float3 N, float3 V,
-    float3 baseColor, float metallic, float roughness)
+    float3 baseColor, float metallic, float roughness, float2 pixelCoord)
 {
     float3 toLight  = light.position.xyz - P;
     float  distance = length(toLight);
@@ -115,7 +115,7 @@ public float3 EvaluateSpotPBR(
 
     float vis = 1.0;
     if (light.shadowEnabled != 0)
-        vis = PCSS_Spot(P, N, light);
+        vis = PCSS_Spot(P, N, light, pixelCoord);
 
     return EvaluateDirectLight(N, V, L, light.color.rgb, attenuate, baseColor, metallic, roughness) * vis;
 }

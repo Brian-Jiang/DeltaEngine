@@ -88,9 +88,11 @@ float4 PSMain(PBRPSInput input, bool isFrontFace : SV_IsFrontFace) : SV_TARGET
     float3 P  = input.positionWS;
     float3 Lo = float3(0, 0, 0);
 
+    float2 pixelCoord = input.position.xy;
+
     for (uint i = 0; i < LightCB.numDirectionalLights; ++i)
     {
-        Lo += EvaluateDirectionalPBR(DirectionalLights[i], P, N, V, baseColor, metallic, roughness);
+        Lo += EvaluateDirectionalPBR(DirectionalLights[i], P, N, V, baseColor, metallic, roughness, pixelCoord);
     }
 
     for (uint j = 0; j < LightCB.numPointLights; ++j)
@@ -100,7 +102,7 @@ float4 PSMain(PBRPSInput input, bool isFrontFace : SV_IsFrontFace) : SV_TARGET
 
     for (uint k = 0; k < LightCB.numSpotLights; ++k)
     {
-        Lo += EvaluateSpotPBR(SpotLights[k], P, N, V, baseColor, metallic, roughness);
+        Lo += EvaluateSpotPBR(SpotLights[k], P, N, V, baseColor, metallic, roughness, pixelCoord);
     }
 
     float  NdotV = max(dot(N, V), 0.0);
