@@ -164,6 +164,7 @@ void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext>
     m_pipelineStateObjects.clear();
     m_gbufferPipelineStateObjects.clear();
     m_builtShaderGenerations.clear();
+    m_builtMaterialPsoKeys.clear();
     const std::string meshName = m_mesh->GetSourcePath().stem().string();
 
     ISlangBlob* gbufferVertexShader = renderContext->renderManager->GetGBufferVertexShaderBlob();
@@ -178,6 +179,7 @@ void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext>
         // Record the shader generation for this submesh in every branch (skip or build) to stay index-aligned.
         DShader* submeshShader = material ? material->GetShader() : nullptr;
         m_builtShaderGenerations.push_back(submeshShader ? submeshShader->GetCompileGeneration() : 0u);
+        m_builtMaterialPsoKeys.push_back(ComputeMaterialPsoKey(material));
         if (!DELTA_ENSURE(material))
         {
             DLOG(LogRenderer, ELogLevel::Warning,
@@ -316,7 +318,7 @@ void MeshRenderProxy::EnsureDrawResourcesReady(std::shared_ptr<DXGraphicsContext
 
         m_meshDirty = false;
     }
-    else if (ShadersChanged())
+    else if (ShadersChanged() || MaterialPipelineStateChanged())
     {
         Initialize(renderContext);
     }
@@ -529,6 +531,33 @@ bool MeshRenderProxy::ShadersChanged() const
         DShader* shader = material ? material->GetShader() : nullptr;
         const uint32_t gen = shader ? shader->GetCompileGeneration() : 0u;
         if (gen != m_builtShaderGenerations[static_cast<size_t>(i)])
+            return true;
+    }
+
+    return false;
+}
+
+uint32_t MeshRenderProxy::ComputeMaterialPsoKey(const DMaterial* material)
+{
+    if (!material)
+        return 0u;
+    // Only flags that are baked into the graphics PSO (blend + rasterizer cull).
+    const MaterialFlags psoMask = MaterialFlags::AlphaBlend | MaterialFlags::DoubleSided;
+    return static_cast<uint32_t>(material->GetFlags() & psoMask);
+}
+
+bool MeshRenderProxy::MaterialPipelineStateChanged() const
+{
+    if (!m_mesh || m_builtMaterialPsoKeys.empty())
+        return false;
+
+    const int submeshCount = m_mesh->GetSubMeshCount();
+    if (static_cast<size_t>(submeshCount) != m_builtMaterialPsoKeys.size())
+        return true;
+
+    for (int i = 0; i < submeshCount; ++i)
+    {
+        if (ComputeMaterialPsoKey(GetEffectiveMaterial(i)) != m_builtMaterialPsoKeys[static_cast<size_t>(i)])
             return true;
     }
 

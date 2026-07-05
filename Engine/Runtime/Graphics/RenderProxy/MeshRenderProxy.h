@@ -74,6 +74,13 @@ private:
     /// True if any submesh material's shader has been recompiled since the PSOs were built.
     bool ShadersChanged() const;
 
+    /// True if any submesh material's PSO-affecting state (e.g. render mode / blend, double-sided)
+    /// has changed since the PSOs were built.
+    bool MaterialPipelineStateChanged() const;
+
+    /// Packs the subset of a material's flags that are baked into the graphics PSO.
+    static uint32_t ComputeMaterialPsoKey(const DMaterial* material);
+
     void EnsureDrawResourcesReady(std::shared_ptr<DXGraphicsContext> renderContext);
     void BindObjectConstantBuffer(std::shared_ptr<DXGraphicsContext> renderContext) const;
     void DrawSubmeshInternal(std::shared_ptr<DXGraphicsContext> renderContext, size_t submeshIndex);
@@ -96,6 +103,9 @@ private:
 
     // Shader compile generation recorded per submesh when PSOs were built; index-aligned with m_pipelineStateObjects.
     std::vector<uint32_t> m_builtShaderGenerations;
+
+    // Material PSO-affecting flags recorded per submesh when PSOs were built; index-aligned with m_pipelineStateObjects.
+    std::vector<uint32_t> m_builtMaterialPsoKeys;
 
     bool m_meshDirty;
 };
