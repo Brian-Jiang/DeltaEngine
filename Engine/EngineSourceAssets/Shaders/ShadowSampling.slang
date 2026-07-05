@@ -5,6 +5,8 @@ import PCSS;
 
 static const float kSlopeNdcScale = 1e-4;
 
+static const float kSelfShadowNdcEpsilon = 1.5e-3;
+
 float ComputeSlopeNdcBias(float NdotL, float slopeBias)
 {
     float clampedN = max(NdotL, 0.05);
@@ -35,7 +37,7 @@ public float PCSS_Directional(float3 worldPos, float3 N, DirectionalLight light)
         atlasUv.y >= light.atlasUVRect.y + light.atlasUVRect.w)
         return 1.0;
 
-    float zReceiver = ndc.z - ComputeSlopeNdcBias(NdotL, light.shadowSlopeBias);
+    float zReceiver = ndc.z - ComputeSlopeNdcBias(NdotL, light.shadowSlopeBias) - kSelfShadowNdcEpsilon;
     return PCSS_SoftShadow2D(g_shadowDirectionalAtlas, g_sampler, g_shadowCmpSampler, atlasUv, zReceiver,
         light.pcssLightSize, light.atlasUVRect.zw);
 }
@@ -65,7 +67,7 @@ public float PCSS_Point(float3 worldPos, float3 N, PointLight light)
     float nearZ = light.shadowNearZ;
     float farZ = light.range;
     float zReceiver = farZ / (farZ - nearZ) - (farZ * nearZ) / ((farZ - nearZ) * dist);
-    zReceiver -= ComputeSlopeNdcBias(NdotL, light.shadowSlopeBias);
+    zReceiver -= ComputeSlopeNdcBias(NdotL, light.shadowSlopeBias) + kSelfShadowNdcEpsilon;
 
     float4 sampleCoord = float4(dir, (float)light.cubeArrayIndex);
     return g_shadowPointCubeArray.SampleCmpLevelZero(g_shadowCmpSampler, sampleCoord, zReceiver);
@@ -96,7 +98,7 @@ public float PCSS_Spot(float3 worldPos, float3 N, SpotLight light)
         atlasUv.y >= light.atlasUVRect.y + light.atlasUVRect.w)
         return 1.0;
 
-    float zReceiver = ndc.z - ComputeSlopeNdcBias(NdotL, light.shadowSlopeBias);
+    float zReceiver = ndc.z - ComputeSlopeNdcBias(NdotL, light.shadowSlopeBias) - kSelfShadowNdcEpsilon;
     return PCSS_SoftShadow2D(g_shadowSpotAtlas, g_sampler, g_shadowCmpSampler, atlasUv, zReceiver,
         light.pcssLightSize, light.atlasUVRect.zw);
 }
