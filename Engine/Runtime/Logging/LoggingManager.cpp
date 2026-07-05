@@ -27,6 +27,30 @@ std::filesystem::path LoggingManager::GetCurrentLogFilePath()
 static constexpr const char* k_pattern = "[%T.%e] [%n] %^[%l]%$ %v";
 static constexpr std::size_t k_maxBytes = 5 * 1024 * 1024; // 5 MB per file
 static constexpr std::size_t k_maxFiles = 3; // keep 3 rotations
+static constexpr int k_maxLogAgeDays = 7; // delete log files older than this on startup
+
+static void DeleteExpiredLogs(const std::filesystem::path& logDir)
+{
+    std::error_code ec;
+    const auto cutoff = std::filesystem::file_time_type::clock::now() - std::chrono::hours(24 * k_maxLogAgeDays);
+
+    std::filesystem::directory_iterator it(logDir, ec);
+    if (ec)
+        return;
+
+    for (const auto& entry : it)
+    {
+        if (!entry.is_regular_file(ec) || entry.path().extension() != ".log")
+            continue;
+
+        const auto lastWrite = std::filesystem::last_write_time(entry.path(), ec);
+        if (ec)
+            continue;
+
+        if (lastWrite < cutoff)
+            std::filesystem::remove(entry.path(), ec);
+    }
+}
 
 void LoggingManager::Initialize(const std::filesystem::path& logDir)
 {
@@ -47,6 +71,8 @@ void LoggingManager::Initialize(const std::filesystem::path& logDir)
             logDir.string(), ec.message());
         return;
     }
+
+    DeleteExpiredLogs(logDir);
 
     auto consoleSink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
     consoleSink->set_pattern(k_pattern);
