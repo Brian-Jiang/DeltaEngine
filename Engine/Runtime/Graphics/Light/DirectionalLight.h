@@ -25,7 +25,7 @@ public:
 
     DFUNCTION()
     /// Updates the light parameters used for draw submission.
-    DELTAENGINE_API void UpdateParameters(DirectX::XMVECTOR direction, DirectX::XMVECTOR color, float intensity);
+    DELTAENGINE_API void UpdateParameters(DirectX::XMVECTOR color, float intensity);
 
     void SetIntensity(float intensity) override { m_intensity = intensity; }
     float GetIntensity() const override { return m_intensity; }
@@ -36,8 +36,6 @@ public:
 private:
     std::shared_ptr<DirectionalLightRenderProxy> m_renderProxy;
 
-    DPROPERTY()
-    DirectX::XMVECTOR m_direction;
     DPROPERTY(meta=(UIType="Color"))
     DirectX::XMVECTOR m_color;
     DPROPERTY()

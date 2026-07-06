@@ -214,7 +214,7 @@ void EngineMain::CreateGameObjects()
     GameObject* directionalLightGo = world->CreateGameObjectInScene(m_worldContextList[0].world->GetActiveScene(), "DirectionalLight");
     DirectionalLight* directionalLight = directionalLightGo->AddSceneComponent<DirectionalLight>();
     directionalLight->SetLocalRotation(DirectX::SimpleMath::Quaternion::CreateFromAxisAngle(DirectX::SimpleMath::Vector3::UnitX, XM_PIDIV4));
-    directionalLight->UpdateParameters(XMVectorSet(0, -1, 0, 0), XMVectorSet(1.0f, 1.0f, 0.95f, 1.0f), 0.7f);
+    directionalLight->UpdateParameters(XMVectorSet(1.0f, 1.0f, 0.95f, 1.0f), 0.7f);
 
     GameObject* pointLightGo = world->CreateGameObjectInScene(m_worldContextList[0].world->GetActiveScene(), "PointLight");
     PointLight* pointLight = pointLightGo->AddSceneComponent<PointLight>();

@@ -103,7 +103,7 @@ DirectionalLight* GpuSceneBuilder::AddDirectionalLightWithShadows()
         return nullptr;
 
     light->SetLocalRotation(Quaternion::CreateFromAxisAngle(Vector3::UnitX, XM_PIDIV4));
-    light->UpdateParameters(XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), XMVectorSet(1.0f, 1.0f, 0.95f, 1.0f), 0.7f);
+    light->UpdateParameters(XMVectorSet(1.0f, 1.0f, 0.95f, 1.0f), 0.7f);
     return light;
 }
 

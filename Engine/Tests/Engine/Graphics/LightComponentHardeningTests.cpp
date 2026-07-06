@@ -50,8 +50,7 @@ TEST(LightComponentHardeningTests, DirectionalLight_UpdateParameters_NegativeInt
 
     // Act: invalid intensity should be rejected; PreGatherDrawCalls then uses
     // the default intensity (1.0) to populate the proxy.
-    light->UpdateParameters(XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f),
-        XMVectorSet(1.0f, 1.0f, 1.0f, 1.0f), -2.0f);
+    light->UpdateParameters(XMVectorSet(1.0f, 1.0f, 1.0f, 1.0f), -2.0f);
     light->PreGatherDrawCalls(ctx);
 
     // Assert
