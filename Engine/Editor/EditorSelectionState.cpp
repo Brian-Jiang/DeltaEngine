@@ -85,6 +85,7 @@ void EditorSelectionState::SetSelectedGameObject(ObjectId id)
     bool changed = false;
     changed |= ClearAssetSelectionInternal();
     changed |= ClearFolderSelectionInternal();
+    changed |= ClearComponentSelectionInternal();
 
     if (m_selectedGameObjects.size() != 1 || m_selectedGameObjects[0] != id)
     {
@@ -104,6 +105,7 @@ void EditorSelectionState::AddSelectedGameObject(ObjectId id)
     bool changed = false;
     changed |= ClearAssetSelectionInternal();
     changed |= ClearFolderSelectionInternal();
+    changed |= ClearComponentSelectionInternal();
 
     if (std::find(m_selectedGameObjects.begin(), m_selectedGameObjects.end(), id) == m_selectedGameObjects.end())
     {
