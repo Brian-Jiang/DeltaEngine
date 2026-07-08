@@ -16,7 +16,7 @@ public:
         DirectX::XMVECTOR color, float intensity, float range,
         float innerConeAngle, float outerConeAngle,
         bool castShadow, float shadowBias, float pcssLightSize,
-        float shadowNormalBias, float shadowSlopeBias);
+        float shadowNormalBias, float shadowSlopeBias, int shadowResolution);
     void SetSpotLightBufferIndex(uint32_t index);
     void PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> renderContext) override;
     void GatherShadowViews(std::shared_ptr<DXGraphicsContext> ctx, std::vector<ShadowView>& outViews) override;
@@ -35,6 +35,7 @@ private:
     float m_pcssLightSize = 0.05f;
     float m_shadowNormalBias = 0.0f;
     float m_shadowSlopeBias = 1.0f;
+    int m_shadowResolution = 1024;
     uint32_t m_spotLightBufferIndex = 0;
     DirectX::XMMATRIX m_shadowViewProjRow = DirectX::XMMatrixIdentity();
 };

@@ -4,16 +4,22 @@
 #include "Graphics/Structures/Light.h"
 
 #include <DirectXMath.h>
+#include <algorithm>
 #include <cmath>
 
 using namespace DeltaEngine;
 using namespace DirectX;
 
+namespace
+{
+    constexpr uint32_t kMaxSpotShadowEdge = 2048u;
+}
+
 void SpotLightRenderProxy::UpdateParameters(XMVECTOR position, XMVECTOR direction,
     XMVECTOR color, float intensity, float range,
     float innerConeAngle, float outerConeAngle,
     bool castShadow, float shadowBias, float pcssLightSize,
-    float shadowNormalBias, float shadowSlopeBias)
+    float shadowNormalBias, float shadowSlopeBias, int shadowResolution)
 {
     // Note: outerConeAngle drives FOV = 2*outer for the shadow projection, so values >= XM_PIDIV2
     // are clamped at use site rather than rejected here (the default is XM_PIDIV2).
@@ -44,6 +50,7 @@ void SpotLightRenderProxy::UpdateParameters(XMVECTOR position, XMVECTOR directio
     m_pcssLightSize = pcssLightSize;
     m_shadowNormalBias = shadowNormalBias;
     m_shadowSlopeBias = shadowSlopeBias;
+    m_shadowResolution = shadowResolution;
 }
 
 void SpotLightRenderProxy::SetSpotLightBufferIndex(uint32_t index)
@@ -109,6 +116,9 @@ void SpotLightRenderProxy::GatherShadowViews(std::shared_ptr<DXGraphicsContext> 
     sv.type = LightType::Spot;
     sv.lightIndex = m_spotLightBufferIndex;
     sv.shadowParamsWriter = this;
+    const float q = (std::max)(0.05f, ctx->shadowQualityScalar);
+    const uint32_t scaled = static_cast<uint32_t>(std::lround(static_cast<float>(m_shadowResolution) * q));
+    sv.shadowMapEdgePx = (std::clamp)(scaled, 32u, kMaxSpotShadowEdge);
     outViews.push_back(sv);
 }
 

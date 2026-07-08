@@ -190,14 +190,15 @@ void ShadowPassManager::Render(std::shared_ptr<DXGraphicsContext> ctx, DWorld& w
         }
         if (view.type == LightType::Spot)
         {
+            const uint32_t spotEdgePx = view.shadowMapEdgePx > 0 ? view.shadowMapEdgePx : kDefaultShadowMapEdge;
             ShadowMapTileRegion region {};
-            if (m_spotAllocator.Allocate(kDefaultShadowMapEdge, region) < 0)
+            if (m_spotAllocator.Allocate(spotEdgePx, region) < 0)
             {
                 if (m_warnedSpot.insert(view.lightIndex).second)
                 {
                     DLOG(LogShadow, ELogLevel::Warning,
                         "Spot shadow allocation failed (lightIndex={}, edgePx={}, atlas {}x{})",
-                        view.lightIndex, kDefaultShadowMapEdge,
+                        view.lightIndex, spotEdgePx,
                         m_spotAtlas.GetSize(), m_spotAtlas.GetSize());
                 }
                 continue;
