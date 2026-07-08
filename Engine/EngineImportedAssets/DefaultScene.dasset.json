@@ -191,7 +191,7 @@
     {
       "_class": "Camera",
       "_objectId": "f06a1959-f14e-459a-813b-f96e6cb30528",
-      "m_aspectRatio": 1.5899945497512817,
+      "m_aspectRatio": 1.2434943914413452,
       "m_children": [],
       "m_far": 1000.0,
       "m_fov": 0.7853981852531433,
@@ -224,8 +224,12 @@
         "objectId": "bd61905b-dc6c-49ac-9186-51f7cf4e5f24"
       },
       "m_shadowSettings": {
+        "m_maxFilterTexels": 12.0,
+        "m_minFilterTexels": 1.0,
         "m_pcssBlockerSamples": 16,
         "m_pcssPCFSamples": 16,
+        "m_penumbraGain": 8.0,
+        "m_penumbraScale": 3.0,
         "m_qualityScalar": 1.0
       }
     },
@@ -255,12 +259,6 @@
         1.0,
         0.949999988079071,
         1.0
-      ],
-      "m_direction": [
-        0.0,
-        -1.0,
-        0.0,
-        0.0
       ],
       "m_gameObject": {
         "assetId": "097992b4-c850-4c69-a612-ec83528b0c30",

@@ -140,12 +140,6 @@
         1.0,
         1.0
       ],
-      "m_direction": [
-        0.0,
-        -1.0,
-        0.0,
-        0.0
-      ],
       "m_gameObject": {
         "assetId": "eb094a14-734a-4de3-9c3e-350a3b3080d0",
         "objectId": "7d53e9c1-eca1-432f-a298-5d930d5f7bbf"
@@ -231,8 +225,12 @@
         "objectId": "00000000-0000-0000-0000-000000000000"
       },
       "m_shadowSettings": {
+        "m_maxFilterTexels": 12.0,
+        "m_minFilterTexels": 1.0,
         "m_pcssBlockerSamples": 16,
         "m_pcssPCFSamples": 16,
+        "m_penumbraGain": 8.0,
+        "m_penumbraScale": 3.0,
         "m_qualityScalar": 1.0
       }
     },
