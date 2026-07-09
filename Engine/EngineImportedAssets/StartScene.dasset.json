@@ -17,11 +17,1396 @@
       "_class": "DScene",
       "_objectId": "27458575-4648-4d18-972c-c19f2895e59a",
       "m_components": [],
-      "m_gameObjects": [],
+      "m_gameObjects": [
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "73ed9487-935f-4f74-af21-025ca6159b0b"
+        },
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "21ec77a3-8bda-4c53-84c5-c4460797e27f"
+        },
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "80d9df8e-06e9-43e1-ba4f-5965f8a5a68d"
+        },
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "d455ee03-e566-4f3f-976e-33f4b869a6fc"
+        },
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "ea7e4a62-1684-4af5-8b98-012ea86f051c"
+        },
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "7ddd1e1c-b35b-4431-9ffc-57eb6c570419"
+        },
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "25327f7f-cc64-4cdf-9b03-0dbaef4de569"
+        },
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "285071ad-7461-4485-8d76-8955df9e6fba"
+        },
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "5ed3755b-6e33-4d0e-9c7e-4744ac8414ef"
+        },
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "bcb36ab0-ee90-4b4d-a147-7a3b5f4d2cfb"
+        },
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "a6d4ec75-ff0f-4329-9dad-3c55ef1faf53"
+        },
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "a1616371-ef4b-4e0e-ac21-a6bd71e98f17"
+        },
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "6751963b-673e-42b7-bde0-28d36d299d5b"
+        },
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "298cda00-fa24-467b-a90b-63daf114ee44"
+        },
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "335299dd-4d19-4dbb-8a96-8ad9d2c966f9"
+        },
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "5a593337-a54c-4790-9c6c-3faad360a543"
+        },
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "16c75ef1-aeff-41a0-bb34-15569e721e94"
+        },
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "e0768150-00b1-4318-9c33-8d072a3227ac"
+        },
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "33ae5c9e-f5b7-4fd1-b8b5-ebc1af38415d"
+        },
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "146cfda4-024d-4b32-b043-b78292081e63"
+        },
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "1e83933a-6440-4363-9742-aba1ed6845b8"
+        },
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "aa0a571d-eec5-40a1-864c-d14afc27a6ac"
+        },
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "db3a3f81-3a84-4ea3-9c3e-9ab6539f8640"
+        }
+      ],
       "m_name": "StartScene",
       "m_skybox": {
         "assetId": "8d7b931f-d6e7-43e8-85ec-e3ab6349ed85",
         "objectId": "5a26843e-603e-4256-8fac-d4509864161f"
+      }
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "73ed9487-935f-4f74-af21-025ca6159b0b",
+      "m_components": [],
+      "m_name": "Ground",
+      "m_rootSceneComponent": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "faabd669-aa45-4e46-9dd0-084d69f4a592"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "faabd669-aa45-4e46-9dd0-084d69f4a592"
+        }
+      ]
+    },
+    {
+      "_class": "MeshRenderer",
+      "_objectId": "faabd669-aa45-4e46-9dd0-084d69f4a592",
+      "m_castShadow": false,
+      "m_children": [],
+      "m_gameObject": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "73ed9487-935f-4f74-af21-025ca6159b0b"
+      },
+      "m_localTransform": [
+        30.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        30.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_materialOverrides": [],
+      "m_mesh": {
+        "assetId": "88c5a858-78c1-4dcb-b1b8-e15192fd172d",
+        "objectId": "aced7614-8b2c-4e01-8fac-01f953958ea8"
+      },
+      "m_name": "New MeshRenderer",
+      "m_settings": {}
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "21ec77a3-8bda-4c53-84c5-c4460797e27f",
+      "m_components": [],
+      "m_name": "Sphere_Gold",
+      "m_rootSceneComponent": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "ca26faaf-69fb-416a-9f33-52c209ae4095"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "ca26faaf-69fb-416a-9f33-52c209ae4095"
+        }
+      ]
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "80d9df8e-06e9-43e1-ba4f-5965f8a5a68d",
+      "m_components": [],
+      "m_name": "Sphere_Silver",
+      "m_rootSceneComponent": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "f503b0dd-ad92-4e49-a28d-186095b9cd5b"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "f503b0dd-ad92-4e49-a28d-186095b9cd5b"
+        }
+      ]
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "d455ee03-e566-4f3f-976e-33f4b869a6fc",
+      "m_components": [],
+      "m_name": "Sphere_Copper",
+      "m_rootSceneComponent": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "b72d1766-3238-4e52-b627-1e16d6e9ca0b"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "b72d1766-3238-4e52-b627-1e16d6e9ca0b"
+        }
+      ]
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "ea7e4a62-1684-4af5-8b98-012ea86f051c",
+      "m_components": [],
+      "m_name": "Sphere_Bronze",
+      "m_rootSceneComponent": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "88a097af-3fa8-4a0d-baf6-53581ef8967c"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "88a097af-3fa8-4a0d-baf6-53581ef8967c"
+        }
+      ]
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "7ddd1e1c-b35b-4431-9ffc-57eb6c570419",
+      "m_components": [],
+      "m_name": "Sphere_BrushedSteel",
+      "m_rootSceneComponent": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "1c4a3a78-5689-4965-9a15-5a3211a55670"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "1c4a3a78-5689-4965-9a15-5a3211a55670"
+        }
+      ]
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "25327f7f-cc64-4cdf-9b03-0dbaef4de569",
+      "m_components": [],
+      "m_name": "Sphere_RedPlastic",
+      "m_rootSceneComponent": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "0242023d-3d54-4f92-9418-7a4cb6cd582d"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "0242023d-3d54-4f92-9418-7a4cb6cd582d"
+        }
+      ]
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "285071ad-7461-4485-8d76-8955df9e6fba",
+      "m_components": [],
+      "m_name": "Sphere_BluePlastic",
+      "m_rootSceneComponent": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "f2873d91-4eee-4528-aec4-96ab81a6537e"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "f2873d91-4eee-4528-aec4-96ab81a6537e"
+        }
+      ]
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "5ed3755b-6e33-4d0e-9c7e-4744ac8414ef",
+      "m_components": [],
+      "m_name": "Sphere_GreenPlastic",
+      "m_rootSceneComponent": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "7ca80395-997b-4fd3-a033-296ecd0756d1"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "7ca80395-997b-4fd3-a033-296ecd0756d1"
+        }
+      ]
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "bcb36ab0-ee90-4b4d-a147-7a3b5f4d2cfb",
+      "m_components": [],
+      "m_name": "Sphere_YellowPlastic",
+      "m_rootSceneComponent": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "64a3d45c-41cf-4182-b074-86edb0735f72"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "64a3d45c-41cf-4182-b074-86edb0735f72"
+        }
+      ]
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "a6d4ec75-ff0f-4329-9dad-3c55ef1faf53",
+      "m_components": [],
+      "m_name": "Sphere_PurplePlastic",
+      "m_rootSceneComponent": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "8f44af92-ab06-4eae-901c-1a32e7ff8d58"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "8f44af92-ab06-4eae-901c-1a32e7ff8d58"
+        }
+      ]
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "a1616371-ef4b-4e0e-ac21-a6bd71e98f17",
+      "m_components": [],
+      "m_name": "Sphere_MatteWhite",
+      "m_rootSceneComponent": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "dee67528-1472-494f-9cd2-19f9c47f8c60"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "dee67528-1472-494f-9cd2-19f9c47f8c60"
+        }
+      ]
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "6751963b-673e-42b7-bde0-28d36d299d5b",
+      "m_components": [],
+      "m_name": "Sphere_MatteGray",
+      "m_rootSceneComponent": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "5876e36b-ae2e-4017-8970-0304a068d632"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "5876e36b-ae2e-4017-8970-0304a068d632"
+        }
+      ]
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "298cda00-fa24-467b-a90b-63daf114ee44",
+      "m_components": [],
+      "m_name": "Sphere_Terracotta",
+      "m_rootSceneComponent": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "8418d8d5-a252-444c-9dd4-0879b350c192"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "8418d8d5-a252-444c-9dd4-0879b350c192"
+        }
+      ]
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "335299dd-4d19-4dbb-8a96-8ad9d2c966f9",
+      "m_components": [],
+      "m_name": "Sphere_Sand",
+      "m_rootSceneComponent": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "c707e210-2bee-4463-9b16-c006a6342f21"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "c707e210-2bee-4463-9b16-c006a6342f21"
+        }
+      ]
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "5a593337-a54c-4790-9c6c-3faad360a543",
+      "m_components": [],
+      "m_name": "Sphere_Charcoal",
+      "m_rootSceneComponent": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "b80bb4bd-5ffc-4426-8b43-aff117d3df56"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "b80bb4bd-5ffc-4426-8b43-aff117d3df56"
+        }
+      ]
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "16c75ef1-aeff-41a0-bb34-15569e721e94",
+      "m_components": [],
+      "m_name": "Sphere_EmissiveCyan",
+      "m_rootSceneComponent": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "453f5689-a4ef-412c-85ca-c5fea95155f4"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "453f5689-a4ef-412c-85ca-c5fea95155f4"
+        }
+      ]
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "e0768150-00b1-4318-9c33-8d072a3227ac",
+      "m_components": [],
+      "m_name": "Sphere_EmissiveMagenta",
+      "m_rootSceneComponent": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "778e8ccf-1d32-44cc-9fe2-26d6232ca7a8"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "778e8ccf-1d32-44cc-9fe2-26d6232ca7a8"
+        }
+      ]
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "33ae5c9e-f5b7-4fd1-b8b5-ebc1af38415d",
+      "m_components": [],
+      "m_name": "Sphere_EmissiveOrange",
+      "m_rootSceneComponent": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "db10b66a-ed17-4bf7-b488-8e67bd41e5df"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "db10b66a-ed17-4bf7-b488-8e67bd41e5df"
+        }
+      ]
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "146cfda4-024d-4b32-b043-b78292081e63",
+      "m_components": [],
+      "m_name": "Sphere_ClearGlass",
+      "m_rootSceneComponent": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "6a882950-31d3-46d6-b1e9-27094bb50e99"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "6a882950-31d3-46d6-b1e9-27094bb50e99"
+        }
+      ]
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "1e83933a-6440-4363-9742-aba1ed6845b8",
+      "m_components": [],
+      "m_name": "Sphere_TintedGlass",
+      "m_rootSceneComponent": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "0f34ff08-b136-4e3a-9235-d7ccc71cbc0c"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "0f34ff08-b136-4e3a-9235-d7ccc71cbc0c"
+        }
+      ]
+    },
+    {
+      "_class": "MeshRenderer",
+      "_objectId": "ca26faaf-69fb-416a-9f33-52c209ae4095",
+      "m_castShadow": true,
+      "m_children": [],
+      "m_gameObject": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "21ec77a3-8bda-4c53-84c5-c4460797e27f"
+      },
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -450.0,
+        100.0,
+        -600.0,
+        1.0
+      ],
+      "m_materialOverrides": [
+        {
+          "assetId": "1b40fd4f-0a22-4544-98ab-ac87c997017d",
+          "objectId": "9f5bf341-7b2c-44b6-9b72-296ad6817f9f"
+        }
+      ],
+      "m_mesh": {
+        "assetId": "9bdff5d8-c0e0-4964-bcec-519fbfef987a",
+        "objectId": "d08c2038-5fd0-4cb7-9845-45fc48452f60"
+      },
+      "m_name": "New MeshRenderer",
+      "m_settings": {}
+    },
+    {
+      "_class": "MeshRenderer",
+      "_objectId": "f503b0dd-ad92-4e49-a28d-186095b9cd5b",
+      "m_castShadow": true,
+      "m_children": [],
+      "m_gameObject": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "80d9df8e-06e9-43e1-ba4f-5965f8a5a68d"
+      },
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -450.0,
+        100.0,
+        -300.0,
+        1.0
+      ],
+      "m_materialOverrides": [
+        {
+          "assetId": "64e98866-ddd3-4ae3-8a89-ff4ca8e2311d",
+          "objectId": "6e4cc9de-c4b1-46e3-aab1-3b6970704ff6"
+        }
+      ],
+      "m_mesh": {
+        "assetId": "9bdff5d8-c0e0-4964-bcec-519fbfef987a",
+        "objectId": "d08c2038-5fd0-4cb7-9845-45fc48452f60"
+      },
+      "m_name": "New MeshRenderer",
+      "m_settings": {}
+    },
+    {
+      "_class": "MeshRenderer",
+      "_objectId": "b72d1766-3238-4e52-b627-1e16d6e9ca0b",
+      "m_castShadow": true,
+      "m_children": [],
+      "m_gameObject": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "d455ee03-e566-4f3f-976e-33f4b869a6fc"
+      },
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -450.0,
+        100.0,
+        0.0,
+        1.0
+      ],
+      "m_materialOverrides": [
+        {
+          "assetId": "3ffd470b-f067-4b20-b428-51f92b7adfe8",
+          "objectId": "2da16c6f-d26c-4b5b-b45b-22eb69e08f5e"
+        }
+      ],
+      "m_mesh": {
+        "assetId": "9bdff5d8-c0e0-4964-bcec-519fbfef987a",
+        "objectId": "d08c2038-5fd0-4cb7-9845-45fc48452f60"
+      },
+      "m_name": "New MeshRenderer",
+      "m_settings": {}
+    },
+    {
+      "_class": "MeshRenderer",
+      "_objectId": "88a097af-3fa8-4a0d-baf6-53581ef8967c",
+      "m_castShadow": true,
+      "m_children": [],
+      "m_gameObject": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "ea7e4a62-1684-4af5-8b98-012ea86f051c"
+      },
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -450.0,
+        100.0,
+        300.0,
+        1.0
+      ],
+      "m_materialOverrides": [
+        {
+          "assetId": "b4685cfc-cf2b-459b-99e8-647383525d0a",
+          "objectId": "484da398-f232-4b26-ad78-16158ea97c4b"
+        }
+      ],
+      "m_mesh": {
+        "assetId": "9bdff5d8-c0e0-4964-bcec-519fbfef987a",
+        "objectId": "d08c2038-5fd0-4cb7-9845-45fc48452f60"
+      },
+      "m_name": "New MeshRenderer",
+      "m_settings": {}
+    },
+    {
+      "_class": "MeshRenderer",
+      "_objectId": "1c4a3a78-5689-4965-9a15-5a3211a55670",
+      "m_castShadow": true,
+      "m_children": [],
+      "m_gameObject": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "7ddd1e1c-b35b-4431-9ffc-57eb6c570419"
+      },
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -450.0,
+        100.0,
+        600.0,
+        1.0
+      ],
+      "m_materialOverrides": [
+        {
+          "assetId": "3ac0c962-2d3f-40a2-b929-37c6db4e8536",
+          "objectId": "18549834-ce17-4e10-8b02-a0acda7ee286"
+        }
+      ],
+      "m_mesh": {
+        "assetId": "9bdff5d8-c0e0-4964-bcec-519fbfef987a",
+        "objectId": "d08c2038-5fd0-4cb7-9845-45fc48452f60"
+      },
+      "m_name": "New MeshRenderer",
+      "m_settings": {}
+    },
+    {
+      "_class": "MeshRenderer",
+      "_objectId": "0242023d-3d54-4f92-9418-7a4cb6cd582d",
+      "m_castShadow": true,
+      "m_children": [],
+      "m_gameObject": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "25327f7f-cc64-4cdf-9b03-0dbaef4de569"
+      },
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -150.0,
+        100.0,
+        -600.0,
+        1.0
+      ],
+      "m_materialOverrides": [
+        {
+          "assetId": "acad9ad4-f510-45c6-853f-db9db7da9a95",
+          "objectId": "70170da6-ebdf-476f-87ee-ef23055ab34b"
+        }
+      ],
+      "m_mesh": {
+        "assetId": "9bdff5d8-c0e0-4964-bcec-519fbfef987a",
+        "objectId": "d08c2038-5fd0-4cb7-9845-45fc48452f60"
+      },
+      "m_name": "New MeshRenderer",
+      "m_settings": {}
+    },
+    {
+      "_class": "MeshRenderer",
+      "_objectId": "f2873d91-4eee-4528-aec4-96ab81a6537e",
+      "m_castShadow": true,
+      "m_children": [],
+      "m_gameObject": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "285071ad-7461-4485-8d76-8955df9e6fba"
+      },
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -150.0,
+        100.0,
+        -300.0,
+        1.0
+      ],
+      "m_materialOverrides": [
+        {
+          "assetId": "001896a3-14f0-419e-a013-5e32da35916b",
+          "objectId": "eea08425-73d6-4fad-a8e1-c2d092d7b94b"
+        }
+      ],
+      "m_mesh": {
+        "assetId": "9bdff5d8-c0e0-4964-bcec-519fbfef987a",
+        "objectId": "d08c2038-5fd0-4cb7-9845-45fc48452f60"
+      },
+      "m_name": "New MeshRenderer",
+      "m_settings": {}
+    },
+    {
+      "_class": "MeshRenderer",
+      "_objectId": "7ca80395-997b-4fd3-a033-296ecd0756d1",
+      "m_castShadow": true,
+      "m_children": [],
+      "m_gameObject": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "5ed3755b-6e33-4d0e-9c7e-4744ac8414ef"
+      },
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -150.0,
+        100.0,
+        0.0,
+        1.0
+      ],
+      "m_materialOverrides": [
+        {
+          "assetId": "4f88e377-a18a-4c71-9f98-db2e8b5e3e7f",
+          "objectId": "e9cd3f2b-a693-42f5-9433-eefa1777f9b1"
+        }
+      ],
+      "m_mesh": {
+        "assetId": "9bdff5d8-c0e0-4964-bcec-519fbfef987a",
+        "objectId": "d08c2038-5fd0-4cb7-9845-45fc48452f60"
+      },
+      "m_name": "New MeshRenderer",
+      "m_settings": {}
+    },
+    {
+      "_class": "MeshRenderer",
+      "_objectId": "64a3d45c-41cf-4182-b074-86edb0735f72",
+      "m_castShadow": true,
+      "m_children": [],
+      "m_gameObject": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "bcb36ab0-ee90-4b4d-a147-7a3b5f4d2cfb"
+      },
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -150.0,
+        100.0,
+        300.0,
+        1.0
+      ],
+      "m_materialOverrides": [
+        {
+          "assetId": "94fa9821-bead-48f1-93d2-eaa5c3b402bd",
+          "objectId": "ba44a491-ac1c-4975-85bd-4f0e045c455a"
+        }
+      ],
+      "m_mesh": {
+        "assetId": "9bdff5d8-c0e0-4964-bcec-519fbfef987a",
+        "objectId": "d08c2038-5fd0-4cb7-9845-45fc48452f60"
+      },
+      "m_name": "New MeshRenderer",
+      "m_settings": {}
+    },
+    {
+      "_class": "MeshRenderer",
+      "_objectId": "8f44af92-ab06-4eae-901c-1a32e7ff8d58",
+      "m_castShadow": true,
+      "m_children": [],
+      "m_gameObject": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "a6d4ec75-ff0f-4329-9dad-3c55ef1faf53"
+      },
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -150.0,
+        100.0,
+        600.0,
+        1.0
+      ],
+      "m_materialOverrides": [
+        {
+          "assetId": "cea60b54-7d8a-42bf-8274-538f407bbb4e",
+          "objectId": "ff85ac50-2561-402b-8a76-bb726ac9455f"
+        }
+      ],
+      "m_mesh": {
+        "assetId": "9bdff5d8-c0e0-4964-bcec-519fbfef987a",
+        "objectId": "d08c2038-5fd0-4cb7-9845-45fc48452f60"
+      },
+      "m_name": "New MeshRenderer",
+      "m_settings": {}
+    },
+    {
+      "_class": "MeshRenderer",
+      "_objectId": "dee67528-1472-494f-9cd2-19f9c47f8c60",
+      "m_castShadow": true,
+      "m_children": [],
+      "m_gameObject": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "a1616371-ef4b-4e0e-ac21-a6bd71e98f17"
+      },
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        150.0,
+        100.0,
+        -600.0,
+        1.0
+      ],
+      "m_materialOverrides": [
+        {
+          "assetId": "e1d63878-f258-4128-b1e6-9a2d9a24f25b",
+          "objectId": "c0557a0e-9c22-43a1-887b-f27a2ec3b8ec"
+        }
+      ],
+      "m_mesh": {
+        "assetId": "9bdff5d8-c0e0-4964-bcec-519fbfef987a",
+        "objectId": "d08c2038-5fd0-4cb7-9845-45fc48452f60"
+      },
+      "m_name": "New MeshRenderer",
+      "m_settings": {}
+    },
+    {
+      "_class": "MeshRenderer",
+      "_objectId": "5876e36b-ae2e-4017-8970-0304a068d632",
+      "m_castShadow": true,
+      "m_children": [],
+      "m_gameObject": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "6751963b-673e-42b7-bde0-28d36d299d5b"
+      },
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        150.0,
+        100.0,
+        -300.0,
+        1.0
+      ],
+      "m_materialOverrides": [
+        {
+          "assetId": "3f893011-efb3-4c04-a5dd-b215fdfa7849",
+          "objectId": "8a499353-a8ad-452b-b3c4-1aa68e4027af"
+        }
+      ],
+      "m_mesh": {
+        "assetId": "9bdff5d8-c0e0-4964-bcec-519fbfef987a",
+        "objectId": "d08c2038-5fd0-4cb7-9845-45fc48452f60"
+      },
+      "m_name": "New MeshRenderer",
+      "m_settings": {}
+    },
+    {
+      "_class": "MeshRenderer",
+      "_objectId": "8418d8d5-a252-444c-9dd4-0879b350c192",
+      "m_castShadow": true,
+      "m_children": [],
+      "m_gameObject": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "298cda00-fa24-467b-a90b-63daf114ee44"
+      },
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        150.0,
+        100.0,
+        0.0,
+        1.0
+      ],
+      "m_materialOverrides": [
+        {
+          "assetId": "d217a296-87db-42c2-91bf-54625467c483",
+          "objectId": "a63f6d7e-3959-4c51-8eac-7666312b59d3"
+        }
+      ],
+      "m_mesh": {
+        "assetId": "9bdff5d8-c0e0-4964-bcec-519fbfef987a",
+        "objectId": "d08c2038-5fd0-4cb7-9845-45fc48452f60"
+      },
+      "m_name": "New MeshRenderer",
+      "m_settings": {}
+    },
+    {
+      "_class": "MeshRenderer",
+      "_objectId": "c707e210-2bee-4463-9b16-c006a6342f21",
+      "m_castShadow": true,
+      "m_children": [],
+      "m_gameObject": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "335299dd-4d19-4dbb-8a96-8ad9d2c966f9"
+      },
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        150.0,
+        100.0,
+        300.0,
+        1.0
+      ],
+      "m_materialOverrides": [
+        {
+          "assetId": "fa46ac07-88b8-4610-85af-b8602e8cb349",
+          "objectId": "10c795ba-af17-4ab8-858b-3bc140e9019a"
+        }
+      ],
+      "m_mesh": {
+        "assetId": "9bdff5d8-c0e0-4964-bcec-519fbfef987a",
+        "objectId": "d08c2038-5fd0-4cb7-9845-45fc48452f60"
+      },
+      "m_name": "New MeshRenderer",
+      "m_settings": {}
+    },
+    {
+      "_class": "MeshRenderer",
+      "_objectId": "b80bb4bd-5ffc-4426-8b43-aff117d3df56",
+      "m_castShadow": true,
+      "m_children": [],
+      "m_gameObject": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "5a593337-a54c-4790-9c6c-3faad360a543"
+      },
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        150.0,
+        100.0,
+        600.0,
+        1.0
+      ],
+      "m_materialOverrides": [
+        {
+          "assetId": "9ba924ab-d305-4a65-9539-32ea5d8cca7c",
+          "objectId": "1d4daca9-ce0f-495e-9930-3474eb767737"
+        }
+      ],
+      "m_mesh": {
+        "assetId": "9bdff5d8-c0e0-4964-bcec-519fbfef987a",
+        "objectId": "d08c2038-5fd0-4cb7-9845-45fc48452f60"
+      },
+      "m_name": "New MeshRenderer",
+      "m_settings": {}
+    },
+    {
+      "_class": "MeshRenderer",
+      "_objectId": "453f5689-a4ef-412c-85ca-c5fea95155f4",
+      "m_castShadow": true,
+      "m_children": [],
+      "m_gameObject": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "16c75ef1-aeff-41a0-bb34-15569e721e94"
+      },
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        450.0,
+        100.0,
+        -600.0,
+        1.0
+      ],
+      "m_materialOverrides": [
+        {
+          "assetId": "8b88e64f-20c7-419c-9d68-d20b9c242795",
+          "objectId": "cc844aac-21ff-4fcb-b080-2ced329b58ac"
+        }
+      ],
+      "m_mesh": {
+        "assetId": "9bdff5d8-c0e0-4964-bcec-519fbfef987a",
+        "objectId": "d08c2038-5fd0-4cb7-9845-45fc48452f60"
+      },
+      "m_name": "New MeshRenderer",
+      "m_settings": {}
+    },
+    {
+      "_class": "MeshRenderer",
+      "_objectId": "778e8ccf-1d32-44cc-9fe2-26d6232ca7a8",
+      "m_castShadow": true,
+      "m_children": [],
+      "m_gameObject": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "e0768150-00b1-4318-9c33-8d072a3227ac"
+      },
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        450.0,
+        100.0,
+        -300.0,
+        1.0
+      ],
+      "m_materialOverrides": [
+        {
+          "assetId": "480615cf-6517-4c75-b764-9c9dfdfb3630",
+          "objectId": "0f1882ff-2eb1-4801-8b8d-3e1ba5749db3"
+        }
+      ],
+      "m_mesh": {
+        "assetId": "9bdff5d8-c0e0-4964-bcec-519fbfef987a",
+        "objectId": "d08c2038-5fd0-4cb7-9845-45fc48452f60"
+      },
+      "m_name": "New MeshRenderer",
+      "m_settings": {}
+    },
+    {
+      "_class": "MeshRenderer",
+      "_objectId": "db10b66a-ed17-4bf7-b488-8e67bd41e5df",
+      "m_castShadow": true,
+      "m_children": [],
+      "m_gameObject": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "33ae5c9e-f5b7-4fd1-b8b5-ebc1af38415d"
+      },
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        450.0,
+        100.0,
+        0.0,
+        1.0
+      ],
+      "m_materialOverrides": [
+        {
+          "assetId": "371d1e45-6c29-4d98-8d6c-7fd2edcb6539",
+          "objectId": "23bdcc70-1897-4738-9b71-509a7fe11a99"
+        }
+      ],
+      "m_mesh": {
+        "assetId": "9bdff5d8-c0e0-4964-bcec-519fbfef987a",
+        "objectId": "d08c2038-5fd0-4cb7-9845-45fc48452f60"
+      },
+      "m_name": "New MeshRenderer",
+      "m_settings": {}
+    },
+    {
+      "_class": "MeshRenderer",
+      "_objectId": "6a882950-31d3-46d6-b1e9-27094bb50e99",
+      "m_castShadow": true,
+      "m_children": [],
+      "m_gameObject": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "146cfda4-024d-4b32-b043-b78292081e63"
+      },
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        450.0,
+        100.0,
+        300.0,
+        1.0
+      ],
+      "m_materialOverrides": [
+        {
+          "assetId": "a3bc2724-aee8-425d-b815-2a3be4ca4027",
+          "objectId": "1ab96a78-33df-49a4-8693-d251809833bb"
+        }
+      ],
+      "m_mesh": {
+        "assetId": "9bdff5d8-c0e0-4964-bcec-519fbfef987a",
+        "objectId": "d08c2038-5fd0-4cb7-9845-45fc48452f60"
+      },
+      "m_name": "New MeshRenderer",
+      "m_settings": {}
+    },
+    {
+      "_class": "MeshRenderer",
+      "_objectId": "0f34ff08-b136-4e3a-9235-d7ccc71cbc0c",
+      "m_castShadow": true,
+      "m_children": [],
+      "m_gameObject": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "1e83933a-6440-4363-9742-aba1ed6845b8"
+      },
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        450.0,
+        100.0,
+        600.0,
+        1.0
+      ],
+      "m_materialOverrides": [
+        {
+          "assetId": "0a1bb22b-2d14-41e0-8e1c-50dc26183346",
+          "objectId": "b13eecfe-0570-4928-a540-7a89a0254d1e"
+        }
+      ],
+      "m_mesh": {
+        "assetId": "9bdff5d8-c0e0-4964-bcec-519fbfef987a",
+        "objectId": "d08c2038-5fd0-4cb7-9845-45fc48452f60"
+      },
+      "m_name": "New MeshRenderer",
+      "m_settings": {}
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "aa0a571d-eec5-40a1-864c-d14afc27a6ac",
+      "m_components": [],
+      "m_name": "SunLight",
+      "m_rootSceneComponent": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "4df0a286-d2b0-4353-a6e8-8049efc6e518"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "4df0a286-d2b0-4353-a6e8-8049efc6e518"
+        }
+      ]
+    },
+    {
+      "_class": "DirectionalLight",
+      "_objectId": "4df0a286-d2b0-4353-a6e8-8049efc6e518",
+      "m_castShadow": true,
+      "m_children": [],
+      "m_color": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "m_gameObject": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "aa0a571d-eec5-40a1-864c-d14afc27a6ac"
+      },
+      "m_intensity": 1.0,
+      "m_localTransform": [
+        0.825333833694458,
+        -1.4901130107602967e-08,
+        -0.5646412968635559,
+        0.0,
+        0.31881633400917053,
+        0.8253231048583984,
+        0.46601253747940063,
+        0.0,
+        0.4660150408744812,
+        -0.5646370053291321,
+        0.6811721920967102,
+        0.0,
+        0.0,
+        500.0,
+        0.0,
+        1.0
+      ],
+      "m_name": "New DirectionalLight",
+      "m_pcssLightSize": 0.004999999888241291,
+      "m_shadowBias": 0.004999999888241291,
+      "m_shadowCasterDistance": 5000.0,
+      "m_shadowMaxDistance": 2500.0,
+      "m_shadowNormalBias": 0.0,
+      "m_shadowOrthoPadding": 5.0,
+      "m_shadowResolution": 2048,
+      "m_shadowSlopeBias": 0.0
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "db3a3f81-3a84-4ea3-9c3e-9ab6539f8640",
+      "m_components": [],
+      "m_name": "New GameObject",
+      "m_rootSceneComponent": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "cc21d6a2-a7f6-4957-b238-4a7e02bbbb61"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "cc21d6a2-a7f6-4957-b238-4a7e02bbbb61"
+        }
+      ]
+    },
+    {
+      "_class": "Camera",
+      "_objectId": "cc21d6a2-a7f6-4957-b238-4a7e02bbbb61",
+      "m_aspectRatio": 2.020458698272705,
+      "m_children": [],
+      "m_far": 1000.0,
+      "m_fov": 45.0,
+      "m_gameObject": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "db3a3f81-3a84-4ea3-9c3e-9ab6539f8640"
+      },
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_name": "New Camera",
+      "m_near": 0.10000000149011612,
+      "m_postProcessStack": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "00000000-0000-0000-0000-000000000000"
+      },
+      "m_shadowSettings": {
+        "m_maxFilterTexels": 12.0,
+        "m_minFilterTexels": 1.0,
+        "m_pcssBlockerSamples": 16,
+        "m_pcssPCFSamples": 16,
+        "m_penumbraGain": 8.0,
+        "m_penumbraScale": 3.0,
+        "m_qualityScalar": 1.0
       }
     }
   ]

@@ -29,7 +29,8 @@ nlohmann::json McpLightsSystem::CommandSetIntensity(EditorCore& core, const nloh
         return MakeMcpError("invalid objectId");
 
     const float target   = params["value"].get<float>();
-    const float duration = params.value("duration_seconds", kDefaultAnimationDurationSeconds);
+    //const float duration = params.value("duration_seconds", kDefaultAnimationDurationSeconds);
+    const float duration = kDefaultAnimationDurationSeconds;
 
     if (duration <= 0.0f)
     {
