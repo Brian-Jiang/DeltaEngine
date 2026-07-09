@@ -17,10 +17,10 @@
       "tags": []
     },
     "static": {
-      "m_format": 0,
-      "m_height": 0,
-      "m_mipCount": 0,
-      "m_width": 0
+      "m_format": 78,
+      "m_height": 1024,
+      "m_mipCount": 1,
+      "m_width": 256
     }
   },
   "objects": [

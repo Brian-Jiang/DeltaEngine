@@ -311,6 +311,18 @@ void EditorWindow_Details::RenderAssetDetails(const AssetId& assetId)
     DrawReadOnlyProperty("Asset Id", asset->GetAssetId().ToString());
     DrawReadOnlyProperty("Objects", std::to_string(asset->GetObjects().size()));
 
+    if (asset->GetStaticMetaSchema().first)
+    {
+        if (ImGui::CollapsingHeader("Actions", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            if (ImGui::Button("Regenerate Static Meta"))
+            {
+                asset->RebuildStaticMeta();
+                assetDatabase->SaveAsset(assetId);
+            }
+        }
+    }
+
     int objectIndex = 0;
     for (DObject* object : asset->GetObjects())
     {
