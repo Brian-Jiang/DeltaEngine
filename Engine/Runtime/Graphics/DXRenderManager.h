@@ -17,6 +17,7 @@
 #include "DirectX/DescriptorAllocator.h"
 #include "Structures/Light.h"
 #include "Structures/Camera.h"
+#include "Structures/TemporalCameraState.h"
 #include "Runtime/Graphics/DXGraphicsContext.h"
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/DirectX/DirectX12Texture.h"
@@ -116,6 +117,10 @@ public:
     DELTAENGINE_API void RenderFrame();
 
     DELTAENGINE_API void SetPendingActiveRenderCamera(std::optional<ActiveRenderCamera> camera);
+
+    DELTAENGINE_API TemporalCameraState& GetTemporalCameraState() { return m_temporalCameraState; }
+    DELTAENGINE_API const TemporalCameraState& GetTemporalCameraState() const { return m_temporalCameraState; }
+    DELTAENGINE_API void RequestTemporalHistoryReset() { m_temporalCameraState.RequestHistoryReset(); }
 
 	DELTAENGINE_API void Resize(UINT width, UINT height);
     DELTAENGINE_API void OnDestroy();
@@ -221,6 +226,7 @@ private:
     SceneDrawCallback m_pendingTransparentDrawCallback;
 
     std::optional<ActiveRenderCamera> m_pendingActiveRenderCamera;
+    TemporalCameraState m_temporalCameraState;
 
     IBLBaker m_iblBaker;
     ShadowPassManager m_shadowPass;

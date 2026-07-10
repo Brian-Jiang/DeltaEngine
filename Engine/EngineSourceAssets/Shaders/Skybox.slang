@@ -10,6 +10,10 @@ cbuffer CameraCB : register(b0)
     float4x4 ProjectionMatrix;
     float4x4 InvViewProjectionMatrix;
     float4 CameraPosition;
+    float4x4 ProjectionMatrixUnjittered;
+    float4x4 PrevViewProjectionMatrix;
+    float2 Jitter;
+    float2 JitterPad;
 }
 
 TextureCube g_skybox : register(t0, space1);
