@@ -64,6 +64,12 @@ struct DXGraphicsContext
     /// Non-owning pointer to the active camera's render proxy for the frame.
     CameraRenderProxy* camera = nullptr;
 
+    /// Frame temporal jitter published by DXRenderManager::PrepareFrame for CameraRenderProxy uploads.
+    bool temporalJitterEnabled = false;
+    bool temporalHistoryReset = true;
+    DirectX::XMFLOAT2 temporalJitter{ 0.f, 0.f };
+    DirectX::XMMATRIX prevUnjitteredViewProjection = DirectX::XMMatrixIdentity();
+
     /// Global shadow quality multiplier sourced from ShadowPassManager settings.
     float shadowQualityScalar = 1.0f;
 

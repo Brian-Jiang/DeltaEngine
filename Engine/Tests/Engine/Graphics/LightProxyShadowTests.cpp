@@ -70,7 +70,7 @@ TEST(LightProxyShadowTests, SpotProducesOnePerspectiveView)
     SpotLightRenderProxy p;
     p.SetSpotLightBufferIndex(0);
     p.UpdateParameters(XMVectorSet(0.0f, 3.0f, 0.0f, 1.0f), XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f),
-        XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f), 1.0f, 25.0f, 0.2f, 0.6f, true, 0.005f, 0.05f, 0.0f, 1.0f);
+        XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f), 1.0f, 25.0f, 0.2f, 0.6f, true, 0.005f, 0.05f, 0.0f, 1.0f, 1024);
 
     std::vector<ShadowView> views;
     p.GatherShadowViews(ctx, views);

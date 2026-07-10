@@ -6,13 +6,13 @@
 
 DELTA_ENGINE_NS_BEGIN
 
-/// Camera constant buffer layout (must match Shaders.hlsl Camera struct).
+/// Camera constant buffer layout (must match StandardConstantStructs.slang Camera / Skybox CameraCB).
 struct alignas(16) CameraCB
 {
     /// View matrix for the active camera.
     DirectX::XMMATRIX viewMatrix;
 
-    /// Projection matrix for the active camera.
+    /// Projection matrix for the active camera (jittered when temporal jitter is enabled).
     DirectX::XMMATRIX projectionMatrix;
 
     /// Inverse of (view * projection), transposed for HLSL mul(rowVec, matrix).
@@ -20,6 +20,16 @@ struct alignas(16) CameraCB
 
     /// Camera world position.
     DirectX::XMVECTOR position;
+
+    /// Centered (unjittered) projection, transposed.
+    DirectX::XMMATRIX projectionMatrixUnjittered;
+
+    /// Previous frame unjittered view*projection, transposed.
+    DirectX::XMMATRIX prevViewProjectionMatrix;
+
+    /// Sub-pixel NDC jitter applied to projection this frame (x, y).
+    DirectX::XMFLOAT2 jitter{};
+    DirectX::XMFLOAT2 jitterPad{};
 };
 
 /// Computes and stores invViewProjectionMatrix from the transposed view/projection in cb.

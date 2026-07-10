@@ -557,6 +557,24 @@ void DXRenderManager::PrepareFrame()
     auto ctx = GetGraphicsContext();
     ctx->activeRenderCamera = m_pendingActiveRenderCamera;
     m_pendingActiveRenderCamera.reset();
+
+    m_temporalCameraState.BeginFrame(m_width, m_height);
+    ctx->temporalJitterEnabled = m_temporalCameraState.enabled;
+    ctx->temporalJitter = m_temporalCameraState.enabled ? m_temporalCameraState.currentJitter
+                                                        : DirectX::XMFLOAT2{ 0.f, 0.f };
+    ctx->temporalHistoryReset = m_temporalCameraState.historyReset;
+    ctx->prevUnjitteredViewProjection = m_temporalCameraState.prevUnjitteredViewProjection;
+
+    if (ctx->activeRenderCamera.has_value())
+    {
+        ActiveRenderCamera& arc = *ctx->activeRenderCamera;
+        const DirectX::XMMATRIX unjitteredView = DirectX::XMMatrixTranspose(arc.cb.viewMatrix);
+        // Incoming ARC builders write centered projection into projectionMatrix.
+        const DirectX::XMMATRIX unjitteredProj = DirectX::XMMatrixTranspose(arc.cb.projectionMatrix);
+        // Commits manager history; ctx prev/historyReset stay as this frame's bind values for the proxy.
+        m_temporalCameraState.FillCameraCB(arc.cb, unjitteredView, unjitteredProj);
+    }
+
     if (m_currentWorld)
         m_currentWorld->PreGatherDrawCalls(ctx);
 }
@@ -1108,6 +1126,7 @@ void DXRenderManager::Resize(UINT width, UINT height)
     m_finalPostProcessSRV = {};
     m_finalPostProcessTexture.reset();
     m_frameGraphDirty = true;
+    m_temporalCameraState.RequestHistoryReset();
 }
 
 void DXRenderManager::CreatePingPongTargets(UINT width, UINT height)

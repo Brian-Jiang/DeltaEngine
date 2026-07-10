@@ -17,6 +17,9 @@ TEST(GraphicsStructureTests, ConstantBuffersRemainSixteenByteAligned)
 {
     EXPECT_EQ(alignof(CameraCB), 16u);
     EXPECT_EQ(sizeof(CameraCB) % 16u, 0u);
+    EXPECT_EQ(offsetof(CameraCB, projectionMatrixUnjittered) % 16u, 0u);
+    EXPECT_EQ(offsetof(CameraCB, prevViewProjectionMatrix) % 16u, 0u);
+    EXPECT_EQ(offsetof(CameraCB, jitter) % 8u, 0u);
 
     EXPECT_EQ(alignof(LightCB), 16u);
     EXPECT_EQ(sizeof(LightCB) % 16u, 0u);
