@@ -66,7 +66,7 @@ bool EditorCommand_RemovePostProcessPass::Execute(EditorCommandContext& ctx)
     DLOG(LogEditorCommand, ELogLevel::Verbose, "[Remove PostProcess Pass] Execute: Start");
 
     PA_PostProcessStack* asset = ResolvePPStackAsset(ctx.core, m_assetId);
-    if (!asset || !asset->m_stack)
+    if (!asset || !asset->GetStack())
     {
         DLOG(LogEditorCommand, ELogLevel::Error,
             "[Remove PostProcess Pass] Execute: PA_PostProcessStack not found for assetId '{}'",
@@ -74,7 +74,7 @@ bool EditorCommand_RemovePostProcessPass::Execute(EditorCommandContext& ctx)
         return false;
     }
 
-    PostProcessPass* pass = FindPassByClass(asset->m_stack, m_className, m_passIndex);
+    PostProcessPass* pass = FindPassByClass(asset->GetStack(), m_className, m_passIndex);
     if (!pass)
     {
         DLOG(LogEditorCommand, ELogLevel::Error,
@@ -105,7 +105,7 @@ bool EditorCommand_RemovePostProcessPass::Undo(EditorCommandContext& ctx)
     DLOG(LogEditorCommand, ELogLevel::Verbose, "[Remove PostProcess Pass] Undo: Start");
 
     PA_PostProcessStack* asset = ResolvePPStackAsset(ctx.core, m_assetId);
-    if (!asset || !asset->m_stack)
+    if (!asset || !asset->GetStack())
     {
         DLOG(LogEditorCommand, ELogLevel::Error,
             "[Remove PostProcess Pass] Undo: PA_PostProcessStack not found for assetId '{}'",
@@ -131,7 +131,7 @@ bool EditorCommand_RemovePostProcessPass::Undo(EditorCommandContext& ctx)
     }
 
     m_removedId = pass->GetObjectId();
-    auto& passes = asset->m_stack->m_passes;
+    auto& passes = asset->GetStack()->m_passes;
     const int insertAt = (m_passIndex >= 0 && m_passIndex <= static_cast<int>(passes.size()))
         ? m_passIndex
         : static_cast<int>(passes.size());

@@ -12,14 +12,14 @@ TEST(PostProcessStackHardeningTests, PostProcessStack_GetPass_ValidIndex_Returns
 {
     PA_PostProcessStack* asset = PA_PostProcessStack::Create();
     ASSERT_NE(asset, nullptr);
-    ASSERT_NE(asset->m_stack, nullptr);
+    ASSERT_NE(asset->GetStack(), nullptr);
 
-    const int countBefore = asset->m_stack->GetPassCount();
+    const int countBefore = asset->GetStack()->GetPassCount();
     PostProcessPass* added = asset->AddPass("PassthroughPass");
     ASSERT_NE(added, nullptr);
-    EXPECT_EQ(asset->m_stack->GetPassCount(), countBefore + 1);
+    EXPECT_EQ(asset->GetStack()->GetPassCount(), countBefore + 1);
 
-    PostProcessPass* p0 = asset->m_stack->GetPass(0);
+    PostProcessPass* p0 = asset->GetStack()->GetPass(0);
     EXPECT_EQ(p0, added);
     EXPECT_NE(dynamic_cast<PassthroughPass*>(p0), nullptr);
 
@@ -30,9 +30,9 @@ TEST(PostProcessStackHardeningTests, PostProcessStack_GetPass_NegativeIndex_Retu
 {
     PA_PostProcessStack* asset = PA_PostProcessStack::Create();
     ASSERT_NE(asset, nullptr);
-    ASSERT_NE(asset->m_stack, nullptr);
+    ASSERT_NE(asset->GetStack(), nullptr);
 
-    EXPECT_EQ(asset->m_stack->GetPass(-1), nullptr);
+    EXPECT_EQ(asset->GetStack()->GetPass(-1), nullptr);
 
     GetReflectionRegistry().DestroyObject(asset);
 }
@@ -41,10 +41,10 @@ TEST(PostProcessStackHardeningTests, PostProcessStack_GetPass_OutOfRange_Returns
 {
     PA_PostProcessStack* asset = PA_PostProcessStack::Create();
     ASSERT_NE(asset, nullptr);
-    ASSERT_NE(asset->m_stack, nullptr);
+    ASSERT_NE(asset->GetStack(), nullptr);
     ASSERT_NE(asset->AddPass("PassthroughPass"), nullptr);
 
-    EXPECT_EQ(asset->m_stack->GetPass(1), nullptr);
+    EXPECT_EQ(asset->GetStack()->GetPass(1), nullptr);
 
     GetReflectionRegistry().DestroyObject(asset);
 }
@@ -53,7 +53,7 @@ TEST(PostProcessStackHardeningTests, PA_PostProcessStack_AddPass_ValidClass_Incr
 {
     PA_PostProcessStack* asset = PA_PostProcessStack::Create();
     ASSERT_NE(asset, nullptr);
-    PostProcessStack* stack = asset->m_stack;
+    PostProcessStack* stack = asset->GetStack();
     ASSERT_NE(stack, nullptr);
 
     EXPECT_EQ(stack->GetPassCount(), 0);
@@ -73,7 +73,7 @@ TEST(PostProcessStackHardeningTests, PA_PostProcessStack_AddBloomPass_Increments
 {
     PA_PostProcessStack* asset = PA_PostProcessStack::Create();
     ASSERT_NE(asset, nullptr);
-    PostProcessStack* stack = asset->m_stack;
+    PostProcessStack* stack = asset->GetStack();
     ASSERT_NE(stack, nullptr);
 
     EXPECT_EQ(stack->GetPassCount(), 0);

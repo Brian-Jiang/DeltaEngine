@@ -17,9 +17,9 @@ TEST(PostProcessDataModelTests, CreateAssetProducesStackWithZeroPasses)
 {
     auto* asset = PA_PostProcessStack::Create();
     ASSERT_NE(asset, nullptr);
-    ASSERT_NE(asset->m_stack, nullptr);
-    EXPECT_EQ(asset->m_stack->GetPassCount(), 0);
-    EXPECT_EQ(asset->m_stack->GetPass(0), nullptr);
+    ASSERT_NE(asset->GetStack(), nullptr);
+    EXPECT_EQ(asset->GetStack()->GetPassCount(), 0);
+    EXPECT_EQ(asset->GetStack()->GetPass(0), nullptr);
 }
 
 TEST(PostProcessDataModelTests, PostProcessPassClassIsAbstract)
@@ -46,11 +46,11 @@ TEST(PostProcessDataModelTests, PostProcessStackReflectedPasses)
     EXPECT_NE(cls->FindPropertyByName("m_passes"), nullptr);
 }
 
-TEST(PostProcessDataModelTests, PA_PostProcessStackReflectedStack)
+TEST(PostProcessDataModelTests, PA_PostProcessStackResolvesStack)
 {
-    DClass* cls = GetReflectionRegistry().FindClassByName("PA_PostProcessStack");
-    ASSERT_NE(cls, nullptr);
-    EXPECT_NE(cls->FindPropertyByName("m_stack"), nullptr);
+    auto* asset = PA_PostProcessStack::Create();
+    ASSERT_NE(asset, nullptr);
+    EXPECT_NE(asset->GetStack(), nullptr);
 }
 
 TEST(PostProcessDataModelTests, AddPassAbstractClassReturnsNullptr)
@@ -58,7 +58,7 @@ TEST(PostProcessDataModelTests, AddPassAbstractClassReturnsNullptr)
     auto* asset = PA_PostProcessStack::Create();
     ASSERT_NE(asset, nullptr);
     EXPECT_EQ(asset->AddPass("PostProcessPass"), nullptr);
-    EXPECT_EQ(asset->m_stack->GetPassCount(), 0);
+    EXPECT_EQ(asset->GetStack()->GetPassCount(), 0);
 }
 
 TEST(PostProcessDataModelTests, AddPassUnknownClassReturnsNullptr)
@@ -66,7 +66,7 @@ TEST(PostProcessDataModelTests, AddPassUnknownClassReturnsNullptr)
     auto* asset = PA_PostProcessStack::Create();
     ASSERT_NE(asset, nullptr);
     EXPECT_EQ(asset->AddPass("NonReflectedPassType"), nullptr);
-    EXPECT_EQ(asset->m_stack->GetPassCount(), 0);
+    EXPECT_EQ(asset->GetStack()->GetPassCount(), 0);
 }
 
 TEST(PostProcessDataModelTests, PassthroughPassIsConcreteSubclassOfPostProcessPass)
@@ -145,10 +145,10 @@ TEST(PostProcessDataModelTests, AddPassDuplicateClassReturnsNullptr)
     auto* asset = PA_PostProcessStack::Create();
     ASSERT_NE(asset, nullptr);
     ASSERT_NE(asset->AddPass("TonemapPass"), nullptr);
-    EXPECT_EQ(asset->m_stack->GetPassCount(), 1);
+    EXPECT_EQ(asset->GetStack()->GetPassCount(), 1);
 
     EXPECT_EQ(asset->AddPass("TonemapPass"), nullptr);
-    EXPECT_EQ(asset->m_stack->GetPassCount(), 1);
+    EXPECT_EQ(asset->GetStack()->GetPassCount(), 1);
 
     GetReflectionRegistry().DestroyObject(asset);
 }
@@ -161,11 +161,11 @@ TEST(PostProcessDataModelTests, RemovePassRemovesFromListAndAsset)
     PostProcessPass* pass = asset->AddPass("BloomPass");
     ASSERT_NE(pass, nullptr);
     const ObjectId passId = pass->GetObjectId();
-    EXPECT_EQ(asset->m_stack->GetPassCount(), 1);
+    EXPECT_EQ(asset->GetStack()->GetPassCount(), 1);
     EXPECT_NE(asset->FindObject(passId), nullptr);
 
     EXPECT_TRUE(asset->RemovePass("BloomPass"));
-    EXPECT_EQ(asset->m_stack->GetPassCount(), 0);
+    EXPECT_EQ(asset->GetStack()->GetPassCount(), 0);
     EXPECT_EQ(asset->FindObject(passId), nullptr);
 
     GetReflectionRegistry().DestroyObject(asset);
@@ -178,7 +178,7 @@ TEST(PostProcessDataModelTests, RemovePassMissingClassReturnsFalse)
     ASSERT_NE(asset->AddPass("PassthroughPass"), nullptr);
 
     EXPECT_FALSE(asset->RemovePass("TonemapPass"));
-    EXPECT_EQ(asset->m_stack->GetPassCount(), 1);
+    EXPECT_EQ(asset->GetStack()->GetPassCount(), 1);
 
     GetReflectionRegistry().DestroyObject(asset);
 }

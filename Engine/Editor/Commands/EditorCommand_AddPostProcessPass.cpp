@@ -47,7 +47,7 @@ bool EditorCommand_AddPostProcessPass::Execute(EditorCommandContext& ctx)
     DLOG(LogEditorCommand, ELogLevel::Verbose, "[Add PostProcess Pass] Execute: Start");
 
     PA_PostProcessStack* asset = ResolvePPStackAsset(ctx.core, m_assetId);
-    if (!asset || !asset->m_stack)
+    if (!asset || !asset->GetStack())
     {
         DLOG(LogEditorCommand, ELogLevel::Error,
             "[Add PostProcess Pass] Execute: PA_PostProcessStack not found for assetId '{}'",
@@ -65,7 +65,7 @@ bool EditorCommand_AddPostProcessPass::Execute(EditorCommandContext& ctx)
     }
 
     m_createdId = pass->GetObjectId();
-    m_passIndex = static_cast<int>(asset->m_stack->m_passes.size()) - 1;
+    m_passIndex = static_cast<int>(asset->GetStack()->m_passes.size()) - 1;
     asset->MarkDirty();
     return true;
 }
@@ -75,7 +75,7 @@ bool EditorCommand_AddPostProcessPass::Undo(EditorCommandContext& ctx)
     DLOG(LogEditorCommand, ELogLevel::Verbose, "[Add PostProcess Pass] Undo: Start");
 
     PA_PostProcessStack* asset = ResolvePPStackAsset(ctx.core, m_assetId);
-    if (!asset || !asset->m_stack)
+    if (!asset || !asset->GetStack())
     {
         DLOG(LogEditorCommand, ELogLevel::Error,
             "[Add PostProcess Pass] Undo: PA_PostProcessStack not found for assetId '{}'",
@@ -97,7 +97,7 @@ bool EditorCommand_AddPostProcessPass::Undo(EditorCommandContext& ctx)
     m_snapshot = writer.Capture(pass);
     m_hasSnapshot = true;
 
-    const auto& passes = asset->m_stack->m_passes;
+    const auto& passes = asset->GetStack()->m_passes;
     auto it = std::find(passes.begin(), passes.end(), pass);
     m_passIndex = (it != passes.end()) ? static_cast<int>(it - passes.begin()) : m_passIndex;
 
@@ -121,7 +121,7 @@ bool EditorCommand_AddPostProcessPass::Redo(EditorCommandContext& ctx)
         return Execute(ctx);
 
     PA_PostProcessStack* asset = ResolvePPStackAsset(ctx.core, m_assetId);
-    if (!asset || !asset->m_stack)
+    if (!asset || !asset->GetStack())
     {
         DLOG(LogEditorCommand, ELogLevel::Error,
             "[Add PostProcess Pass] Redo: PA_PostProcessStack not found for assetId '{}'",
@@ -147,7 +147,7 @@ bool EditorCommand_AddPostProcessPass::Redo(EditorCommandContext& ctx)
     }
 
     m_createdId = pass->GetObjectId();
-    auto& passes = asset->m_stack->m_passes;
+    auto& passes = asset->GetStack()->m_passes;
     const int insertAt = (m_passIndex >= 0 && m_passIndex <= static_cast<int>(passes.size()))
         ? m_passIndex
         : static_cast<int>(passes.size());

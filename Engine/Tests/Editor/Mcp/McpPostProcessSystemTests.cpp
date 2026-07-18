@@ -32,7 +32,7 @@ TEST_F(McpPostProcessSystemTests, CommandAddPass_AddsPassToStackAsset)
     ASSERT_NE(asset, nullptr);
     const AssetId assetId = asset->GetAssetId();
     ASSERT_FALSE(assetId.IsNull());
-    EXPECT_EQ(asset->m_stack->GetPassCount(), 0);
+    EXPECT_EQ(asset->GetStack()->GetPassCount(), 0);
 
     auto dispatchRes = Dispatch("post_process", "AddPass",
         {{"assetId", assetId.ToString()}, {"passClass", "TonemapPass"}});
@@ -48,9 +48,9 @@ TEST_F(McpPostProcessSystemTests, CommandAddPass_AddsPassToStackAsset)
 
     asset = dynamic_cast<PA_PostProcessStack*>(m_core->GetAssetDatabase()->LoadAsset(assetId));
     ASSERT_NE(asset, nullptr);
-    ASSERT_NE(asset->m_stack, nullptr);
-    ASSERT_EQ(asset->m_stack->GetPassCount(), 1);
-    PostProcessPass* pass = asset->m_stack->GetPass(0);
+    ASSERT_NE(asset->GetStack(), nullptr);
+    ASSERT_EQ(asset->GetStack()->GetPassCount(), 1);
+    PostProcessPass* pass = asset->GetStack()->GetPass(0);
     ASSERT_NE(pass, nullptr);
     ASSERT_NE(pass->GetClass(), nullptr);
     EXPECT_EQ(pass->GetClass()->GetName(), "TonemapPass");
@@ -75,7 +75,7 @@ TEST_F(McpPostProcessSystemTests, CommandAddPass_DuplicateClass_Fails)
 
     asset = dynamic_cast<PA_PostProcessStack*>(m_core->GetAssetDatabase()->LoadAsset(assetId));
     ASSERT_NE(asset, nullptr);
-    EXPECT_EQ(asset->m_stack->GetPassCount(), 1);
+    EXPECT_EQ(asset->GetStack()->GetPassCount(), 1);
 }
 
 TEST_F(McpPostProcessSystemTests, CommandRemovePass_RemovesPassFromStackAsset)
@@ -84,7 +84,7 @@ TEST_F(McpPostProcessSystemTests, CommandRemovePass_RemovesPassFromStackAsset)
     ASSERT_NE(asset, nullptr);
     const AssetId assetId = asset->GetAssetId();
     ASSERT_NE(asset->AddPass("VignettePass"), nullptr);
-    ASSERT_EQ(asset->m_stack->GetPassCount(), 1);
+    ASSERT_EQ(asset->GetStack()->GetPassCount(), 1);
 
     auto dispatchRes = Dispatch("post_process", "RemovePass",
         {{"assetId", assetId.ToString()}, {"passClass", "VignettePass"}});
@@ -97,7 +97,7 @@ TEST_F(McpPostProcessSystemTests, CommandRemovePass_RemovesPassFromStackAsset)
 
     asset = dynamic_cast<PA_PostProcessStack*>(m_core->GetAssetDatabase()->LoadAsset(assetId));
     ASSERT_NE(asset, nullptr);
-    EXPECT_EQ(asset->m_stack->GetPassCount(), 0);
+    EXPECT_EQ(asset->GetStack()->GetPassCount(), 0);
 }
 
 TEST_F(McpPostProcessSystemTests, CommandAddPass_Undo_RemovesPass)
@@ -117,14 +117,14 @@ TEST_F(McpPostProcessSystemTests, CommandAddPass_Undo_RemovesPass)
 
     asset = dynamic_cast<PA_PostProcessStack*>(m_core->GetAssetDatabase()->LoadAsset(assetId));
     ASSERT_NE(asset, nullptr);
-    ASSERT_EQ(asset->m_stack->GetPassCount(), 1);
+    ASSERT_EQ(asset->GetStack()->GetPassCount(), 1);
 
     auto undoRes = Dispatch("undo_history", "Undo");
     ASSERT_TRUE(undoRes["ok"].get<bool>());
 
     asset = dynamic_cast<PA_PostProcessStack*>(m_core->GetAssetDatabase()->LoadAsset(assetId));
     ASSERT_NE(asset, nullptr);
-    EXPECT_EQ(asset->m_stack->GetPassCount(), 0);
+    EXPECT_EQ(asset->GetStack()->GetPassCount(), 0);
 }
 
 TEST_F(McpPostProcessSystemTests, CommandRemovePass_Undo_RestoresPass)
@@ -145,15 +145,15 @@ TEST_F(McpPostProcessSystemTests, CommandRemovePass_Undo_RestoresPass)
 
     asset = dynamic_cast<PA_PostProcessStack*>(m_core->GetAssetDatabase()->LoadAsset(assetId));
     ASSERT_NE(asset, nullptr);
-    ASSERT_EQ(asset->m_stack->GetPassCount(), 0);
+    ASSERT_EQ(asset->GetStack()->GetPassCount(), 0);
 
     auto undoRes = Dispatch("undo_history", "Undo");
     ASSERT_TRUE(undoRes["ok"].get<bool>());
 
     asset = dynamic_cast<PA_PostProcessStack*>(m_core->GetAssetDatabase()->LoadAsset(assetId));
     ASSERT_NE(asset, nullptr);
-    ASSERT_EQ(asset->m_stack->GetPassCount(), 1);
-    PostProcessPass* pass = asset->m_stack->GetPass(0);
+    ASSERT_EQ(asset->GetStack()->GetPassCount(), 1);
+    PostProcessPass* pass = asset->GetStack()->GetPass(0);
     ASSERT_NE(pass, nullptr);
     ASSERT_NE(pass->GetClass(), nullptr);
     EXPECT_EQ(pass->GetClass()->GetName(), "PassthroughPass");

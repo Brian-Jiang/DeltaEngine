@@ -33,13 +33,31 @@ PA_PostProcessStack* PA_PostProcessStack::Create()
     return asset;
 }
 
+PostProcessStack* PA_PostProcessStack::GetStack() const
+{
+    if (m_stack)
+        return m_stack;
+
+    for (DObject* object : GetObjects())
+    {
+        if (PostProcessStack* stack = dynamic_cast<PostProcessStack*>(object))
+        {
+            m_stack = stack;
+            return m_stack;
+        }
+    }
+
+    return nullptr;
+}
+
 PostProcessPass* PA_PostProcessStack::AddPass(const std::string& className)
 {
-    if (!DELTA_ENSURE_MSG(m_stack, "PA_PostProcessStack::AddPass called with null m_stack (className='{}', expected PostProcessStack on asset)",
+    PostProcessStack* stack = GetStack();
+    if (!DELTA_ENSURE_MSG(stack, "PA_PostProcessStack::AddPass called with null stack (className='{}', expected PostProcessStack on asset)",
             className))
         return nullptr;
 
-    for (PostProcessPass* existing : m_stack->m_passes)
+    for (PostProcessPass* existing : stack->m_passes)
     {
         if (!existing || !existing->GetClass())
             continue;
@@ -72,17 +90,18 @@ PostProcessPass* PA_PostProcessStack::AddPass(const std::string& className)
     }
 
     AddObject(pass);
-    m_stack->m_passes.push_back(pass);
+    stack->m_passes.push_back(pass);
     return pass;
 }
 
 bool PA_PostProcessStack::RemovePass(const std::string& className)
 {
-    if (!DELTA_ENSURE_MSG(m_stack, "PA_PostProcessStack::RemovePass called with null m_stack (className='{}', expected PostProcessStack on asset)",
+    PostProcessStack* stack = GetStack();
+    if (!DELTA_ENSURE_MSG(stack, "PA_PostProcessStack::RemovePass called with null stack (className='{}', expected PostProcessStack on asset)",
             className))
         return false;
 
-    auto& passes = m_stack->m_passes;
+    auto& passes = stack->m_passes;
     auto it = std::find_if(passes.begin(), passes.end(),
         [&](PostProcessPass* p)
         {
