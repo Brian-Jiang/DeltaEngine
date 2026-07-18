@@ -165,11 +165,11 @@ TEST(LightProxyHardeningTests, Spot_UpdateParameters_NegativeOuterCone_LeavesPre
     // Arrange: first set valid params, then attempt invalid update
     SpotLightRenderProxy p;
     p.UpdateParameters(XMVectorSet(0.f, 0.f, 0.f, 1.f), XMVectorSet(0.f, -1.f, 0.f, 0.f),
-        XMVectorSet(1.f, 1.f, 1.f, 0.f), 1.0f, 25.0f, 0.2f, 0.6f, true, 0.005f, 0.05f, 0.0f, 1.0f);
+        XMVectorSet(1.f, 1.f, 1.f, 0.f), 1.0f, 25.0f, 0.2f, 0.6f, true, 0.005f, 0.05f, 0.0f, 1.0f, 1024);
 
     // Act: invalid outerConeAngle should be rejected
     p.UpdateParameters(XMVectorSet(0.f, 0.f, 0.f, 1.f), XMVectorSet(0.f, -1.f, 0.f, 0.f),
-        XMVectorSet(1.f, 1.f, 1.f, 0.f), 1.0f, 25.0f, 0.0f, -0.5f, true, 0.005f, 0.05f, 0.0f, 1.0f);
+        XMVectorSet(1.f, 1.f, 1.f, 0.f), 1.0f, 25.0f, 0.0f, -0.5f, true, 0.005f, 0.05f, 0.0f, 1.0f, 1024);
 
     // Assert: shadow view still produced from the previous valid state
     auto ctx = std::make_shared<DXGraphicsContext>();
@@ -183,7 +183,7 @@ TEST(LightProxyHardeningTests, Spot_GatherShadowViews_NullCtx_IsNoop)
     // Arrange
     SpotLightRenderProxy p;
     p.UpdateParameters(XMVectorSet(0.f, 3.f, 0.f, 1.f), XMVectorSet(0.f, -1.f, 0.f, 0.f),
-        XMVectorSet(1.f, 1.f, 1.f, 0.f), 1.0f, 25.0f, 0.2f, 0.6f, true, 0.005f, 0.05f, 0.0f, 1.0f);
+        XMVectorSet(1.f, 1.f, 1.f, 0.f), 1.0f, 25.0f, 0.2f, 0.6f, true, 0.005f, 0.05f, 0.0f, 1.0f, 1024);
     std::vector<ShadowView> views;
 
     // Act

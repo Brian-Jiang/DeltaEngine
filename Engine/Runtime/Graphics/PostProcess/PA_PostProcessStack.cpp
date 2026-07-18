@@ -3,7 +3,10 @@
 #include "Runtime/Core/UUID.h"
 #include "Runtime/Graphics/PostProcess/PostProcessPass.h"
 #include "Runtime/Graphics/PostProcess/PostProcessStack.h"
+#include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
+
+#include <algorithm>
 
 using namespace DeltaEngine;
 
@@ -36,6 +39,19 @@ PostProcessPass* PA_PostProcessStack::AddPass(const std::string& className)
             className))
         return nullptr;
 
+    for (PostProcessPass* existing : m_stack->m_passes)
+    {
+        if (!existing || !existing->GetClass())
+            continue;
+        if (existing->GetClass()->GetName() == className)
+        {
+            DLOG(LogPostProcess, ELogLevel::Warning,
+                "AddPass rejected: stack already contains a pass of class '{}' (at most one pass per class per stack)",
+                className);
+            return nullptr;
+        }
+    }
+
     DObject* obj = GetReflectionRegistry().CreateObject(className);
     if (!obj)
     {
@@ -58,4 +74,34 @@ PostProcessPass* PA_PostProcessStack::AddPass(const std::string& className)
     AddObject(pass);
     m_stack->m_passes.push_back(pass);
     return pass;
+}
+
+bool PA_PostProcessStack::RemovePass(const std::string& className)
+{
+    if (!DELTA_ENSURE_MSG(m_stack, "PA_PostProcessStack::RemovePass called with null m_stack (className='{}', expected PostProcessStack on asset)",
+            className))
+        return false;
+
+    auto& passes = m_stack->m_passes;
+    auto it = std::find_if(passes.begin(), passes.end(),
+        [&](PostProcessPass* p)
+        {
+            return p && p->GetClass() && p->GetClass()->GetName() == className;
+        });
+
+    if (it == passes.end())
+    {
+        DLOG(LogPostProcess, ELogLevel::Warning,
+            "RemovePass failed: no pass of class '{}' found in stack",
+            className);
+        return false;
+    }
+
+    PostProcessPass* pass = *it;
+    const ObjectId passId = pass->GetObjectId();
+    passes.erase(it);
+    RemoveObject(passId);
+    GetReflectionRegistry().DestroyObject(pass);
+    MarkDirty();
+    return true;
 }

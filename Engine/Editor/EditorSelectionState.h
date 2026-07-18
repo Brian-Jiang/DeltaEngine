@@ -29,7 +29,7 @@ public:
     DELTAEDITOR_API bool IsGameObjectSelected(ObjectId id) const;
     DELTAEDITOR_API bool HasGameObjectSelection() const { return !m_selectedGameObjects.empty(); }
 
-    // --- Component selection (independent) ---
+    // --- Component selection ---
     DELTAEDITOR_API void SetSelectedComponent(ObjectId id);
     DELTAEDITOR_API void AddSelectedComponent(ObjectId id);
     DELTAEDITOR_API void RemoveSelectedComponent(ObjectId id);

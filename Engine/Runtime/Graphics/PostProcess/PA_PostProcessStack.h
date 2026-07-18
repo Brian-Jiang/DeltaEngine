@@ -25,6 +25,7 @@ public:
     static PA_PostProcessStack* Create();
 
     PostProcessPass* AddPass(const std::string& className);
+    bool RemovePass(const std::string& className);
 };
 
 DELTA_ENGINE_NS_END

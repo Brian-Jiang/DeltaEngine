@@ -139,3 +139,46 @@ TEST(PostProcessDataModelTests, VignettePassIsConcreteSubclassOfPostProcessPass)
 
     GetReflectionRegistry().DestroyObject(obj);
 }
+
+TEST(PostProcessDataModelTests, AddPassDuplicateClassReturnsNullptr)
+{
+    auto* asset = PA_PostProcessStack::Create();
+    ASSERT_NE(asset, nullptr);
+    ASSERT_NE(asset->AddPass("TonemapPass"), nullptr);
+    EXPECT_EQ(asset->m_stack->GetPassCount(), 1);
+
+    EXPECT_EQ(asset->AddPass("TonemapPass"), nullptr);
+    EXPECT_EQ(asset->m_stack->GetPassCount(), 1);
+
+    GetReflectionRegistry().DestroyObject(asset);
+}
+
+TEST(PostProcessDataModelTests, RemovePassRemovesFromListAndAsset)
+{
+    auto* asset = PA_PostProcessStack::Create();
+    ASSERT_NE(asset, nullptr);
+
+    PostProcessPass* pass = asset->AddPass("BloomPass");
+    ASSERT_NE(pass, nullptr);
+    const ObjectId passId = pass->GetObjectId();
+    EXPECT_EQ(asset->m_stack->GetPassCount(), 1);
+    EXPECT_NE(asset->FindObject(passId), nullptr);
+
+    EXPECT_TRUE(asset->RemovePass("BloomPass"));
+    EXPECT_EQ(asset->m_stack->GetPassCount(), 0);
+    EXPECT_EQ(asset->FindObject(passId), nullptr);
+
+    GetReflectionRegistry().DestroyObject(asset);
+}
+
+TEST(PostProcessDataModelTests, RemovePassMissingClassReturnsFalse)
+{
+    auto* asset = PA_PostProcessStack::Create();
+    ASSERT_NE(asset, nullptr);
+    ASSERT_NE(asset->AddPass("PassthroughPass"), nullptr);
+
+    EXPECT_FALSE(asset->RemovePass("TonemapPass"));
+    EXPECT_EQ(asset->m_stack->GetPassCount(), 1);
+
+    GetReflectionRegistry().DestroyObject(asset);
+}

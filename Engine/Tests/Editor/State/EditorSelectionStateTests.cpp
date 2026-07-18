@@ -380,7 +380,7 @@ TEST(EditorSelectionStateTests, SetSelectedAssetClearsFolder)
     EXPECT_TRUE(state.HasAssetSelection());
 }
 
-// --- Component selection (independent) ---
+// --- Component selection ---
 
 TEST(EditorSelectionStateTests, ComponentSelectionDoesNotClearGameObjects)
 {
@@ -397,7 +397,7 @@ TEST(EditorSelectionStateTests, ComponentSelectionDoesNotClearGameObjects)
     EXPECT_TRUE(state.IsComponentSelected(co));
 }
 
-TEST(EditorSelectionStateTests, GameObjectSelectionDoesNotClearComponents)
+TEST(EditorSelectionStateTests, GameObjectSelectionClearsComponents)
 {
     EditorSelectionState state;
     const ObjectId co = ObjectId::Generate();
@@ -405,8 +405,8 @@ TEST(EditorSelectionStateTests, GameObjectSelectionDoesNotClearComponents)
     state.SetSelectedComponent(co);
     state.SetSelectedGameObject(ObjectId::Generate());
 
-    EXPECT_TRUE(state.HasComponentSelection());
-    EXPECT_TRUE(state.IsComponentSelected(co));
+    EXPECT_FALSE(state.HasComponentSelection());
+    EXPECT_FALSE(state.IsComponentSelected(co));
 }
 
 TEST(EditorSelectionStateTests, AddSelectedComponentAppends)

@@ -63,6 +63,7 @@ set(DELTA_EDITOR_TEST_SOURCES
     Animation/AnimationManagerTests.cpp
     Animation/TransformSessionTests.cpp
     Mcp/McpLightsSystemTests.cpp
+    Mcp/McpPostProcessSystemTests.cpp
 )
 
 add_executable(DeltaEditorTests

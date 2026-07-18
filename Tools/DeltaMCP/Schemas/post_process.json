@@ -1,0 +1,44 @@
+{
+  "system": "post_process",
+  "description": "Post-process stack asset mutation — add/remove passes by class name",
+  "queries": {},
+  "commands": {
+    "AddPass": {
+      "description": "Add a post-process pass of the given class to a PA_PostProcessStack asset. At most one pass per class per stack. Creates the pass object on the asset and appends it to the stack list.",
+      "undoable": true,
+      "expects_result": true,
+      "params": {
+        "assetId": {
+          "type": "string",
+          "required": true,
+          "description": "UUID of the PA_PostProcessStack asset"
+        },
+        "passClass": {
+          "type": "string",
+          "required": true,
+          "description": "Reflected PostProcessPass subclass name (e.g. TonemapPass, BloomPass)"
+        }
+      },
+      "returns": {
+        "objectId": "string"
+      }
+    },
+    "RemovePass": {
+      "description": "Remove the post-process pass of the given class from a PA_PostProcessStack asset. Deletes the pass object from the asset and removes it from the stack list.",
+      "undoable": true,
+      "expects_result": true,
+      "params": {
+        "assetId": {
+          "type": "string",
+          "required": true,
+          "description": "UUID of the PA_PostProcessStack asset"
+        },
+        "passClass": {
+          "type": "string",
+          "required": true,
+          "description": "Reflected PostProcessPass subclass name to remove"
+        }
+      }
+    }
+  }
+}

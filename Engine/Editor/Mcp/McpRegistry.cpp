@@ -4,6 +4,7 @@
 #include "Mcp/Systems/McpCommonSystem.h"
 #include "Mcp/Systems/McpLogSystem.h"
 #include "Mcp/Systems/McpMetaSystem.h"
+#include "Mcp/Systems/McpPostProcessSystem.h"
 #include "Mcp/Systems/McpProjectSystem.h"
 #include "Mcp/Systems/McpReflectionSystem.h"
 #include "Mcp/Systems/McpSceneSystem.h"
@@ -55,6 +56,7 @@ void McpRegistry::InitializeAll(EditorCore& core)
     m_systems.push_back(std::make_unique<McpSelectionSystem>());
     m_systems.push_back(std::make_unique<McpLightsSystem>());
     m_systems.push_back(std::make_unique<McpAssetsSystem>());
+    m_systems.push_back(std::make_unique<McpPostProcessSystem>());
     m_systems.push_back(std::make_unique<McpViewportSystem>());
     m_systems.push_back(std::make_unique<McpReflectionSystem>());
     m_systems.push_back(std::make_unique<McpUndoSystem>());
