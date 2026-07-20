@@ -5,6 +5,7 @@
 #include "Editor/Commands/EditorCommandManager.h"
 #include "Editor/Commands/EditorCommandRegistry.h"
 #include "Editor/Commands/EditorCommand_SetAssetDynamicMeta.h"
+#include "Editor/Mcp/McpRegistry.h"
 
 #include "Runtime/Assets/DPrimaryAsset.h"
 
@@ -244,17 +245,15 @@ TEST_F(EditorCommandTests_SetAssetDynamicMeta, FactoryRegistered)
     EXPECT_EQ(created->GetTypeName(), EditorCommand_SetAssetDynamicMeta::StaticTypeName());
 }
 
-TEST_F(EditorCommandTests_SetAssetDynamicMeta, SerializedReplay_ViaQueue)
+TEST_F(EditorCommandTests_SetAssetDynamicMeta, DispatchedViaMcpCommand)
 {
-    nlohmann::json data;
-    data["assetId"]     = m_assetId.ToString();
-    data["jsonPointer"] = "/dynamic/desc";
-    data["valueAfter"]  = "from-queue";
-    nlohmann::json env;
-    env["type"] = std::string(EditorCommand_SetAssetDynamicMeta::StaticTypeName());
-    env["data"] = data;
+    nlohmann::json params;
+    params["asset_id"]  = m_assetId.ToString();
+    params["json_path"] = "/dynamic/desc";
+    params["new_value"] = "from-queue";
 
-    const nlohmann::json resp = m_core->ExecuteSerializedCommand(env);
+    const nlohmann::json resp = m_core->GetMcpRegistry()->DispatchCommand(
+        "assets", "set_asset_dynamic_metadata", *m_core, params);
     EXPECT_TRUE(resp.value("ok", false));
 
     EXPECT_EQ(m_asset->GetDynamicMeta()["desc"], "from-queue");

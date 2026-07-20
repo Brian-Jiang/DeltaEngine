@@ -73,30 +73,12 @@ public:
 
     DELTAEDITOR_API void CreateAssets();
 
-    // Executes a single MCP command/auxiliary envelope synchronously on the calling
-    // (main) thread and returns the result payload. JSON envelope forms:
-    //   { "type": "command", "system": "...", "command": "EditorCommand_*", "params": {...} }
-    //   { "type": "EditorCommand_*", "data": {...} }          (legacy)
-    //   { "type": "auxiliary", "name": "...", ... }
-    DELTAEDITOR_API nlohmann::json ExecuteSerializedCommand(const nlohmann::json& envelope);
-
     // Main-thread MCP request pump. The socket thread submits a raw JSON line and
     // blocks on the returned future; DrainMcpRequests (called once per frame on the
     // main thread) routes each request and fulfils the promise.
     std::future<std::string> SubmitMcpRequest(std::string json);
     DELTAEDITOR_API void DrainMcpRequests();
     void CancelPendingMcpRequests();
-
-    /// Reimports the given assets on the main thread. Shader assets are recompiled (PSOs refresh
-    /// automatically next frame); other asset types are skipped. Returns {ok, reimported, skipped}.
-    DELTAEDITOR_API nlohmann::json ReimportAssets(const std::vector<AssetId>& assetIds);
-
-    /// Duplicates an asset on the main thread. Optional rename (exact stem) and/or move under the
-    /// imported-assets root. Returns {ok, asset_id, path} or {ok:false, error}.
-    DELTAEDITOR_API nlohmann::json DuplicateAsset(
-        AssetId sourceId,
-        const std::optional<std::string>& newName,
-        const std::optional<std::string>& newPathVirtual);
 
     DELTAEDITOR_API const std::filesystem::path& GetAssetRoot() const { return m_assetRoot; }
 

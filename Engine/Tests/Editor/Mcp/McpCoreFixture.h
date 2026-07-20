@@ -43,17 +43,10 @@ protected:
         return m_core->GetMcpRegistry()->DispatchCommand(system, command, *m_core, params);
     }
 
-    // Creates a GO via the legacy command path and returns its objectId.
+    // Creates a GameObject directly through the command manager and returns its objectId.
     std::string CreateLegacyGameObject() const
     {
-        const AssetId sceneId = GetActiveSceneAssetId();
-        nlohmann::json data;
-        data["sceneAssetId"] = sceneId.ToString();
-        data["className"]    = "GameObject";
-        nlohmann::json env;
-        env["type"] = "EditorCommand_CreateGameObject";
-        env["data"] = data;
-        return m_core->ExecuteSerializedCommand(env).value("objectId", std::string{});
+        return ExecCreateGameObject();
     }
 };
 

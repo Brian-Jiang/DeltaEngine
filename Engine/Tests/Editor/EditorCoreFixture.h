@@ -1,5 +1,9 @@
 #pragma once
 
+#include "Editor/Commands/EditorCommandContext.h"
+#include "Editor/Commands/EditorCommandManager.h"
+#include "Editor/Commands/EditorCommand_CreateComponent.h"
+#include "Editor/Commands/EditorCommand_CreateGameObject.h"
 #include "Editor/EditorCore.h"
 #include "Runtime/Core/DObject.h"
 #include "Runtime/Core/UUID.h"
@@ -14,6 +18,8 @@
 #include <filesystem>
 #include <memory>
 #include <string>
+
+#include <nlohmann/json.hpp>
 
 #include <gtest/gtest.h>
 
@@ -71,6 +77,33 @@ protected:
     {
         DPrimaryAsset* pa = m_core->GetActiveSceneAsset();
         return pa ? pa->GetAssetId() : AssetId::Null();
+    }
+
+    // Creates a GameObject directly through the command manager; returns its objectId.
+    std::string ExecCreateGameObject(const std::string& className = "GameObject") const
+    {
+        EditorCommandContext ctx{ *m_core };
+        auto cmd = std::make_unique<EditorCommand_CreateGameObject>(GetActiveSceneAssetId(), className);
+        EditorCommand_CreateGameObject* ptr = cmd.get();
+        if (!m_core->GetCommandManager().Execute(std::move(cmd), ctx))
+            return {};
+        nlohmann::json j;
+        ptr->Serialize(j);
+        return j.value("createdId", std::string{});
+    }
+
+    // Creates a component on the given GameObject; returns its component objectId.
+    std::string ExecCreateComponent(const std::string& gameObjectId, const std::string& className) const
+    {
+        EditorCommandContext ctx{ *m_core };
+        auto cmd = std::make_unique<EditorCommand_CreateComponent>(
+            GetActiveSceneAssetId(), DeltaEngine::UUID::FromString(gameObjectId), className);
+        EditorCommand_CreateComponent* ptr = cmd.get();
+        if (!m_core->GetCommandManager().Execute(std::move(cmd), ctx))
+            return {};
+        nlohmann::json j;
+        ptr->Serialize(j);
+        return j.value("createdComponentId", std::string{});
     }
 };
 

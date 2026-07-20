@@ -1,16 +1,20 @@
 #include "McpAssetsSystem.h"
 
 #include "Editor/Assets/EditorAssetDatabase.h"
+#include "Editor/Commands/EditorCommand_SetAssetDynamicMeta.h"
 #include "Editor/Commands/PropertyValueIO.h"
 #include "Editor/EditorCore.h"
 #include "Mcp/McpProtocol.h"
 #include "Mcp/McpRegistry.h"
 #include "Runtime/Assets/DPrimaryAsset.h"
+#include "Runtime/Assets/PA_CommonAssets.h"
 #include "Runtime/Core/DComponent.h"
+#include "Runtime/Core/DShader.h"
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Core/SceneComponent.h"
 #include "Runtime/IO/IOManager.h"
+#include "Runtime/Logging/LogCategory.h"
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DProperty.h"
 #include "Runtime/Reflection/DVectorProperty.h"
@@ -22,10 +26,15 @@
 #include <cctype>
 #include <filesystem>
 #include <map>
+#include <memory>
+#include <optional>
 #include <set>
+#include <system_error>
 #include <unordered_set>
 
 using namespace DeltaEngine;
+
+DEFINE_LOG_CATEGORY_STATIC(LogMcpAssets);
 
 namespace
 {
@@ -42,6 +51,16 @@ std::string TrimSlashes(std::string s)
     while (!s.empty() && (s.back() == '/' || s.back() == '\\'))
         s.pop_back();
     return s;
+}
+
+bool IsPathUnderRoot(const std::filesystem::path& root, const std::filesystem::path& candidate)
+{
+    std::error_code ec;
+    const auto rel = std::filesystem::relative(candidate, root, ec);
+    if (ec || rel.empty())
+        return !ec && candidate == root;
+    const std::string relStr = rel.generic_string();
+    return !relStr.starts_with("..");
 }
 
 std::string ToLower(std::string s)
@@ -848,18 +867,8 @@ nlohmann::json McpAssetsSystem::CommandSetAssetDynamicMetadata(EditorCore& core,
     if (!db->LoadAsset(assetId))
         return MakeError("asset not found or failed to load");
 
-    nlohmann::json data;
-    data["assetId"]     = assetIdStr;
-    data["jsonPointer"] = jsonPath;
-    data["valueAfter"]  = params["new_value"];
-
-    nlohmann::json envelope;
-    envelope["type"]    = "command";
-    envelope["system"]  = "assets";
-    envelope["command"] = "EditorCommand_SetAssetDynamicMeta";
-    envelope["params"]  = std::move(data);
-
-    return core.ExecuteSerializedCommand(envelope);
+    return RunEditorCommand(core, std::make_unique<EditorCommand_SetAssetDynamicMeta>(
+        assetId, jsonPath, params["new_value"]));
 }
 
 nlohmann::json McpAssetsSystem::CommandReimportAssets(EditorCore& core, const nlohmann::json& params)
@@ -878,16 +887,49 @@ nlohmann::json McpAssetsSystem::CommandReimportAssets(EditorCore& core, const nl
         assetIds.push_back(idStr);
     }
 
-    if (assetIds.empty())
+    std::vector<AssetId> ids;
+    for (const auto& v : assetIds)
+        ids.push_back(UUID::FromString(v.get<std::string>()));
+
+    if (ids.empty())
         return MakeError("asset_ids is empty");
 
-    // Marshal to the main thread: shader recompile swaps GPU blobs the render thread reads.
-    nlohmann::json envelope;
-    envelope["type"]     = "auxiliary";
-    envelope["name"]     = "ReimportAssets";
-    envelope["assetIds"] = std::move(assetIds);
+    EditorAssetDatabase* db = core.GetAssetDatabase();
+    if (!db)
+        return MakeError("no asset database");
 
-    return core.ExecuteSerializedCommand(envelope);
+    // Runs on the main thread: shader recompile swaps GPU blobs the render thread reads.
+    nlohmann::json reimported = nlohmann::json::array();
+    nlohmann::json skipped    = nlohmann::json::array();
+
+    for (const AssetId& id : ids)
+    {
+        DPrimaryAsset* asset = db->LoadAsset(id);
+        if (!asset)
+        {
+            skipped.push_back({{"asset_id", id.ToString()}, {"reason", "not found or failed to load"}});
+            continue;
+        }
+
+        if (auto* shaderAsset = dynamic_cast<PA_Shader*>(asset))
+        {
+            DShader* shader = shaderAsset->GetShader();
+            if (!shader)
+            {
+                skipped.push_back({{"asset_id", id.ToString()}, {"reason", "shader asset has no shader"}});
+                continue;
+            }
+
+            DLOG(LogMcpAssets, ELogLevel::Verbose, "reimport_assets: reimporting shader '{}'", id.ToString());
+            shader->Reimport();
+            reimported.push_back(id.ToString());
+            continue;
+        }
+
+        skipped.push_back({{"asset_id", id.ToString()}, {"reason", "not a shader asset"}});
+    }
+
+    return { {"ok", true}, {"reimported", std::move(reimported)}, {"skipped", std::move(skipped)} };
 }
 
 nlohmann::json McpAssetsSystem::CommandDuplicateAsset(EditorCore& core, const nlohmann::json& params)
@@ -914,16 +956,78 @@ nlohmann::json McpAssetsSystem::CommandDuplicateAsset(EditorCore& core, const nl
     if (params.contains("new_path") && !params["new_path"].is_string())
         return MakeError("new_path must be a string");
 
-    nlohmann::json envelope;
-    envelope["type"]    = "auxiliary";
-    envelope["name"]    = "DuplicateAsset";
-    envelope["assetId"] = assetIdStr;
+    std::optional<std::string> newName;
     if (params.contains("new_name") && params["new_name"].is_string())
-        envelope["newName"] = params["new_name"].get<std::string>();
-    if (params.contains("new_path") && params["new_path"].is_string())
-        envelope["newPath"] = params["new_path"].get<std::string>();
+        newName = params["new_name"].get<std::string>();
 
-    return core.ExecuteSerializedCommand(envelope);
+    std::optional<std::string> newPathVirtual;
+    if (params.contains("new_path") && params["new_path"].is_string())
+        newPathVirtual = params["new_path"].get<std::string>();
+
+    EditorAssetDatabase* db = core.GetAssetDatabase();
+    if (!db)
+        return MakeError("no asset database");
+
+    if (!db->LoadAsset(assetId))
+        return MakeError("asset not found or failed to load");
+
+    const AssetId duplicatedId = db->DuplicateAsset(assetId);
+    if (duplicatedId.IsNull())
+        return MakeError("duplicate failed");
+
+    auto cleanupOnFailure = [&]() { db->DeleteAsset(duplicatedId); };
+
+    if (newName.has_value())
+    {
+        if (!db->RenameAssetToExactStem(duplicatedId, *newName))
+        {
+            cleanupOnFailure();
+            return MakeError("rename failed: target stem already exists or filesystem error");
+        }
+    }
+
+    if (newPathVirtual.has_value())
+    {
+        const std::string folderNorm = TrimSlashes(*newPathVirtual);
+        const std::filesystem::path assetRoot = core.GetAssetRoot();
+        std::filesystem::path targetFolder = folderNorm.empty()
+            ? assetRoot
+            : assetRoot / std::filesystem::path(folderNorm).generic_string();
+
+        std::error_code ec;
+        targetFolder = std::filesystem::weakly_canonical(targetFolder, ec);
+        if (ec || !IsPathUnderRoot(assetRoot, targetFolder))
+        {
+            cleanupOnFailure();
+            return MakeError("new_path is outside the imported-assets root");
+        }
+
+        std::filesystem::create_directories(targetFolder, ec);
+        if (ec)
+        {
+            cleanupOnFailure();
+            return MakeError("failed to create target folder: " + ec.message());
+        }
+
+        if (!db->MoveAsset(duplicatedId, targetFolder))
+        {
+            cleanupOnFailure();
+            return MakeError("move failed: target path may already exist or filesystem error");
+        }
+    }
+
+    const std::filesystem::path absPath = db->GetAssetPath(duplicatedId);
+    std::string relPath = absPath.generic_string();
+    std::error_code relEc;
+    const auto relative = std::filesystem::relative(absPath, core.GetAssetRoot(), relEc);
+    if (!relEc)
+        relPath = relative.generic_string();
+
+    return {
+        {"ok", true},
+        {"asset_id", duplicatedId.ToString()},
+        {"path", std::move(relPath)},
+    };
 }
 
 nlohmann::json McpAssetsSystem::QueryHasStaticMetaSchema(EditorCore& core, const nlohmann::json& params)

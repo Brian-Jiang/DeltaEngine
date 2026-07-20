@@ -37,17 +37,8 @@ TEST_F(McpCommonSystemTests, CommandSetProperty_FloatProperty_ChangesValue)
     const std::string goId = CreateLegacyGameObject();
     ASSERT_FALSE(goId.empty());
 
-    // Add PointLight via legacy path
-    {
-        json data;
-        data["sceneAssetId"] = GetActiveSceneAssetId().ToString();
-        data["gameObjectId"] = goId;
-        data["className"]    = "PointLight";
-        json env;
-        env["type"] = "EditorCommand_CreateComponent";
-        env["data"] = data;
-        ASSERT_TRUE(m_core->ExecuteSerializedCommand(env)["ok"].get<bool>());
-    }
+    // Add PointLight through the command manager
+    ASSERT_FALSE(ExecCreateComponent(goId, "PointLight").empty());
 
     // Find PointLight's object_id
     auto comps = Dispatch("scene", "components_on_object", {{"object_id", goId}});

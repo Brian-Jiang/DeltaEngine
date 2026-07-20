@@ -1,8 +1,15 @@
 #include "Editor/EditorCoreFixture.h"
 
+#include "Editor/Commands/EditorCommandContext.h"
+#include "Editor/Commands/EditorCommandManager.h"
+#include "Editor/Commands/EditorCommand_CreateComponent.h"
+#include "Editor/Commands/EditorCommand_CreateGameObject.h"
 #include "Editor/Mcp/McpQueryRouter.h"
 
+#include "Runtime/Core/UUID.h"
+
 #include <gtest/gtest.h>
+#include <memory>
 #include <nlohmann/json.hpp>
 
 #include <string>
@@ -14,36 +21,33 @@ using namespace DeltaEngine::Tests;
 namespace
 {
 
-std::string ExecObjectId(EditorCore& core, const std::string& type, json data)
+std::string CreateLegacyGameObject(EditorCore& core, const AssetId& sceneAssetId)
 {
-    json env;
-    env["type"] = type;
-    env["data"] = std::move(data);
-    return core.ExecuteSerializedCommand(env).value("objectId", std::string{});
+    EditorCommandContext ctx{core};
+    auto cmd = std::make_unique<EditorCommand_CreateGameObject>(sceneAssetId, "GameObject");
+    EditorCommand_CreateGameObject* ptr = cmd.get();
+    if (!core.GetCommandManager().Execute(std::move(cmd), ctx))
+        return {};
+    json j;
+    ptr->Serialize(j);
+    return j.value("createdId", std::string{});
 }
 
 std::string CreatePointLightObjectId(EditorCore& core, const AssetId& sceneAssetId)
 {
-    json data;
-    data["sceneAssetId"] = sceneAssetId.ToString();
-    data["className"]    = "GameObject";
-    const std::string goId = ExecObjectId(core, "EditorCommand_CreateGameObject", data);
+    const std::string goId = CreateLegacyGameObject(core, sceneAssetId);
     if (goId.empty())
         return {};
 
-    json compData;
-    compData["sceneAssetId"] = sceneAssetId.ToString();
-    compData["gameObjectId"] = goId;
-    compData["className"]    = "PointLight";
-    return ExecObjectId(core, "EditorCommand_CreateComponent", compData);
-}
-
-std::string CreateLegacyGameObject(EditorCore& core, const AssetId& sceneAssetId)
-{
-    json data;
-    data["sceneAssetId"] = sceneAssetId.ToString();
-    data["className"]    = "GameObject";
-    return ExecObjectId(core, "EditorCommand_CreateGameObject", data);
+    EditorCommandContext ctx{core};
+    auto cmd = std::make_unique<EditorCommand_CreateComponent>(
+        sceneAssetId, DeltaEngine::UUID::FromString(goId), "PointLight");
+    EditorCommand_CreateComponent* ptr = cmd.get();
+    if (!core.GetCommandManager().Execute(std::move(cmd), ctx))
+        return {};
+    json j;
+    ptr->Serialize(j);
+    return j.value("createdComponentId", std::string{});
 }
 
 // Routes a command envelope and returns its single synchronous result, verifying

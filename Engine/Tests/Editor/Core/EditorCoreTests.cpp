@@ -1,7 +1,9 @@
 #include "../EditorCoreFixture.h"
 
 #include "Editor/Assets/EditorAssetDatabase.h"
+#include "Editor/Mcp/McpRegistry.h"
 #include "Runtime/Assets/DPrimaryAsset.h"
+#include "Runtime/Core/DWorld.h"
 
 #include <nlohmann/json.hpp>
 
@@ -64,46 +66,18 @@ TEST_F(EditorCoreTests, GetIdsForObject_RoundTripsLoadedSceneAsset)
     EXPECT_EQ(oid, first->GetObjectId());
 }
 
-TEST_F(EditorCoreTests, ExecuteSerializedCommand_MissingType_ReturnsError)
+TEST_F(EditorCoreTests, CreateGameObject_ReturnsObjectId)
 {
-    const auto j = m_core->ExecuteSerializedCommand(nlohmann::json::parse(R"({"data":{}})"));
-    EXPECT_FALSE(j.value("ok", true));
-    EXPECT_NE(j.value("error", std::string{}).find("type"), std::string::npos);
+    const std::string objectId = ExecCreateGameObject();
+    EXPECT_FALSE(objectId.empty());
+    EXPECT_EQ(m_core->GetWorld()->GetGameObjects().size(), 1u);
 }
 
-TEST_F(EditorCoreTests, ExecuteSerializedCommand_UnknownCommand_ReturnsError)
+TEST_F(EditorCoreTests, SaveProjectCommand_Succeeds)
 {
-    const auto j = m_core->ExecuteSerializedCommand(
-        nlohmann::json::parse(R"({"type":"EditorCommand_NoSuchThing","data":{}})"));
-    EXPECT_FALSE(j.value("ok", true));
-    EXPECT_EQ(j.value("commandType", std::string{}), "EditorCommand_NoSuchThing");
-}
-
-TEST_F(EditorCoreTests, ExecuteSerializedCommand_CreateGameObject_ReturnsResult)
-{
-    const AssetId sceneId = GetActiveSceneAssetId();
-    nlohmann::json data;
-    data["sceneAssetId"] = sceneId.ToString();
-    data["className"] = "GameObject";
-    nlohmann::json envelope;
-    envelope["type"] = "EditorCommand_CreateGameObject";
-    envelope["data"] = data;
-
-    const auto j = m_core->ExecuteSerializedCommand(envelope);
+    const auto j = m_core->GetMcpRegistry()->DispatchCommand(
+        "common", "SaveProject", *m_core, nlohmann::json::object());
     EXPECT_TRUE(j["ok"].get<bool>());
-    EXPECT_EQ(j["commandType"].get<std::string>(), "EditorCommand_CreateGameObject");
-    EXPECT_FALSE(j["objectId"].get<std::string>().empty());
-}
-
-TEST_F(EditorCoreTests, ExecuteSerializedCommand_SaveDirtyAssetsAuxiliary_Succeeds)
-{
-    nlohmann::json envelope;
-    envelope["type"] = "auxiliary";
-    envelope["name"] = "SaveDirtyAssets";
-
-    const auto j = m_core->ExecuteSerializedCommand(envelope);
-    EXPECT_TRUE(j["ok"].get<bool>());
-    EXPECT_EQ(j["commandType"].get<std::string>(), "SaveDirtyAssets");
 }
 
 TEST_F(EditorCoreTests, LoadScene_NonExistentPath_DoesNothing)

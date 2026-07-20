@@ -2,12 +2,14 @@
 
 #include "Editor/Commands/EditorCommandContext.h"
 #include "Editor/Commands/EditorCommandManager.h"
+#include "Editor/Commands/EditorCommand_SetProperty.h"
 #include "Editor/Commands/PropertyValueIO.h"
 
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/SceneComponent.h"
 
+#include <memory>
 #include <nlohmann/json.hpp>
 
 #include <functional>
@@ -21,12 +23,15 @@ using namespace DeltaEngine::Tests;
 class McpPathTests : public EditorCoreFixture
 {
 protected:
-    json ExecLegacy(const std::string& type, json data) const
+    bool SetProperty(const AssetId& assetId, const std::string& objectId,
+                     const std::string& propertyName, json valueAfter) const
     {
-        json env;
-        env["type"] = type;
-        env["data"] = std::move(data);
-        return m_core->ExecuteSerializedCommand(env);
+        EditorCommandContext ctx{ *m_core };
+        return m_core->GetCommandManager().Execute(
+            std::make_unique<EditorCommand_SetProperty>(
+                assetId, DeltaEngine::UUID::FromString(objectId), propertyName,
+                json{}, std::move(valueAfter)),
+            ctx);
     }
 };
 
@@ -59,35 +64,17 @@ SceneComponent* FindSceneComponentByClassName(GameObject* go, std::string_view c
 
 TEST_F(McpPathTests, CreateGameObject_ReturnsObjectId)
 {
-    const AssetId sceneId = GetActiveSceneAssetId();
-    json data;
-    data["sceneAssetId"] = sceneId.ToString();
-    data["className"] = "GameObject";
-
-    const json r = ExecLegacy("EditorCommand_CreateGameObject", data);
-    EXPECT_TRUE(r["ok"].get<bool>());
-    EXPECT_EQ(r["commandType"].get<std::string>(), "EditorCommand_CreateGameObject");
-    EXPECT_FALSE(r["objectId"].get<std::string>().empty());
+    EXPECT_FALSE(ExecCreateGameObject().empty());
 }
 
 TEST_F(McpPathTests, SetProperty_FloatProperty_RoundTrips)
 {
     const AssetId sceneId = GetActiveSceneAssetId();
 
-    // Create a GameObject
-    json createData;
-    createData["sceneAssetId"] = sceneId.ToString();
-    createData["className"] = "GameObject";
-    const std::string goObjectId =
-        ExecLegacy("EditorCommand_CreateGameObject", createData)["objectId"].get<std::string>();
+    const std::string goObjectId = ExecCreateGameObject();
     ASSERT_FALSE(goObjectId.empty());
 
-    // Add a PointLight component
-    json addCompData;
-    addCompData["sceneAssetId"] = sceneId.ToString();
-    addCompData["gameObjectId"] = goObjectId;
-    addCompData["className"] = "PointLight";
-    ASSERT_TRUE(ExecLegacy("EditorCommand_CreateComponent", addCompData)["ok"].get<bool>());
+    ASSERT_FALSE(ExecCreateComponent(goObjectId, "PointLight").empty());
 
     GameObject* go = nullptr;
     for (GameObject* g : m_core->GetWorld()->GetGameObjects())
@@ -104,41 +91,16 @@ TEST_F(McpPathTests, SetProperty_FloatProperty_RoundTrips)
     const std::string compId = pl->GetObjectId().ToString();
     ASSERT_FALSE(compId.empty());
 
-    // Set m_intensity to 7.5
-    json setPropData;
-    setPropData["assetId"] = sceneId.ToString();
-    setPropData["objectId"] = compId;
-    setPropData["propertyName"] = "m_intensity";
-    setPropData["valueAfter"] = 7.5;
-    EXPECT_TRUE(ExecLegacy("EditorCommand_SetProperty", setPropData)["ok"].get<bool>());
+    EXPECT_TRUE(SetProperty(sceneId, compId, "m_intensity", 7.5));
 
     DProperty* intensityProp = FindPropertyOnObject(pl, "m_intensity");
     ASSERT_NE(intensityProp, nullptr);
     EXPECT_NEAR(PropertyToJson(pl, intensityProp).get<float>(), 7.5f, 0.001f);
 }
 
-TEST_F(McpPathTests, UnknownCommandType_ReturnsError)
-{
-    const json resp = m_core->ExecuteSerializedCommand(
-        json::parse(R"({"type":"EditorCommand_DoesNotExist","data":{}})"));
-    EXPECT_FALSE(resp["ok"].get<bool>());
-    EXPECT_FALSE(resp["error"].get<std::string>().empty());
-}
-
-TEST_F(McpPathTests, MissingTypeField_ReturnsError)
-{
-    const json resp = m_core->ExecuteSerializedCommand(json::parse(R"({"data":{"foo":"bar"}})"));
-    EXPECT_FALSE(resp["ok"].get<bool>());
-    EXPECT_FALSE(resp["error"].get<std::string>().empty());
-}
-
 TEST_F(McpPathTests, CreateThenUndo_RemovesGameObject)
 {
-    const AssetId sceneId = GetActiveSceneAssetId();
-    json data;
-    data["sceneAssetId"] = sceneId.ToString();
-    data["className"] = "GameObject";
-    ASSERT_TRUE(ExecLegacy("EditorCommand_CreateGameObject", data)["ok"].get<bool>());
+    ASSERT_FALSE(ExecCreateGameObject().empty());
 
     size_t countBefore = m_core->GetWorld()->GetGameObjects().size();
     ASSERT_GT(countBefore, 0u);

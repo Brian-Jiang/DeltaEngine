@@ -1,9 +1,14 @@
 #include "Editor/Mcp/Systems/McpPostProcessSystem.h"
 
+#include "Editor/Commands/EditorCommand_AddPostProcessPass.h"
+#include "Editor/Commands/EditorCommand_RemovePostProcessPass.h"
 #include "Editor/EditorCore.h"
 #include "Editor/Mcp/McpProtocol.h"
 #include "Editor/Mcp/McpRegistry.h"
 
+#include "Runtime/Core/UUID.h"
+
+#include <memory>
 #include <nlohmann/json.hpp>
 
 using namespace DeltaEngine;
@@ -23,10 +28,12 @@ nlohmann::json McpPostProcessSystem::CommandAddPass(EditorCore& core, const nloh
     if (!params.contains("passClass"))
         return MakeMcpError("missing required param: passClass");
 
-    nlohmann::json data;
-    data["assetId"] = params["assetId"].get<std::string>();
-    data["className"] = params["passClass"].get<std::string>();
-    return ExecuteMcpCommand(core, "post_process", "EditorCommand_AddPostProcessPass", std::move(data));
+    const AssetId assetId = UUID::FromString(params["assetId"].get<std::string>());
+    if (assetId.IsNull())
+        return MakeMcpError("invalid assetId");
+
+    return RunEditorCommand(core, std::make_unique<EditorCommand_AddPostProcessPass>(
+        assetId, params["passClass"].get<std::string>()));
 }
 
 nlohmann::json McpPostProcessSystem::CommandRemovePass(EditorCore& core, const nlohmann::json& params)
@@ -36,8 +43,10 @@ nlohmann::json McpPostProcessSystem::CommandRemovePass(EditorCore& core, const n
     if (!params.contains("passClass"))
         return MakeMcpError("missing required param: passClass");
 
-    nlohmann::json data;
-    data["assetId"] = params["assetId"].get<std::string>();
-    data["className"] = params["passClass"].get<std::string>();
-    return ExecuteMcpCommand(core, "post_process", "EditorCommand_RemovePostProcessPass", std::move(data));
+    const AssetId assetId = UUID::FromString(params["assetId"].get<std::string>());
+    if (assetId.IsNull())
+        return MakeMcpError("invalid assetId");
+
+    return RunEditorCommand(core, std::make_unique<EditorCommand_RemovePostProcessPass>(
+        assetId, params["passClass"].get<std::string>()));
 }

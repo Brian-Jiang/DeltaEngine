@@ -1,7 +1,10 @@
 #include "McpProjectSystem.h"
 
-#include "Editor/EditorCore.h"
 #include "Editor/Assets/EditorAssetDatabase.h"
+#include "Editor/Commands/EditorAuxiliarySceneCommands.h"
+#include "Editor/Commands/EditorCommandContext.h"
+#include "Editor/Commands/EditorCommandManager.h"
+#include "Editor/EditorCore.h"
 #include "Mcp/McpRegistry.h"
 #include "Runtime/Assets/DPrimaryAsset.h"
 #include "Runtime/Core/UUID.h"
@@ -9,6 +12,7 @@
 #include "Runtime/Settings/EngineSettings.h"
 
 #include <filesystem>
+#include <memory>
 
 using namespace DeltaEngine;
 
@@ -115,11 +119,8 @@ nlohmann::json McpProjectSystem::CommandLoadScene(EditorCore& core, const nlohma
     if (scenePath.empty())
         return MakeError("no scene asset registered for asset_id: " + assetIdStr);
 
-    // Reuse the ready LoadScene auxiliary (keyed by path) that the scene system drives.
-    nlohmann::json envelope;
-    envelope["type"]      = "auxiliary";
-    envelope["name"]      = "LoadScene";
-    envelope["scenePath"] = scenePath.string();
-
-    return core.ExecuteSerializedCommand(envelope);
+    EditorCommandContext ctx{core};
+    core.GetCommandManager().ExecuteAuxiliary(
+        std::make_unique<EditorAuxiliaryCommand_LoadScene>(scenePath), ctx);
+    return {{"ok", true}, {"commandType", "LoadScene"}};
 }

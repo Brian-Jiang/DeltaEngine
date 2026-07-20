@@ -1,7 +1,18 @@
 #include "McpSceneSystem.h"
 
-#include "Editor/EditorCore.h"
+#include "Editor/Animation/EditorAnimationManager.h"
+#include "Editor/Commands/EditorCommandContext.h"
+#include "Editor/Commands/EditorCommandManager.h"
+#include "Editor/Commands/EditorCommand_CreateComponent.h"
+#include "Editor/Commands/EditorCommand_CreateGameObject.h"
+#include "Editor/Commands/EditorCommand_DeleteComponent.h"
+#include "Editor/Commands/EditorCommand_DeleteGameObject.h"
+#include "Editor/Commands/EditorCommand_DuplicateGameObject.h"
+#include "Editor/Commands/EditorCommand_RenameObject.h"
+#include "Editor/Commands/EditorCommand_ReparentSceneComponent.h"
+#include "Editor/Commands/EditorCommand_SetProperty.h"
 #include "Editor/Commands/PropertyValueIO.h"
+#include "Editor/EditorCore.h"
 #include "Editor/Mcp/McpAnimationDefaults.h"
 #include "Mcp/McpProtocol.h"
 #include "Mcp/McpRegistry.h"
@@ -15,6 +26,7 @@
 #include "Runtime/Reflection/DEnumProperty.h"
 #include "Runtime/Logging/LogCategory.h"
 
+#include <memory>
 #include <unordered_set>
 
 using namespace DeltaEngine;
@@ -497,18 +509,35 @@ nlohmann::json McpSceneSystem::CommandCreateGameObject(EditorCore& core, const n
 
     const std::string name = params["name"].get<std::string>();
 
-    if (name.empty() || name == "New GameObject")
-    {
-        nlohmann::json data;
-        data["className"] = "GameObject";
-        return ExecuteMcpCommand(core, "scene", "EditorCommand_CreateGameObject", std::move(data));
-    }
+    const AssetId sceneAssetId = ActiveSceneAssetId(core);
+    if (sceneAssetId.IsNull())
+        return MakeMcpError("No active scene asset");
 
-    nlohmann::json envelope;
-    envelope["type"] = "auxiliary";
-    envelope["name"] = "CreateGameObjectWithRename";
-    envelope["desiredName"] = name;
-    return core.ExecuteSerializedCommand(envelope);
+    // Create the GameObject.
+    EditorCommandContext ctx{core};
+    auto createCmd = std::make_unique<EditorCommand_CreateGameObject>(sceneAssetId, "GameObject");
+    EditorCommand_CreateGameObject* createPtr = createCmd.get();
+    if (!core.GetCommandManager().Execute(std::move(createCmd), ctx))
+        return {{"ok", false}, {"commandType", "EditorCommand_CreateGameObject"},
+                {"error", "Execute() returned false"}};
+
+    nlohmann::json createJson;
+    createPtr->Serialize(createJson);
+    const std::string objectId = createJson.value("createdId", "");
+
+    const bool needsRename = !name.empty() && name != "New GameObject";
+    if (!needsRename)
+        return {{"ok", true}, {"commandType", "EditorCommand_CreateGameObject"}, {"objectId", objectId}};
+
+    // Rename to the requested name as a second undoable step.
+    const ObjectId renameTarget = UUID::FromString(objectId);
+    if (!core.GetCommandManager().Execute(
+            std::make_unique<EditorCommand_RenameObject>(sceneAssetId, renameTarget, name), ctx))
+        return {{"ok", true}, {"commandType", "EditorCommand_CreateGameObject"},
+                {"objectId", objectId},
+                {"error", "rename failed: Execute() returned false"}};
+
+    return {{"ok", true}, {"commandType", "EditorCommand_CreateGameObject"}, {"objectId", objectId}};
 }
 
 // ─── Command: DeleteGameObject ──────────────────────────────────────────────
@@ -518,9 +547,12 @@ nlohmann::json McpSceneSystem::CommandDeleteGameObject(EditorCore& core, const n
     if (!params.contains("objectId"))
         return MakeMcpError("missing required param: objectId");
 
-    nlohmann::json data;
-    data["gameObjectId"] = params["objectId"].get<std::string>();
-    return ExecuteMcpCommand(core, "scene", "EditorCommand_DeleteGameObject", std::move(data));
+    const ObjectId gameObjectId = UUID::FromString(params["objectId"].get<std::string>());
+    if (gameObjectId.IsNull())
+        return MakeMcpError("invalid objectId");
+
+    return RunEditorCommand(core, std::make_unique<EditorCommand_DeleteGameObject>(
+        ActiveSceneAssetId(core), gameObjectId));
 }
 
 // ─── Command: DuplicateGameObject ───────────────────────────────────────────
@@ -530,14 +562,19 @@ nlohmann::json McpSceneSystem::CommandDuplicateGameObject(EditorCore& core, cons
     if (!params.contains("objectId"))
         return MakeMcpError("missing required param: objectId");
 
+    // DuplicateGameObject carries an optional position offset that is only settable
+    // through Deserialize (no constructor arg), so populate it that way.
     nlohmann::json data;
+    data["assetId"] = ActiveSceneAssetId(core).ToString();
     data["sourceObjectId"] = params["objectId"].get<std::string>();
     if (params.contains("newName") && params["newName"].is_string())
         data["newName"] = params["newName"].get<std::string>();
     if (params.contains("offset_position") && params["offset_position"].is_array())
         data["offsetPosition"] = params["offset_position"];
 
-    return ExecuteMcpCommand(core, "scene", "EditorCommand_DuplicateGameObject", std::move(data));
+    auto cmd = std::make_unique<EditorCommand_DuplicateGameObject>();
+    cmd->Deserialize(data);
+    return RunEditorCommand(core, std::move(cmd));
 }
 
 // ─── Command: ReparentSceneComponent ────────────────────────────────────────
@@ -549,10 +586,15 @@ nlohmann::json McpSceneSystem::CommandReparentSceneComponent(EditorCore& core, c
     if (!params.contains("newParentId"))
         return MakeMcpError("missing required param: newParentId");
 
-    nlohmann::json data;
-    data["childObjectId"] = params["objectId"].get<std::string>();
-    data["newParentObjectId"] = params["newParentId"].get<std::string>();
-    return ExecuteMcpCommand(core, "scene", "EditorCommand_ReparentSceneComponent", std::move(data));
+    const ObjectId childObjectId = UUID::FromString(params["objectId"].get<std::string>());
+    if (childObjectId.IsNull())
+        return MakeMcpError("invalid objectId");
+    const ObjectId newParentObjectId = UUID::FromString(params["newParentId"].get<std::string>());
+    if (newParentObjectId.IsNull())
+        return MakeMcpError("invalid newParentId");
+
+    return RunEditorCommand(core, std::make_unique<EditorCommand_ReparentSceneComponent>(
+        ActiveSceneAssetId(core), childObjectId, newParentObjectId));
 }
 
 // ─── Command: CreateComponent ───────────────────────────────────────────────
@@ -564,10 +606,12 @@ nlohmann::json McpSceneSystem::CommandCreateComponent(EditorCore& core, const nl
     if (!params.contains("componentClass"))
         return MakeMcpError("missing required param: componentClass");
 
-    nlohmann::json data;
-    data["gameObjectId"] = params["objectId"].get<std::string>();
-    data["className"] = params["componentClass"].get<std::string>();
-    return ExecuteMcpCommand(core, "scene", "EditorCommand_CreateComponent", std::move(data));
+    const ObjectId gameObjectId = UUID::FromString(params["objectId"].get<std::string>());
+    if (gameObjectId.IsNull())
+        return MakeMcpError("invalid objectId");
+
+    return RunEditorCommand(core, std::make_unique<EditorCommand_CreateComponent>(
+        ActiveSceneAssetId(core), gameObjectId, params["componentClass"].get<std::string>()));
 }
 
 // ─── Command: DeleteComponent ───────────────────────────────────────────────
@@ -591,13 +635,11 @@ nlohmann::json McpSceneSystem::CommandDeleteComponent(EditorCore& core, const nl
     if (!owner)
         return MakeMcpError("component has no owning GameObject: " + compIdStr);
 
-    //auto [ownerAssetId, ownerObjectId] = core.GetIdsForObject(owner);
-    auto ownerObjectId = comp->GetGameObject()->GetObjectId();
+    const ObjectId ownerObjectId = owner->GetObjectId();
+    const ObjectId componentId = comp->GetObjectId();
 
-    nlohmann::json data;
-    data["gameObjectId"] = ownerObjectId.ToString();
-    data["componentId"] = compIdStr;
-    return ExecuteMcpCommand(core, "scene", "EditorCommand_DeleteComponent", std::move(data));
+    return RunEditorCommand(core, std::make_unique<EditorCommand_DeleteComponent>(
+        ActiveSceneAssetId(core), ownerObjectId, componentId));
 }
 
 // ─── Shared helper: resolve a SceneComponent from an objectId string ────────
@@ -624,6 +666,105 @@ static nlohmann::json MatrixToJson(DirectX::XMMATRIX mat)
         for (int c = 0; c < 4; ++c)
             arr.push_back(f.m[r][c]);
     return arr;
+}
+
+// Starts (or, in headless mode, immediately applies + commits) a tweened transform-channel
+// animation for one of "position" / "rotation" / "scale". On completion the animation manager
+// commits a single m_localTransform SetProperty; headless applies the setter then commits now.
+static nlohmann::json StartTransformChannelAnimation(
+    EditorCore& core, SceneComponent* sc,
+    const AssetId& scAssetId, const ObjectId& scObjectId,
+    const std::string& channel, const nlohmann::json& tval,
+    bool worldSpace, float duration)
+{
+    using namespace DirectX;
+    using namespace DirectX::SimpleMath;
+
+    DProperty* transformProp = sc->GetClass()->FindPropertyByName("m_localTransform");
+    if (!transformProp)
+        return MakeMcpError("m_localTransform property not found");
+
+    const nlohmann::json snapshot = PropertyToJson(sc, transformProp);
+    EditorAnimationManager* animMgr = core.GetAnimationManager();
+    EditorCommandContext ctx{core};
+
+    auto commitHeadless = [&]()
+    {
+        core.GetCommandManager().Execute(
+            std::make_unique<EditorCommand_SetProperty>(
+                scAssetId, scObjectId, "m_localTransform",
+                snapshot, PropertyToJson(sc, transformProp)),
+            ctx);
+    };
+
+    if (channel == "position")
+    {
+        const Vector3 from = worldSpace ? sc->GetWorldPosition() : sc->GetLocalPosition();
+        const Vector3 target(tval[0].get<float>(), tval[1].get<float>(), tval[2].get<float>());
+        if (animMgr)
+        {
+            animMgr->StartAnimationVec3(
+                scAssetId, scObjectId, "position", from, target, duration,
+                worldSpace
+                    ? std::function<void(Vector3)>([sc](Vector3 p) { sc->SetWorldPosition(p); })
+                    : std::function<void(Vector3)>([sc](Vector3 p) { sc->SetLocalPosition(p); }),
+                snapshot);
+        }
+        else
+        {
+            if (worldSpace) sc->SetWorldPosition(target); else sc->SetLocalPosition(target);
+            commitHeadless();
+        }
+    }
+    else if (channel == "rotation")
+    {
+        const Quaternion from = worldSpace ? sc->GetWorldRotation() : sc->GetLocalRotation();
+        Quaternion target;
+        if (tval.size() == 4)
+            target = Quaternion(tval[0].get<float>(), tval[1].get<float>(),
+                                tval[2].get<float>(), tval[3].get<float>());
+        else
+            target = Quaternion::CreateFromYawPitchRoll(
+                tval[1].get<float>(), tval[0].get<float>(), tval[2].get<float>());
+
+        if (animMgr)
+        {
+            animMgr->StartAnimationQuat(
+                scAssetId, scObjectId, "rotation", from, target, duration,
+                worldSpace
+                    ? std::function<void(Quaternion)>([sc](Quaternion q) { sc->SetWorldRotation(q); })
+                    : std::function<void(Quaternion)>([sc](Quaternion q) { sc->SetLocalRotation(q); }),
+                snapshot);
+        }
+        else
+        {
+            if (worldSpace) sc->SetWorldRotation(target); else sc->SetLocalRotation(target);
+            commitHeadless();
+        }
+    }
+    else if (channel == "scale")
+    {
+        const Vector3 from = sc->GetLocalScale();
+        const Vector3 target(tval[0].get<float>(), tval[1].get<float>(), tval[2].get<float>());
+        if (animMgr)
+        {
+            animMgr->StartAnimationVec3(
+                scAssetId, scObjectId, "scale", from, target, duration,
+                [sc](Vector3 s) { sc->SetLocalScale(s); },
+                snapshot);
+        }
+        else
+        {
+            sc->SetLocalScale(target);
+            commitHeadless();
+        }
+    }
+    else
+    {
+        return MakeMcpError("Unknown channel: " + channel);
+    }
+
+    return {{"ok", true}, {"commandType", "StartTransformChannelAnimation"}};
 }
 
 // ─── Command: SetPosition ────────────────────────────────────────────────────
@@ -674,24 +815,13 @@ nlohmann::json McpSceneSystem::CommandSetPosition(EditorCore& core, const nlohma
                 XMMatrixScalingFromVector(scl) * XMMatrixRotationQuaternion(rot) * XMMatrixTranslationFromVector(target);
         }
 
-        nlohmann::json data;
-        data["objectId"]      = scObjectId.ToString();
-        data["propertyName"]  = "m_localTransform";
-        data["valueAfter"]    = MatrixToJson(localMat);
-        return ExecuteMcpCommand(core, "scene", "EditorCommand_SetProperty", std::move(data));
+        return RunEditorCommand(core, std::make_unique<EditorCommand_SetProperty>(
+            scAssetId, scObjectId, "m_localTransform", nlohmann::json{}, MatrixToJson(localMat)));
     }
 
-    // Animation path — execute the transform-channel animation auxiliary synchronously.
-    nlohmann::json envelope;
-    envelope["type"]      = "auxiliary";
-    envelope["name"]      = "StartTransformChannelAnimation";
-    envelope["scAssetId"] = scAssetId.ToString();
-    envelope["scObjectId"]= scObjectId.ToString();
-    envelope["channel"]   = "position";
-    envelope["targetValue"] = params["value"];
-    envelope["space"]     = space;
-    envelope["duration"]  = duration;
-    return core.ExecuteSerializedCommand(envelope);
+    // Animation path.
+    return StartTransformChannelAnimation(
+        core, sc, scAssetId, scObjectId, "position", params["value"], worldSpace, duration);
 }
 
 // ─── Command: SetRotation ────────────────────────────────────────────────────
@@ -748,23 +878,12 @@ nlohmann::json McpSceneSystem::CommandSetRotation(EditorCore& core, const nlohma
                 XMMatrixScalingFromVector(scl) * XMMatrixRotationQuaternion(target) * XMMatrixTranslationFromVector(pos);
         }
 
-        nlohmann::json data;
-        data["objectId"]     = scObjectId.ToString();
-        data["propertyName"] = "m_localTransform";
-        data["valueAfter"]   = MatrixToJson(localMat);
-        return ExecuteMcpCommand(core, "scene", "EditorCommand_SetProperty", std::move(data));
+        return RunEditorCommand(core, std::make_unique<EditorCommand_SetProperty>(
+            scAssetId, scObjectId, "m_localTransform", nlohmann::json{}, MatrixToJson(localMat)));
     }
 
-    nlohmann::json envelope;
-    envelope["type"]       = "auxiliary";
-    envelope["name"]       = "StartTransformChannelAnimation";
-    envelope["scAssetId"]  = scAssetId.ToString();
-    envelope["scObjectId"] = scObjectId.ToString();
-    envelope["channel"]    = "rotation";
-    envelope["targetValue"]= params["value"];
-    envelope["space"]      = space;
-    envelope["duration"]   = duration;
-    return core.ExecuteSerializedCommand(envelope);
+    return StartTransformChannelAnimation(
+        core, sc, scAssetId, scObjectId, "rotation", params["value"], worldSpace, duration);
 }
 
 // ─── Command: SetScale ───────────────────────────────────────────────────────
@@ -798,21 +917,10 @@ nlohmann::json McpSceneSystem::CommandSetScale(EditorCore& core, const nlohmann:
         const XMMATRIX localMat =
             XMMatrixScalingFromVector(target) * XMMatrixRotationQuaternion(rot) * XMMatrixTranslationFromVector(pos);
 
-        nlohmann::json data;
-        data["objectId"]     = scObjectId.ToString();
-        data["propertyName"] = "m_localTransform";
-        data["valueAfter"]   = MatrixToJson(localMat);
-        return ExecuteMcpCommand(core, "scene", "EditorCommand_SetProperty", std::move(data));
+        return RunEditorCommand(core, std::make_unique<EditorCommand_SetProperty>(
+            scAssetId, scObjectId, "m_localTransform", nlohmann::json{}, MatrixToJson(localMat)));
     }
 
-    nlohmann::json envelope;
-    envelope["type"]       = "auxiliary";
-    envelope["name"]       = "StartTransformChannelAnimation";
-    envelope["scAssetId"]  = scAssetId.ToString();
-    envelope["scObjectId"] = scObjectId.ToString();
-    envelope["channel"]    = "scale";
-    envelope["targetValue"]= params["value"];
-    envelope["space"]      = "local";
-    envelope["duration"]   = duration;
-    return core.ExecuteSerializedCommand(envelope);
+    return StartTransformChannelAnimation(
+        core, sc, scAssetId, scObjectId, "scale", params["value"], /*worldSpace*/ false, duration);
 }

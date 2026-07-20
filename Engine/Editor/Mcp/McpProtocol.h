@@ -2,23 +2,29 @@
 
 #include "EditorIncludes.h"
 
+#include "Runtime/Core/UUID.h"
+
 #include <nlohmann/json.hpp>
 
+#include <memory>
 #include <string>
-#include <string_view>
 
 DELTA_ENGINE_NS_BEGIN
 
 class EditorCore;
+class EditorCommand;
 
 DELTAEDITOR_API nlohmann::json MakeMcpError(const std::string& message);
 
-// Builds a command envelope and executes it synchronously on the calling (main)
-// thread, returning the command's real result payload.
-DELTAEDITOR_API nlohmann::json ExecuteMcpCommand(
+// Executes an already-constructed editor command synchronously on the calling
+// (main) thread and formats the standard MCP result payload:
+//   { "ok": true,  "commandType": "<TypeName>", "objectId": "<createdId?>" }
+//   { "ok": false, "commandType": "<TypeName>", "error": "Execute() returned false" }
+DELTAEDITOR_API nlohmann::json RunEditorCommand(
     EditorCore& core,
-    std::string_view system,
-    const std::string& commandName,
-    nlohmann::json params);
+    std::unique_ptr<EditorCommand> cmd);
+
+// Returns the active scene's asset id, or a null AssetId when no scene is active.
+DELTAEDITOR_API AssetId ActiveSceneAssetId(EditorCore& core);
 
 DELTA_ENGINE_NS_END

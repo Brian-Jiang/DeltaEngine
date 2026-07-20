@@ -25,14 +25,7 @@ protected:
         if (goId.empty())
             return {};
 
-        json data;
-        data["sceneAssetId"] = GetActiveSceneAssetId().ToString();
-        data["gameObjectId"] = goId;
-        data["className"]    = "PointLight";
-        json env;
-        env["type"] = "EditorCommand_CreateComponent";
-        env["data"] = data;
-        return m_core->ExecuteSerializedCommand(env).value("objectId", std::string{});
+        return ExecCreateComponent(goId, "PointLight");
     }
 
     // Dispatch a lights command synchronously; returns its real result.

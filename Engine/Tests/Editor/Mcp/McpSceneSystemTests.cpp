@@ -18,17 +18,10 @@ using namespace DeltaEngine::Tests;
 class McpSceneSystemTests : public McpCoreFixture
 {
 protected:
-    // Adds a component to a GameObject via the legacy command path; returns its objectId.
+    // Adds a component to a GameObject through the command manager; returns its objectId.
     std::string AddComponent(const std::string& goId, const char* className)
     {
-        json data;
-        data["sceneAssetId"] = GetActiveSceneAssetId().ToString();
-        data["gameObjectId"] = goId;
-        data["className"]    = className;
-        json env;
-        env["type"] = "EditorCommand_CreateComponent";
-        env["data"] = data;
-        return m_core->ExecuteSerializedCommand(env).value("objectId", std::string{});
+        return ExecCreateComponent(goId, className);
     }
 };
 
@@ -200,21 +193,6 @@ TEST_F(McpSceneSystemTests, CommandCreateGameObject_CustomName_ReturnsObjectId)
     ASSERT_EQ(queryRes["game_objects"].size(), 1u);
     EXPECT_EQ(queryRes["game_objects"][0]["object_id"].get<std::string>(), objectId);
     EXPECT_EQ(queryRes["game_objects"][0]["name"].get<std::string>(), "MyCustomCube");
-}
-
-TEST_F(McpSceneSystemTests, CommandCreateGameObject_RenameFailure_ReportsErrorInResult)
-{
-    json envelope;
-    envelope["type"]               = "auxiliary";
-    envelope["name"]               = "CreateGameObjectWithRename";
-    envelope["desiredName"]        = "ShouldFailRename";
-    envelope["forceRenameFailure"] = true;
-    const json r = m_core->ExecuteSerializedCommand(envelope);
-
-    EXPECT_TRUE(r["ok"].get<bool>());
-    EXPECT_FALSE(r.value("objectId", std::string{}).empty());
-    ASSERT_TRUE(r.contains("error"));
-    EXPECT_NE(r["error"].get<std::string>().find("rename failed"), std::string::npos);
 }
 
 TEST_F(McpSceneSystemTests, CommandDeleteGameObject_RemovesObject)

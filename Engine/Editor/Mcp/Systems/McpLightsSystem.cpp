@@ -1,11 +1,18 @@
 #include "Editor/Mcp/Systems/McpLightsSystem.h"
 
+#include "Editor/Animation/EditorAnimationManager.h"
+#include "Editor/Commands/EditorCommandContext.h"
+#include "Editor/Commands/EditorCommandManager.h"
+#include "Editor/Commands/EditorCommand_SetProperty.h"
 #include "Editor/EditorCore.h"
 #include "Editor/Mcp/McpAnimationDefaults.h"
 #include "Editor/Mcp/McpProtocol.h"
 #include "Editor/Mcp/McpRegistry.h"
 
 #include "Runtime/Core/UUID.h"
+#include "Runtime/Graphics/Light/LightComponent.h"
+
+#include <memory>
 
 using namespace DeltaEngine;
 
@@ -20,11 +27,11 @@ nlohmann::json McpLightsSystem::CommandSetIntensity(EditorCore& core, const nloh
     if (!params.contains("assetId") || !params.contains("objectId") || !params.contains("value"))
         return MakeMcpError("required params: assetId, objectId, value");
 
-    const AssetId  assetId  = DeltaEngine::UUID::FromString(params["assetId"].get<std::string>());
+    const AssetId assetId = UUID::FromString(params["assetId"].get<std::string>());
     if (assetId.IsNull())
         return MakeMcpError("invalid assetId");
 
-    const ObjectId objectId = DeltaEngine::UUID::FromString(params["objectId"].get<std::string>());
+    const ObjectId objectId = UUID::FromString(params["objectId"].get<std::string>());
     if (objectId.IsNull())
         return MakeMcpError("invalid objectId");
 
@@ -32,31 +39,37 @@ nlohmann::json McpLightsSystem::CommandSetIntensity(EditorCore& core, const nloh
     //const float duration = params.value("duration_seconds", kDefaultAnimationDurationSeconds);
     const float duration = kDefaultAnimationDurationSeconds;
 
+    static constexpr const char* kIntensityProp = "m_intensity";
+
     if (duration <= 0.0f)
     {
-        // Immediate path: execute EditorCommand_SetProperty synchronously.
-        nlohmann::json envelope;
-        envelope["type"]    = "command";
-        envelope["command"] = "EditorCommand_SetProperty";
-        envelope["params"]  = {
-            {"assetId",      assetId.ToString()},
-            {"objectId",     objectId.ToString()},
-            {"propertyName", "m_intensity"},
-            {"valueAfter",   target}
-        };
-        return core.ExecuteSerializedCommand(envelope);
+        // Immediate path: apply via an undoable SetProperty.
+        return RunEditorCommand(core, std::make_unique<EditorCommand_SetProperty>(
+            assetId, objectId, kIntensityProp, nlohmann::json{}, nlohmann::json(target)));
+    }
+
+    // Animation path.
+    LightComponent* light = core.ResolveObject<LightComponent>(assetId, objectId);
+    if (!light)
+        return MakeMcpError("object not found or not a LightComponent");
+
+    const float current = light->GetIntensity();
+    if (auto* animMgr = core.GetAnimationManager())
+    {
+        animMgr->StartAnimation(
+            assetId, objectId, kIntensityProp,
+            current, target, duration,
+            [light](float v) { light->SetIntensity(v); });
     }
     else
     {
-        // Animation path: execute the light-animation auxiliary synchronously.
-        nlohmann::json envelope;
-        envelope["type"]         = "auxiliary";
-        envelope["name"]         = "StartLightAnimation";
-        envelope["assetId"]      = assetId.ToString();
-        envelope["objectId"]     = objectId.ToString();
-        envelope["propertyName"] = "m_intensity";
-        envelope["targetValue"]  = target;
-        envelope["duration"]     = duration;
-        return core.ExecuteSerializedCommand(envelope);
+        // Headless fallback: apply immediately via SetProperty.
+        EditorCommandContext ctx{core};
+        core.GetCommandManager().Execute(
+            std::make_unique<EditorCommand_SetProperty>(
+                assetId, objectId, kIntensityProp,
+                nlohmann::json(current), nlohmann::json(target)),
+            ctx);
     }
+    return {{"ok", true}, {"commandType", "SetIntensity"}};
 }

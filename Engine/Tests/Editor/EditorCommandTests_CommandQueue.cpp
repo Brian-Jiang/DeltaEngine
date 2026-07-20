@@ -3,11 +3,13 @@
 #include "Editor/Commands/EditorCommandContext.h"
 #include "Editor/Commands/EditorCommandManager.h"
 #include "Editor/Commands/EditorCommand_CreateGameObject.h"
+#include "Editor/Commands/EditorCommand_SetProperty.h"
 
 #include "Runtime/Core/GameObject.h"
 
 #include <nlohmann/json.hpp>
 
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
@@ -18,28 +20,29 @@ using namespace DeltaEngine::Tests;
 class EditorCommandTests_CommandQueue : public EditorCoreFixture
 {
 protected:
-    // Builds a legacy {type, data} envelope and executes it synchronously.
-    nlohmann::json ExecLegacy(const std::string& type, nlohmann::json data) const
+    // Executes a SetProperty directly through the command manager.
+    bool SetProperty(const AssetId& assetId, const std::string& objectId,
+                     const std::string& propertyName, nlohmann::json valueAfter) const
     {
-        nlohmann::json env;
-        env["type"] = type;
-        env["data"] = std::move(data);
-        return m_core->ExecuteSerializedCommand(env);
+        EditorCommandContext ctx{ *m_core };
+        return m_core->GetCommandManager().Execute(
+            std::make_unique<EditorCommand_SetProperty>(
+                assetId, DeltaEngine::UUID::FromString(objectId), propertyName,
+                nlohmann::json{}, std::move(valueAfter)),
+            ctx);
     }
 };
 
-TEST_F(EditorCommandTests_CommandQueue, ExecuteSerializedCommand_SetProperty_AppliesImmediately)
+TEST_F(EditorCommandTests_CommandQueue, SetProperty_AppliesImmediately)
 {
     const AssetId sceneId = GetActiveSceneAssetId();
-    nlohmann::json createData;
-    createData["sceneAssetId"] = sceneId.ToString();
-    createData["className"] = "GameObject";
-    ExecLegacy("EditorCommand_CreateGameObject", createData);
+    const std::string goId = ExecCreateGameObject();
+    ASSERT_FALSE(goId.empty());
 
     GameObject* go = nullptr;
     for (GameObject* g : m_core->GetWorld()->GetGameObjects())
     {
-        if (g->GetName() == "New GameObject")
+        if (g->GetObjectId().ToString() == goId)
         {
             go = g;
             break;
@@ -47,62 +50,25 @@ TEST_F(EditorCommandTests_CommandQueue, ExecuteSerializedCommand_SetProperty_App
     }
     ASSERT_NE(go, nullptr);
 
-    nlohmann::json spData;
-    spData["assetId"] = sceneId.ToString();
-    spData["objectId"] = go->GetObjectId().ToString();
-    spData["propertyName"] = "m_name";
-    spData["valueBefore"] = nlohmann::json();
-    spData["valueAfter"] = "FromQueue";
-    ExecLegacy("EditorCommand_SetProperty", spData);
-
+    EXPECT_TRUE(SetProperty(sceneId, goId, "m_name", "FromQueue"));
     EXPECT_EQ(go->GetName(), "FromQueue");
 }
 
-TEST_F(EditorCommandTests_CommandQueue, ExecuteSerializedCommand_UnknownType_ReturnsErrorAndContinues)
+TEST_F(EditorCommandTests_CommandQueue, InvalidObjectId_SkipsGracefully)
 {
     const AssetId sceneId = GetActiveSceneAssetId();
-    const nlohmann::json bad = m_core->ExecuteSerializedCommand(
-        nlohmann::json::parse(R"({"type":"NonExistent","data":{}})"));
-    EXPECT_FALSE(bad.value("ok", true));
-
-    nlohmann::json createData;
-    createData["sceneAssetId"] = sceneId.ToString();
-    createData["className"] = "GameObject";
-    ExecLegacy("EditorCommand_CreateGameObject", createData);
-
-    EXPECT_FALSE(m_core->GetWorld()->GetGameObjects().empty());
-}
-
-TEST_F(EditorCommandTests_CommandQueue, ExecuteSerializedCommand_InvalidObjectId_SkipsGracefully)
-{
-    EditorCommandContext ctx{ *m_core };
-    const AssetId sceneId = GetActiveSceneAssetId();
-    ASSERT_TRUE(m_core->GetCommandManager().Execute(
-        std::make_unique<EditorCommand_CreateGameObject>(sceneId, "GameObject"), ctx));
+    ASSERT_FALSE(ExecCreateGameObject().empty());
     const size_t depthBefore = m_core->GetCommandManager().GetUndoStackDepth();
 
-    nlohmann::json spData;
-    spData["assetId"] = sceneId.ToString();
-    spData["objectId"] = "11111111-1111-1111-1111-111111111111";
-    spData["propertyName"] = "m_name";
-    spData["valueAfter"] = "X";
-    ExecLegacy("EditorCommand_SetProperty", spData);
+    SetProperty(sceneId, "11111111-1111-1111-1111-111111111111", "m_name", "X");
 
     EXPECT_EQ(m_core->GetCommandManager().GetUndoStackDepth(), depthBefore);
 }
 
-TEST_F(EditorCommandTests_CommandQueue, ExecuteSerializedCommand_ManyCreates_ProduceDistinctObjects)
+TEST_F(EditorCommandTests_CommandQueue, ManyCreates_ProduceDistinctObjects)
 {
-    const AssetId sceneId = GetActiveSceneAssetId();
-    const std::string sceneStr = sceneId.ToString();
-
     for (int i = 0; i < 100; ++i)
-    {
-        nlohmann::json createData;
-        createData["sceneAssetId"] = sceneStr;
-        createData["className"] = "GameObject";
-        ExecLegacy("EditorCommand_CreateGameObject", createData);
-    }
+        ASSERT_FALSE(ExecCreateGameObject().empty());
 
     std::set<ObjectId> ids;
     for (GameObject* g : m_core->GetWorld()->GetGameObjects())
@@ -112,14 +78,7 @@ TEST_F(EditorCommandTests_CommandQueue, ExecuteSerializedCommand_ManyCreates_Pro
     EXPECT_EQ(m_core->GetWorld()->GetGameObjects().size(), 100);
 }
 
-TEST_F(EditorCommandTests_CommandQueue, ExecuteSerializedCommand_CreateGameObject_ResultHasObjectId)
+TEST_F(EditorCommandTests_CommandQueue, CreateGameObject_ReturnsObjectId)
 {
-    const AssetId sceneId = GetActiveSceneAssetId();
-    nlohmann::json createData;
-    createData["sceneAssetId"] = sceneId.ToString();
-    createData["className"] = "GameObject";
-    const nlohmann::json resp = ExecLegacy("EditorCommand_CreateGameObject", createData);
-
-    EXPECT_TRUE(resp.value("ok", false));
-    EXPECT_FALSE(resp.value("objectId", "").empty());
+    EXPECT_FALSE(ExecCreateGameObject().empty());
 }

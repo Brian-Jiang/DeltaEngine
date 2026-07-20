@@ -40,15 +40,7 @@ protected:
         const std::string goId = CreateLegacyGameObject();
         if (goId.empty()) return nullptr;
 
-        json data;
-        data["sceneAssetId"] = GetActiveSceneAssetId().ToString();
-        data["gameObjectId"] = goId;
-        data["className"]    = "PointLight";
-        json env;
-        env["type"] = "EditorCommand_CreateComponent";
-        env["data"] = data;
-        const std::string plId =
-            m_core->ExecuteSerializedCommand(env).value("objectId", std::string{});
+        const std::string plId = ExecCreateComponent(goId, "PointLight");
         if (plId.empty()) return nullptr;
 
         ObjectId oid = UUID::FromString(plId);
