@@ -42,11 +42,19 @@ namespace
 }
 
 EditorCommand_DuplicateGameObject::EditorCommand_DuplicateGameObject(
-    AssetId assetId, ObjectId sourceGameObjectId, std::string newName)
+    AssetId assetId, ObjectId sourceGameObjectId, std::string newName,
+    std::optional<std::array<float, 3>> offsetPosition)
     : m_assetId(assetId)
     , m_sourceGameObjectId(sourceGameObjectId)
     , m_newName(std::move(newName))
 {
+    if (offsetPosition)
+    {
+        m_offset[0] = (*offsetPosition)[0];
+        m_offset[1] = (*offsetPosition)[1];
+        m_offset[2] = (*offsetPosition)[2];
+        m_hasOffset = true;
+    }
 }
 
 std::string_view EditorCommand_DuplicateGameObject::GetDescription() const

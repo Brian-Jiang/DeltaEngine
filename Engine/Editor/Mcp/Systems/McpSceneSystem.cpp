@@ -26,7 +26,9 @@
 #include "Runtime/Reflection/DEnumProperty.h"
 #include "Runtime/Logging/LogCategory.h"
 
+#include <array>
 #include <memory>
+#include <optional>
 #include <unordered_set>
 
 using namespace DeltaEngine;
@@ -570,18 +572,24 @@ nlohmann::json McpSceneSystem::CommandDuplicateGameObject(EditorCore& core, cons
     if (!params.contains("objectId"))
         return MakeMcpError("missing required param: objectId");
 
-    // DuplicateGameObject carries an optional position offset that is only settable
-    // through Deserialize (no constructor arg), so populate it that way.
-    nlohmann::json data;
-    data["assetId"] = ActiveSceneAssetId(core).ToString();
-    data["sourceObjectId"] = params["objectId"].get<std::string>();
-    if (params.contains("newName") && params["newName"].is_string())
-        data["newName"] = params["newName"].get<std::string>();
-    if (params.contains("offset_position") && params["offset_position"].is_array())
-        data["offsetPosition"] = params["offset_position"];
+    const AssetId assetId = ActiveSceneAssetId(core);
+    const ObjectId sourceObjectId = UUID::FromString(params["objectId"].get<std::string>());
 
-    auto cmd = std::make_unique<EditorCommand_DuplicateGameObject>();
-    cmd->Deserialize(data);
+    std::string newName;
+    if (params.contains("newName") && params["newName"].is_string())
+        newName = params["newName"].get<std::string>();
+
+    std::optional<std::array<float, 3>> offsetPosition;
+    if (params.contains("offset_position") && params["offset_position"].is_array() &&
+        params["offset_position"].size() >= 3)
+    {
+        const auto& off = params["offset_position"];
+        offsetPosition = std::array<float, 3>{
+            off[0].get<float>(), off[1].get<float>(), off[2].get<float>()};
+    }
+
+    auto cmd = std::make_unique<EditorCommand_DuplicateGameObject>(
+        assetId, sourceObjectId, std::move(newName), offsetPosition);
     EditorCommand_DuplicateGameObject* cmdPtr = cmd.get();
 
     nlohmann::json err;

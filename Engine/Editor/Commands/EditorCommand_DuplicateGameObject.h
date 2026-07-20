@@ -6,6 +6,8 @@
 #include "Runtime/Core/UUID.h"
 #include "Runtime/Serialization/ObjectSnapshot.h"
 
+#include <array>
+#include <optional>
 #include <string>
 
 DELTA_ENGINE_NS_BEGIN
@@ -16,7 +18,8 @@ class DELTAEDITOR_API EditorCommand_DuplicateGameObject : public EditorCommand
 public:
     EditorCommand_DuplicateGameObject() = default;
     EditorCommand_DuplicateGameObject(AssetId assetId, ObjectId sourceGameObjectId,
-                                      std::string newName = {});
+                                      std::string newName = {},
+                                      std::optional<std::array<float, 3>> offsetPosition = std::nullopt);
 
     static constexpr std::string_view StaticTypeName() { return "EditorCommand_DuplicateGameObject"; }
     std::string_view GetTypeName() const override { return StaticTypeName(); }
