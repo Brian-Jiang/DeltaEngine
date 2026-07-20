@@ -288,7 +288,7 @@ A full undo/redo command system built on the Command pattern:
 | Class | Role |
 |---|---|
 | `EditorCommand` | Abstract base; `Execute / Undo / Redo / Serialize / Deserialize` |
-| `EditorCommandManager` | Owns undo/redo stacks (max 100 deep); `SerializeUndoStack` / `DeserializeAndReplay` |
+| `EditorCommandManager` | Owns undo/redo stacks (max 100 deep) |
 | `EditorCommandRegistry` | Factory registry; `CommandRegistrar<T>` auto-registers at startup |
 | `EditorCommandContext` | Carries `EditorCore&` through every command call |
 | `EditorCommandBatch` | Groups multiple commands into one undoable unit |

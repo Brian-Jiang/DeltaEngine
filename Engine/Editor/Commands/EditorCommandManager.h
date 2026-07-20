@@ -22,9 +22,6 @@ public:
     DELTAEDITOR_API std::string_view GetUndoDescription() const;
     DELTAEDITOR_API std::string_view GetRedoDescription() const;
 
-    DELTAEDITOR_API void SerializeUndoStack(nlohmann::json& out) const;
-    DELTAEDITOR_API void DeserializeAndReplay(const nlohmann::json& in, EditorCommandContext& ctx);
-
     DELTAEDITOR_API void Clear();
 
     DELTAEDITOR_API size_t GetUndoStackDepth() const;

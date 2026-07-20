@@ -1,6 +1,5 @@
 #include "Editor/Commands/EditorCommandManager.h"
 
-#include "Editor/Commands/EditorCommandRegistry.h"
 #include "Editor/EditorCore.h"
 #include "Editor/Animation/EditorAnimationManager.h"
 
@@ -106,72 +105,6 @@ std::string_view EditorCommandManager::GetRedoDescription() const
     if (m_redoStack.empty())
         return {};
     return m_redoStack.back()->GetDescription();
-}
-
-void EditorCommandManager::SerializeUndoStack(nlohmann::json& out) const
-{
-    auto& arr = out["undoStack"];
-    arr = nlohmann::json::array();
-    for (const auto& cmd : m_undoStack)
-    {
-        nlohmann::json envelope;
-        envelope["type"] = cmd->GetTypeName();
-        cmd->Serialize(envelope["data"]);
-        arr.push_back(std::move(envelope));
-    }
-}
-
-void EditorCommandManager::DeserializeAndReplay(const nlohmann::json& in, EditorCommandContext& ctx)
-{
-    if (!in.contains("undoStack"))
-    {
-        DLOG(LogEditorCommand, ELogLevel::Verbose,
-             "[Command Manager] DeserializeAndReplay: input missing 'undoStack' key — nothing replayed");
-        return;
-    }
-    for (const auto& envelope : in["undoStack"])
-    {
-        const std::string type = envelope.value("type", "");
-        if (type.empty())
-        {
-            DLOG(LogEditorCommand, ELogLevel::Error,
-                 "[Command Manager] DeserializeAndReplay: skipped entry with missing or empty command type "
-                 "(expected envelope['type'])");
-            continue;
-        }
-        if (!envelope.contains("data"))
-        {
-            DLOG(LogEditorCommand, ELogLevel::Error,
-                 "[Command Manager] DeserializeAndReplay: skipped entry for '{}' — missing 'data' object with serialized fields",
-                 type);
-            continue;
-        }
-        if (!envelope["data"].is_object())
-        {
-            DLOG(LogEditorCommand, ELogLevel::Error,
-                 "[Command Manager] DeserializeAndReplay: skipped entry for '{}' — 'data' must be JSON object "
-                 "(actual type discriminator: {})",
-                 type, envelope["data"].type_name());
-            continue;
-        }
-        auto cmd = EditorCommandRegistry::Get().Create(type);
-        if (!cmd)
-            continue;
-
-        try
-        {
-            cmd->Deserialize(envelope["data"]);
-        }
-        catch (const std::exception& e)
-        {
-            DLOG(LogEditorCommand, ELogLevel::Error,
-                 "[Command Manager] DeserializeAndReplay: deserialization failed for command '{}': {} (skipped)",
-                 type, e.what());
-            continue;
-        }
-
-        Execute(std::move(cmd), ctx);
-    }
 }
 
 void EditorCommandManager::Clear()
