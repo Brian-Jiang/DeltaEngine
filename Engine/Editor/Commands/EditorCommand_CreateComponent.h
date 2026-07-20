@@ -26,6 +26,9 @@ public:
     void Serialize(nlohmann::json& out) const override;
     void Deserialize(const nlohmann::json& in) override;
 
+    /** Object id of the component created by Execute (null before Execute). */
+    ObjectId GetCreatedComponentId() const { return m_createdComponentId; }
+
 private:
     AssetId m_sceneAssetId;
     ObjectId m_gameObjectId;

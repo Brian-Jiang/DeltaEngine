@@ -112,7 +112,6 @@ TEST_F(McpAssetsMetaTests, SetAssetDynamicMetadata_DispatchesThroughCommandQueue
     params["new_value"] = "from-mcp";
     auto res = Dispatch("assets", "set_asset_dynamic_metadata", params);
     ASSERT_TRUE(res["ok"].get<bool>());
-    EXPECT_EQ(res.value("commandType", std::string{}), "EditorCommand_SetAssetDynamicMeta");
 
     EXPECT_EQ(m_sceneAsset->GetDynamicMeta()["desc"], "from-mcp");
     EXPECT_EQ(m_core->GetAssetDatabase()->GetAssetMeta(m_sceneId)["dynamic"]["desc"], "from-mcp");

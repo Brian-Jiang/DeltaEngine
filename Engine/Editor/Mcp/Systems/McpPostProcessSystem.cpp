@@ -32,8 +32,18 @@ nlohmann::json McpPostProcessSystem::CommandAddPass(EditorCore& core, const nloh
     if (assetId.IsNull())
         return MakeMcpError("invalid assetId");
 
-    return RunEditorCommand(core, std::make_unique<EditorCommand_AddPostProcessPass>(
-        assetId, params["passClass"].get<std::string>()));
+    auto cmd = std::make_unique<EditorCommand_AddPostProcessPass>(
+        assetId, params["passClass"].get<std::string>());
+    EditorCommand_AddPostProcessPass* cmdPtr = cmd.get();
+
+    nlohmann::json err;
+    if (!ExecuteMcpCommand(core, std::move(cmd), err))
+        return err;
+
+    auto res = MakeMcpOk();
+    res["objectId"] = cmdPtr->GetCreatedObjectId().ToString();
+    res["passIndex"] = cmdPtr->GetPassIndex();
+    return res;
 }
 
 nlohmann::json McpPostProcessSystem::CommandRemovePass(EditorCore& core, const nlohmann::json& params)
@@ -47,6 +57,10 @@ nlohmann::json McpPostProcessSystem::CommandRemovePass(EditorCore& core, const n
     if (assetId.IsNull())
         return MakeMcpError("invalid assetId");
 
-    return RunEditorCommand(core, std::make_unique<EditorCommand_RemovePostProcessPass>(
-        assetId, params["passClass"].get<std::string>()));
+    nlohmann::json err;
+    if (!ExecuteMcpCommand(core, std::make_unique<EditorCommand_RemovePostProcessPass>(
+            assetId, params["passClass"].get<std::string>()), err))
+        return err;
+
+    return MakeMcpOk();
 }

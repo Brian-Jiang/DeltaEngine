@@ -28,6 +28,9 @@ public:
     void Serialize(nlohmann::json& out) const override;
     void Deserialize(const nlohmann::json& in) override;
 
+    /** Object id of the duplicated GameObject created by Execute (null before Execute). */
+    ObjectId GetCreatedObjectId() const { return m_createdId; }
+
 private:
     bool RestoreDuplicate(EditorCommandContext& ctx);
 

@@ -52,8 +52,12 @@ nlohmann::json McpCommonSystem::CommandRenameObject(EditorCore& core, const nloh
     if (targetObjectId.IsNull())
         return MakeMcpError("invalid objectId");
 
-    return RunEditorCommand(core, std::make_unique<EditorCommand_RenameObject>(
-        ResolveAssetId(core, params), targetObjectId, params["newName"].get<std::string>()));
+    nlohmann::json err;
+    if (!ExecuteMcpCommand(core, std::make_unique<EditorCommand_RenameObject>(
+            ResolveAssetId(core, params), targetObjectId, params["newName"].get<std::string>()), err))
+        return err;
+
+    return MakeMcpOk();
 }
 
 nlohmann::json McpCommonSystem::CommandSetProperty(EditorCore& core, const nlohmann::json& params)
@@ -69,10 +73,14 @@ nlohmann::json McpCommonSystem::CommandSetProperty(EditorCore& core, const nlohm
     if (objectId.IsNull())
         return MakeMcpError("invalid objectId");
 
-    return RunEditorCommand(core, std::make_unique<EditorCommand_SetProperty>(
-        ResolveAssetId(core, params), objectId,
-        params["propertyName"].get<std::string>(),
-        nlohmann::json{}, params["valueAfter"]));
+    nlohmann::json err;
+    if (!ExecuteMcpCommand(core, std::make_unique<EditorCommand_SetProperty>(
+            ResolveAssetId(core, params), objectId,
+            params["propertyName"].get<std::string>(),
+            nlohmann::json{}, params["valueAfter"]), err))
+        return err;
+
+    return MakeMcpOk();
 }
 
 nlohmann::json McpCommonSystem::CommandSaveProject(EditorCore& core, const nlohmann::json&)

@@ -44,8 +44,11 @@ nlohmann::json McpLightsSystem::CommandSetIntensity(EditorCore& core, const nloh
     if (duration <= 0.0f)
     {
         // Immediate path: apply via an undoable SetProperty.
-        return RunEditorCommand(core, std::make_unique<EditorCommand_SetProperty>(
-            assetId, objectId, kIntensityProp, nlohmann::json{}, nlohmann::json(target)));
+        nlohmann::json err;
+        if (!ExecuteMcpCommand(core, std::make_unique<EditorCommand_SetProperty>(
+                assetId, objectId, kIntensityProp, nlohmann::json{}, nlohmann::json(target)), err))
+            return err;
+        return MakeMcpOk();
     }
 
     // Animation path.

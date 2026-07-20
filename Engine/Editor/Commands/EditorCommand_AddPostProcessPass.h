@@ -26,6 +26,12 @@ public:
     void Serialize(nlohmann::json& out) const override;
     void Deserialize(const nlohmann::json& in) override;
 
+    /** Object id of the pass created by Execute (null before Execute). */
+    ObjectId GetCreatedObjectId() const { return m_createdId; }
+
+    /** Index the pass was inserted at (-1 before Execute). */
+    int GetPassIndex() const { return m_passIndex; }
+
 private:
     AssetId m_assetId;
     std::string m_className;

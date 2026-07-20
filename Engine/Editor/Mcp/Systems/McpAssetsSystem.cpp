@@ -867,8 +867,12 @@ nlohmann::json McpAssetsSystem::CommandSetAssetDynamicMetadata(EditorCore& core,
     if (!db->LoadAsset(assetId))
         return MakeError("asset not found or failed to load");
 
-    return RunEditorCommand(core, std::make_unique<EditorCommand_SetAssetDynamicMeta>(
-        assetId, jsonPath, params["new_value"]));
+    nlohmann::json err;
+    if (!ExecuteMcpCommand(core, std::make_unique<EditorCommand_SetAssetDynamicMeta>(
+            assetId, jsonPath, params["new_value"]), err))
+        return err;
+
+    return MakeMcpOk();
 }
 
 nlohmann::json McpAssetsSystem::CommandReimportAssets(EditorCore& core, const nlohmann::json& params)

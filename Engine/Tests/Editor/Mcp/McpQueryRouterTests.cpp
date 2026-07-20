@@ -212,7 +212,6 @@ TEST_F(McpQueryRouterTests, Route_CommandRenameObject_ReturnsResultWithRequestId
         {{"objectId", goId}, {"newName", "RenamedViaRouter"}}, "req-rename-drain-1");
 
     EXPECT_TRUE(result["ok"].get<bool>());
-    EXPECT_EQ(result["commandType"].get<std::string>(), "EditorCommand_RenameObject");
 }
 
 TEST_F(McpQueryRouterTests, Route_CommandCreateGameObjectCustomName_ReturnsResultWithObjectId)

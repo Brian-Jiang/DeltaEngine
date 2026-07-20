@@ -514,30 +514,34 @@ nlohmann::json McpSceneSystem::CommandCreateGameObject(EditorCore& core, const n
         return MakeMcpError("No active scene asset");
 
     // Create the GameObject.
-    EditorCommandContext ctx{core};
+    nlohmann::json err;
     auto createCmd = std::make_unique<EditorCommand_CreateGameObject>(sceneAssetId, "GameObject");
     EditorCommand_CreateGameObject* createPtr = createCmd.get();
-    if (!core.GetCommandManager().Execute(std::move(createCmd), ctx))
-        return {{"ok", false}, {"commandType", "EditorCommand_CreateGameObject"},
-                {"error", "Execute() returned false"}};
+    if (!ExecuteMcpCommand(core, std::move(createCmd), err))
+        return err;
 
-    nlohmann::json createJson;
-    createPtr->Serialize(createJson);
-    const std::string objectId = createJson.value("createdId", "");
+    const ObjectId createdId = createPtr->GetCreatedObjectId();
+    const std::string objectId = createdId.ToString();
 
     const bool needsRename = !name.empty() && name != "New GameObject";
     if (!needsRename)
-        return {{"ok", true}, {"commandType", "EditorCommand_CreateGameObject"}, {"objectId", objectId}};
+    {
+        auto res = MakeMcpOk();
+        res["objectId"] = objectId;
+        return res;
+    }
 
     // Rename to the requested name as a second undoable step.
-    const ObjectId renameTarget = UUID::FromString(objectId);
-    if (!core.GetCommandManager().Execute(
-            std::make_unique<EditorCommand_RenameObject>(sceneAssetId, renameTarget, name), ctx))
-        return {{"ok", true}, {"commandType", "EditorCommand_CreateGameObject"},
-                {"objectId", objectId},
-                {"error", "rename failed: Execute() returned false"}};
+    if (!ExecuteMcpCommand(
+            core, std::make_unique<EditorCommand_RenameObject>(sceneAssetId, createdId, name), err))
+    {
+        err["objectId"] = objectId;
+        return err;
+    }
 
-    return {{"ok", true}, {"commandType", "EditorCommand_CreateGameObject"}, {"objectId", objectId}};
+    auto res = MakeMcpOk();
+    res["objectId"] = objectId;
+    return res;
 }
 
 // ─── Command: DeleteGameObject ──────────────────────────────────────────────
@@ -551,8 +555,12 @@ nlohmann::json McpSceneSystem::CommandDeleteGameObject(EditorCore& core, const n
     if (gameObjectId.IsNull())
         return MakeMcpError("invalid objectId");
 
-    return RunEditorCommand(core, std::make_unique<EditorCommand_DeleteGameObject>(
-        ActiveSceneAssetId(core), gameObjectId));
+    nlohmann::json err;
+    if (!ExecuteMcpCommand(core, std::make_unique<EditorCommand_DeleteGameObject>(
+            ActiveSceneAssetId(core), gameObjectId), err))
+        return err;
+
+    return MakeMcpOk();
 }
 
 // ─── Command: DuplicateGameObject ───────────────────────────────────────────
@@ -574,7 +582,15 @@ nlohmann::json McpSceneSystem::CommandDuplicateGameObject(EditorCore& core, cons
 
     auto cmd = std::make_unique<EditorCommand_DuplicateGameObject>();
     cmd->Deserialize(data);
-    return RunEditorCommand(core, std::move(cmd));
+    EditorCommand_DuplicateGameObject* cmdPtr = cmd.get();
+
+    nlohmann::json err;
+    if (!ExecuteMcpCommand(core, std::move(cmd), err))
+        return err;
+
+    auto res = MakeMcpOk();
+    res["objectId"] = cmdPtr->GetCreatedObjectId().ToString();
+    return res;
 }
 
 // ─── Command: ReparentSceneComponent ────────────────────────────────────────
@@ -593,8 +609,12 @@ nlohmann::json McpSceneSystem::CommandReparentSceneComponent(EditorCore& core, c
     if (newParentObjectId.IsNull())
         return MakeMcpError("invalid newParentId");
 
-    return RunEditorCommand(core, std::make_unique<EditorCommand_ReparentSceneComponent>(
-        ActiveSceneAssetId(core), childObjectId, newParentObjectId));
+    nlohmann::json err;
+    if (!ExecuteMcpCommand(core, std::make_unique<EditorCommand_ReparentSceneComponent>(
+            ActiveSceneAssetId(core), childObjectId, newParentObjectId), err))
+        return err;
+
+    return MakeMcpOk();
 }
 
 // ─── Command: CreateComponent ───────────────────────────────────────────────
@@ -610,8 +630,17 @@ nlohmann::json McpSceneSystem::CommandCreateComponent(EditorCore& core, const nl
     if (gameObjectId.IsNull())
         return MakeMcpError("invalid objectId");
 
-    return RunEditorCommand(core, std::make_unique<EditorCommand_CreateComponent>(
-        ActiveSceneAssetId(core), gameObjectId, params["componentClass"].get<std::string>()));
+    auto cmd = std::make_unique<EditorCommand_CreateComponent>(
+        ActiveSceneAssetId(core), gameObjectId, params["componentClass"].get<std::string>());
+    EditorCommand_CreateComponent* cmdPtr = cmd.get();
+
+    nlohmann::json err;
+    if (!ExecuteMcpCommand(core, std::move(cmd), err))
+        return err;
+
+    auto res = MakeMcpOk();
+    res["objectId"] = cmdPtr->GetCreatedComponentId().ToString();
+    return res;
 }
 
 // ─── Command: DeleteComponent ───────────────────────────────────────────────
@@ -638,8 +667,12 @@ nlohmann::json McpSceneSystem::CommandDeleteComponent(EditorCore& core, const nl
     const ObjectId ownerObjectId = owner->GetObjectId();
     const ObjectId componentId = comp->GetObjectId();
 
-    return RunEditorCommand(core, std::make_unique<EditorCommand_DeleteComponent>(
-        ActiveSceneAssetId(core), ownerObjectId, componentId));
+    nlohmann::json err;
+    if (!ExecuteMcpCommand(core, std::make_unique<EditorCommand_DeleteComponent>(
+            ActiveSceneAssetId(core), ownerObjectId, componentId), err))
+        return err;
+
+    return MakeMcpOk();
 }
 
 // ─── Shared helper: resolve a SceneComponent from an objectId string ────────
@@ -815,8 +848,11 @@ nlohmann::json McpSceneSystem::CommandSetPosition(EditorCore& core, const nlohma
                 XMMatrixScalingFromVector(scl) * XMMatrixRotationQuaternion(rot) * XMMatrixTranslationFromVector(target);
         }
 
-        return RunEditorCommand(core, std::make_unique<EditorCommand_SetProperty>(
-            scAssetId, scObjectId, "m_localTransform", nlohmann::json{}, MatrixToJson(localMat)));
+        nlohmann::json err;
+        if (!ExecuteMcpCommand(core, std::make_unique<EditorCommand_SetProperty>(
+                scAssetId, scObjectId, "m_localTransform", nlohmann::json{}, MatrixToJson(localMat)), err))
+            return err;
+        return MakeMcpOk();
     }
 
     // Animation path.
@@ -878,8 +914,11 @@ nlohmann::json McpSceneSystem::CommandSetRotation(EditorCore& core, const nlohma
                 XMMatrixScalingFromVector(scl) * XMMatrixRotationQuaternion(target) * XMMatrixTranslationFromVector(pos);
         }
 
-        return RunEditorCommand(core, std::make_unique<EditorCommand_SetProperty>(
-            scAssetId, scObjectId, "m_localTransform", nlohmann::json{}, MatrixToJson(localMat)));
+        nlohmann::json err;
+        if (!ExecuteMcpCommand(core, std::make_unique<EditorCommand_SetProperty>(
+                scAssetId, scObjectId, "m_localTransform", nlohmann::json{}, MatrixToJson(localMat)), err))
+            return err;
+        return MakeMcpOk();
     }
 
     return StartTransformChannelAnimation(
@@ -917,8 +956,11 @@ nlohmann::json McpSceneSystem::CommandSetScale(EditorCore& core, const nlohmann:
         const XMMATRIX localMat =
             XMMatrixScalingFromVector(target) * XMMatrixRotationQuaternion(rot) * XMMatrixTranslationFromVector(pos);
 
-        return RunEditorCommand(core, std::make_unique<EditorCommand_SetProperty>(
-            scAssetId, scObjectId, "m_localTransform", nlohmann::json{}, MatrixToJson(localMat)));
+        nlohmann::json err;
+        if (!ExecuteMcpCommand(core, std::make_unique<EditorCommand_SetProperty>(
+                scAssetId, scObjectId, "m_localTransform", nlohmann::json{}, MatrixToJson(localMat)), err))
+            return err;
+        return MakeMcpOk();
     }
 
     return StartTransformChannelAnimation(
