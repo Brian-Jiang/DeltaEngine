@@ -47,12 +47,8 @@ protected:
         json env;
         env["type"] = "EditorCommand_CreateComponent";
         env["data"] = data;
-        m_core->EnqueueSerializedCommand(env.dump());
-        std::vector<std::string> r;
-        m_core->DrainCommandQueue(r);
-        if (r.empty()) return nullptr;
-
-        const std::string plId = json::parse(r[0]).value("objectId", std::string{});
+        const std::string plId =
+            m_core->ExecuteSerializedCommand(env).value("objectId", std::string{});
         if (plId.empty()) return nullptr;
 
         ObjectId oid = UUID::FromString(plId);

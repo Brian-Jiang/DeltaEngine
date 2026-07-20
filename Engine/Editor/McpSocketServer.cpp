@@ -193,16 +193,3 @@ void McpSocketServer::DoWrite(std::string line)
     asio::async_write(m_clientSock, asio::buffer(*buf),
         [buf](asio::error_code, std::size_t) {});
 }
-
-void McpSocketServer::SendResponse(const std::string& jsonLine)
-{
-    asio::post(m_ioc, [this, line = jsonLine]() mutable {
-        if (m_clientConnected)
-            DoWrite(std::move(line));
-        else
-            DLOG(LogMcpServer,
-                 ELogLevel::Verbose,
-                 "MCP SendResponse skipped: no client connected (payload {} bytes)",
-                 line.size());
-    });
-}

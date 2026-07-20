@@ -34,7 +34,7 @@ nlohmann::json McpLightsSystem::CommandSetIntensity(EditorCore& core, const nloh
 
     if (duration <= 0.0f)
     {
-        // Immediate path: enqueue EditorCommand_SetProperty for main-thread execution via DrainCommandQueue.
+        // Immediate path: execute EditorCommand_SetProperty synchronously.
         nlohmann::json envelope;
         envelope["type"]    = "command";
         envelope["command"] = "EditorCommand_SetProperty";
@@ -44,12 +44,11 @@ nlohmann::json McpLightsSystem::CommandSetIntensity(EditorCore& core, const nloh
             {"propertyName", "m_intensity"},
             {"valueAfter",   target}
         };
-        core.EnqueueSerializedCommand(envelope.dump());
-        return {{"ok", true}, {"queued", true}, {"expects_result", true}};
+        return core.ExecuteSerializedCommand(envelope);
     }
     else
     {
-        // Animation path: enqueue auxiliary for main-thread execution via DrainCommandQueue.
+        // Animation path: execute the light-animation auxiliary synchronously.
         nlohmann::json envelope;
         envelope["type"]         = "auxiliary";
         envelope["name"]         = "StartLightAnimation";
@@ -58,7 +57,6 @@ nlohmann::json McpLightsSystem::CommandSetIntensity(EditorCore& core, const nloh
         envelope["propertyName"] = "m_intensity";
         envelope["targetValue"]  = target;
         envelope["duration"]     = duration;
-        core.EnqueueSerializedCommand(envelope.dump());
-        return {{"ok", true}, {"queued", true}, {"expects_result", false}};
+        return core.ExecuteSerializedCommand(envelope);
     }
 }

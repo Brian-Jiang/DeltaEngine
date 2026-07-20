@@ -126,7 +126,6 @@ EXEC_RESULT_TIMEOUT_S = 30.0
 _sock: socket.socket | None = None
 _buf: str = ""
 _request_id_counter = 0
-_orphan_buffer: list[dict] = []
 
 _STRIP_KEYS = frozenset({"phase", "request_id", "queued", "expects_result"})
 
@@ -196,9 +195,7 @@ def _strip_response(data: dict) -> dict:
     return {k: v for k, v in data.items() if k not in _STRIP_KEYS}
 
 
-def _read_matching_line(phase: str, request_id: str, timeout_s: float) -> dict | None:
-    global _orphan_buffer
-
+def _read_matching_line(request_id: str, timeout_s: float) -> dict | None:
     deadline = time.monotonic() + timeout_s
     while True:
         remaining = deadline - time.monotonic()
@@ -210,11 +207,10 @@ def _read_matching_line(phase: str, request_id: str, timeout_s: float) -> dict |
         except TimeoutError:
             return None
 
-        if line.get("phase") == phase and line.get("request_id") == request_id:
+        # Single response per request; skip any stray line (e.g. a late reply
+        # from a previously timed-out request) that doesn't match this request_id.
+        if line.get("request_id") == request_id:
             return line
-
-        if line.get("phase") == "result":
-            _orphan_buffer.append(line)
 
 
 def _send_query(payload: dict) -> dict:
@@ -247,27 +243,15 @@ def _send_mcp_command(payload: dict) -> dict:
             return err
         _sock.sendall((json.dumps(envelope) + "\n").encode())
 
-        accept = _read_matching_line("accept", request_id, ACCEPT_TIMEOUT_S)
-        if accept is None:
+        # Commands execute synchronously on the editor main thread and return their
+        # real result in a single response.
+        result = _read_matching_line(request_id, EXEC_RESULT_TIMEOUT_S)
+        if result is None:
             return {
                 "ok": False,
-                "error": f"Timed out after {ACCEPT_TIMEOUT_S}s waiting for command accept",
+                "error": f"Timed out after {EXEC_RESULT_TIMEOUT_S}s waiting for command result",
             }
-
-        if not accept.get("ok") or not accept.get("expects_result"):
-            return _strip_response(accept)
-
-        result = _read_matching_line("result", request_id, EXEC_RESULT_TIMEOUT_S)
-        if result is not None:
-            return _strip_response(result)
-
-        return {
-            **_strip_response(accept),
-            "execution_pending": True,
-            "timeout_message": (
-                f"Timed out after {EXEC_RESULT_TIMEOUT_S}s waiting for command result"
-            ),
-        }
+        return _strip_response(result)
     except Exception as e:
         _close_connection()
         return {"ok": False, "error": str(e)}
@@ -349,15 +333,13 @@ def execute_batch(operations: list[dict]) -> dict:
       Example:
         {"type":"command","system":"scene","command":"CreateGameObject","params":{"name":"Sun"}}
 
-    Commands use the two-phase wire protocol internally (see PROTOCOL.md):
-      - Queries: one synchronous response.
-      - Commands: immediate accept envelope, then optional result after editor
-        main-thread execution when expects_result is true.
-      - Caller-visible results strip wire fields (phase, request_id, queued,
-        expects_result).
-      - On result timeout (30s), the command entry returns the stripped accept
-        plus execution_pending:true and timeout_message; the TCP socket stays
-        open. Re-query scene state rather than retrying the same command.
+    Wire protocol (see PROTOCOL.md):
+      - Queries and commands both return a single synchronous response; the editor
+        executes each on its main thread and replies once.
+      - Caller-visible results strip wire fields (request_id and any legacy
+        phase/queued/expects_result keys).
+      - On result timeout (30s), the command entry returns a structured error; the
+        TCP socket stays open. Re-query scene state rather than blindly retrying.
 
     Terminology:
       - query     = read-only operation

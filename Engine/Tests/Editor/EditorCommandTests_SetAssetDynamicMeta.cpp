@@ -254,12 +254,7 @@ TEST_F(EditorCommandTests_SetAssetDynamicMeta, SerializedReplay_ViaQueue)
     env["type"] = std::string(EditorCommand_SetAssetDynamicMeta::StaticTypeName());
     env["data"] = data;
 
-    m_core->EnqueueSerializedCommand(env.dump());
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-
-    ASSERT_EQ(responses.size(), 1u);
-    auto resp = nlohmann::json::parse(responses[0]);
+    const nlohmann::json resp = m_core->ExecuteSerializedCommand(env);
     EXPECT_TRUE(resp.value("ok", false));
 
     EXPECT_EQ(m_asset->GetDynamicMeta()["desc"], "from-queue");

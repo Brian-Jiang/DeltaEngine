@@ -26,7 +26,7 @@ nlohmann::json McpPostProcessSystem::CommandAddPass(EditorCore& core, const nloh
     nlohmann::json data;
     data["assetId"] = params["assetId"].get<std::string>();
     data["className"] = params["passClass"].get<std::string>();
-    return EnqueueMcpCommand(core, "post_process", "EditorCommand_AddPostProcessPass", std::move(data), true);
+    return ExecuteMcpCommand(core, "post_process", "EditorCommand_AddPostProcessPass", std::move(data));
 }
 
 nlohmann::json McpPostProcessSystem::CommandRemovePass(EditorCore& core, const nlohmann::json& params)
@@ -39,5 +39,5 @@ nlohmann::json McpPostProcessSystem::CommandRemovePass(EditorCore& core, const n
     nlohmann::json data;
     data["assetId"] = params["assetId"].get<std::string>();
     data["className"] = params["passClass"].get<std::string>();
-    return EnqueueMcpCommand(core, "post_process", "EditorCommand_RemovePostProcessPass", std::move(data), true);
+    return ExecuteMcpCommand(core, "post_process", "EditorCommand_RemovePostProcessPass", std::move(data));
 }

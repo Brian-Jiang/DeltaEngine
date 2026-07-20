@@ -64,56 +64,22 @@ TEST_F(EditorCoreTests, GetIdsForObject_RoundTripsLoadedSceneAsset)
     EXPECT_EQ(oid, first->GetObjectId());
 }
 
-TEST_F(EditorCoreTests, EnqueueSerializedCommand_EmptyPayload_DroppedSilently)
+TEST_F(EditorCoreTests, ExecuteSerializedCommand_MissingType_ReturnsError)
 {
-    m_core->EnqueueSerializedCommand("");
-
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-
-    EXPECT_TRUE(responses.empty());
-}
-
-TEST_F(EditorCoreTests, DrainCommandQueue_JsonParseError_ReturnsErrorEnvelope)
-{
-    m_core->EnqueueSerializedCommand("not json {{");
-
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-
-    ASSERT_EQ(responses.size(), 1u);
-    const auto j = nlohmann::json::parse(responses[0]);
-    EXPECT_FALSE(j.value("ok", true));
-    EXPECT_NE(j.value("error", std::string{}).find("JSON parse error"), std::string::npos);
-}
-
-TEST_F(EditorCoreTests, DrainCommandQueue_MissingType_ReturnsErrorEnvelope)
-{
-    m_core->EnqueueSerializedCommand(R"({"data":{}})");
-
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-
-    ASSERT_EQ(responses.size(), 1u);
-    const auto j = nlohmann::json::parse(responses[0]);
+    const auto j = m_core->ExecuteSerializedCommand(nlohmann::json::parse(R"({"data":{}})"));
     EXPECT_FALSE(j.value("ok", true));
     EXPECT_NE(j.value("error", std::string{}).find("type"), std::string::npos);
 }
 
-TEST_F(EditorCoreTests, DrainCommandQueue_UnknownCommand_ReturnsErrorEnvelope)
+TEST_F(EditorCoreTests, ExecuteSerializedCommand_UnknownCommand_ReturnsError)
 {
-    m_core->EnqueueSerializedCommand(R"({"type":"EditorCommand_NoSuchThing","data":{}})");
-
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-
-    ASSERT_EQ(responses.size(), 1u);
-    const auto j = nlohmann::json::parse(responses[0]);
+    const auto j = m_core->ExecuteSerializedCommand(
+        nlohmann::json::parse(R"({"type":"EditorCommand_NoSuchThing","data":{}})"));
     EXPECT_FALSE(j.value("ok", true));
     EXPECT_EQ(j.value("commandType", std::string{}), "EditorCommand_NoSuchThing");
 }
 
-TEST_F(EditorCoreTests, DrainCommandQueue_WithEmbeddedRequestId_WrapsResult)
+TEST_F(EditorCoreTests, ExecuteSerializedCommand_CreateGameObject_ReturnsResult)
 {
     const AssetId sceneId = GetActiveSceneAssetId();
     nlohmann::json data;
@@ -122,40 +88,20 @@ TEST_F(EditorCoreTests, DrainCommandQueue_WithEmbeddedRequestId_WrapsResult)
     nlohmann::json envelope;
     envelope["type"] = "EditorCommand_CreateGameObject";
     envelope["data"] = data;
-    envelope["request_id"] = "req-direct-1";
 
-    m_core->EnqueueSerializedCommand(envelope.dump());
-
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-
-    ASSERT_EQ(responses.size(), 1u);
-    const auto j = nlohmann::json::parse(responses[0]);
-    EXPECT_EQ(j["phase"].get<std::string>(), "result");
-    EXPECT_EQ(j["request_id"].get<std::string>(), "req-direct-1");
+    const auto j = m_core->ExecuteSerializedCommand(envelope);
     EXPECT_TRUE(j["ok"].get<bool>());
     EXPECT_EQ(j["commandType"].get<std::string>(), "EditorCommand_CreateGameObject");
     EXPECT_FALSE(j["objectId"].get<std::string>().empty());
 }
 
-TEST_F(EditorCoreTests, EnqueueSerializedCommand_ActiveRequestId_EmbedsInEnvelope)
+TEST_F(EditorCoreTests, ExecuteSerializedCommand_SaveDirtyAssetsAuxiliary_Succeeds)
 {
-    m_core->SetActiveMcpRequestId("req-active-2");
-
     nlohmann::json envelope;
     envelope["type"] = "auxiliary";
     envelope["name"] = "SaveDirtyAssets";
-    m_core->EnqueueSerializedCommand(envelope.dump());
 
-    m_core->ClearActiveMcpRequestId();
-
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-
-    ASSERT_EQ(responses.size(), 1u);
-    const auto j = nlohmann::json::parse(responses[0]);
-    EXPECT_EQ(j["phase"].get<std::string>(), "result");
-    EXPECT_EQ(j["request_id"].get<std::string>(), "req-active-2");
+    const auto j = m_core->ExecuteSerializedCommand(envelope);
     EXPECT_TRUE(j["ok"].get<bool>());
     EXPECT_EQ(j["commandType"].get<std::string>(), "SaveDirtyAssets");
 }

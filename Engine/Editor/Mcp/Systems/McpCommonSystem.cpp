@@ -30,7 +30,7 @@ nlohmann::json McpCommonSystem::CommandRenameObject(EditorCore& core, const nloh
     data["newName"] = params["newName"].get<std::string>();
     if (params.contains("assetId"))
         data["assetId"] = params["assetId"].get<std::string>();
-    return EnqueueMcpCommand(core, "common", "EditorCommand_RenameObject", std::move(data), true);
+    return ExecuteMcpCommand(core, "common", "EditorCommand_RenameObject", std::move(data));
 }
 
 nlohmann::json McpCommonSystem::CommandSetProperty(EditorCore& core, const nlohmann::json& params)
@@ -48,7 +48,7 @@ nlohmann::json McpCommonSystem::CommandSetProperty(EditorCore& core, const nlohm
     data["valueAfter"] = params["valueAfter"];
     if (params.contains("assetId"))
         data["assetId"] = params["assetId"].get<std::string>();
-    return EnqueueMcpCommand(core, "common", "EditorCommand_SetProperty", std::move(data), true);
+    return ExecuteMcpCommand(core, "common", "EditorCommand_SetProperty", std::move(data));
 }
 
 nlohmann::json McpCommonSystem::CommandSaveProject(EditorCore& core, const nlohmann::json&)
@@ -56,6 +56,5 @@ nlohmann::json McpCommonSystem::CommandSaveProject(EditorCore& core, const nlohm
     nlohmann::json envelope;
     envelope["type"] = "auxiliary";
     envelope["name"] = "SaveDirtyAssets";
-    core.EnqueueSerializedCommand(envelope.dump());
-    return { {"ok", true}, {"queued", true}, {"command", "SaveDirtyAssets"}, {"expects_result", false} };
+    return core.ExecuteSerializedCommand(envelope);
 }

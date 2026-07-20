@@ -121,6 +121,5 @@ nlohmann::json McpProjectSystem::CommandLoadScene(EditorCore& core, const nlohma
     envelope["name"]      = "LoadScene";
     envelope["scenePath"] = scenePath.string();
 
-    core.EnqueueSerializedCommand(envelope.dump());
-    return { {"ok", true}, {"queued", true}, {"command", "LoadScene"}, {"expects_result", false} };
+    return core.ExecuteSerializedCommand(envelope);
 }

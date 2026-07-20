@@ -35,17 +35,15 @@ void SendLine(asio::ip::tcp::socket& sock, const std::string& line)
 
 } // namespace
 
-TEST(McpSocketServerTests, Command_TwoPhaseAcceptThenSendResponse)
+TEST(McpSocketServerTests, Command_SingleSyncResponse)
 {
     McpSocketServer server(
         [](const std::string& line) {
             const json inbound = json::parse(line);
-            const std::string requestId = inbound.value("request_id", "test-id");
-            return MakeAcceptResponse(
-                       requestId,
-                       "CreateGameObject",
-                       json{{"ok", true}, {"queued", true}, {"expects_result", true}})
-                .dump();
+            json out{{"ok", true}, {"objectId", "obj-sock-1"}};
+            if (inbound.contains("request_id"))
+                out["request_id"] = inbound["request_id"];
+            return out.dump();
         },
         [](const std::string&) { return json{{"ok", true}, {"objects", json::array()}}.dump(); });
 
@@ -60,19 +58,10 @@ TEST(McpSocketServerTests, Command_TwoPhaseAcceptThenSendResponse)
         client,
         R"({"type":"command","system":"scene","command":"CreateGameObject","params":{},"request_id":"req-sock-1"})");
 
-    const json accept = json::parse(ReadLine(client));
-    EXPECT_EQ(accept["phase"].get<std::string>(), "accept");
-    EXPECT_EQ(accept["request_id"].get<std::string>(), "req-sock-1");
-    EXPECT_TRUE(accept["expects_result"].get<bool>());
-
-    server.SendResponse(
-        MakeResultResponse("req-sock-1", json{{"ok", true}, {"objectId", "obj-sock-1"}}).dump());
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
-
     const json result = json::parse(ReadLine(client));
-    EXPECT_EQ(result["phase"].get<std::string>(), "result");
+    EXPECT_FALSE(result.contains("phase"));
     EXPECT_EQ(result["request_id"].get<std::string>(), "req-sock-1");
+    EXPECT_TRUE(result["ok"].get<bool>());
     EXPECT_EQ(result["objectId"].get<std::string>(), "obj-sock-1");
 
     server.Stop();

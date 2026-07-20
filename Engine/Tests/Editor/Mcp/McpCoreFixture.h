@@ -53,12 +53,7 @@ protected:
         nlohmann::json env;
         env["type"] = "EditorCommand_CreateGameObject";
         env["data"] = data;
-        m_core->EnqueueSerializedCommand(env.dump());
-        std::vector<std::string> responses;
-        m_core->DrainCommandQueue(responses);
-        if (responses.empty())
-            return {};
-        return nlohmann::json::parse(responses[0]).value("objectId", std::string{});
+        return m_core->ExecuteSerializedCommand(env).value("objectId", std::string{});
     }
 };
 

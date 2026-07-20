@@ -32,28 +32,18 @@ protected:
         json env;
         env["type"] = "EditorCommand_CreateComponent";
         env["data"] = data;
-        m_core->EnqueueSerializedCommand(env.dump());
-        std::vector<std::string> r;
-        m_core->DrainCommandQueue(r);
-        if (r.empty())
-            return {};
-        return json::parse(r[0]).value("objectId", std::string{});
+        return m_core->ExecuteSerializedCommand(env).value("objectId", std::string{});
     }
 
-    // Dispatch a lights command and drain the queue; returns the drain response.
+    // Dispatch a lights command synchronously; returns its real result.
     json DispatchAndDrain(const std::string& op, const json& params = json::object())
     {
-        Dispatch("lights", op, params);
-        std::vector<std::string> responses;
-        m_core->DrainCommandQueue(responses);
-        if (responses.empty())
-            return {{"ok", false}, {"error", "no response from drain"}};
-        return json::parse(responses[0]);
+        return Dispatch("lights", op, params);
     }
 };
 
 // SetIntensity: immediately applies the value in headless mode (no animation manager).
-// With duration > 0 but no animation manager, DrainCommandQueue falls back to SetProperty.
+// With duration > 0 but no animation manager, it falls back to SetProperty.
 TEST_F(McpLightsSystemTests, SetIntensity_Headless_ImmediatelyAppliesValue)
 {
     const std::string plId = CreatePointLight();

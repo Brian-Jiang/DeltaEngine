@@ -10,13 +10,27 @@
 #include <nlohmann/json.hpp>
 
 #include <string>
-#include <vector>
 
 using json = nlohmann::json;
 using namespace DeltaEngine;
 using namespace DeltaEngine::Tests;
 
-class McpSceneSystemTests : public McpCoreFixture {};
+class McpSceneSystemTests : public McpCoreFixture
+{
+protected:
+    // Adds a component to a GameObject via the legacy command path; returns its objectId.
+    std::string AddComponent(const std::string& goId, const char* className)
+    {
+        json data;
+        data["sceneAssetId"] = GetActiveSceneAssetId().ToString();
+        data["gameObjectId"] = goId;
+        data["className"]    = className;
+        json env;
+        env["type"] = "EditorCommand_CreateComponent";
+        env["data"] = data;
+        return m_core->ExecuteSerializedCommand(env).value("objectId", std::string{});
+    }
+};
 
 // ─── Queries ─────────────────────────────────────────────────────────────────
 
@@ -65,19 +79,7 @@ TEST_F(McpSceneSystemTests, QueryHierarchy_WithRootObjectId_ReturnsTree)
     const std::string goId = CreateLegacyGameObject();
     ASSERT_FALSE(goId.empty());
 
-    // Add PointLight to get a SC id via GetSceneComponents()
-    json data;
-    data["sceneAssetId"] = GetActiveSceneAssetId().ToString();
-    data["gameObjectId"] = goId;
-    data["className"]    = "PointLight";
-    json env;
-    env["type"] = "EditorCommand_CreateComponent";
-    env["data"] = data;
-    m_core->EnqueueSerializedCommand(env.dump());
-    std::vector<std::string> r;
-    m_core->DrainCommandQueue(r);
-    ASSERT_EQ(r.size(), 1u);
-    const std::string plId = json::parse(r[0]).value("objectId", std::string{});
+    const std::string plId = AddComponent(goId, "PointLight");
     ASSERT_FALSE(plId.empty());
 
     auto res = Dispatch("scene", "hierarchy", {{"root_object_id", plId}});
@@ -91,19 +93,7 @@ TEST_F(McpSceneSystemTests, QueryComponent_ByObjectId_ReturnsProperties)
     const std::string goId = CreateLegacyGameObject();
     ASSERT_FALSE(goId.empty());
 
-    // Add PointLight to have a component accessible via GetSceneComponents()
-    json data;
-    data["sceneAssetId"] = GetActiveSceneAssetId().ToString();
-    data["gameObjectId"] = goId;
-    data["className"]    = "PointLight";
-    json env;
-    env["type"] = "EditorCommand_CreateComponent";
-    env["data"] = data;
-    m_core->EnqueueSerializedCommand(env.dump());
-    std::vector<std::string> r;
-    m_core->DrainCommandQueue(r);
-    ASSERT_EQ(r.size(), 1u);
-    const std::string plId = json::parse(r[0]).value("objectId", std::string{});
+    const std::string plId = AddComponent(goId, "PointLight");
     ASSERT_FALSE(plId.empty());
 
     auto res = Dispatch("scene", "component", {{"object_id", plId}});
@@ -139,18 +129,7 @@ TEST_F(McpSceneSystemTests, QueryComponent_IncludeSchema_EnumProperty_HasMetadat
     const std::string goId = CreateLegacyGameObject();
     ASSERT_FALSE(goId.empty());
 
-    json data;
-    data["sceneAssetId"] = GetActiveSceneAssetId().ToString();
-    data["gameObjectId"] = goId;
-    data["className"]    = "ReflectionTestObject";
-    json env;
-    env["type"] = "EditorCommand_CreateComponent";
-    env["data"] = data;
-    m_core->EnqueueSerializedCommand(env.dump());
-    std::vector<std::string> r;
-    m_core->DrainCommandQueue(r);
-    ASSERT_EQ(r.size(), 1u);
-    const std::string compId = json::parse(r[0]).value("objectId", std::string{});
+    const std::string compId = AddComponent(goId, "ReflectionTestObject");
     ASSERT_FALSE(compId.empty());
 
     auto res = Dispatch("scene", "component",
@@ -170,19 +149,7 @@ TEST_F(McpSceneSystemTests, QueryComponentsOnObject_AfterAddingComponent_ListsIt
     const std::string goId = CreateLegacyGameObject();
     ASSERT_FALSE(goId.empty());
 
-    // Add PointLight so there is a known component
-    json data;
-    data["sceneAssetId"] = GetActiveSceneAssetId().ToString();
-    data["gameObjectId"] = goId;
-    data["className"]    = "PointLight";
-    json env;
-    env["type"] = "EditorCommand_CreateComponent";
-    env["data"] = data;
-    m_core->EnqueueSerializedCommand(env.dump());
-    std::vector<std::string> r;
-    m_core->DrainCommandQueue(r);
-    ASSERT_EQ(r.size(), 1u);
-    ASSERT_TRUE(json::parse(r[0])["ok"].get<bool>());
+    ASSERT_FALSE(AddComponent(goId, "PointLight").empty());
 
     auto res = Dispatch("scene", "components_on_object", {{"object_id", goId}});
     EXPECT_TRUE(res["ok"].get<bool>());
@@ -210,65 +177,29 @@ TEST_F(McpSceneSystemTests, QueryFindByProperty_MatchesCreatedGameObject)
     EXPECT_EQ(res["matches"][0]["object_id"].get<std::string>(), goId);
 }
 
-// ─── Commands ────────────────────────────────────────────────────────────────
+// ─── Commands (execute synchronously, return real results) ─────────────────────
 
 TEST_F(McpSceneSystemTests, CommandCreateGameObject_CreatesObject)
 {
-    auto dispatchRes = Dispatch("scene", "CreateGameObject", {{"name", "New GameObject"}});
-    EXPECT_TRUE(dispatchRes["ok"].get<bool>());
-    EXPECT_TRUE(dispatchRes.value("queued", false));
-    EXPECT_TRUE(dispatchRes.value("expects_result", false));
-
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-    ASSERT_EQ(responses.size(), 1u);
-    auto r = json::parse(responses[0]);
-    EXPECT_TRUE(r["ok"].get<bool>());
-    EXPECT_FALSE(r.value("objectId", std::string{}).empty());
+    auto res = Dispatch("scene", "CreateGameObject", {{"name", "New GameObject"}});
+    EXPECT_TRUE(res["ok"].get<bool>());
+    EXPECT_FALSE(res.value("objectId", std::string{}).empty());
 
     EXPECT_EQ(m_core->GetWorld()->GetGameObjects().size(), 1u);
 }
 
-TEST_F(McpSceneSystemTests, CommandCreateGameObject_CustomName_SinglePhase2)
+TEST_F(McpSceneSystemTests, CommandCreateGameObject_CustomName_ReturnsObjectId)
 {
-    auto dispatchRes = Dispatch("scene", "CreateGameObject", {{"name", "MyCustomCube"}});
-    EXPECT_TRUE(dispatchRes["ok"].get<bool>());
-    EXPECT_TRUE(dispatchRes.value("queued", false));
-    EXPECT_TRUE(dispatchRes.value("expects_result", false));
-
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-    ASSERT_EQ(responses.size(), 1u);
-    auto r = json::parse(responses[0]);
-    EXPECT_TRUE(r["ok"].get<bool>());
-    const std::string objectId = r.value("objectId", std::string{});
+    auto res = Dispatch("scene", "CreateGameObject", {{"name", "MyCustomCube"}});
+    EXPECT_TRUE(res["ok"].get<bool>());
+    const std::string objectId = res.value("objectId", std::string{});
     EXPECT_FALSE(objectId.empty());
-    EXPECT_FALSE(r.contains("error"));
+    EXPECT_FALSE(res.contains("error"));
 
     auto queryRes = Dispatch("scene", "game_objects");
     ASSERT_EQ(queryRes["game_objects"].size(), 1u);
     EXPECT_EQ(queryRes["game_objects"][0]["object_id"].get<std::string>(), objectId);
     EXPECT_EQ(queryRes["game_objects"][0]["name"].get<std::string>(), "MyCustomCube");
-}
-
-TEST_F(McpSceneSystemTests, CommandCreateGameObject_CustomName_ExpectsResultTrue)
-{
-    auto* reg = m_core->GetMcpRegistry();
-    ASSERT_NE(reg, nullptr);
-    const McpQueryRouter router(*m_core, *reg);
-
-    json env;
-    env["type"]        = "command";
-    env["system"]      = "scene";
-    env["command"]     = "CreateGameObject";
-    env["params"]      = {{"name", "CustomNameGO"}};
-    env["request_id"]  = "req-custom-name";
-
-    const json accept = json::parse(router.Route(env.dump()));
-    EXPECT_EQ(accept["phase"].get<std::string>(), "accept");
-    EXPECT_EQ(accept["request_id"].get<std::string>(), "req-custom-name");
-    EXPECT_TRUE(accept["expects_result"].get<bool>());
-    EXPECT_TRUE(accept["queued"].get<bool>());
 }
 
 TEST_F(McpSceneSystemTests, CommandCreateGameObject_RenameFailure_ReportsErrorInResult)
@@ -278,12 +209,8 @@ TEST_F(McpSceneSystemTests, CommandCreateGameObject_RenameFailure_ReportsErrorIn
     envelope["name"]               = "CreateGameObjectWithRename";
     envelope["desiredName"]        = "ShouldFailRename";
     envelope["forceRenameFailure"] = true;
-    m_core->EnqueueSerializedCommand(envelope.dump());
+    const json r = m_core->ExecuteSerializedCommand(envelope);
 
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-    ASSERT_EQ(responses.size(), 1u);
-    auto r = json::parse(responses[0]);
     EXPECT_TRUE(r["ok"].get<bool>());
     EXPECT_FALSE(r.value("objectId", std::string{}).empty());
     ASSERT_TRUE(r.contains("error"));
@@ -296,13 +223,8 @@ TEST_F(McpSceneSystemTests, CommandDeleteGameObject_RemovesObject)
     ASSERT_FALSE(goId.empty());
     ASSERT_EQ(m_core->GetWorld()->GetGameObjects().size(), 1u);
 
-    auto dispatchRes = Dispatch("scene", "DeleteGameObject", {{"objectId", goId}});
-    EXPECT_TRUE(dispatchRes["ok"].get<bool>());
-
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-    ASSERT_EQ(responses.size(), 1u);
-    EXPECT_TRUE(json::parse(responses[0])["ok"].get<bool>());
+    auto res = Dispatch("scene", "DeleteGameObject", {{"objectId", goId}});
+    EXPECT_TRUE(res["ok"].get<bool>());
 
     EXPECT_EQ(m_core->GetWorld()->GetGameObjects().size(), 0u);
 }
@@ -312,29 +234,11 @@ TEST_F(McpSceneSystemTests, CommandDuplicateGameObject_CreatesIndependentCopy)
     const std::string goId = CreateLegacyGameObject();
     ASSERT_FALSE(goId.empty());
 
-    // Add a PointLight so the duplicate has a component subtree to clone.
-    json data;
-    data["sceneAssetId"] = GetActiveSceneAssetId().ToString();
-    data["gameObjectId"] = goId;
-    data["className"]    = "PointLight";
-    json env;
-    env["type"] = "EditorCommand_CreateComponent";
-    env["data"] = data;
-    m_core->EnqueueSerializedCommand(env.dump());
-    std::vector<std::string> cr;
-    m_core->DrainCommandQueue(cr);
-    const std::string plId = json::parse(cr[0]).value("objectId", std::string{});
+    const std::string plId = AddComponent(goId, "PointLight");
     ASSERT_FALSE(plId.empty());
 
-    auto dispatchRes = Dispatch("scene", "DuplicateGameObject",
-                                {{"objectId", goId}, {"newName", "Copy"}});
-    EXPECT_TRUE(dispatchRes["ok"].get<bool>());
-    EXPECT_TRUE(dispatchRes.value("expects_result", false));
-
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-    ASSERT_EQ(responses.size(), 1u);
-    const json reply = json::parse(responses[0]);
+    auto reply = Dispatch("scene", "DuplicateGameObject",
+                          {{"objectId", goId}, {"newName", "Copy"}});
     EXPECT_TRUE(reply["ok"].get<bool>());
     const std::string dupId = reply.value("objectId", std::string{});
     ASSERT_FALSE(dupId.empty());
@@ -364,13 +268,8 @@ TEST_F(McpSceneSystemTests, CommandDuplicateGameObject_Undo_RemovesCopy)
     const std::string goId = CreateLegacyGameObject();
     ASSERT_FALSE(goId.empty());
 
-    auto dispatchRes = Dispatch("scene", "DuplicateGameObject", {{"objectId", goId}});
-    EXPECT_TRUE(dispatchRes["ok"].get<bool>());
-
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-    ASSERT_EQ(responses.size(), 1u);
-    ASSERT_TRUE(json::parse(responses[0])["ok"].get<bool>());
+    auto res = Dispatch("scene", "DuplicateGameObject", {{"objectId", goId}});
+    EXPECT_TRUE(res["ok"].get<bool>());
     EXPECT_EQ(m_core->GetWorld()->GetGameObjects().size(), 2u);
 
     auto undoRes = Dispatch("undo_history", "Undo");
@@ -390,16 +289,10 @@ TEST_F(McpSceneSystemTests, CommandCreateComponent_AddsPointLight)
     const std::string goId = CreateLegacyGameObject();
     ASSERT_FALSE(goId.empty());
 
-    auto dispatchRes = Dispatch("scene", "CreateComponent",
-                                {{"objectId", goId}, {"componentClass", "PointLight"}});
-    EXPECT_TRUE(dispatchRes["ok"].get<bool>());
+    auto res = Dispatch("scene", "CreateComponent",
+                        {{"objectId", goId}, {"componentClass", "PointLight"}});
+    EXPECT_TRUE(res["ok"].get<bool>());
 
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-    ASSERT_EQ(responses.size(), 1u);
-    EXPECT_TRUE(json::parse(responses[0])["ok"].get<bool>());
-
-    // Verify PointLight is present on the GO
     auto compRes = Dispatch("scene", "components_on_object", {{"object_id", goId}});
     bool foundPointLight = false;
     for (const auto& c : compRes["components"])
@@ -408,44 +301,24 @@ TEST_F(McpSceneSystemTests, CommandCreateComponent_AddsPointLight)
     EXPECT_TRUE(foundPointLight);
 }
 
-TEST_F(McpSceneSystemTests, CommandDeleteComponent_DispatchesDeleteForComponent)
+TEST_F(McpSceneSystemTests, CommandDeleteComponent_RemovesComponent)
 {
     const std::string goId = CreateLegacyGameObject();
     ASSERT_FALSE(goId.empty());
+    // First component becomes the root; add a second (non-root) one to delete.
+    ASSERT_FALSE(AddComponent(goId, "PointLight").empty());
+    const std::string slId = AddComponent(goId, "SpotLight");
+    ASSERT_FALSE(slId.empty());
 
-    // Add PointLight
-    {
-        json data;
-        data["sceneAssetId"] = GetActiveSceneAssetId().ToString();
-        data["gameObjectId"] = goId;
-        data["className"]    = "PointLight";
-        json env;
-        env["type"] = "EditorCommand_CreateComponent";
-        env["data"] = data;
-        m_core->EnqueueSerializedCommand(env.dump());
-        std::vector<std::string> r;
-        m_core->DrainCommandQueue(r);
-        ASSERT_EQ(r.size(), 1u);
-        ASSERT_TRUE(json::parse(r[0])["ok"].get<bool>());
-    }
+    auto res = Dispatch("scene", "DeleteComponent", {{"objectId", slId}});
+    EXPECT_TRUE(res["ok"].get<bool>());
 
-    // Find PointLight component id
     auto compRes = Dispatch("scene", "components_on_object", {{"object_id", goId}});
-    std::string plId;
+    bool foundSpotLight = false;
     for (const auto& c : compRes["components"])
-        if (c.value("class", "") == "PointLight")
-            plId = c["object_id"].get<std::string>();
-    ASSERT_FALSE(plId.empty());
-
-    // The MCP dispatch should queue the delete command (ok:true, queued:true)
-    auto dispatchRes = Dispatch("scene", "DeleteComponent", {{"objectId", plId}});
-    EXPECT_TRUE(dispatchRes["ok"].get<bool>());
-    EXPECT_TRUE(dispatchRes.value("queued", false));
-
-    // Drain to flush pending commands
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-    EXPECT_EQ(responses.size(), 1u);
+        if (c.value("class", "") == "SpotLight")
+            foundSpotLight = true;
+    EXPECT_FALSE(foundSpotLight);
 }
 
 TEST_F(McpSceneSystemTests, CommandReparentSceneComponent_ChangesParent)
@@ -453,187 +326,86 @@ TEST_F(McpSceneSystemTests, CommandReparentSceneComponent_ChangesParent)
     const std::string goId = CreateLegacyGameObject();
     ASSERT_FALSE(goId.empty());
 
-    auto addSceneComponent = [&](const char* className) -> std::string
-    {
-        json data;
-        data["sceneAssetId"] = GetActiveSceneAssetId().ToString();
-        data["gameObjectId"] = goId;
-        data["className"]    = className;
-        json env;
-        env["type"] = "EditorCommand_CreateComponent";
-        env["data"] = data;
-        m_core->EnqueueSerializedCommand(env.dump());
-        std::vector<std::string> r;
-        m_core->DrainCommandQueue(r);
-        if (r.empty()) return {};
-        return json::parse(r[0]).value("objectId", std::string{});
-    };
-
-    const std::string plId = addSceneComponent("PointLight");
-    const std::string slId = addSceneComponent("SpotLight");
+    const std::string plId = AddComponent(goId, "PointLight");
+    const std::string slId = AddComponent(goId, "SpotLight");
     ASSERT_FALSE(plId.empty());
     ASSERT_FALSE(slId.empty());
 
-    auto dispatchRes = Dispatch("scene", "ReparentSceneComponent",
-                                {{"objectId", slId}, {"newParentId", plId}});
-    EXPECT_TRUE(dispatchRes["ok"].get<bool>());
-
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-    ASSERT_EQ(responses.size(), 1u);
-    EXPECT_TRUE(json::parse(responses[0])["ok"].get<bool>());
+    auto res = Dispatch("scene", "ReparentSceneComponent",
+                        {{"objectId", slId}, {"newParentId", plId}});
+    EXPECT_TRUE(res["ok"].get<bool>());
 }
 
 TEST_F(McpSceneSystemTests, CommandSetPosition_Immediate_SetsLocalPosition)
 {
     const std::string goId = CreateLegacyGameObject();
     ASSERT_FALSE(goId.empty());
-
-    // Add a PointLight to get a SceneComponent.
-    json data;
-    data["sceneAssetId"] = GetActiveSceneAssetId().ToString();
-    data["gameObjectId"] = goId;
-    data["className"]    = "PointLight";
-    json env;
-    env["type"] = "EditorCommand_CreateComponent";
-    env["data"] = data;
-    m_core->EnqueueSerializedCommand(env.dump());
-    std::vector<std::string> cr;
-    m_core->DrainCommandQueue(cr);
-    const std::string plId = json::parse(cr[0]).value("objectId", std::string{});
+    const std::string plId = AddComponent(goId, "PointLight");
     ASSERT_FALSE(plId.empty());
 
-    auto dispatchRes = Dispatch("scene", "SetPosition",
+    auto res = Dispatch("scene", "SetPosition",
         {{"objectId", plId},
          {"value", json::array({4.0f, 0.0f, 0.0f})},
          {"space", "local"},
          {"duration_seconds", 0.0f}});
-    EXPECT_TRUE(dispatchRes["ok"].get<bool>());
-    EXPECT_TRUE(dispatchRes.value("expects_result", false));
-
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-    ASSERT_GE(responses.size(), 1u);
-    EXPECT_TRUE(json::parse(responses[0])["ok"].get<bool>());
+    EXPECT_TRUE(res["ok"].get<bool>());
 }
 
 TEST_F(McpSceneSystemTests, CommandSetRotation_Immediate_SetsLocalRotation)
 {
     const std::string goId = CreateLegacyGameObject();
     ASSERT_FALSE(goId.empty());
-
-    json data;
-    data["sceneAssetId"] = GetActiveSceneAssetId().ToString();
-    data["gameObjectId"] = goId;
-    data["className"]    = "PointLight";
-    json env;
-    env["type"] = "EditorCommand_CreateComponent";
-    env["data"] = data;
-    m_core->EnqueueSerializedCommand(env.dump());
-    std::vector<std::string> cr;
-    m_core->DrainCommandQueue(cr);
-    const std::string plId = json::parse(cr[0]).value("objectId", std::string{});
+    const std::string plId = AddComponent(goId, "PointLight");
     ASSERT_FALSE(plId.empty());
 
-    auto dispatchRes = Dispatch("scene", "SetRotation",
+    auto res = Dispatch("scene", "SetRotation",
         {{"objectId", plId},
          {"value", json::array({0.0f, 0.0f, 0.0f, 1.0f})},  // identity quaternion
          {"duration_seconds", 0.0f}});
-    EXPECT_TRUE(dispatchRes["ok"].get<bool>());
-
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-    ASSERT_GE(responses.size(), 1u);
-    EXPECT_TRUE(json::parse(responses[0])["ok"].get<bool>());
+    EXPECT_TRUE(res["ok"].get<bool>());
 }
 
 TEST_F(McpSceneSystemTests, CommandSetScale_Immediate_SetsLocalScale)
 {
     const std::string goId = CreateLegacyGameObject();
     ASSERT_FALSE(goId.empty());
-
-    json data;
-    data["sceneAssetId"] = GetActiveSceneAssetId().ToString();
-    data["gameObjectId"] = goId;
-    data["className"]    = "PointLight";
-    json env;
-    env["type"] = "EditorCommand_CreateComponent";
-    env["data"] = data;
-    m_core->EnqueueSerializedCommand(env.dump());
-    std::vector<std::string> cr;
-    m_core->DrainCommandQueue(cr);
-    const std::string plId = json::parse(cr[0]).value("objectId", std::string{});
+    const std::string plId = AddComponent(goId, "PointLight");
     ASSERT_FALSE(plId.empty());
 
-    auto dispatchRes = Dispatch("scene", "SetScale",
+    auto res = Dispatch("scene", "SetScale",
         {{"objectId", plId},
          {"value", json::array({2.0f, 2.0f, 2.0f})},
          {"duration_seconds", 0.0f}});
-    EXPECT_TRUE(dispatchRes["ok"].get<bool>());
-
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-    ASSERT_GE(responses.size(), 1u);
-    EXPECT_TRUE(json::parse(responses[0])["ok"].get<bool>());
+    EXPECT_TRUE(res["ok"].get<bool>());
 }
 
-TEST_F(McpSceneSystemTests, CommandSetPosition_WithDuration_QueuesAnimation)
+TEST_F(McpSceneSystemTests, CommandSetPosition_WithDuration_StartsAnimation)
 {
     const std::string goId = CreateLegacyGameObject();
     ASSERT_FALSE(goId.empty());
-
-    json data;
-    data["sceneAssetId"] = GetActiveSceneAssetId().ToString();
-    data["gameObjectId"] = goId;
-    data["className"]    = "PointLight";
-    json env;
-    env["type"] = "EditorCommand_CreateComponent";
-    env["data"] = data;
-    m_core->EnqueueSerializedCommand(env.dump());
-    std::vector<std::string> cr;
-    m_core->DrainCommandQueue(cr);
-    const std::string plId = json::parse(cr[0]).value("objectId", std::string{});
+    const std::string plId = AddComponent(goId, "PointLight");
     ASSERT_FALSE(plId.empty());
 
-    auto dispatchRes = Dispatch("scene", "SetPosition",
+    // headless mode → animation applies immediately via SetProperty fallback.
+    auto res = Dispatch("scene", "SetPosition",
         {{"objectId", plId},
          {"value", json::array({3.0f, 0.0f, 0.0f})},
          {"duration_seconds", 1.0f}});
-    EXPECT_TRUE(dispatchRes["ok"].get<bool>());
-    EXPECT_TRUE(dispatchRes.value("queued", false));
-    EXPECT_FALSE(dispatchRes.value("expects_result", true));
-
-    // Drain queues the auxiliary and executes it (headless mode → immediate SetProperty).
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-    ASSERT_GE(responses.size(), 1u);
-    EXPECT_TRUE(json::parse(responses[0])["ok"].get<bool>());
+    EXPECT_TRUE(res["ok"].get<bool>());
 }
 
-TEST_F(McpSceneSystemTests, CommandSetPosition_DefaultDuration_QueuesAnimation)
+TEST_F(McpSceneSystemTests, CommandSetPosition_DefaultDuration_StartsAnimation)
 {
     const std::string goId = CreateLegacyGameObject();
     ASSERT_FALSE(goId.empty());
-
-    json data;
-    data["sceneAssetId"] = GetActiveSceneAssetId().ToString();
-    data["gameObjectId"] = goId;
-    data["className"]    = "PointLight";
-    json env;
-    env["type"] = "EditorCommand_CreateComponent";
-    env["data"] = data;
-    m_core->EnqueueSerializedCommand(env.dump());
-    std::vector<std::string> cr;
-    m_core->DrainCommandQueue(cr);
-    const std::string plId = json::parse(cr[0]).value("objectId", std::string{});
+    const std::string plId = AddComponent(goId, "PointLight");
     ASSERT_FALSE(plId.empty());
 
     // Omitting duration_seconds animates by default (kDefaultAnimationDurationSeconds).
-    auto dispatchRes = Dispatch("scene", "SetPosition",
+    auto res = Dispatch("scene", "SetPosition",
         {{"objectId", plId},
          {"value", json::array({3.0f, 0.0f, 0.0f})}});
-    EXPECT_TRUE(dispatchRes["ok"].get<bool>());
-    EXPECT_TRUE(dispatchRes.value("queued", false));
+    EXPECT_TRUE(res["ok"].get<bool>());
 }
 
 TEST_F(McpSceneSystemTests, CommandSetPosition_MissingObjectId_ReturnsError)
@@ -653,4 +425,3 @@ TEST_F(McpSceneSystemTests, CommandSetScale_MissingValue_ReturnsError)
     EXPECT_FALSE(res["ok"].get<bool>());
     EXPECT_TRUE(res.contains("error"));
 }
-

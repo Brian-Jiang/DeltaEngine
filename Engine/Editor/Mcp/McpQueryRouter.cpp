@@ -35,11 +35,17 @@ std::string McpQueryRouter::Route(const std::string& rawJson) const
         auto params = q.contains("params") ? q["params"]
                                            : nlohmann::json::object();
 
+        // Correlation id echoed back on the single response for this request.
+        const std::string requestId = q.value("request_id", "");
+        auto finish = [&requestId](nlohmann::json response) -> std::string {
+            if (!requestId.empty())
+                response["request_id"] = requestId;
+            return response.dump();
+        };
+
         if (type == "command")
         {
             std::string command = q.value("command", "");
-            const std::string requestId = ResolveRequestId(q);
-            const McpRequestIdScope requestScope(m_core, requestId);
 
             DLOG(LogMcpRouter, ELogLevel::Log,
                  "Received MCP command: system='{}', command='{}'", system, command);
@@ -47,22 +53,12 @@ std::string McpQueryRouter::Route(const std::string& rawJson) const
                  "Routing MCP command: params={}", params.dump());
 
             if (system.empty() || command.empty())
-            {
-                return MakeAcceptResponse(
-                    requestId,
-                    command,
-                    nlohmann::json{
-                        {"ok", false},
-                        {"error", "Command must include 'system' and 'command' fields"}
-                    })
-                    .dump();
-            }
+                return finish({{"ok", false},
+                               {"error", "Command must include 'system' and 'command' fields"}});
 
-            return MakeAcceptResponse(
-                requestId,
-                command,
-                m_registry.DispatchCommand(system, command, m_core, params))
-                .dump();
+            // Commands execute synchronously on the main thread and return their
+            // real result in this single response.
+            return finish(m_registry.DispatchCommand(system, command, m_core, params));
         }
 
         std::string query = q.value("query", "");
@@ -74,17 +70,15 @@ std::string McpQueryRouter::Route(const std::string& rawJson) const
 
         if (system.empty() || query.empty())
         {
-            return nlohmann::json{
+            return finish({
                 {"ok", false},
                 {"error", "Query must include 'system' and 'query' fields"},
                 {"hint", "Call editor('meta','list_operations') to see all "
                          "available systems, queries, and commands"}
-            }.dump();
+            });
         }
 
-        return m_registry
-            .DispatchQuery(system, query, m_core, params)
-            .dump();
+        return finish(m_registry.DispatchQuery(system, query, m_core, params));
     }
     catch (const nlohmann::json::parse_error& e)
     {

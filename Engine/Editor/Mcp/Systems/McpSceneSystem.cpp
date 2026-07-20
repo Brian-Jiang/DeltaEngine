@@ -501,20 +501,14 @@ nlohmann::json McpSceneSystem::CommandCreateGameObject(EditorCore& core, const n
     {
         nlohmann::json data;
         data["className"] = "GameObject";
-        return EnqueueMcpCommand(core, "scene", "EditorCommand_CreateGameObject", std::move(data), true);
+        return ExecuteMcpCommand(core, "scene", "EditorCommand_CreateGameObject", std::move(data));
     }
 
     nlohmann::json envelope;
     envelope["type"] = "auxiliary";
     envelope["name"] = "CreateGameObjectWithRename";
     envelope["desiredName"] = name;
-    core.EnqueueSerializedCommand(envelope.dump());
-    return {
-        {"ok", true},
-        {"queued", true},
-        {"command", "CreateGameObjectWithRename"},
-        {"expects_result", true}
-    };
+    return core.ExecuteSerializedCommand(envelope);
 }
 
 // ─── Command: DeleteGameObject ──────────────────────────────────────────────
@@ -526,7 +520,7 @@ nlohmann::json McpSceneSystem::CommandDeleteGameObject(EditorCore& core, const n
 
     nlohmann::json data;
     data["gameObjectId"] = params["objectId"].get<std::string>();
-    return EnqueueMcpCommand(core, "scene", "EditorCommand_DeleteGameObject", std::move(data), true);
+    return ExecuteMcpCommand(core, "scene", "EditorCommand_DeleteGameObject", std::move(data));
 }
 
 // ─── Command: DuplicateGameObject ───────────────────────────────────────────
@@ -543,7 +537,7 @@ nlohmann::json McpSceneSystem::CommandDuplicateGameObject(EditorCore& core, cons
     if (params.contains("offset_position") && params["offset_position"].is_array())
         data["offsetPosition"] = params["offset_position"];
 
-    return EnqueueMcpCommand(core, "scene", "EditorCommand_DuplicateGameObject", std::move(data), true);
+    return ExecuteMcpCommand(core, "scene", "EditorCommand_DuplicateGameObject", std::move(data));
 }
 
 // ─── Command: ReparentSceneComponent ────────────────────────────────────────
@@ -558,7 +552,7 @@ nlohmann::json McpSceneSystem::CommandReparentSceneComponent(EditorCore& core, c
     nlohmann::json data;
     data["childObjectId"] = params["objectId"].get<std::string>();
     data["newParentObjectId"] = params["newParentId"].get<std::string>();
-    return EnqueueMcpCommand(core, "scene", "EditorCommand_ReparentSceneComponent", std::move(data), true);
+    return ExecuteMcpCommand(core, "scene", "EditorCommand_ReparentSceneComponent", std::move(data));
 }
 
 // ─── Command: CreateComponent ───────────────────────────────────────────────
@@ -573,7 +567,7 @@ nlohmann::json McpSceneSystem::CommandCreateComponent(EditorCore& core, const nl
     nlohmann::json data;
     data["gameObjectId"] = params["objectId"].get<std::string>();
     data["className"] = params["componentClass"].get<std::string>();
-    return EnqueueMcpCommand(core, "scene", "EditorCommand_CreateComponent", std::move(data), true);
+    return ExecuteMcpCommand(core, "scene", "EditorCommand_CreateComponent", std::move(data));
 }
 
 // ─── Command: DeleteComponent ───────────────────────────────────────────────
@@ -603,7 +597,7 @@ nlohmann::json McpSceneSystem::CommandDeleteComponent(EditorCore& core, const nl
     nlohmann::json data;
     data["gameObjectId"] = ownerObjectId.ToString();
     data["componentId"] = compIdStr;
-    return EnqueueMcpCommand(core, "scene", "EditorCommand_DeleteComponent", std::move(data), true);
+    return ExecuteMcpCommand(core, "scene", "EditorCommand_DeleteComponent", std::move(data));
 }
 
 // ─── Shared helper: resolve a SceneComponent from an objectId string ────────
@@ -684,10 +678,10 @@ nlohmann::json McpSceneSystem::CommandSetPosition(EditorCore& core, const nlohma
         data["objectId"]      = scObjectId.ToString();
         data["propertyName"]  = "m_localTransform";
         data["valueAfter"]    = MatrixToJson(localMat);
-        return EnqueueMcpCommand(core, "scene", "EditorCommand_SetProperty", std::move(data), true);
+        return ExecuteMcpCommand(core, "scene", "EditorCommand_SetProperty", std::move(data));
     }
 
-    // Animation path — resolved IDs stored in the auxiliary so DrainCommandQueue can act.
+    // Animation path — execute the transform-channel animation auxiliary synchronously.
     nlohmann::json envelope;
     envelope["type"]      = "auxiliary";
     envelope["name"]      = "StartTransformChannelAnimation";
@@ -697,8 +691,7 @@ nlohmann::json McpSceneSystem::CommandSetPosition(EditorCore& core, const nlohma
     envelope["targetValue"] = params["value"];
     envelope["space"]     = space;
     envelope["duration"]  = duration;
-    core.EnqueueSerializedCommand(envelope.dump());
-    return {{"ok", true}, {"queued", true}, {"expects_result", false}};
+    return core.ExecuteSerializedCommand(envelope);
 }
 
 // ─── Command: SetRotation ────────────────────────────────────────────────────
@@ -759,7 +752,7 @@ nlohmann::json McpSceneSystem::CommandSetRotation(EditorCore& core, const nlohma
         data["objectId"]     = scObjectId.ToString();
         data["propertyName"] = "m_localTransform";
         data["valueAfter"]   = MatrixToJson(localMat);
-        return EnqueueMcpCommand(core, "scene", "EditorCommand_SetProperty", std::move(data), true);
+        return ExecuteMcpCommand(core, "scene", "EditorCommand_SetProperty", std::move(data));
     }
 
     nlohmann::json envelope;
@@ -771,8 +764,7 @@ nlohmann::json McpSceneSystem::CommandSetRotation(EditorCore& core, const nlohma
     envelope["targetValue"]= params["value"];
     envelope["space"]      = space;
     envelope["duration"]   = duration;
-    core.EnqueueSerializedCommand(envelope.dump());
-    return {{"ok", true}, {"queued", true}, {"expects_result", false}};
+    return core.ExecuteSerializedCommand(envelope);
 }
 
 // ─── Command: SetScale ───────────────────────────────────────────────────────
@@ -810,7 +802,7 @@ nlohmann::json McpSceneSystem::CommandSetScale(EditorCore& core, const nlohmann:
         data["objectId"]     = scObjectId.ToString();
         data["propertyName"] = "m_localTransform";
         data["valueAfter"]   = MatrixToJson(localMat);
-        return EnqueueMcpCommand(core, "scene", "EditorCommand_SetProperty", std::move(data), true);
+        return ExecuteMcpCommand(core, "scene", "EditorCommand_SetProperty", std::move(data));
     }
 
     nlohmann::json envelope;
@@ -822,6 +814,5 @@ nlohmann::json McpSceneSystem::CommandSetScale(EditorCore& core, const nlohmann:
     envelope["targetValue"]= params["value"];
     envelope["space"]      = "local";
     envelope["duration"]   = duration;
-    core.EnqueueSerializedCommand(envelope.dump());
-    return {{"ok", true}, {"queued", true}, {"expects_result", false}};
+    return core.ExecuteSerializedCommand(envelope);
 }

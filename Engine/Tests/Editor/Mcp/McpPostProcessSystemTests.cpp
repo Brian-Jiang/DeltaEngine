@@ -37,13 +37,7 @@ TEST_F(McpPostProcessSystemTests, CommandAddPass_AddsPassToStackAsset)
     auto dispatchRes = Dispatch("post_process", "AddPass",
         {{"assetId", assetId.ToString()}, {"passClass", "TonemapPass"}});
     ASSERT_TRUE(dispatchRes["ok"].get<bool>());
-    EXPECT_TRUE(dispatchRes.value("queued", false));
-
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-    ASSERT_EQ(responses.size(), 1u);
-    const json drainRes = json::parse(responses[0]);
-    ASSERT_TRUE(drainRes["ok"].get<bool>());
+    const json& drainRes = dispatchRes;
     ASSERT_FALSE(drainRes.value("objectId", "").empty());
 
     asset = dynamic_cast<PA_PostProcessStack*>(m_core->GetAssetDatabase()->LoadAsset(assetId));
@@ -66,12 +60,7 @@ TEST_F(McpPostProcessSystemTests, CommandAddPass_DuplicateClass_Fails)
 
     auto dispatchRes = Dispatch("post_process", "AddPass",
         {{"assetId", assetId.ToString()}, {"passClass", "BloomPass"}});
-    ASSERT_TRUE(dispatchRes["ok"].get<bool>());
-
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-    ASSERT_EQ(responses.size(), 1u);
-    EXPECT_FALSE(json::parse(responses[0])["ok"].get<bool>());
+    EXPECT_FALSE(dispatchRes["ok"].get<bool>());
 
     asset = dynamic_cast<PA_PostProcessStack*>(m_core->GetAssetDatabase()->LoadAsset(assetId));
     ASSERT_NE(asset, nullptr);
@@ -88,12 +77,7 @@ TEST_F(McpPostProcessSystemTests, CommandRemovePass_RemovesPassFromStackAsset)
 
     auto dispatchRes = Dispatch("post_process", "RemovePass",
         {{"assetId", assetId.ToString()}, {"passClass", "VignettePass"}});
-    ASSERT_TRUE(dispatchRes["ok"].get<bool>());
-
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-    ASSERT_EQ(responses.size(), 1u);
-    EXPECT_TRUE(json::parse(responses[0])["ok"].get<bool>());
+    EXPECT_TRUE(dispatchRes["ok"].get<bool>());
 
     asset = dynamic_cast<PA_PostProcessStack*>(m_core->GetAssetDatabase()->LoadAsset(assetId));
     ASSERT_NE(asset, nullptr);
@@ -109,11 +93,6 @@ TEST_F(McpPostProcessSystemTests, CommandAddPass_Undo_RemovesPass)
     auto dispatchRes = Dispatch("post_process", "AddPass",
         {{"assetId", assetId.ToString()}, {"passClass", "ColorGradingPass"}});
     ASSERT_TRUE(dispatchRes["ok"].get<bool>());
-
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-    ASSERT_EQ(responses.size(), 1u);
-    ASSERT_TRUE(json::parse(responses[0])["ok"].get<bool>());
 
     asset = dynamic_cast<PA_PostProcessStack*>(m_core->GetAssetDatabase()->LoadAsset(assetId));
     ASSERT_NE(asset, nullptr);
@@ -137,11 +116,6 @@ TEST_F(McpPostProcessSystemTests, CommandRemovePass_Undo_RestoresPass)
     auto dispatchRes = Dispatch("post_process", "RemovePass",
         {{"assetId", assetId.ToString()}, {"passClass", "PassthroughPass"}});
     ASSERT_TRUE(dispatchRes["ok"].get<bool>());
-
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-    ASSERT_EQ(responses.size(), 1u);
-    ASSERT_TRUE(json::parse(responses[0])["ok"].get<bool>());
 
     asset = dynamic_cast<PA_PostProcessStack*>(m_core->GetAssetDatabase()->LoadAsset(assetId));
     ASSERT_NE(asset, nullptr);

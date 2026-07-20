@@ -105,14 +105,7 @@ TEST_F(McpProjectSystemTests, CommandLoadScene_ValidAssetId_SwapsActiveScene)
     ASSERT_FALSE(sceneBId.IsNull());
     ASSERT_NE(sceneBId, sceneAId);
 
-    auto dispatchRes = Dispatch("project", "LoadScene", {{"asset_id", sceneBId.ToString()}});
-    EXPECT_TRUE(dispatchRes["ok"].get<bool>());
-    EXPECT_TRUE(dispatchRes.value("queued", false));
-
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-    ASSERT_EQ(responses.size(), 1u);
-    const json reply = json::parse(responses[0]);
+    const json reply = Dispatch("project", "LoadScene", {{"asset_id", sceneBId.ToString()}});
     EXPECT_TRUE(reply["ok"].get<bool>());
     EXPECT_EQ(reply.value("commandType", std::string{}), "LoadScene");
 

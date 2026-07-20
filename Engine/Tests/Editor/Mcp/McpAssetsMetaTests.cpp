@@ -33,11 +33,6 @@ protected:
         m_core->GetAssetDatabase()->RefreshAssetMetaCache(m_sceneId);
     }
 
-    void DrainQueue(std::vector<std::string>& outResponses)
-    {
-        m_core->DrainCommandQueue(outResponses);
-    }
-
     AssetId        m_sceneId;
     DPrimaryAsset* m_sceneAsset = nullptr;
 };
@@ -117,14 +112,7 @@ TEST_F(McpAssetsMetaTests, SetAssetDynamicMetadata_DispatchesThroughCommandQueue
     params["new_value"] = "from-mcp";
     auto res = Dispatch("assets", "set_asset_dynamic_metadata", params);
     ASSERT_TRUE(res["ok"].get<bool>());
-    EXPECT_TRUE(res["queued"].get<bool>());
-    EXPECT_EQ(res["command"], "EditorCommand_SetAssetDynamicMeta");
-
-    std::vector<std::string> responses;
-    DrainQueue(responses);
-    ASSERT_EQ(responses.size(), 1u);
-    auto resp = json::parse(responses[0]);
-    EXPECT_TRUE(resp.value("ok", false));
+    EXPECT_EQ(res.value("commandType", std::string{}), "EditorCommand_SetAssetDynamicMeta");
 
     EXPECT_EQ(m_sceneAsset->GetDynamicMeta()["desc"], "from-mcp");
     EXPECT_EQ(m_core->GetAssetDatabase()->GetAssetMeta(m_sceneId)["dynamic"]["desc"], "from-mcp");
@@ -138,9 +126,6 @@ TEST_F(McpAssetsMetaTests, SetAssetDynamicMetadata_PersistsToDiskAfterSave)
     params["new_value"] = "persisted";
     Dispatch("assets", "set_asset_dynamic_metadata", params);
 
-    std::vector<std::string> responses;
-    DrainQueue(responses);
-    ASSERT_EQ(responses.size(), 1u);
 
     m_core->GetAssetDatabase()->SaveAsset(m_sceneId);
 
@@ -163,9 +148,6 @@ TEST_F(McpAssetsMetaTests, SetAssetDynamicMetadata_UndoRedoViaMcpUndoSystem)
     setParams["new_value"] = "after-set";
     Dispatch("assets", "set_asset_dynamic_metadata", setParams);
 
-    std::vector<std::string> responses;
-    DrainQueue(responses);
-    ASSERT_EQ(responses.size(), 1u);
     ASSERT_EQ(m_sceneAsset->GetDynamicMeta()["desc"], "after-set");
 
     auto undoRes = Dispatch("undo_history", "Undo");
@@ -210,9 +192,6 @@ TEST_F(McpAssetsMetaTests, SetAssetDynamicMetadata_RejectsStaticPath)
     EXPECT_FALSE(res["ok"].get<bool>());
     EXPECT_NE(res["error"].get<std::string>().find("read-only"), std::string::npos);
 
-    std::vector<std::string> responses;
-    DrainQueue(responses);
-    EXPECT_TRUE(responses.empty());
 }
 
 TEST_F(McpAssetsMetaTests, SetAssetDynamicMetadata_RejectsArbitraryPath)
@@ -225,9 +204,6 @@ TEST_F(McpAssetsMetaTests, SetAssetDynamicMetadata_RejectsArbitraryPath)
     EXPECT_FALSE(res["ok"].get<bool>());
     EXPECT_NE(res["error"].get<std::string>().find("invalid json_path"), std::string::npos);
 
-    std::vector<std::string> responses;
-    DrainQueue(responses);
-    EXPECT_TRUE(responses.empty());
 }
 
 TEST_F(McpAssetsMetaTests, SetAssetDynamicMetadata_AcceptsDynamicRoot)
@@ -238,11 +214,7 @@ TEST_F(McpAssetsMetaTests, SetAssetDynamicMetadata_AcceptsDynamicRoot)
     params["new_value"] = json{{"desc", "root"}, {"tags", json::array({"t"})}};
     auto res = Dispatch("assets", "set_asset_dynamic_metadata", params);
     ASSERT_TRUE(res["ok"].get<bool>());
-    EXPECT_TRUE(res["queued"].get<bool>());
 
-    std::vector<std::string> responses;
-    DrainQueue(responses);
-    ASSERT_EQ(responses.size(), 1u);
 }
 
 TEST_F(McpAssetsMetaTests, SetAssetDynamicMetadata_AcceptsDynamicChild)
@@ -253,11 +225,7 @@ TEST_F(McpAssetsMetaTests, SetAssetDynamicMetadata_AcceptsDynamicChild)
     params["new_value"] = "child-ok";
     auto res = Dispatch("assets", "set_asset_dynamic_metadata", params);
     ASSERT_TRUE(res["ok"].get<bool>());
-    EXPECT_TRUE(res["queued"].get<bool>());
 
-    std::vector<std::string> responses;
-    DrainQueue(responses);
-    ASSERT_EQ(responses.size(), 1u);
 }
 
 TEST_F(McpAssetsMetaTests, HasStaticMetaSchema_ByClass_TrueForMeshAndTexture)

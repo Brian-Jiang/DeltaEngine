@@ -5,7 +5,9 @@
 #include "Runtime/Core/DObject.h"
 #include "Runtime/Core/UUID.h"
 
+#include <deque>
 #include <filesystem>
+#include <future>
 #include <memory>
 #include <mutex>
 #include <nlohmann/json.hpp>
@@ -28,6 +30,7 @@ class DWorld;
 class EditorAnimationManager;
 class EditorCommandManager;
 class EditorCore;
+class McpQueryRouter;
 class McpRegistry;
 class McpSocketServer;
 
@@ -70,10 +73,19 @@ public:
 
     DELTAEDITOR_API void CreateAssets();
 
-    // Serialized command dispatch queue for headless / MCP callers.
-    // JSON envelope: { "type": "EditorCommand_SetProperty", "data": { ... } }
-    DELTAEDITOR_API void EnqueueSerializedCommand(std::string jsonPayload);
-    DELTAEDITOR_API void DrainCommandQueue(std::vector<std::string>& outResponses);
+    // Executes a single MCP command/auxiliary envelope synchronously on the calling
+    // (main) thread and returns the result payload. JSON envelope forms:
+    //   { "type": "command", "system": "...", "command": "EditorCommand_*", "params": {...} }
+    //   { "type": "EditorCommand_*", "data": {...} }          (legacy)
+    //   { "type": "auxiliary", "name": "...", ... }
+    DELTAEDITOR_API nlohmann::json ExecuteSerializedCommand(const nlohmann::json& envelope);
+
+    // Main-thread MCP request pump. The socket thread submits a raw JSON line and
+    // blocks on the returned future; DrainMcpRequests (called once per frame on the
+    // main thread) routes each request and fulfils the promise.
+    std::future<std::string> SubmitMcpRequest(std::string json);
+    DELTAEDITOR_API void DrainMcpRequests();
+    void CancelPendingMcpRequests();
 
     /// Reimports the given assets on the main thread. Shader assets are recompiled (PSOs refresh
     /// automatically next frame); other asset types are skipped. Returns {ok, reimported, skipped}.
@@ -91,9 +103,6 @@ public:
     DELTAEDITOR_API McpRegistry* GetMcpRegistry() { return m_mcpRegistry.get(); }
     DELTAEDITOR_API EditorAnimationManager* GetAnimationManager() { return m_animationManager.get(); }
 
-    DELTAEDITOR_API void SetActiveMcpRequestId(std::string requestId);
-    DELTAEDITOR_API void ClearActiveMcpRequestId();
-
 private:
     std::unique_ptr<EditorAssetDatabase> m_assetDatabase;
     std::unique_ptr<EditorSelectionState> m_selectionState;
@@ -101,12 +110,19 @@ private:
     std::unordered_map<std::string, std::string> m_testValueStore;
     EngineMain* m_engine = nullptr;
 
-    std::mutex m_commandQueueMutex;
-    std::vector<std::string> m_pendingCommands;
+    struct PendingMcpRequest
+    {
+        std::string json;
+        std::promise<std::string> result;
+    };
+    std::mutex m_mcpRequestMutex;
+    std::deque<PendingMcpRequest> m_mcpRequestQueue;
+    bool m_mcpShuttingDown = false;
+    std::shared_ptr<McpQueryRouter> m_mcpRouter;
+
     std::unique_ptr<McpRegistry> m_mcpRegistry;
     std::unique_ptr<EditorAnimationManager> m_animationManager;
     bool m_headless = false;
-    std::string m_activeMcpRequestId;
     std::filesystem::path m_assetRoot;
 };
 

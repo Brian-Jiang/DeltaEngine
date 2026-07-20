@@ -26,12 +26,6 @@ TEST_F(McpCommonSystemTests, CommandRenameObject_ChangesName)
     auto dispatchRes = Dispatch("common", "RenameObject",
                                 {{"objectId", goId}, {"newName", "RenamedGO"}});
     EXPECT_TRUE(dispatchRes["ok"].get<bool>());
-    EXPECT_TRUE(dispatchRes.value("queued", false));
-
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-    ASSERT_EQ(responses.size(), 1u);
-    EXPECT_TRUE(json::parse(responses[0])["ok"].get<bool>());
 
     // Verify name changed
     auto goRes = Dispatch("scene", "game_object", {{"object_id", goId}});
@@ -52,10 +46,7 @@ TEST_F(McpCommonSystemTests, CommandSetProperty_FloatProperty_ChangesValue)
         json env;
         env["type"] = "EditorCommand_CreateComponent";
         env["data"] = data;
-        m_core->EnqueueSerializedCommand(env.dump());
-        std::vector<std::string> r;
-        m_core->DrainCommandQueue(r);
-        ASSERT_TRUE(json::parse(r[0])["ok"].get<bool>());
+        ASSERT_TRUE(m_core->ExecuteSerializedCommand(env)["ok"].get<bool>());
     }
 
     // Find PointLight's object_id
@@ -71,11 +62,6 @@ TEST_F(McpCommonSystemTests, CommandSetProperty_FloatProperty_ChangesValue)
                                  {"propertyName", "m_intensity"},
                                  {"valueAfter",   4.5f}});
     EXPECT_TRUE(dispatchRes["ok"].get<bool>());
-
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-    ASSERT_EQ(responses.size(), 1u);
-    EXPECT_TRUE(json::parse(responses[0])["ok"].get<bool>());
 
     // Verify via component query
     auto compRes = Dispatch("scene", "component", {{"object_id", plId}});
@@ -106,12 +92,6 @@ TEST_F(McpCommonSystemTests, CommandRenameObject_WithExplicitAssetId_RenamesObje
                                  {"objectId", otherObjectId.ToString()},
                                  {"newName",  "AfterRename"}});
     EXPECT_TRUE(dispatchRes["ok"].get<bool>());
-    EXPECT_TRUE(dispatchRes.value("queued", false));
-
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-    ASSERT_EQ(responses.size(), 1u);
-    EXPECT_TRUE(json::parse(responses[0])["ok"].get<bool>());
 
     auto* resolved = dynamic_cast<DTestObjectA*>(
         m_core->ResolveObject(otherAssetId, otherObjectId));
@@ -142,12 +122,6 @@ TEST_F(McpCommonSystemTests, CommandSetProperty_WithExplicitAssetId_MutatesObjec
                                  {"propertyName", "m_health"},
                                  {"valueAfter",   42.5f}});
     EXPECT_TRUE(dispatchRes["ok"].get<bool>());
-    EXPECT_TRUE(dispatchRes.value("queued", false));
-
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-    ASSERT_EQ(responses.size(), 1u);
-    EXPECT_TRUE(json::parse(responses[0])["ok"].get<bool>());
 
     auto* resolved = dynamic_cast<DTestObjectA*>(
         m_core->ResolveObject(otherAssetId, otherObjectId));
@@ -159,10 +133,4 @@ TEST_F(McpCommonSystemTests, CommandSaveProject_QueuesAndDrains)
 {
     auto dispatchRes = Dispatch("common", "SaveProject");
     EXPECT_TRUE(dispatchRes["ok"].get<bool>());
-    EXPECT_TRUE(dispatchRes.value("queued", false));
-
-    std::vector<std::string> responses;
-    m_core->DrainCommandQueue(responses);
-    ASSERT_EQ(responses.size(), 1u);
-    EXPECT_TRUE(json::parse(responses[0])["ok"].get<bool>());
 }

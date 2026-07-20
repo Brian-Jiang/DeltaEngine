@@ -215,12 +215,7 @@ int EditorMain::Run()
         if (!m_running)
             break;
 
-        std::vector<std::string> responses;
-        m_editorCore->DrainCommandQueue(responses);
-        if (g_mcpServer) {
-            for (const auto& r : responses)
-                g_mcpServer->SendResponse(r);
-        }
+        m_editorCore->DrainMcpRequests();
         m_engine->PreTick();
         m_engine->Tick();
         if (auto* animMgr = m_editorCore->GetAnimationManager())

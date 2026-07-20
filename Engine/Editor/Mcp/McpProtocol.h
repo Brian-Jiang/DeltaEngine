@@ -11,37 +11,14 @@ DELTA_ENGINE_NS_BEGIN
 
 class EditorCore;
 
-DELTAEDITOR_API std::string ResolveRequestId(const nlohmann::json& envelope);
-
 DELTAEDITOR_API nlohmann::json MakeMcpError(const std::string& message);
 
-DELTAEDITOR_API nlohmann::json MakeAcceptResponse(
-    const std::string& requestId,
-    const std::string& commandName,
-    nlohmann::json handlerResult);
-
-DELTAEDITOR_API nlohmann::json MakeResultResponse(
-    const std::string& requestId,
-    nlohmann::json payload);
-
-class McpRequestIdScope
-{
-public:
-    DELTAEDITOR_API explicit McpRequestIdScope(EditorCore& core, std::string requestId);
-    DELTAEDITOR_API ~McpRequestIdScope();
-
-    McpRequestIdScope(const McpRequestIdScope&) = delete;
-    McpRequestIdScope& operator=(const McpRequestIdScope&) = delete;
-
-private:
-    EditorCore& m_core;
-};
-
-DELTAEDITOR_API nlohmann::json EnqueueMcpCommand(
+// Builds a command envelope and executes it synchronously on the calling (main)
+// thread, returning the command's real result payload.
+DELTAEDITOR_API nlohmann::json ExecuteMcpCommand(
     EditorCore& core,
     std::string_view system,
     const std::string& commandName,
-    nlohmann::json params,
-    bool expectsResult = true);
+    nlohmann::json params);
 
 DELTA_ENGINE_NS_END

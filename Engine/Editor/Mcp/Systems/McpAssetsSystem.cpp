@@ -859,8 +859,7 @@ nlohmann::json McpAssetsSystem::CommandSetAssetDynamicMetadata(EditorCore& core,
     envelope["command"] = "EditorCommand_SetAssetDynamicMeta";
     envelope["params"]  = std::move(data);
 
-    core.EnqueueSerializedCommand(envelope.dump());
-    return { {"ok", true}, {"queued", true}, {"command", "EditorCommand_SetAssetDynamicMeta"}, {"expects_result", true} };
+    return core.ExecuteSerializedCommand(envelope);
 }
 
 nlohmann::json McpAssetsSystem::CommandReimportAssets(EditorCore& core, const nlohmann::json& params)
@@ -888,8 +887,7 @@ nlohmann::json McpAssetsSystem::CommandReimportAssets(EditorCore& core, const nl
     envelope["name"]     = "ReimportAssets";
     envelope["assetIds"] = std::move(assetIds);
 
-    core.EnqueueSerializedCommand(envelope.dump());
-    return { {"ok", true}, {"queued", true}, {"command", "ReimportAssets"}, {"expects_result", true} };
+    return core.ExecuteSerializedCommand(envelope);
 }
 
 nlohmann::json McpAssetsSystem::CommandDuplicateAsset(EditorCore& core, const nlohmann::json& params)
@@ -925,8 +923,7 @@ nlohmann::json McpAssetsSystem::CommandDuplicateAsset(EditorCore& core, const nl
     if (params.contains("new_path") && params["new_path"].is_string())
         envelope["newPath"] = params["new_path"].get<std::string>();
 
-    core.EnqueueSerializedCommand(envelope.dump());
-    return { {"ok", true}, {"queued", true}, {"command", "DuplicateAsset"}, {"expects_result", true} };
+    return core.ExecuteSerializedCommand(envelope);
 }
 
 nlohmann::json McpAssetsSystem::QueryHasStaticMetaSchema(EditorCore& core, const nlohmann::json& params)

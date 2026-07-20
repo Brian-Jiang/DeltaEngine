@@ -27,9 +27,6 @@ public:
     uint16_t Start(uint16_t preferredPort = 57340);
     void Stop();
 
-    // Thread-safe. Posts the line to the io_context for async send.
-    void SendResponse(const std::string& jsonLine);
-
 private:
     void RunLoop();
     void DoAccept();

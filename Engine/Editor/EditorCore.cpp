@@ -40,6 +40,7 @@
 #include <SimpleMath.h>
 #include <nlohmann/json.hpp>
 
+#include <chrono>
 #include <cstdio>
 #include <memory>
 
@@ -134,13 +135,23 @@ void EditorCore::Initialize(EngineMain& engine, bool headless, std::filesystem::
     m_mcpRegistry = std::make_unique<McpRegistry>();
     m_mcpRegistry->InitializeAll(*this);
 
+    m_mcpRouter = std::make_shared<McpQueryRouter>(*this, *m_mcpRegistry);
+
     if (!m_headless)
     {
         constexpr uint16_t kPreferredMcpPort = 57340;
-        auto router = std::make_shared<McpQueryRouter>(*this, *m_mcpRegistry);
-        g_mcpServer = std::make_unique<McpSocketServer>(
-            [router](const std::string& json) -> std::string { return router->Route(json); },
-            [router](const std::string& json) -> std::string { return router->Route(json); });
+        // Socket-thread handler: hand the raw line to the main thread and block for
+        // the result. Both query and command lines take the same path.
+        auto handler = [this](const std::string& json) -> std::string {
+            constexpr auto kMcpRequestTimeout = std::chrono::seconds(30);
+            std::future<std::string> fut = SubmitMcpRequest(json);
+            if (fut.wait_for(kMcpRequestTimeout) != std::future_status::ready)
+                return nlohmann::json{{"ok", false},
+                                      {"error", "timed out waiting for main-thread execution"}}
+                    .dump();
+            return fut.get();
+        };
+        g_mcpServer = std::make_unique<McpSocketServer>(handler, handler);
         const uint16_t mcpPort = g_mcpServer->Start(kPreferredMcpPort);
         if (mcpPort == 0)
             DLOG(LogEditorCore,
@@ -153,7 +164,11 @@ void EditorCore::Initialize(EngineMain& engine, bool headless, std::filesystem::
 void EditorCore::Shutdown()
 {
     DLOG(LogEditorCore, ELogLevel::Verbose, "EditorCore::Shutdown");
+    // Unblock any socket thread waiting on a pending request before we join the
+    // server thread, otherwise its future.get() could deadlock the join.
+    CancelPendingMcpRequests();
     g_mcpServer.reset();
+    m_mcpRouter.reset();
     m_mcpRegistry.reset();
     m_animationManager.reset();
     if (m_commandManager)
@@ -425,451 +440,367 @@ nlohmann::json EditorCore::DuplicateAsset(
     };
 }
 
-void EditorCore::SetActiveMcpRequestId(std::string requestId)
+std::future<std::string> EditorCore::SubmitMcpRequest(std::string json)
 {
-    m_activeMcpRequestId = std::move(requestId);
+    std::promise<std::string> promise;
+    std::future<std::string> future = promise.get_future();
+
+    std::lock_guard lock(m_mcpRequestMutex);
+    if (m_mcpShuttingDown)
+    {
+        promise.set_value(nlohmann::json{{"ok", false}, {"error", "editor shutting down"}}.dump());
+        return future;
+    }
+    m_mcpRequestQueue.push_back({std::move(json), std::move(promise)});
+    return future;
 }
 
-void EditorCore::ClearActiveMcpRequestId()
+void EditorCore::DrainMcpRequests()
 {
-    m_activeMcpRequestId.clear();
-}
-
-void EditorCore::EnqueueSerializedCommand(std::string jsonPayload)
-{
-    if (!DELTA_ENSURE(!jsonPayload.empty()))
+    std::deque<PendingMcpRequest> batch;
     {
-        DLOG(LogEditorCore, ELogLevel::Warning,
-             "EnqueueSerializedCommand: empty payload dropped (expected non-empty JSON envelope)");
-        return;
+        std::lock_guard lock(m_mcpRequestMutex);
+        batch.swap(m_mcpRequestQueue);
     }
 
-    if (!m_activeMcpRequestId.empty())
+    for (auto& req : batch)
     {
-        nlohmann::json envelope;
+        std::string response;
         try
         {
-            envelope = nlohmann::json::parse(jsonPayload);
-        }
-        catch (const nlohmann::json::parse_error& e)
-        {
-            DLOG(LogEditorCore, ELogLevel::Warning,
-                 "EnqueueSerializedCommand: JSON parse error: {}", e.what());
-            return;
-        }
-
-        envelope["request_id"] = m_activeMcpRequestId;
-        jsonPayload = envelope.dump();
-    }
-
-    std::lock_guard lock(m_commandQueueMutex);
-    m_pendingCommands.push_back(std::move(jsonPayload));
-}
-
-void EditorCore::DrainCommandQueue(std::vector<std::string>& outResponses)
-{
-    std::vector<std::string> batch;
-    {
-        std::lock_guard lock(m_commandQueueMutex);
-        batch.swap(m_pendingCommands);
-    }
-
-    if (batch.empty())
-        return;
-
-    DLOG(LogEditorCore, ELogLevel::Verbose, "DrainCommandQueue: pending={}", batch.size());
-
-    EditorCommandContext ctx{ *this };
-
-    auto emitResponse = [&](const nlohmann::json& envelope, nlohmann::json payload) {
-        const std::string requestId = envelope.value("request_id", "");
-        outResponses.push_back(MakeResultResponse(requestId, std::move(payload)).dump());
-    };
-
-    auto emitResponseNoEnvelope = [&](nlohmann::json payload) {
-        outResponses.push_back(MakeResultResponse("", std::move(payload)).dump());
-    };
-
-    for (const auto& payload : batch)
-    {
-        nlohmann::json envelope;
-        try
-        {
-            envelope = nlohmann::json::parse(payload);
-        }
-        catch (const nlohmann::json::parse_error& e)
-        {
-            DLOG(LogEditorCommand, ELogLevel::Error, "[DrainCommandQueue] JSON parse error: {}", e.what());
-            emitResponseNoEnvelope({{"ok", false}, {"error", std::string{"JSON parse error: "} + e.what()}});
-            continue;
-        }
-
-        std::string type = envelope.value("type", "");
-        if (type.empty())
-        {
-            DLOG(LogEditorCommand, ELogLevel::Error, "[DrainCommandQueue] Missing 'type' field");
-            emitResponse(envelope, {{"ok", false}, {"error", "Missing 'type' field"}});
-            continue;
-        }
-
-        if (type == "auxiliary")
-        {
-            std::string name = envelope.value("name", "");
-            if (name == "SaveDirtyAssets")
-            {
-                m_commandManager->ExecuteAuxiliary(
-                    std::make_unique<EditorAuxiliaryCommand_SaveScene>(), ctx);
-                emitResponse(envelope, {{"ok", true}, {"commandType", "SaveDirtyAssets"}});
-                continue;
-            }
-            if (name == "LoadScene")
-            {
-                std::string scenePath = envelope.value("scenePath", "");
-                if (scenePath.empty())
-                {
-                    emitResponse(envelope,
-                        {{"ok", false}, {"commandType", "LoadScene"},
-                         {"error", "Missing 'scenePath' field"}});
-                    continue;
-                }
-                m_commandManager->ExecuteAuxiliary(
-                    std::make_unique<EditorAuxiliaryCommand_LoadScene>(
-                        std::filesystem::path(scenePath)), ctx);
-                emitResponse(envelope, {{"ok", true}, {"commandType", "LoadScene"}});
-                continue;
-            }
-            if (name == "StartLightAnimation")
-            {
-                const AssetId  animAssetId  = UUID::FromString(envelope.value("assetId", ""));
-                const ObjectId animObjectId = UUID::FromString(envelope.value("objectId", ""));
-                const std::string propName  = envelope.value("propertyName", "m_intensity");
-                const float targetValue     = envelope.value("targetValue", 0.0f);
-                const float duration        = envelope.value("duration", 0.0f);
-
-                LightComponent* light = ResolveObject<LightComponent>(animAssetId, animObjectId);
-                if (!light)
-                {
-                    emitResponse(envelope,
-                        {{"ok", false}, {"commandType", "StartLightAnimation"},
-                         {"error", "object not found or not a LightComponent"}});
-                    continue;
-                }
-
-                const float current = light->GetIntensity();
-                if (m_animationManager)
-                {
-                    m_animationManager->StartAnimation(
-                        animAssetId, animObjectId, propName,
-                        current, targetValue, duration,
-                        [light](float v) { light->SetIntensity(v); });
-                }
-                else
-                {
-                    // Headless fallback: apply immediately via SetProperty.
-                    auto cmd = std::make_unique<EditorCommand_SetProperty>(
-                        animAssetId, animObjectId, propName,
-                        nlohmann::json(current),
-                        nlohmann::json(targetValue));
-                    m_commandManager->Execute(std::move(cmd), ctx);
-                }
-                emitResponse(envelope, {{"ok", true}, {"commandType", "StartLightAnimation"}});
-                continue;
-            }
-            if (name == "StartTransformChannelAnimation")
-            {
-                using namespace DirectX;
-                using namespace DirectX::SimpleMath;
-
-                const AssetId  scAssetId  = UUID::FromString(envelope.value("scAssetId",  ""));
-                const ObjectId scObjectId = UUID::FromString(envelope.value("scObjectId", ""));
-                const std::string channel = envelope.value("channel", "");
-                const std::string space   = envelope.value("space",   "local");
-                const float duration      = envelope.value("duration", 1.0f);
-                const bool worldSpace     = (space == "world");
-
-                if (scAssetId.IsNull() || scObjectId.IsNull() || channel.empty())
-                {
-                    emitResponse(envelope,
-                        {{"ok", false}, {"commandType", "StartTransformChannelAnimation"},
-                         {"error", "Missing scAssetId, scObjectId, or channel"}});
-                    continue;
-                }
-
-                SceneComponent* sc = ResolveObject<SceneComponent>(scAssetId, scObjectId);
-                if (!sc)
-                {
-                    emitResponse(envelope,
-                        {{"ok", false}, {"commandType", "StartTransformChannelAnimation"},
-                         {"error", "SceneComponent not found"}});
-                    continue;
-                }
-
-                DProperty* transformProp = sc->GetClass()->FindPropertyByName("m_localTransform");
-                if (!transformProp)
-                {
-                    emitResponse(envelope,
-                        {{"ok", false}, {"commandType", "StartTransformChannelAnimation"},
-                         {"error", "m_localTransform property not found"}});
-                    continue;
-                }
-
-                const nlohmann::json snapshot = PropertyToJson(sc, transformProp);
-                const auto& tval = envelope["targetValue"];
-
-                if (channel == "position")
-                {
-                    const Vector3 from   = worldSpace ? sc->GetWorldPosition() : sc->GetLocalPosition();
-                    const Vector3 target(tval[0].get<float>(), tval[1].get<float>(), tval[2].get<float>());
-
-                    if (m_animationManager)
-                    {
-                        m_animationManager->StartAnimationVec3(
-                            scAssetId, scObjectId, "position", from, target, duration,
-                            worldSpace
-                                ? std::function<void(Vector3)>([sc](Vector3 p) { sc->SetWorldPosition(p); })
-                                : std::function<void(Vector3)>([sc](Vector3 p) { sc->SetLocalPosition(p); }),
-                            snapshot);
-                    }
-                    else
-                    {
-                        if (worldSpace) sc->SetWorldPosition(target); else sc->SetLocalPosition(target);
-                        auto cmd = std::make_unique<EditorCommand_SetProperty>(
-                            scAssetId, scObjectId, "m_localTransform",
-                            snapshot, PropertyToJson(sc, transformProp));
-                        m_commandManager->Execute(std::move(cmd), ctx);
-                    }
-                }
-                else if (channel == "rotation")
-                {
-                    const Quaternion from = worldSpace ? sc->GetWorldRotation() : sc->GetLocalRotation();
-                    Quaternion target;
-                    if (tval.size() == 4)
-                        target = Quaternion(tval[0].get<float>(), tval[1].get<float>(),
-                                            tval[2].get<float>(), tval[3].get<float>());
-                    else
-                        target = Quaternion::CreateFromYawPitchRoll(
-                            tval[1].get<float>(), tval[0].get<float>(), tval[2].get<float>());
-
-                    if (m_animationManager)
-                    {
-                        m_animationManager->StartAnimationQuat(
-                            scAssetId, scObjectId, "rotation", from, target, duration,
-                            worldSpace
-                                ? std::function<void(Quaternion)>([sc](Quaternion q) { sc->SetWorldRotation(q); })
-                                : std::function<void(Quaternion)>([sc](Quaternion q) { sc->SetLocalRotation(q); }),
-                            snapshot);
-                    }
-                    else
-                    {
-                        if (worldSpace) sc->SetWorldRotation(target); else sc->SetLocalRotation(target);
-                        auto cmd = std::make_unique<EditorCommand_SetProperty>(
-                            scAssetId, scObjectId, "m_localTransform",
-                            snapshot, PropertyToJson(sc, transformProp));
-                        m_commandManager->Execute(std::move(cmd), ctx);
-                    }
-                }
-                else if (channel == "scale")
-                {
-                    const Vector3 from   = sc->GetLocalScale();
-                    const Vector3 target(tval[0].get<float>(), tval[1].get<float>(), tval[2].get<float>());
-
-                    if (m_animationManager)
-                    {
-                        m_animationManager->StartAnimationVec3(
-                            scAssetId, scObjectId, "scale", from, target, duration,
-                            [sc](Vector3 s) { sc->SetLocalScale(s); },
-                            snapshot);
-                    }
-                    else
-                    {
-                        sc->SetLocalScale(target);
-                        auto cmd = std::make_unique<EditorCommand_SetProperty>(
-                            scAssetId, scObjectId, "m_localTransform",
-                            snapshot, PropertyToJson(sc, transformProp));
-                        m_commandManager->Execute(std::move(cmd), ctx);
-                    }
-                }
-                else
-                {
-                    emitResponse(envelope,
-                        {{"ok", false}, {"commandType", "StartTransformChannelAnimation"},
-                         {"error", "Unknown channel: " + channel}});
-                    continue;
-                }
-
-                emitResponse(envelope, {{"ok", true}, {"commandType", "StartTransformChannelAnimation"}});
-                continue;
-            }
-            if (name == "CreateGameObjectWithRename")
-            {
-                const std::string desiredName = envelope.value("desiredName", "");
-                DPrimaryAsset* activeAsset = GetActiveSceneAsset();
-                if (!activeAsset)
-                {
-                    emitResponse(envelope,
-                        {{"ok", false}, {"commandType", "EditorCommand_CreateGameObject"},
-                         {"error", "No active scene asset"}});
-                    continue;
-                }
-
-                const AssetId sceneAssetId = activeAsset->GetAssetId();
-                auto createCmd = std::make_unique<EditorCommand_CreateGameObject>(sceneAssetId, "GameObject");
-                EditorCommand_CreateGameObject* createPtr = createCmd.get();
-                if (!m_commandManager->Execute(std::move(createCmd), ctx))
-                {
-                    emitResponse(envelope,
-                        {{"ok", false}, {"commandType", "EditorCommand_CreateGameObject"},
-                         {"error", "Execute() returned false"}});
-                    continue;
-                }
-
-                nlohmann::json createJson;
-                createPtr->Serialize(createJson);
-                const std::string objectId = createJson.value("createdId", "");
-
-                const bool needsRename = !desiredName.empty() && desiredName != "New GameObject";
-                if (!needsRename)
-                {
-                    emitResponse(envelope,
-                        {{"ok", true}, {"commandType", "EditorCommand_CreateGameObject"}, {"objectId", objectId}});
-                    continue;
-                }
-
-                ObjectId renameTarget = UUID::FromString(objectId);
-                if (envelope.value("forceRenameFailure", false))
-                    renameTarget = ObjectId{};
-
-                auto renameCmd = std::make_unique<EditorCommand_RenameObject>(
-                    sceneAssetId, renameTarget, desiredName);
-                if (!m_commandManager->Execute(std::move(renameCmd), ctx))
-                {
-                    emitResponse(envelope,
-                        {{"ok", true}, {"commandType", "EditorCommand_CreateGameObject"},
-                         {"objectId", objectId},
-                         {"error", "rename failed: Execute() returned false"}});
-                    continue;
-                }
-
-                emitResponse(envelope,
-                    {{"ok", true}, {"commandType", "EditorCommand_CreateGameObject"}, {"objectId", objectId}});
-                continue;
-            }
-            if (name == "ReimportAssets")
-            {
-                std::vector<AssetId> ids;
-                if (envelope.contains("assetIds") && envelope["assetIds"].is_array())
-                {
-                    for (const auto& v : envelope["assetIds"])
-                    {
-                        if (!v.is_string())
-                            continue;
-                        const AssetId id = UUID::FromString(v.get<std::string>());
-                        if (!id.IsNull())
-                            ids.push_back(id);
-                    }
-                }
-
-                nlohmann::json result = ReimportAssets(ids);
-                result["commandType"] = "ReimportAssets";
-                emitResponse(envelope, std::move(result));
-                continue;
-            }
-            if (name == "DuplicateAsset")
-            {
-                const AssetId sourceId = UUID::FromString(envelope.value("assetId", ""));
-                if (sourceId.IsNull())
-                {
-                    emitResponse(envelope,
-                        {{"ok", false}, {"commandType", "DuplicateAsset"},
-                         {"error", "Missing or invalid assetId"}});
-                    continue;
-                }
-
-                std::optional<std::string> newName;
-                if (envelope.contains("newName") && envelope["newName"].is_string())
-                    newName = envelope["newName"].get<std::string>();
-
-                std::optional<std::string> newPath;
-                if (envelope.contains("newPath") && envelope["newPath"].is_string())
-                    newPath = envelope["newPath"].get<std::string>();
-
-                nlohmann::json result = DuplicateAsset(sourceId, newName, newPath);
-                result["commandType"] = "DuplicateAsset";
-                emitResponse(envelope, std::move(result));
-                continue;
-            }
-            emitResponse(envelope, {{"ok", false}, {"error", "Unknown auxiliary: " + name}});
-            continue;
-        }
-
-        // MCP envelope: {"type":"command","system":"...","command":"EditorCommand_*","params":{...}}
-        // Legacy envelope: {"type":"EditorCommand_*","data":{...}}
-        std::string commandName;
-        nlohmann::json commandData;
-        if (type == "command" && envelope.contains("command"))
-        {
-            commandName = envelope["command"].get<std::string>();
-            commandData = envelope.value("params", nlohmann::json::object());
-
-            // Auto-inject active scene asset ID for MCP callers
-            DPrimaryAsset* activeAsset = GetActiveSceneAsset();
-            if (activeAsset)
-            {
-                std::string aid = activeAsset->GetAssetId().ToString();
-                if (!commandData.contains("sceneAssetId"))
-                    commandData["sceneAssetId"] = aid;
-                if (!commandData.contains("assetId"))
-                    commandData["assetId"] = aid;
-            }
-        }
-        else
-        {
-            commandName = type;
-            commandData = envelope.value("data", nlohmann::json{});
-        }
-
-        auto cmd = EditorCommandRegistry::Get().Create(commandName);
-        if (!cmd)
-        {
-            DLOG(LogEditorCommand, ELogLevel::Error, "[DrainCommandQueue] Unknown command type: {}", commandName);
-            emitResponse(envelope, {{"ok", false}, {"commandType", commandName}, {"error", "Unknown command type"}});
-            continue;
-        }
-
-        try
-        {
-            if (!commandData.empty())
-                cmd->Deserialize(commandData);
+            response = m_mcpRouter ? m_mcpRouter->Route(req.json)
+                                   : nlohmann::json{{"ok", false}, {"error", "no MCP router"}}.dump();
         }
         catch (const std::exception& e)
         {
-            DLOG(LogEditorCommand, ELogLevel::Error, "[DrainCommandQueue] Deserialize failed for '{}': {}", commandName, e.what());
-            emitResponse(envelope,
-                {{"ok", false}, {"commandType", commandName},
-                 {"error", std::string{"Deserialize failed: "} + e.what()}});
-            continue;
+            response = nlohmann::json{{"ok", false}, {"error", e.what()}}.dump();
         }
+        req.result.set_value(std::move(response));
+    }
+}
 
-        std::string typeName{cmd->GetTypeName()};
-        EditorCommand* cmdPtr = cmd.get();
-        bool ok = m_commandManager->Execute(std::move(cmd), ctx);
-        if (ok)
-        {
-            nlohmann::json j;
-            cmdPtr->Serialize(j);
-            std::string objectId = j.value("createdId", "");
-            if (objectId.empty())
-                objectId = j.value("createdComponentId", "");
-            emitResponse(envelope,
-                {{"ok", true}, {"commandType", typeName}, {"objectId", objectId}});
-        }
-        else
-        {
-            emitResponse(envelope,
-                {{"ok", false}, {"commandType", typeName}, {"error", "Execute() returned false"}});
-        }
+void EditorCore::CancelPendingMcpRequests()
+{
+    std::deque<PendingMcpRequest> batch;
+    {
+        std::lock_guard lock(m_mcpRequestMutex);
+        m_mcpShuttingDown = true;
+        batch.swap(m_mcpRequestQueue);
     }
 
+    for (auto& req : batch)
+        req.result.set_value(nlohmann::json{{"ok", false}, {"error", "editor shutting down"}}.dump());
+}
+
+nlohmann::json EditorCore::ExecuteSerializedCommand(const nlohmann::json& envelope)
+{
+    EditorCommandContext ctx{ *this };
+
+    std::string type = envelope.value("type", "");
+    if (type.empty())
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[ExecuteSerializedCommand] Missing 'type' field");
+        return {{"ok", false}, {"error", "Missing 'type' field"}};
+    }
+
+    if (type == "auxiliary")
+    {
+        std::string name = envelope.value("name", "");
+        if (name == "SaveDirtyAssets")
+        {
+            m_commandManager->ExecuteAuxiliary(
+                std::make_unique<EditorAuxiliaryCommand_SaveScene>(), ctx);
+            return {{"ok", true}, {"commandType", "SaveDirtyAssets"}};
+        }
+        if (name == "LoadScene")
+        {
+            std::string scenePath = envelope.value("scenePath", "");
+            if (scenePath.empty())
+                return {{"ok", false}, {"commandType", "LoadScene"},
+                        {"error", "Missing 'scenePath' field"}};
+            m_commandManager->ExecuteAuxiliary(
+                std::make_unique<EditorAuxiliaryCommand_LoadScene>(
+                    std::filesystem::path(scenePath)), ctx);
+            return {{"ok", true}, {"commandType", "LoadScene"}};
+        }
+        if (name == "StartLightAnimation")
+        {
+            const AssetId  animAssetId  = UUID::FromString(envelope.value("assetId", ""));
+            const ObjectId animObjectId = UUID::FromString(envelope.value("objectId", ""));
+            const std::string propName  = envelope.value("propertyName", "m_intensity");
+            const float targetValue     = envelope.value("targetValue", 0.0f);
+            const float duration        = envelope.value("duration", 0.0f);
+
+            LightComponent* light = ResolveObject<LightComponent>(animAssetId, animObjectId);
+            if (!light)
+                return {{"ok", false}, {"commandType", "StartLightAnimation"},
+                        {"error", "object not found or not a LightComponent"}};
+
+            const float current = light->GetIntensity();
+            if (m_animationManager)
+            {
+                m_animationManager->StartAnimation(
+                    animAssetId, animObjectId, propName,
+                    current, targetValue, duration,
+                    [light](float v) { light->SetIntensity(v); });
+            }
+            else
+            {
+                // Headless fallback: apply immediately via SetProperty.
+                auto cmd = std::make_unique<EditorCommand_SetProperty>(
+                    animAssetId, animObjectId, propName,
+                    nlohmann::json(current),
+                    nlohmann::json(targetValue));
+                m_commandManager->Execute(std::move(cmd), ctx);
+            }
+            return {{"ok", true}, {"commandType", "StartLightAnimation"}};
+        }
+        if (name == "StartTransformChannelAnimation")
+        {
+            using namespace DirectX;
+            using namespace DirectX::SimpleMath;
+
+            const AssetId  scAssetId  = UUID::FromString(envelope.value("scAssetId",  ""));
+            const ObjectId scObjectId = UUID::FromString(envelope.value("scObjectId", ""));
+            const std::string channel = envelope.value("channel", "");
+            const std::string space   = envelope.value("space",   "local");
+            const float duration      = envelope.value("duration", 1.0f);
+            const bool worldSpace     = (space == "world");
+
+            if (scAssetId.IsNull() || scObjectId.IsNull() || channel.empty())
+                return {{"ok", false}, {"commandType", "StartTransformChannelAnimation"},
+                        {"error", "Missing scAssetId, scObjectId, or channel"}};
+
+            SceneComponent* sc = ResolveObject<SceneComponent>(scAssetId, scObjectId);
+            if (!sc)
+                return {{"ok", false}, {"commandType", "StartTransformChannelAnimation"},
+                        {"error", "SceneComponent not found"}};
+
+            DProperty* transformProp = sc->GetClass()->FindPropertyByName("m_localTransform");
+            if (!transformProp)
+                return {{"ok", false}, {"commandType", "StartTransformChannelAnimation"},
+                        {"error", "m_localTransform property not found"}};
+
+            const nlohmann::json snapshot = PropertyToJson(sc, transformProp);
+            const auto& tval = envelope["targetValue"];
+
+            if (channel == "position")
+            {
+                const Vector3 from   = worldSpace ? sc->GetWorldPosition() : sc->GetLocalPosition();
+                const Vector3 target(tval[0].get<float>(), tval[1].get<float>(), tval[2].get<float>());
+
+                if (m_animationManager)
+                {
+                    m_animationManager->StartAnimationVec3(
+                        scAssetId, scObjectId, "position", from, target, duration,
+                        worldSpace
+                            ? std::function<void(Vector3)>([sc](Vector3 p) { sc->SetWorldPosition(p); })
+                            : std::function<void(Vector3)>([sc](Vector3 p) { sc->SetLocalPosition(p); }),
+                        snapshot);
+                }
+                else
+                {
+                    if (worldSpace) sc->SetWorldPosition(target); else sc->SetLocalPosition(target);
+                    auto cmd = std::make_unique<EditorCommand_SetProperty>(
+                        scAssetId, scObjectId, "m_localTransform",
+                        snapshot, PropertyToJson(sc, transformProp));
+                    m_commandManager->Execute(std::move(cmd), ctx);
+                }
+            }
+            else if (channel == "rotation")
+            {
+                const Quaternion from = worldSpace ? sc->GetWorldRotation() : sc->GetLocalRotation();
+                Quaternion target;
+                if (tval.size() == 4)
+                    target = Quaternion(tval[0].get<float>(), tval[1].get<float>(),
+                                        tval[2].get<float>(), tval[3].get<float>());
+                else
+                    target = Quaternion::CreateFromYawPitchRoll(
+                        tval[1].get<float>(), tval[0].get<float>(), tval[2].get<float>());
+
+                if (m_animationManager)
+                {
+                    m_animationManager->StartAnimationQuat(
+                        scAssetId, scObjectId, "rotation", from, target, duration,
+                        worldSpace
+                            ? std::function<void(Quaternion)>([sc](Quaternion q) { sc->SetWorldRotation(q); })
+                            : std::function<void(Quaternion)>([sc](Quaternion q) { sc->SetLocalRotation(q); }),
+                        snapshot);
+                }
+                else
+                {
+                    if (worldSpace) sc->SetWorldRotation(target); else sc->SetLocalRotation(target);
+                    auto cmd = std::make_unique<EditorCommand_SetProperty>(
+                        scAssetId, scObjectId, "m_localTransform",
+                        snapshot, PropertyToJson(sc, transformProp));
+                    m_commandManager->Execute(std::move(cmd), ctx);
+                }
+            }
+            else if (channel == "scale")
+            {
+                const Vector3 from   = sc->GetLocalScale();
+                const Vector3 target(tval[0].get<float>(), tval[1].get<float>(), tval[2].get<float>());
+
+                if (m_animationManager)
+                {
+                    m_animationManager->StartAnimationVec3(
+                        scAssetId, scObjectId, "scale", from, target, duration,
+                        [sc](Vector3 s) { sc->SetLocalScale(s); },
+                        snapshot);
+                }
+                else
+                {
+                    sc->SetLocalScale(target);
+                    auto cmd = std::make_unique<EditorCommand_SetProperty>(
+                        scAssetId, scObjectId, "m_localTransform",
+                        snapshot, PropertyToJson(sc, transformProp));
+                    m_commandManager->Execute(std::move(cmd), ctx);
+                }
+            }
+            else
+            {
+                return {{"ok", false}, {"commandType", "StartTransformChannelAnimation"},
+                        {"error", "Unknown channel: " + channel}};
+            }
+
+            return {{"ok", true}, {"commandType", "StartTransformChannelAnimation"}};
+        }
+        if (name == "CreateGameObjectWithRename")
+        {
+            const std::string desiredName = envelope.value("desiredName", "");
+            DPrimaryAsset* activeAsset = GetActiveSceneAsset();
+            if (!activeAsset)
+                return {{"ok", false}, {"commandType", "EditorCommand_CreateGameObject"},
+                        {"error", "No active scene asset"}};
+
+            const AssetId sceneAssetId = activeAsset->GetAssetId();
+            auto createCmd = std::make_unique<EditorCommand_CreateGameObject>(sceneAssetId, "GameObject");
+            EditorCommand_CreateGameObject* createPtr = createCmd.get();
+            if (!m_commandManager->Execute(std::move(createCmd), ctx))
+                return {{"ok", false}, {"commandType", "EditorCommand_CreateGameObject"},
+                        {"error", "Execute() returned false"}};
+
+            nlohmann::json createJson;
+            createPtr->Serialize(createJson);
+            const std::string objectId = createJson.value("createdId", "");
+
+            const bool needsRename = !desiredName.empty() && desiredName != "New GameObject";
+            if (!needsRename)
+                return {{"ok", true}, {"commandType", "EditorCommand_CreateGameObject"}, {"objectId", objectId}};
+
+            ObjectId renameTarget = UUID::FromString(objectId);
+            if (envelope.value("forceRenameFailure", false))
+                renameTarget = ObjectId{};
+
+            auto renameCmd = std::make_unique<EditorCommand_RenameObject>(
+                sceneAssetId, renameTarget, desiredName);
+            if (!m_commandManager->Execute(std::move(renameCmd), ctx))
+                return {{"ok", true}, {"commandType", "EditorCommand_CreateGameObject"},
+                        {"objectId", objectId},
+                        {"error", "rename failed: Execute() returned false"}};
+
+            return {{"ok", true}, {"commandType", "EditorCommand_CreateGameObject"}, {"objectId", objectId}};
+        }
+        if (name == "ReimportAssets")
+        {
+            std::vector<AssetId> ids;
+            if (envelope.contains("assetIds") && envelope["assetIds"].is_array())
+            {
+                for (const auto& v : envelope["assetIds"])
+                {
+                    if (!v.is_string())
+                        continue;
+                    const AssetId id = UUID::FromString(v.get<std::string>());
+                    if (!id.IsNull())
+                        ids.push_back(id);
+                }
+            }
+
+            nlohmann::json result = ReimportAssets(ids);
+            result["commandType"] = "ReimportAssets";
+            return result;
+        }
+        if (name == "DuplicateAsset")
+        {
+            const AssetId sourceId = UUID::FromString(envelope.value("assetId", ""));
+            if (sourceId.IsNull())
+                return {{"ok", false}, {"commandType", "DuplicateAsset"},
+                        {"error", "Missing or invalid assetId"}};
+
+            std::optional<std::string> newName;
+            if (envelope.contains("newName") && envelope["newName"].is_string())
+                newName = envelope["newName"].get<std::string>();
+
+            std::optional<std::string> newPath;
+            if (envelope.contains("newPath") && envelope["newPath"].is_string())
+                newPath = envelope["newPath"].get<std::string>();
+
+            nlohmann::json result = DuplicateAsset(sourceId, newName, newPath);
+            result["commandType"] = "DuplicateAsset";
+            return result;
+        }
+        return {{"ok", false}, {"error", "Unknown auxiliary: " + name}};
+    }
+
+    // MCP envelope: {"type":"command","system":"...","command":"EditorCommand_*","params":{...}}
+    // Legacy envelope: {"type":"EditorCommand_*","data":{...}}
+    std::string commandName;
+    nlohmann::json commandData;
+    if (type == "command" && envelope.contains("command"))
+    {
+        commandName = envelope["command"].get<std::string>();
+        commandData = envelope.value("params", nlohmann::json::object());
+
+        // Auto-inject active scene asset ID for MCP callers
+        DPrimaryAsset* activeAsset = GetActiveSceneAsset();
+        if (activeAsset)
+        {
+            std::string aid = activeAsset->GetAssetId().ToString();
+            if (!commandData.contains("sceneAssetId"))
+                commandData["sceneAssetId"] = aid;
+            if (!commandData.contains("assetId"))
+                commandData["assetId"] = aid;
+        }
+    }
+    else
+    {
+        commandName = type;
+        commandData = envelope.value("data", nlohmann::json{});
+    }
+
+    auto cmd = EditorCommandRegistry::Get().Create(commandName);
+    if (!cmd)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[ExecuteSerializedCommand] Unknown command type: {}", commandName);
+        return {{"ok", false}, {"commandType", commandName}, {"error", "Unknown command type"}};
+    }
+
+    try
+    {
+        if (!commandData.empty())
+            cmd->Deserialize(commandData);
+    }
+    catch (const std::exception& e)
+    {
+        DLOG(LogEditorCommand, ELogLevel::Error, "[ExecuteSerializedCommand] Deserialize failed for '{}': {}", commandName, e.what());
+        return {{"ok", false}, {"commandType", commandName},
+                {"error", std::string{"Deserialize failed: "} + e.what()}};
+    }
+
+    std::string typeName{cmd->GetTypeName()};
+    EditorCommand* cmdPtr = cmd.get();
+    bool ok = m_commandManager->Execute(std::move(cmd), ctx);
+    if (ok)
+    {
+        nlohmann::json j;
+        cmdPtr->Serialize(j);
+        std::string objectId = j.value("createdId", "");
+        if (objectId.empty())
+            objectId = j.value("createdComponentId", "");
+        return {{"ok", true}, {"commandType", typeName}, {"objectId", objectId}};
+    }
+
+    return {{"ok", false}, {"commandType", typeName}, {"error", "Execute() returned false"}};
 }
 
  void EditorCore::CreateAssets()

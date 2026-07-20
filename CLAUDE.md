@@ -278,7 +278,8 @@ All editor windows implement `EditorWindow` interface. Current windows:
 Key operations exposed:
 - `LoadScene(path)`, `GetWorld()`, `GetActiveSceneAsset()`
 - `ResolveObject(assetId, objectId)` / `GetIdsForObject(obj)` — bidirectional UUID↔pointer lookup
-- `EnqueueSerializedCommand(json)` + `DrainCommandQueue()` — serialized command dispatch for headless / MCP callers
+- `ExecuteSerializedCommand(envelope)` — executes a single MCP command/auxiliary envelope synchronously and returns its result payload (used by MCP handlers)
+- `SubmitMcpRequest(json)` / `DrainMcpRequests()` — main-thread MCP request pump: the socket thread submits a raw line and blocks on the returned future; `DrainMcpRequests()` (called once per frame on the main thread) routes each and fulfils the promise
 - Supports headless mode (`Initialize(..., headless=true)`) for test environments
 
 ### Editor Command System (`Engine/Editor/Commands/`)
@@ -314,9 +315,10 @@ DeltaEngine ships a full MCP bridge that lets AI agents (Claude Code, etc.) quer
 
 **C++ side (`Engine/Editor/Mcp/` + `Engine/Editor/McpSocketServer.h`):**
 
-- `McpSocketServer` — async TCP server (Asio); listens on port 57340 by default; dispatches newline-delimited JSON to the router.
+- `McpSocketServer` — async TCP server (Asio) on its own thread; listens on port 57340 by default; single client. It is pure transport: it never touches the engine object graph. For each newline-delimited line it calls a handler that submits the request to the main thread (`EditorCore::SubmitMcpRequest`) and blocks on the result, then writes back the single response line.
+- **Threading model** — MCP queries and commands execute **synchronously on the editor main thread**. `EditorCore::DrainMcpRequests()` runs once per frame (before `Tick`/`TickGC`), routing each queued request through `McpQueryRouter::Route` and fulfilling its promise. This keeps all engine/graph/GC access single-threaded; there is no cross-thread access and no async command queue. Each operation returns one response line (`request_id` echoed when supplied); there is no accept/result two-phase protocol.
 - `IMcpSystem` — interface for a named system that registers tools into `McpRegistry`.
-- `McpQueryRouter` — routes incoming JSON envelopes. Queries: `{ "type": "query", "system", "query", "params" }`. Commands: `{ "type": "command", "system", "command", "params" }`.
+- `McpQueryRouter` — routes incoming JSON envelopes. Queries: `{ "type": "query", "system", "query", "params" }`. Commands: `{ "type": "command", "system", "command", "params" }`. Command handlers execute via `EditorCore::ExecuteSerializedCommand` and return the real result.
 - `McpRegistry` — holds separate query and command maps. `RegisterQuery` / `RegisterCommand` register handlers; `DispatchQuery` / `DispatchCommand` invoke them; `HasQuery`, `HasCommand`, `GetQueryNames`, `GetCommandNames` for introspection.
 - **Systems** (`Engine/Editor/Mcp/Systems/`): `McpSceneSystem`, `McpAssetsSystem`, `McpReflectionSystem`, `McpSelectionSystem`, `McpUndoSystem`, `McpViewportSystem`, `McpProjectSystem`, `McpMetaSystem`, `McpCommonSystem`, `McpLightsSystem`.
 - **Transform commands** in `McpSceneSystem` are per-channel: `SetPosition`, `SetRotation`, `SetScale`. Each accepts an optional `duration_seconds` for tweened animation; duration 0 (default) applies immediately. There is no bulk `SetTransform` command.
