@@ -109,6 +109,18 @@
         {
           "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
           "objectId": "db3a3f81-3a84-4ea3-9c3e-9ab6539f8640"
+        },
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "0e91c161-45cb-4b15-9871-ffcb50c94ffb"
+        },
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "d303ab2b-41c3-497d-b45c-2f61a94ba0ee"
+        },
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "bf03f0b1-d77b-48e0-bba4-3e3f87c42eb6"
         }
       ],
       "m_name": "StartScene",
@@ -1367,10 +1379,10 @@
     {
       "_class": "Camera",
       "_objectId": "cc21d6a2-a7f6-4957-b238-4a7e02bbbb61",
-      "m_aspectRatio": 2.020458698272705,
+      "m_aspectRatio": 1.2567567825317383,
       "m_children": [],
       "m_far": 1000.0,
-      "m_fov": 45.0,
+      "m_fov": 35.0,
       "m_gameObject": {
         "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
         "objectId": "db3a3f81-3a84-4ea3-9c3e-9ab6539f8640"
@@ -1396,8 +1408,8 @@
       "m_name": "New Camera",
       "m_near": 0.10000000149011612,
       "m_postProcessStack": {
-        "assetId": "00000000-0000-0000-0000-000000000000",
-        "objectId": "00000000-0000-0000-0000-000000000000"
+        "assetId": "a521c98a-6402-46d4-b0d6-a61e1c232971",
+        "objectId": "bd61905b-dc6c-49ac-9186-51f7cf4e5f24"
       },
       "m_shadowSettings": {
         "m_maxFilterTexels": 12.0,
@@ -1408,6 +1420,168 @@
         "m_penumbraScale": 3.0,
         "m_qualityScalar": 1.0
       }
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "0e91c161-45cb-4b15-9871-ffcb50c94ffb",
+      "m_components": [],
+      "m_name": "Home",
+      "m_rootSceneComponent": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "c97267a2-c358-4335-b58f-c87d1f7ba533"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "c97267a2-c358-4335-b58f-c87d1f7ba533"
+        }
+      ]
+    },
+    {
+      "_class": "MeshRenderer",
+      "_objectId": "c97267a2-c358-4335-b58f-c87d1f7ba533",
+      "m_castShadow": true,
+      "m_children": [],
+      "m_gameObject": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "0e91c161-45cb-4b15-9871-ffcb50c94ffb"
+      },
+      "m_localTransform": [
+        2.200000047683716,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        2.200000047683716,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        2.200000047683716,
+        0.0,
+        3542.20458984375,
+        300.0,
+        -900.174072265625,
+        1.0
+      ],
+      "m_materialOverrides": [],
+      "m_mesh": {
+        "assetId": "dc7417ee-c251-4a6e-a8a1-53ae05b87c1e",
+        "objectId": "fabfc358-8dd6-4357-af8a-8b6575dfe6ca"
+      },
+      "m_name": "New MeshRenderer",
+      "m_settings": {}
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "d303ab2b-41c3-497d-b45c-2f61a94ba0ee",
+      "m_components": [],
+      "m_name": "HomeSpotLight",
+      "m_rootSceneComponent": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "e2606615-8404-43c1-9d18-0937ee8c466d"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "e2606615-8404-43c1-9d18-0937ee8c466d"
+        }
+      ]
+    },
+    {
+      "_class": "SpotLight",
+      "_objectId": "e2606615-8404-43c1-9d18-0937ee8c466d",
+      "m_castShadow": true,
+      "m_children": [],
+      "m_color": [
+        1.0,
+        0.75,
+        0.44999998807907104,
+        1.0
+      ],
+      "m_gameObject": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "d303ab2b-41c3-497d-b45c-2f61a94ba0ee"
+      },
+      "m_innerConeAngle": 0.5,
+      "m_intensity": 10.0,
+      "m_localTransform": [
+        1.0,
+        2.0097178045005992e-14,
+        -9.317362419797304e-21,
+        0.0,
+        -8.470364813511557e-22,
+        5.364440198718512e-07,
+        1.0000040531158447,
+        0.0,
+        2.0097261054234823e-14,
+        -1.0000040531158447,
+        5.364440198718512e-07,
+        0.0,
+        4145.08984375,
+        1200.0,
+        -794.36767578125,
+        1.0
+      ],
+      "m_name": "New SpotLight",
+      "m_outerConeAngle": 0.8999999761581421,
+      "m_pcssLightSize": 0.05000000074505806,
+      "m_range": 1400.0,
+      "m_shadowBias": 0.004999999888241291,
+      "m_shadowNormalBias": 0.0,
+      "m_shadowResolution": 1024,
+      "m_shadowSlopeBias": 1.0
+    },
+    {
+      "_class": "GameObject",
+      "_objectId": "bf03f0b1-d77b-48e0-bba4-3e3f87c42eb6",
+      "m_components": [],
+      "m_name": "SponzaDemo",
+      "m_rootSceneComponent": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "cd7891aa-e98a-494a-baa3-86d66879541c"
+      },
+      "m_sceneComponents": [
+        {
+          "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+          "objectId": "cd7891aa-e98a-494a-baa3-86d66879541c"
+        }
+      ]
+    },
+    {
+      "_class": "MeshRenderer",
+      "_objectId": "cd7891aa-e98a-494a-baa3-86d66879541c",
+      "m_castShadow": true,
+      "m_children": [],
+      "m_gameObject": {
+        "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
+        "objectId": "bf03f0b1-d77b-48e0-bba4-3e3f87c42eb6"
+      },
+      "m_localTransform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        -9000.0,
+        1.0
+      ],
+      "m_materialOverrides": [],
+      "m_mesh": {
+        "assetId": "ff337d3c-3bf5-4d9d-bfa4-e0b8f1826ec1",
+        "objectId": "f11ff3cb-b445-4368-90b1-7c460d136955"
+      },
+      "m_name": "New MeshRenderer",
+      "m_settings": {}
     }
   ]
 }

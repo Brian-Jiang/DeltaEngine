@@ -1,0 +1,22 @@
+{
+  "header": {
+    "assetId": "34dd7fb0-8c9d-432e-9c8d-e4c842f12b02",
+    "className": "PA_PostProcessStack",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "meta": {
+    "dynamic": {
+      "desc": "",
+      "tags": []
+    },
+    "static": {}
+  },
+  "objects": [
+    {
+      "_class": "PostProcessStack",
+      "_objectId": "fd2860e1-79b2-4297-9b1d-1750b629a362",
+      "m_passes": []
+    }
+  ]
+}
