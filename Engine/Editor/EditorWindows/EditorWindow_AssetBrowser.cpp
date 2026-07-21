@@ -106,17 +106,24 @@ void EditorWindow_AssetBrowser::Render(bool& open)
     RenderCreateButton(assetDatabase);
     ImGui::Separator();
 
-    const auto assets = assetDatabase->GetAllAssets();
-    if (assets.empty())
+    const uint64_t revision = assetDatabase->GetAssetSetRevision();
+    if (revision != m_cachedRevision)
+    {
+        m_cachedTree = FolderNode{};
+        const std::filesystem::path assetRoot(IOManager::GetEngineImportedAssetsFolder());
+        BuildTree(m_cachedTree, assetDatabase->GetAllAssets(), assetRoot);
+        m_cachedRevision = revision;
+    }
+
+    const FolderNode& rootNode = m_cachedTree;
+    if (rootNode.m_children.empty() && rootNode.m_assets.empty())
     {
         ImGui::TextDisabled("No imported assets");
         ImGui::End();
         return;
     }
 
-    FolderNode rootNode;
     const std::filesystem::path assetRoot(IOManager::GetEngineImportedAssetsFolder());
-    BuildTree(rootNode, assets, assetRoot);
 
     constexpr ImGuiTreeNodeFlags kRootFlags =
         ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanFullWidth;
@@ -188,7 +195,7 @@ void EditorWindow_AssetBrowser::BuildTree(FolderNode& root,
         {
             if (!dirEntry.is_directory())
                 continue;
-            const auto rel = std::filesystem::relative(dirEntry.path(), assetRoot);
+            const auto rel = dirEntry.path().lexically_relative(assetRoot);
             FolderNode* cur = &root;
             for (const auto& part : rel)
                 cur = &cur->m_children[part.string()];
@@ -215,7 +222,7 @@ void EditorWindow_AssetBrowser::BuildTree(FolderNode& root,
         std::filesystem::path relativePath;
         try
         {
-            relativePath = std::filesystem::relative(entry.m_filePath, assetRoot);
+            relativePath = entry.m_filePath.lexically_relative(assetRoot);
         }
         catch (const std::exception& ex)
         {
@@ -590,6 +597,7 @@ void EditorWindow_AssetBrowser::MoveSelectedItems(EditorAssetDatabase* assetData
             DLOG(LogEditorWindows, ELogLevel::Error,
                 "Folder move incomplete: remove_all '{}' failed: {} (expected empty source folder after asset moves)",
                 source.string(), ec.message());
+        assetDatabase->BumpAssetSetRevision();
         const std::string newRel =
             ToAssetRootRelativeString(destination, IOManager::GetEngineImportedAssetsFolder());
         if (!newRel.empty())
@@ -705,6 +713,7 @@ void EditorWindow_AssetBrowser::RenameFolder(EditorAssetDatabase* assetDatabase,
         DLOG(LogEditorWindows, ELogLevel::Error,
             "RenameFolder: remove_all '{}' failed: {} after moving assets",
             source.string(), ec.message());
+    assetDatabase->BumpAssetSetRevision();
     const std::string newRel = ToAssetRootRelativeString(target, IOManager::GetEngineImportedAssetsFolder());
     if (!newRel.empty())
         sel->SetSelectedFolder(newRel);
@@ -738,6 +747,7 @@ void EditorWindow_AssetBrowser::DeleteFolder(EditorAssetDatabase* assetDatabase,
         DLOG(LogEditorWindows, ELogLevel::Error,
             "DeleteFolder: remove_all '{}' failed: {} (expected deletable folder after asset purge)",
             folderPath.string(), ec.message());
+    assetDatabase->BumpAssetSetRevision();
 
     EditorSelectionState* sel = g_editorCore->GetSelectionState();
     if (sel && sel->IsFolderSelected(folderRelPath))
@@ -784,6 +794,7 @@ void EditorWindow_AssetBrowser::RenderCreateButton(EditorAssetDatabase* assetDat
             m_scrollToFolderRelPath  = relPath;
             m_inlineRename.Begin(absPath.filename().string());
             g_editorCore->GetSelectionState()->SetSelectedFolder(relPath);
+            assetDatabase->BumpAssetSetRevision();
         }
         else
             DLOG(LogEditorWindows, ELogLevel::Error,

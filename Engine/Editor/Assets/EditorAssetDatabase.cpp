@@ -145,6 +145,8 @@ void EditorAssetDatabase::ScanAssetsFolder(const std::filesystem::path& root)
 
         m_assetPathMap[path] = header.m_persistentId;
     }
+
+    BumpAssetSetRevision();
 }
 
 const std::unordered_map<AssetId, EditorAssetDatabase::AssetEntry>& EditorAssetDatabase::GetAllAssets() const
@@ -685,6 +687,8 @@ AssetId EditorAssetDatabase::DuplicateAsset(const AssetId& id)
 
     m_assetPathMap[targetPath] = newAssetId;
 
+    BumpAssetSetRevision();
+
     return newAssetId;
 }
 
@@ -738,6 +742,8 @@ bool EditorAssetDatabase::DeleteAsset(const AssetId& id)
     deletedAnything |= std::filesystem::remove(assetPath);
     m_assetPathMap.erase(it->second.m_filePath);
     m_assets.erase(it);
+
+    BumpAssetSetRevision();
 
     return deletedAnything;
 }
@@ -844,6 +850,8 @@ bool EditorAssetDatabase::MoveAsset(const AssetId& id, const std::filesystem::pa
     it->second.m_filePath = newPath;
     m_assetPathMap[newPath] = id;
 
+    BumpAssetSetRevision();
+
     return true;
 }
 
@@ -913,6 +921,8 @@ bool EditorAssetDatabase::RenameAssetToExactStem(const AssetId& id, const std::s
     m_assetPathMap.erase(oldPath);
     it->second.m_filePath = newPath;
     m_assetPathMap[newPath] = id;
+
+    BumpAssetSetRevision();
 
     asset->MarkDirty();
     SaveAsset(id);
@@ -1040,6 +1050,8 @@ void EditorAssetDatabase::CreateAsset(const std::filesystem::path& filePath, DPr
     };
 
     m_assetPathMap[filePath] = newId;
+
+    BumpAssetSetRevision();
 
     SaveAsset(newId);
 }

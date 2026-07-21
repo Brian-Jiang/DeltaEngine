@@ -8,7 +8,9 @@
 
 #include "Runtime/Core/UUID.h"
 
+#include <cstdint>
 #include <filesystem>
+#include <limits>
 #include <map>
 #include <string>
 #include <vector>
@@ -46,6 +48,9 @@ private:
     void DeleteFolder(EditorAssetDatabase* assetDatabase, const std::string& folderRelPath);
 
     std::filesystem::path GetTargetFolder(EditorAssetDatabase* assetDatabase) const;
+
+    FolderNode m_cachedTree;
+    uint64_t   m_cachedRevision = std::numeric_limits<uint64_t>::max();
 
     ContextMenuPopup   m_assetContextMenu;
     EditorInlineRename m_inlineRename;

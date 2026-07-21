@@ -94,6 +94,14 @@ public:
     /// or a null UUID if no matching entry is found.
     AssetId FindAssetIdByPath(const std::filesystem::path& path) const override;
 
+    /// Monotonic counter bumped whenever the asset id-set or any asset file path changes.
+    /// UI can compare it to detect structural changes without rescanning.
+    uint64_t GetAssetSetRevision() const { return m_assetSetRevision; }
+
+    /// Signals a structural change (e.g. an empty folder created/removed on disk) that does
+    /// not pass through the asset-map mutators. Bumps GetAssetSetRevision().
+    void BumpAssetSetRevision() { ++m_assetSetRevision; }
+
 private:
     void LoadAssetRecursive(const AssetId& id);
     void ResolvePendingBatch();
@@ -111,6 +119,8 @@ private:
 
     std::unordered_set<AssetId>             m_currentlyLoading;
     std::vector<AssetId>                    m_newlyLoadedBatch;
+
+    uint64_t                                m_assetSetRevision = 0;
 };
 
 DELTA_ENGINE_NS_END
