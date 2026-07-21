@@ -3,6 +3,7 @@
 #include "Editor/Assets/AssetImporter.h"
 #include "Editor/Assets/EditorAssetsLog.h"
 
+#include "Runtime/Assert/Assert.h"
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DObjectReferenceTraversal.h"
 #include "Runtime/Core/DObject.h"
@@ -254,7 +255,9 @@ nlohmann::json EditorAssetDatabase::ReadAssetMetaFromFile(const std::filesystem:
         return out;
     }
 
-    if (root.contains("meta") && root["meta"].is_object())
+    if (DELTA_ENSURE_MSG(root.contains("meta") && root["meta"].is_object(),
+                         "ReadAssetMetaFromFile: '{}' has no valid 'meta' object — applying empty defaults",
+                         path.string()))
     {
         const auto& meta = root["meta"];
         if (meta.contains("static") && meta["static"].is_object())
@@ -387,16 +390,12 @@ void EditorAssetDatabase::LoadAssetRecursive(const AssetId& id)
         JsonAssetArchive bulkAr(root, entry.m_filePath.parent_path());
         asset->SerializeBulkData(bulkAr);
 
-        const bool legacyMissingMeta = !root.contains("meta");
-        nlohmann::json metaRoot = legacyMissingMeta ? nlohmann::json::object() : root["meta"];
+        const bool hasMeta = DELTA_ENSURE_MSG(root.contains("meta"),
+                                              "LoadAssetRecursive: '{}' has no 'meta' block — applying empty defaults",
+                                              entry.m_filePath.string());
+        nlohmann::json metaRoot = hasMeta ? root["meta"] : nlohmann::json::object();
         JsonAssetArchive metaAr(metaRoot, entry.m_filePath.parent_path());
         asset->SerializeMeta(metaAr);
-        if (legacyMissingMeta)
-        {
-            DLOG(LogEditorAssets, ELogLevel::Warning,
-                 "LoadAssetRecursive: '{}' has no 'meta' block — applied empty defaults (legacy file)",
-                 entry.m_filePath.string());
-        }
 
         auto refs = asset->CollectExternalReferences();
         for (const auto& sp : refs)
@@ -547,6 +546,9 @@ void EditorAssetDatabase::SaveAsset(const AssetId& id)
         if (bulkRoot.contains("header") && bulkRoot["header"].contains("bulkDataMap"))
             output["header"]["bulkDataMap"] = bulkRoot["header"]["bulkDataMap"];
         output["meta"] = metaAr.GetRoot();
+        DELTA_ASSERT_MSG(output.contains("meta") && output["meta"].is_object(),
+                         "SaveAsset: serialized asset '{}' produced no 'meta' object",
+                         entry.m_filePath.string());
         for (auto& [key, val] : bodyAr.GetRoot().items())
             output[key] = val;
 

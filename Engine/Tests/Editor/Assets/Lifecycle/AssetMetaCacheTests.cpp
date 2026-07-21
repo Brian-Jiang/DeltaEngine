@@ -91,7 +91,7 @@ TEST_F(AssetMetaCacheTests, ScanBackfillsMissingDynamicKeys)
     EXPECT_EQ(meta["dynamic"]["tags"].size(), 0u);
 }
 
-TEST_F(AssetMetaCacheTests, ScanBackfillsCompletelyMissingMeta)
+TEST_F(AssetMetaCacheTests, ScanEnsuresAndFallsBackWhenMetaBlockMissing)
 {
     const auto tempDir = MakeTempDir("DeltaMetaCacheNoMeta");
     const AssetId assetId = AssetId::Generate();
