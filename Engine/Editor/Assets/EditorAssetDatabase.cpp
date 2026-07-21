@@ -49,18 +49,21 @@ EditorAssetDatabase::~EditorAssetDatabase()
     // object it loaded — including GPU resources held by their render proxies (PSO,
     // textures, SRV heaps), which keeps the device alive past shutdown.
     for (auto& [id, entry] : m_assets)
-    {
-        if (!entry.m_instance)
-            continue;
+        DestroyAssetInstance(entry);
+}
 
-        DPrimaryAsset* pa = entry.m_instance.Get();
-        pa->ClearObjectRoots();
-        std::vector<DObject*> owned = pa->GetObjects();
-        for (DObject* obj : owned)
-            GetReflectionRegistry().DestroyObject(obj);
-        entry.m_instance.Reset();
-        GetReflectionRegistry().DestroyObject(pa);
-    }
+void EditorAssetDatabase::DestroyAssetInstance(AssetEntry& entry)
+{
+    if (!entry.m_instance)
+        return;
+
+    DPrimaryAsset* pa = entry.m_instance.Get();
+    pa->ClearObjectRoots();
+    std::vector<DObject*> owned = pa->GetObjects();
+    for (DObject* obj : owned)
+        GetReflectionRegistry().DestroyObject(obj);
+    entry.m_instance.Reset();
+    GetReflectionRegistry().DestroyObject(pa);
 }
 
 // ---------------------------------------------------------------------------
@@ -81,16 +84,7 @@ void EditorAssetDatabase::ReloadAssetFromDisk(const AssetId& id)
     DLOG(LogEditorAssets, ELogLevel::Verbose, "ReloadAssetFromDisk: id='{}'", id.ToString());
 
     AssetEntry& entry = it->second;
-    if (entry.m_instance)
-    {
-        DPrimaryAsset* pa = entry.m_instance.Get();
-        pa->ClearObjectRoots();
-        std::vector<DObject*> owned = pa->GetObjects();
-        for (DObject* obj : owned)
-            GetReflectionRegistry().DestroyObject(obj);
-        entry.m_instance.Reset();
-        GetReflectionRegistry().DestroyObject(pa);
-    }
+    DestroyAssetInstance(entry);
     entry.m_state = AssetState::HeaderOnly;
     LoadAsset(id);
 }
@@ -369,53 +363,71 @@ void EditorAssetDatabase::LoadAssetRecursive(const AssetId& id)
 
         auto asset = CreateAssetInstance(entry.m_header.m_className);
 
-        if (root.contains("header"))
+        // Root the asset immediately
+        entry.m_instance = asset;
+
+        auto failLoad = [&]()
         {
-            JsonAssetArchive headerAr(root["header"], entry.m_filePath.parent_path());
-            asset->SerializeHeader(headerAr);
-        }
-        else
-        {
+            DestroyAssetInstance(entry);
+            entry.m_state = AssetState::HeaderOnly;
             m_currentlyLoading.erase(id);
+        };
+
+        if (!root.contains("header"))
+        {
+            failLoad();
             DLOG(LogEditorAssets, ELogLevel::Error,
                  "LoadAssetRecursive: '{}' missing top-level 'header' object (expected DLTA asset header)",
                  entry.m_filePath.string());
             return;
         }
 
-        JsonAssetArchive bodyAr(root, entry.m_filePath.parent_path());
-        asset->SerializeBody(bodyAr);
-
-        // Phase 2: load bulk data payloads (handles were read from JSON by SerializeBody)
-        JsonAssetArchive bulkAr(root, entry.m_filePath.parent_path());
-        asset->SerializeBulkData(bulkAr);
-
-        const bool hasMeta = DELTA_ENSURE_MSG(root.contains("meta"),
-                                              "LoadAssetRecursive: '{}' has no 'meta' block — applying empty defaults",
-                                              entry.m_filePath.string());
-        nlohmann::json metaRoot = hasMeta ? root["meta"] : nlohmann::json::object();
-        JsonAssetArchive metaAr(metaRoot, entry.m_filePath.parent_path());
-        asset->SerializeMeta(metaAr);
-
-        auto refs = asset->CollectExternalReferences();
-        for (const auto& sp : refs)
+        try
         {
-            if (!sp.m_assetId.IsNull() && sp.m_assetId != id)
-                LoadAssetRecursive(sp.m_assetId);
-        }
+            JsonAssetArchive headerAr(root["header"], entry.m_filePath.parent_path());
+            asset->SerializeHeader(headerAr);
 
-        entry.m_state    = AssetState::Loaded;
-        entry.m_instance = asset;
+            JsonAssetArchive bodyAr(root, entry.m_filePath.parent_path());
+            asset->SerializeBody(bodyAr);
 
-        for (auto& obj : asset->GetObjects())
-        {
-            if (auto* callbackReceiver = dynamic_cast<ISerializationCallbackReceiver*>(obj))
+            // Phase 2: load bulk data payloads (handles were read from JSON by SerializeBody)
+            JsonAssetArchive bulkAr(root, entry.m_filePath.parent_path());
+            asset->SerializeBulkData(bulkAr);
+
+            const bool hasMeta = DELTA_ENSURE_MSG(root.contains("meta"),
+                                                  "LoadAssetRecursive: '{}' has no 'meta' block — applying empty defaults",
+                                                  entry.m_filePath.string());
+            nlohmann::json metaRoot = hasMeta ? root["meta"] : nlohmann::json::object();
+            JsonAssetArchive metaAr(metaRoot, entry.m_filePath.parent_path());
+            asset->SerializeMeta(metaAr);
+
+            auto refs = asset->CollectExternalReferences();
+            for (const auto& sp : refs)
             {
-                callbackReceiver->OnAfterDeserialize();
+                if (!sp.m_assetId.IsNull() && sp.m_assetId != id)
+                    LoadAssetRecursive(sp.m_assetId);
             }
-        }
 
-        entry.m_meta = BuildMetaFromLiveAsset(asset);
+            entry.m_state = AssetState::Loaded;
+
+            for (auto& obj : asset->GetObjects())
+            {
+                if (auto* callbackReceiver = dynamic_cast<ISerializationCallbackReceiver*>(obj))
+                {
+                    callbackReceiver->OnAfterDeserialize();
+                }
+            }
+
+            entry.m_meta = BuildMetaFromLiveAsset(asset);
+        }
+        catch (const std::exception& e)
+        {
+            failLoad();
+            DLOG(LogEditorAssets, ELogLevel::Error,
+                 "LoadAssetRecursive: population failed for '{}': {} (asset torn down)",
+                 entry.m_filePath.string(), e.what());
+            return;
+        }
     }
     // todo binary loading
 

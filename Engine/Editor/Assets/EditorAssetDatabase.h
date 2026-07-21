@@ -107,6 +107,10 @@ private:
     void ResolvePendingBatch();
     DPrimaryAsset* CreateAssetInstance(const std::string& className);
 
+    /// Fully tears down a loaded/rooted asset: releases child roots, destroys owned
+    /// objects, releases the asset root, and frees the asset. No-op if not instanced.
+    void DestroyAssetInstance(AssetEntry& entry);
+
     static DPrimaryAsset::Header ReadAssetHeaderFromFile(
         const std::filesystem::path& path, bool isJson);
 
