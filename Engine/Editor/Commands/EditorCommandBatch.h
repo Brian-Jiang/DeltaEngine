@@ -29,7 +29,6 @@ public:
     bool Undo(EditorCommandContext& ctx) override;
     bool Redo(EditorCommandContext& ctx) override;
     void Serialize(nlohmann::json& out) const override;
-    void Deserialize(const nlohmann::json& in) override;
 
 private:
     std::vector<std::unique_ptr<EditorCommand>> m_commands;

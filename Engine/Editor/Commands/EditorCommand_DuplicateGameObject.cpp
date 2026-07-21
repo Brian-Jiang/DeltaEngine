@@ -227,34 +227,3 @@ void EditorCommand_DuplicateGameObject::Serialize(nlohmann::json& out) const
         out["capturedIds"] = ids;
     }
 }
-
-void EditorCommand_DuplicateGameObject::Deserialize(const nlohmann::json& in)
-{
-    m_assetId = UUID::FromString(in.value("assetId", ""));
-    m_sourceGameObjectId = UUID::FromString(in.value("sourceObjectId", ""));
-    m_newName = in.value("newName", "");
-    m_createdId = UUID::FromString(in.value("createdId", ""));
-
-    m_hasOffset = false;
-    if (in.contains("offsetPosition") && in["offsetPosition"].is_array() && in["offsetPosition"].size() >= 3)
-    {
-        m_offset[0] = in["offsetPosition"][0].get<float>();
-        m_offset[1] = in["offsetPosition"][1].get<float>();
-        m_offset[2] = in["offsetPosition"][2].get<float>();
-        m_hasOffset = true;
-    }
-
-    m_hasSnapshot = false;
-    if (in.contains("snapshot"))
-    {
-        m_snapshot.rootJson = in["snapshot"];
-        m_snapshot.rootClassName = in.value("rootClassName", "");
-        m_snapshot.capturedIds.clear();
-        if (in.contains("capturedIds"))
-            for (const auto& idStr : in["capturedIds"])
-                m_snapshot.capturedIds.push_back(UUID::FromString(idStr.get<std::string>()));
-        m_hasSnapshot = true;
-    }
-
-    m_description.clear();
-}

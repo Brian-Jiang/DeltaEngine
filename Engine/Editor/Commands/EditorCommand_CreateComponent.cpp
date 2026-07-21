@@ -216,27 +216,3 @@ void EditorCommand_CreateComponent::Serialize(nlohmann::json& out) const
         out["capturedIds"] = ids;
     }
 }
-
-void EditorCommand_CreateComponent::Deserialize(const nlohmann::json& in)
-{
-    m_sceneAssetId = UUID::FromString(in.value("sceneAssetId", ""));
-    m_gameObjectId = UUID::FromString(in.value("gameObjectId", ""));
-    m_className = in.value("className", "");
-    m_createdComponentId = UUID::FromString(in.value("createdComponentId", ""));
-    m_isSceneComponent = in.value("isSceneComponent", false);
-    m_componentIndex = in.value("componentIndex", -1);
-    m_parentSceneComponentId = UUID::FromString(in.value("parentSceneComponentId", ""));
-
-    if (in.contains("snapshot"))
-    {
-        m_snapshot.rootJson = in["snapshot"];
-        m_snapshot.rootClassName = in.value("rootClassName", "");
-        m_snapshot.capturedIds.clear();
-        if (in.contains("capturedIds"))
-            for (const auto& idStr : in["capturedIds"])
-                m_snapshot.capturedIds.push_back(UUID::FromString(idStr.get<std::string>()));
-        m_hasSnapshot = true;
-    }
-
-    m_description.clear();
-}

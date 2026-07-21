@@ -173,24 +173,3 @@ void EditorCommand_AddPostProcessPass::Serialize(nlohmann::json& out) const
         out["capturedIds"] = ids;
     }
 }
-
-void EditorCommand_AddPostProcessPass::Deserialize(const nlohmann::json& in)
-{
-    m_assetId = UUID::FromString(in.value("assetId", ""));
-    m_className = in.value("className", "");
-    m_createdId = UUID::FromString(in.value("createdId", ""));
-    m_passIndex = in.value("passIndex", -1);
-
-    if (in.contains("snapshot"))
-    {
-        m_snapshot.rootJson = in["snapshot"];
-        m_snapshot.rootClassName = in.value("rootClassName", "");
-        m_snapshot.capturedIds.clear();
-        if (in.contains("capturedIds"))
-            for (const auto& idStr : in["capturedIds"])
-                m_snapshot.capturedIds.push_back(UUID::FromString(idStr.get<std::string>()));
-        m_hasSnapshot = true;
-    }
-
-    m_description.clear();
-}

@@ -180,22 +180,3 @@ void EditorCommand_DeleteComponent::Serialize(nlohmann::json& out) const
         ids.push_back(id.ToString());
     out["capturedIds"] = ids;
 }
-
-void EditorCommand_DeleteComponent::Deserialize(const nlohmann::json& in)
-{
-    m_sceneAssetId = UUID::FromString(in.value("sceneAssetId", ""));
-    m_gameObjectId = UUID::FromString(in.value("gameObjectId", ""));
-    m_componentId = UUID::FromString(in.value("componentId", ""));
-    m_isSceneComponent = in.value("isSceneComponent", false);
-    m_componentIndex = in.value("componentIndex", -1);
-    m_parentSceneComponentId = UUID::FromString(in.value("parentSceneComponentId", ""));
-
-    m_snapshot.rootJson = in.value("snapshot", nlohmann::json{});
-    m_snapshot.rootClassName = in.value("rootClassName", "");
-    m_snapshot.capturedIds.clear();
-    if (in.contains("capturedIds"))
-        for (const auto& idStr : in["capturedIds"])
-            m_snapshot.capturedIds.push_back(UUID::FromString(idStr.get<std::string>()));
-
-    m_description.clear();
-}

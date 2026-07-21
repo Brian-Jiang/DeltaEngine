@@ -80,12 +80,3 @@ void EditorCommand_ReparentSceneComponent::Serialize(nlohmann::json& out) const
     out["newParentObjectId"] = m_newParentObjectId.ToString();
     out["oldParentObjectId"] = m_oldParentObjectId.ToString();
 }
-
-void EditorCommand_ReparentSceneComponent::Deserialize(const nlohmann::json& in)
-{
-    m_sceneAssetId = UUID::FromString(in.value("sceneAssetId", ""));
-    m_childObjectId = UUID::FromString(in.value("childObjectId", ""));
-    m_newParentObjectId = UUID::FromString(in.value("newParentObjectId", ""));
-    m_oldParentObjectId = UUID::FromString(in.value("oldParentObjectId", ""));
-    m_description.clear();
-}

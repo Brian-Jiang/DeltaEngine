@@ -108,13 +108,3 @@ void EditorCommand_SetProperty::Serialize(nlohmann::json& out) const
     out["valueBefore"] = m_valueBefore;
     out["valueAfter"] = m_valueAfter;
 }
-
-void EditorCommand_SetProperty::Deserialize(const nlohmann::json& in)
-{
-    m_assetId = UUID::FromString(in.value("assetId", ""));
-    m_objectId = UUID::FromString(in.value("objectId", ""));
-    m_propertyName = in.value("propertyName", "");
-    m_valueBefore = in.value("valueBefore", nlohmann::json{});
-    m_valueAfter = in.value("valueAfter", nlohmann::json{});
-    m_description.clear();
-}

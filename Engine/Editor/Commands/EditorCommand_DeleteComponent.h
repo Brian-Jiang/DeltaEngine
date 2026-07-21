@@ -24,7 +24,6 @@ public:
     bool Undo(EditorCommandContext& ctx) override;
     bool Redo(EditorCommandContext& ctx) override;
     void Serialize(nlohmann::json& out) const override;
-    void Deserialize(const nlohmann::json& in) override;
 
 private:
     AssetId m_sceneAssetId;

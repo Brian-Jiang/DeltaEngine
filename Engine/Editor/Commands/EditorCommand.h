@@ -21,7 +21,6 @@ public:
     virtual bool Undo(EditorCommandContext& ctx) = 0;
     virtual bool Redo(EditorCommandContext& ctx) { return Execute(ctx); }
     virtual void Serialize(nlohmann::json& out) const = 0;
-    virtual void Deserialize(const nlohmann::json& in) = 0;
     virtual std::string_view GetDescription() const { return GetTypeName(); }
 };
 

@@ -175,24 +175,3 @@ void EditorCommand_CreateGameObject::Serialize(nlohmann::json& out) const
         out["capturedIds"] = ids;
     }
 }
-
-void EditorCommand_CreateGameObject::Deserialize(const nlohmann::json& in)
-{
-    m_sceneAssetId = UUID::FromString(in.value("sceneAssetId", ""));
-    m_className = in.value("className", "");
-    m_initialName = in.value("initialName", "");
-    m_createdId = UUID::FromString(in.value("createdId", ""));
-
-    if (in.contains("snapshot"))
-    {
-        m_snapshot.rootJson = in["snapshot"];
-        m_snapshot.rootClassName = in.value("rootClassName", "");
-        m_snapshot.capturedIds.clear();
-        if (in.contains("capturedIds"))
-            for (const auto& idStr : in["capturedIds"])
-                m_snapshot.capturedIds.push_back(UUID::FromString(idStr.get<std::string>()));
-        m_hasSnapshot = true;
-    }
-
-    m_description.clear();
-}

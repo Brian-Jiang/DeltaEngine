@@ -90,12 +90,3 @@ void EditorCommand_RenameObject::Serialize(nlohmann::json& out) const
     out["newName"] = m_newName;
     out["oldName"] = m_oldName;
 }
-
-void EditorCommand_RenameObject::Deserialize(const nlohmann::json& in)
-{
-    m_assetId = UUID::FromString(in.value("assetId", ""));
-    m_targetObjectId = UUID::FromString(in.value("targetObjectId", ""));
-    m_newName = in.value("newName", "");
-    m_oldName = in.value("oldName", "");
-    m_description.clear();
-}

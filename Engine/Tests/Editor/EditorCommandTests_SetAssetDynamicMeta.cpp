@@ -212,7 +212,7 @@ TEST_F(EditorCommandTests_SetAssetDynamicMeta, Reject_UnknownAsset)
     EXPECT_FALSE(m_core->GetCommandManager().Execute(std::move(cmd), ctx));
 }
 
-TEST_F(EditorCommandTests_SetAssetDynamicMeta, JsonRoundTrip)
+TEST_F(EditorCommandTests_SetAssetDynamicMeta, JsonSerialize)
 {
     EditorCommandContext ctx{ *m_core };
     auto srcCmd = std::make_unique<EditorCommand_SetAssetDynamicMeta>(
@@ -228,13 +228,6 @@ TEST_F(EditorCommandTests_SetAssetDynamicMeta, JsonRoundTrip)
     EXPECT_EQ(out["valueBefore"], "initial");
     EXPECT_TRUE(out["hadValueBefore"].get<bool>());
     EXPECT_TRUE(out["snapshotTaken"].get<bool>());
-
-    EditorCommand_SetAssetDynamicMeta dst;
-    dst.Deserialize(out);
-
-    nlohmann::json out2;
-    dst.Serialize(out2);
-    EXPECT_EQ(out, out2);
 }
 
 TEST_F(EditorCommandTests_SetAssetDynamicMeta, FactoryRegistered)

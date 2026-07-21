@@ -19,7 +19,6 @@ public:
     bool Execute(EditorCommandContext& ctx) override;
     bool Undo(EditorCommandContext& ctx) override;
     void Serialize(nlohmann::json& out) const override;
-    void Deserialize(const nlohmann::json& in) override;
 
 private:
     std::string m_key;

@@ -160,20 +160,3 @@ void EditorCommand_RemovePostProcessPass::Serialize(nlohmann::json& out) const
         ids.push_back(id.ToString());
     out["capturedIds"] = ids;
 }
-
-void EditorCommand_RemovePostProcessPass::Deserialize(const nlohmann::json& in)
-{
-    m_assetId = UUID::FromString(in.value("assetId", ""));
-    m_className = in.value("className", "");
-    m_removedId = UUID::FromString(in.value("removedId", ""));
-    m_passIndex = in.value("passIndex", -1);
-
-    m_snapshot.rootJson = in.value("snapshot", nlohmann::json{});
-    m_snapshot.rootClassName = in.value("rootClassName", "");
-    m_snapshot.capturedIds.clear();
-    if (in.contains("capturedIds"))
-        for (const auto& idStr : in["capturedIds"])
-            m_snapshot.capturedIds.push_back(UUID::FromString(idStr.get<std::string>()));
-
-    m_description.clear();
-}

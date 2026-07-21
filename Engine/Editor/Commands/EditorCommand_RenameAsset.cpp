@@ -129,12 +129,3 @@ void EditorCommand_RenameAsset::Serialize(nlohmann::json& out) const
     out["oldStem"]     = m_oldStem;
     out["newStem"]     = m_newStem;
 }
-
-void EditorCommand_RenameAsset::Deserialize(const nlohmann::json& in)
-{
-    m_assetId     = UUID::FromString(in.value("assetId", ""));
-    m_desiredStem = in.value("desiredStem", "");
-    m_oldStem     = in.value("oldStem", "");
-    m_newStem     = in.value("newStem", "");
-    m_description.clear();
-}

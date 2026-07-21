@@ -272,14 +272,3 @@ void EditorCommand_SetAssetDynamicMeta::Serialize(nlohmann::json& out) const
     out["hadValueBefore"] = m_hadValueBefore;
     out["snapshotTaken"]  = m_snapshotTaken;
 }
-
-void EditorCommand_SetAssetDynamicMeta::Deserialize(const nlohmann::json& in)
-{
-    m_assetId        = UUID::FromString(in.value("assetId", ""));
-    m_jsonPointer    = in.value("jsonPointer", "");
-    m_valueBefore    = in.value("valueBefore", nlohmann::json{});
-    m_valueAfter     = in.value("valueAfter", nlohmann::json{});
-    m_hadValueBefore = in.value("hadValueBefore", false);
-    m_snapshotTaken  = in.value("snapshotTaken", false);
-    m_description.clear();
-}

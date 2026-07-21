@@ -40,26 +40,6 @@ TEST_F(EditorCommandBatchFixture, EditorCommandBatch_Execute_Undo_RoundTripsSubC
     EXPECT_TRUE(m_core->GetTestValue("batchB").empty());
 }
 
-TEST_F(EditorCommandBatchFixture, EditorCommandBatch_SerializeDeserialize_NestedBatchRoundTrips)
-{
-    EditorCommandBatch inner;
-    inner.Add(std::make_unique<EditorCommand_SetTestValue>("nested", "", "in"));
-
-    EditorCommandBatch outer;
-    outer.Add(std::make_unique<EditorCommandBatch>(std::move(inner)));
-
-    nlohmann::json data;
-    outer.Serialize(data);
-
-    EditorCommandBatch restored;
-    restored.Deserialize(data);
-
-    EditorCommandContext ctx{ *m_core };
-    ASSERT_TRUE(restored.Execute(ctx));
-    const std::string vin = "in";
-    EXPECT_EQ(m_core->GetTestValue("nested"), vin);
-}
-
 TEST_F(EditorCommandBatchFixture, EditorCommandBatch_Execute_WhenSubCommandFails_ManagerDoesNotPushBatch)
 {
     EditorCommandContext ctx{ *m_core };

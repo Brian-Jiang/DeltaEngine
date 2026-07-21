@@ -111,20 +111,3 @@ void EditorCommand_DeleteGameObject::Serialize(nlohmann::json& out) const
         ids.push_back(id.ToString());
     out["capturedIds"] = ids;
 }
-
-void EditorCommand_DeleteGameObject::Deserialize(const nlohmann::json& in)
-{
-    m_assetId = UUID::FromString(in.value("assetId", ""));
-    m_gameObjectId = UUID::FromString(in.value("gameObjectId", ""));
-    m_snapshot.rootJson = in.value("snapshot", nlohmann::json{});
-    m_snapshot.rootClassName = in.value("rootClassName", "");
-
-    m_snapshot.capturedIds.clear();
-    if (in.contains("capturedIds"))
-    {
-        for (const auto& idStr : in["capturedIds"])
-            m_snapshot.capturedIds.push_back(UUID::FromString(idStr.get<std::string>()));
-    }
-
-    m_description.clear();
-}

@@ -37,10 +37,3 @@ void EditorCommand_SetTestValue::Serialize(nlohmann::json& out) const
     out["valueBefore"] = m_valueBefore;
     out["valueAfter"] = m_valueAfter;
 }
-
-void EditorCommand_SetTestValue::Deserialize(const nlohmann::json& in)
-{
-    m_key = in.value("key", "");
-    m_valueBefore = in.value("valueBefore", "");
-    m_valueAfter = in.value("valueAfter", "");
-}
