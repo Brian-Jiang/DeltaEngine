@@ -442,6 +442,7 @@ void EditorWindow_Viewport::DrawGizmo(const ImVec2& imageMin, const ImVec2& imag
 
     ImGuizmo::SetDrawlist(ImGui::GetWindowDrawList());
     ImGuizmo::SetOrthographic(false);
+    ImGuizmo::AllowAxisFlip(false);
     ImGuizmo::SetRect(imageMin.x, imageMin.y, imageSize.x, imageSize.y);
 
     // Build view + projection using the same helper that feeds the runtime camera.
