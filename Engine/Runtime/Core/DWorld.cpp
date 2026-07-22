@@ -448,7 +448,7 @@ void DWorld::AddGameObjectFromScene(GameObject* go)
         };
         reconstructLinks(rootSC);
 
-        rootSC->UpdateTransform();
+        rootSC->MarkWorldTRSDirtySubtree();
     }
 
     m_gameObjectsChanged = true;

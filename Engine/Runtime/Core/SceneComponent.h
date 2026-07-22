@@ -95,21 +95,35 @@ protected:
     virtual void OnTransformChanged() {}
 
 private:
-    void SyncEulerFromMatrix();
+    DPROPERTY(HideInDetails)
+    DirectX::SimpleMath::Vector3 m_localPosition;
 
     DPROPERTY(HideInDetails)
-    DirectX::XMMATRIX m_localTransform;
+    DirectX::SimpleMath::Quaternion m_localRotation;
 
-    DirectX::XMMATRIX m_worldTransform;
+    DPROPERTY(HideInDetails)
+    DirectX::SimpleMath::Vector3 m_localScale;
+
+    DPROPERTY(HideInDetails)
+    DirectX::SimpleMath::Vector3 m_localEulerAngles;
+
     SceneComponent* m_parent;
 
     DPROPERTY(HideInDetails)
     std::vector<SceneComponent*> m_children;
 
-    DirectX::SimpleMath::Vector3 m_eulerRotationCache;
+    mutable DirectX::XMMATRIX m_localMatrix;
+    mutable bool m_localDirty = true;
 
-    void UpdateTransformHierarchy(DirectX::XMMATRIX worldTransform);
-    void UpdateTransform();
+    mutable DirectX::SimpleMath::Vector3 m_worldPosition;
+    mutable DirectX::SimpleMath::Quaternion m_worldRotation;
+    mutable DirectX::SimpleMath::Vector3 m_worldScale;
+    mutable bool m_worldTRSDirty = true;
+
+    DirectX::XMMATRIX GetLocalMatrix() const;
+    void EnsureLocalClean() const;
+    void EnsureWorldTRS() const;
+    void MarkWorldTRSDirtySubtree();
     void SetTransformDirty();
 };
 
