@@ -82,22 +82,25 @@
         "assetId": "eb094a14-734a-4de3-9c3e-350a3b3080d0",
         "objectId": "c6997cb6-651e-4da2-89f7-d7f5cb1199bc"
       },
-      "m_localTransform": [
-        1.0,
+      "m_localEulerAngles": [
+        -0.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         -172.2855682373047,
         -3.048182770726271e-05,
-        -98.94652557373047,
+        -98.94652557373047
+      ],
+      "m_localRotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
+        1.0,
+        1.0,
         1.0
       ],
       "m_materialOverrides": [
@@ -145,22 +148,25 @@
         "objectId": "7d53e9c1-eca1-432f-a298-5d930d5f7bbf"
       },
       "m_intensity": 1.0,
-      "m_localTransform": [
+      "m_localEulerAngles": [
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "m_localPosition": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "m_localRotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
         1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
         1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
         1.0
       ],
       "m_name": "New DirectionalLight",
@@ -200,22 +206,25 @@
         "assetId": "eb094a14-734a-4de3-9c3e-350a3b3080d0",
         "objectId": "fbfe269b-2556-4889-8a01-696a6657dc89"
       },
-      "m_localTransform": [
+      "m_localEulerAngles": [
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "m_localPosition": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "m_localRotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
         1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
         1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
         1.0
       ],
       "m_name": "New Camera",
@@ -323,22 +332,25 @@
         "assetId": "eb094a14-734a-4de3-9c3e-350a3b3080d0",
         "objectId": "4b2780ce-ee08-436e-9ad6-43b61fd65d38"
       },
-      "m_localTransform": [
-        1.0,
+      "m_localEulerAngles": [
+        -0.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         -586.0,
         376.0,
-        668.0,
+        668.0
+      ],
+      "m_localRotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
+        1.0,
+        1.0,
         1.0
       ],
       "m_materialOverrides": [
@@ -363,22 +375,25 @@
         "assetId": "eb094a14-734a-4de3-9c3e-350a3b3080d0",
         "objectId": "8ceec201-a140-4ea7-b3d8-41bffe2ecbfe"
       },
-      "m_localTransform": [
-        1.0,
+      "m_localEulerAngles": [
+        -0.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         -516.0,
         376.0,
-        494.0,
+        494.0
+      ],
+      "m_localRotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
+        1.0,
+        1.0,
         1.0
       ],
       "m_materialOverrides": [
@@ -403,22 +418,25 @@
         "assetId": "eb094a14-734a-4de3-9c3e-350a3b3080d0",
         "objectId": "22df257b-55cd-4eea-8607-37ed6a847f33"
       },
-      "m_localTransform": [
-        1.0,
+      "m_localEulerAngles": [
+        -0.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         -446.0,
         376.0,
-        320.0,
+        320.0
+      ],
+      "m_localRotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
+        1.0,
+        1.0,
         1.0
       ],
       "m_materialOverrides": [
@@ -443,22 +461,25 @@
         "assetId": "eb094a14-734a-4de3-9c3e-350a3b3080d0",
         "objectId": "8ac21ce2-b387-49e3-b9ac-8fc157060713"
       },
-      "m_localTransform": [
-        1.0,
+      "m_localEulerAngles": [
+        -0.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         -376.0,
         376.0,
-        146.0,
+        146.0
+      ],
+      "m_localRotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
+        1.0,
+        1.0,
         1.0
       ],
       "m_materialOverrides": [
@@ -483,22 +504,25 @@
         "assetId": "eb094a14-734a-4de3-9c3e-350a3b3080d0",
         "objectId": "aca8fe37-1fe7-4baf-be85-0a84dcbfbc89"
       },
-      "m_localTransform": [
-        1.0,
+      "m_localEulerAngles": [
+        -0.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         -306.0,
         376.0,
-        -28.0,
+        -28.0
+      ],
+      "m_localRotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
+        1.0,
+        1.0,
         1.0
       ],
       "m_materialOverrides": [

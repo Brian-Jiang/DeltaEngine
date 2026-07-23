@@ -154,23 +154,26 @@
         "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
         "objectId": "73ed9487-935f-4f74-af21-025ca6159b0b"
       },
-      "m_localTransform": [
-        30.0,
+      "m_localEulerAngles": [
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         0.0,
         0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        30.0,
-        0.0,
+        0.0
+      ],
+      "m_localRotation": [
         0.0,
         0.0,
         0.0,
         1.0
+      ],
+      "m_localScale": [
+        30.0,
+        1.0,
+        30.0
       ],
       "m_materialOverrides": [],
       "m_mesh": {
@@ -509,22 +512,25 @@
         "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
         "objectId": "21ec77a3-8bda-4c53-84c5-c4460797e27f"
       },
-      "m_localTransform": [
-        1.0,
+      "m_localEulerAngles": [
+        -0.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         -450.0,
         100.0,
-        -600.0,
+        -600.0
+      ],
+      "m_localRotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
+        1.0,
+        1.0,
         1.0
       ],
       "m_materialOverrides": [
@@ -549,22 +555,25 @@
         "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
         "objectId": "80d9df8e-06e9-43e1-ba4f-5965f8a5a68d"
       },
-      "m_localTransform": [
-        1.0,
+      "m_localEulerAngles": [
+        -0.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         -450.0,
         100.0,
-        -300.0,
+        -300.0
+      ],
+      "m_localRotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
+        1.0,
+        1.0,
         1.0
       ],
       "m_materialOverrides": [
@@ -589,22 +598,25 @@
         "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
         "objectId": "d455ee03-e566-4f3f-976e-33f4b869a6fc"
       },
-      "m_localTransform": [
-        1.0,
+      "m_localEulerAngles": [
+        -0.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         -450.0,
         100.0,
+        0.0
+      ],
+      "m_localRotation": [
         0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
+        1.0,
+        1.0,
         1.0
       ],
       "m_materialOverrides": [
@@ -629,22 +641,25 @@
         "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
         "objectId": "ea7e4a62-1684-4af5-8b98-012ea86f051c"
       },
-      "m_localTransform": [
-        1.0,
+      "m_localEulerAngles": [
+        -0.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         -450.0,
         100.0,
-        300.0,
+        300.0
+      ],
+      "m_localRotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
+        1.0,
+        1.0,
         1.0
       ],
       "m_materialOverrides": [
@@ -669,22 +684,25 @@
         "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
         "objectId": "7ddd1e1c-b35b-4431-9ffc-57eb6c570419"
       },
-      "m_localTransform": [
-        1.0,
+      "m_localEulerAngles": [
+        -0.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         -450.0,
         100.0,
-        600.0,
+        600.0
+      ],
+      "m_localRotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
+        1.0,
+        1.0,
         1.0
       ],
       "m_materialOverrides": [
@@ -709,22 +727,25 @@
         "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
         "objectId": "25327f7f-cc64-4cdf-9b03-0dbaef4de569"
       },
-      "m_localTransform": [
-        1.0,
+      "m_localEulerAngles": [
+        -0.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         -150.0,
         100.0,
-        -600.0,
+        -600.0
+      ],
+      "m_localRotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
+        1.0,
+        1.0,
         1.0
       ],
       "m_materialOverrides": [
@@ -749,22 +770,25 @@
         "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
         "objectId": "285071ad-7461-4485-8d76-8955df9e6fba"
       },
-      "m_localTransform": [
-        1.0,
+      "m_localEulerAngles": [
+        -0.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         -150.0,
         100.0,
-        -300.0,
+        -300.0
+      ],
+      "m_localRotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
+        1.0,
+        1.0,
         1.0
       ],
       "m_materialOverrides": [
@@ -789,22 +813,25 @@
         "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
         "objectId": "5ed3755b-6e33-4d0e-9c7e-4744ac8414ef"
       },
-      "m_localTransform": [
-        1.0,
+      "m_localEulerAngles": [
+        -0.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         -150.0,
         100.0,
+        0.0
+      ],
+      "m_localRotation": [
         0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
+        1.0,
+        1.0,
         1.0
       ],
       "m_materialOverrides": [
@@ -829,22 +856,25 @@
         "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
         "objectId": "bcb36ab0-ee90-4b4d-a147-7a3b5f4d2cfb"
       },
-      "m_localTransform": [
-        1.0,
+      "m_localEulerAngles": [
+        -0.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         -150.0,
         100.0,
-        300.0,
+        300.0
+      ],
+      "m_localRotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
+        1.0,
+        1.0,
         1.0
       ],
       "m_materialOverrides": [
@@ -869,22 +899,25 @@
         "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
         "objectId": "a6d4ec75-ff0f-4329-9dad-3c55ef1faf53"
       },
-      "m_localTransform": [
-        1.0,
+      "m_localEulerAngles": [
+        -0.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         -150.0,
         100.0,
-        600.0,
+        600.0
+      ],
+      "m_localRotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
+        1.0,
+        1.0,
         1.0
       ],
       "m_materialOverrides": [
@@ -909,22 +942,25 @@
         "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
         "objectId": "a1616371-ef4b-4e0e-ac21-a6bd71e98f17"
       },
-      "m_localTransform": [
-        1.0,
+      "m_localEulerAngles": [
+        -0.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         150.0,
         100.0,
-        -600.0,
+        -600.0
+      ],
+      "m_localRotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
+        1.0,
+        1.0,
         1.0
       ],
       "m_materialOverrides": [
@@ -949,22 +985,25 @@
         "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
         "objectId": "6751963b-673e-42b7-bde0-28d36d299d5b"
       },
-      "m_localTransform": [
-        1.0,
+      "m_localEulerAngles": [
+        -0.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         150.0,
         100.0,
-        -300.0,
+        -300.0
+      ],
+      "m_localRotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
+        1.0,
+        1.0,
         1.0
       ],
       "m_materialOverrides": [
@@ -989,22 +1028,25 @@
         "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
         "objectId": "298cda00-fa24-467b-a90b-63daf114ee44"
       },
-      "m_localTransform": [
-        1.0,
+      "m_localEulerAngles": [
+        -0.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         150.0,
         100.0,
+        0.0
+      ],
+      "m_localRotation": [
         0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
+        1.0,
+        1.0,
         1.0
       ],
       "m_materialOverrides": [
@@ -1029,22 +1071,25 @@
         "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
         "objectId": "335299dd-4d19-4dbb-8a96-8ad9d2c966f9"
       },
-      "m_localTransform": [
-        1.0,
+      "m_localEulerAngles": [
+        -0.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         150.0,
         100.0,
-        300.0,
+        300.0
+      ],
+      "m_localRotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
+        1.0,
+        1.0,
         1.0
       ],
       "m_materialOverrides": [
@@ -1069,22 +1114,25 @@
         "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
         "objectId": "5a593337-a54c-4790-9c6c-3faad360a543"
       },
-      "m_localTransform": [
-        1.0,
+      "m_localEulerAngles": [
+        -0.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         150.0,
         100.0,
-        600.0,
+        600.0
+      ],
+      "m_localRotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
+        1.0,
+        1.0,
         1.0
       ],
       "m_materialOverrides": [
@@ -1109,22 +1157,25 @@
         "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
         "objectId": "16c75ef1-aeff-41a0-bb34-15569e721e94"
       },
-      "m_localTransform": [
-        1.0,
+      "m_localEulerAngles": [
+        -0.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         450.0,
         100.0,
-        -600.0,
+        -600.0
+      ],
+      "m_localRotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
+        1.0,
+        1.0,
         1.0
       ],
       "m_materialOverrides": [
@@ -1149,22 +1200,25 @@
         "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
         "objectId": "e0768150-00b1-4318-9c33-8d072a3227ac"
       },
-      "m_localTransform": [
-        1.0,
+      "m_localEulerAngles": [
+        -0.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         450.0,
         100.0,
-        -300.0,
+        -300.0
+      ],
+      "m_localRotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
+        1.0,
+        1.0,
         1.0
       ],
       "m_materialOverrides": [
@@ -1189,22 +1243,25 @@
         "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
         "objectId": "33ae5c9e-f5b7-4fd1-b8b5-ebc1af38415d"
       },
-      "m_localTransform": [
-        1.0,
+      "m_localEulerAngles": [
+        -0.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         450.0,
         100.0,
+        0.0
+      ],
+      "m_localRotation": [
         0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
+        1.0,
+        1.0,
         1.0
       ],
       "m_materialOverrides": [
@@ -1229,22 +1286,25 @@
         "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
         "objectId": "146cfda4-024d-4b32-b043-b78292081e63"
       },
-      "m_localTransform": [
-        1.0,
+      "m_localEulerAngles": [
+        -0.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         450.0,
         100.0,
-        300.0,
+        300.0
+      ],
+      "m_localRotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
+        1.0,
+        1.0,
         1.0
       ],
       "m_materialOverrides": [
@@ -1269,22 +1329,25 @@
         "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
         "objectId": "1e83933a-6440-4363-9742-aba1ed6845b8"
       },
-      "m_localTransform": [
-        1.0,
+      "m_localEulerAngles": [
+        -0.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         450.0,
         100.0,
-        600.0,
+        600.0
+      ],
+      "m_localRotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
+        1.0,
+        1.0,
         1.0
       ],
       "m_materialOverrides": [
@@ -1332,23 +1395,26 @@
         "objectId": "aa0a571d-eec5-40a1-864c-d14afc27a6ac"
       },
       "m_intensity": 1.0,
-      "m_localTransform": [
-        0.825333833694458,
-        -1.4901130107602967e-08,
-        -0.5646412968635559,
-        0.0,
-        0.31881633400917053,
-        0.8253231048583984,
-        0.46601253747940063,
-        0.0,
-        0.4660150408744812,
-        -0.5646370053291321,
-        0.6811721920967102,
-        0.0,
+      "m_localEulerAngles": [
+        34.377471148659325,
+        34.37747052534217,
+        1.467093348266617e-06
+      ],
+      "m_localPosition": [
         0.0,
         500.0,
-        0.0,
-        1.0
+        0.0
+      ],
+      "m_localRotation": [
+        0.2823212655691924,
+        0.2823212529007162,
+        -0.08733219627914425,
+        0.9126677931542454
+      ],
+      "m_localScale": [
+        0.999997865579997,
+        0.9999848835518184,
+        0.9999902606496386
       ],
       "m_name": "New DirectionalLight",
       "m_pcssLightSize": 0.004999999888241291,
@@ -1387,22 +1453,25 @@
         "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
         "objectId": "db3a3f81-3a84-4ea3-9c3e-9ab6539f8640"
       },
-      "m_localTransform": [
+      "m_localEulerAngles": [
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "m_localPosition": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "m_localRotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
         1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
         1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
         1.0
       ],
       "m_name": "New Camera",
@@ -1446,23 +1515,26 @@
         "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
         "objectId": "0e91c161-45cb-4b15-9871-ffcb50c94ffb"
       },
-      "m_localTransform": [
-        2.200000047683716,
+      "m_localEulerAngles": [
+        -0.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        2.200000047683716,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        2.200000047683716,
-        0.0,
+        0.0
+      ],
+      "m_localPosition": [
         3542.20458984375,
         300.0,
-        -900.174072265625,
+        -900.174072265625
+      ],
+      "m_localRotation": [
+        0.0,
+        0.0,
+        0.0,
         1.0
+      ],
+      "m_localScale": [
+        2.200000047683716,
+        2.200000047683716,
+        2.200000047683716
       ],
       "m_materialOverrides": [],
       "m_mesh": {
@@ -1505,23 +1577,26 @@
       },
       "m_innerConeAngle": 0.5,
       "m_intensity": 10.0,
-      "m_localTransform": [
-        1.0,
-        2.0097178045005992e-14,
-        -9.317362419797304e-21,
+      "m_localEulerAngles": [
+        89.9999692641463,
         0.0,
-        -8.470364813511557e-22,
-        5.364440198718512e-07,
-        1.0000040531158447,
-        0.0,
-        2.0097261054234823e-14,
-        -1.0000040531158447,
-        5.364440198718512e-07,
-        0.0,
+        -0.0
+      ],
+      "m_localPosition": [
         4145.08984375,
         1200.0,
-        -794.36767578125,
-        1.0
+        -794.36767578125
+      ],
+      "m_localRotation": [
+        0.7071065915256888,
+        0.0,
+        0.0,
+        0.7071069708473555
+      ],
+      "m_localScale": [
+        1.0,
+        1.0000040531159886,
+        1.0000040531159886
       ],
       "m_name": "New SpotLight",
       "m_outerConeAngle": 0.8999999761581421,
@@ -1557,22 +1632,25 @@
         "assetId": "9e017129-7bf9-433d-9b0b-c98898b5f3e0",
         "objectId": "bf03f0b1-d77b-48e0-bba4-3e3f87c42eb6"
       },
-      "m_localTransform": [
+      "m_localEulerAngles": [
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "m_localPosition": [
+        0.0,
+        0.0,
+        -9000.0
+      ],
+      "m_localRotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_localScale": [
         1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
         1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        -9000.0,
         1.0
       ],
       "m_materialOverrides": [],
