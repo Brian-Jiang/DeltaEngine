@@ -44,6 +44,12 @@ private:
     void RenderComponentDetails(DComponent* component);
     void RenderSceneComponentTransform(SceneComponent* sceneComponent);
 
+    enum class TransformChannel { None, Position, Rotation, Scale };
+    void HandleTransformChannelBegin(SceneComponent* sceneComponent, const WidgetEditEvent& evt,
+        TransformChannel channel, const char* propName);
+    void HandleTransformChannelCommit(SceneComponent* sceneComponent, const WidgetEditEvent& evt,
+        TransformChannel channel, const char* propName);
+
     void DrawPropertyEditor(DObject* instance, DClass* dclass, int depth = 0);
     void RenderSingleProperty(DObject* instance, DProperty* prop, int depth);
     void DrawFunctionButtons(DObject* instance, DClass* dclass);
@@ -83,7 +89,7 @@ private:
     nlohmann::json   m_activeEditBefore = {};
     DObject*         m_activeEditObject = nullptr;
 
-    bool             m_transformEditing = false;
+    TransformChannel m_transformEditChannel = TransformChannel::None;
     SceneComponent*  m_transformEditTarget = nullptr;
     nlohmann::json   m_transformEditBefore = {};
 

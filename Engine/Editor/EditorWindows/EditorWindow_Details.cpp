@@ -101,9 +101,9 @@ void EditorWindow_Details::HandleSelectionChanged()
     m_activeEditBefore = {};
     m_activeEditObject = nullptr;
 
-    m_transformEditing    = false;
-    m_transformEditTarget = nullptr;
-    m_transformEditBefore = {};
+    m_transformEditChannel = TransformChannel::None;
+    m_transformEditTarget  = nullptr;
+    m_transformEditBefore  = {};
 }
 
 void EditorWindow_Details::Render(bool& open)
@@ -417,62 +417,84 @@ void EditorWindow_Details::RenderSceneComponentTransform(SceneComponent* sceneCo
     if (!sceneComponent)
         return;
 
-    if (m_transformEditing && m_transformEditTarget != sceneComponent)
+    if (m_transformEditChannel != TransformChannel::None && m_transformEditTarget != sceneComponent)
     {
-        m_transformEditing = false;
-        m_transformEditTarget = nullptr;
-        m_transformEditBefore = {};
+        m_transformEditChannel = TransformChannel::None;
+        m_transformEditTarget  = nullptr;
+        m_transformEditBefore  = {};
     }
 
-    Vector3 pos = sceneComponent->GetLocalPosition();
+    Vector3 pos   = sceneComponent->GetLocalPosition();
     Vector3 euler = sceneComponent->GetLocalRotationEulerAngles();
     Vector3 scale = sceneComponent->GetLocalScale();
 
-    WidgetEditEvent combined;
-    combined.Merge(m_vec3Field.Draw("Position", &pos.x, 0.1f));
-    combined.Merge(m_vec3Field.Draw("Rotation", &euler.x, 1.0f));
-    combined.Merge(m_vec3Field.Draw("Scale", &scale.x, 0.01f));
+    // Each row has a distinct ImGui ID, so events are tracked per channel. Only one row can be
+    // dragged at a time, so a single active-channel edit state is sufficient.
+    const WidgetEditEvent posEvt = m_vec3Field.Draw("Position", &pos.x, 0.1f);
+    const WidgetEditEvent rotEvt = m_vec3Field.Draw("Rotation", &euler.x, 1.0f);
+    const WidgetEditEvent sclEvt = m_vec3Field.Draw("Scale", &scale.x, 0.01f);
 
-    if (combined.editBegan && !m_transformEditing)
-    {
-        m_transformEditing = true;
-        m_transformEditTarget = sceneComponent;
-        DClass* dc = sceneComponent->GetClass();
-        DProperty* ltProp = dc ? dc->FindPropertyByName("m_localTransform") : nullptr;
-        if (ltProp)
-            m_transformEditBefore = PropertyToJson(sceneComponent, ltProp);
-    }
+    // Begin-capture before any live write so the before-snapshot holds the pre-edit value.
+    HandleTransformChannelBegin(sceneComponent, posEvt, TransformChannel::Position, "m_localPosition");
+    HandleTransformChannelBegin(sceneComponent, rotEvt, TransformChannel::Rotation, "m_localEulerAngles");
+    HandleTransformChannelBegin(sceneComponent, sclEvt, TransformChannel::Scale, "m_localScale");
 
-    if (combined.valueChanged)
-    {
+    // Live preview. Rotation uses the euler overload so the typed angles are the source of truth.
+    if (posEvt.valueChanged)
         sceneComponent->SetLocalPosition(pos);
+    if (rotEvt.valueChanged)
         sceneComponent->SetLocalRotation(euler);
+    if (sclEvt.valueChanged)
         sceneComponent->SetLocalScale(scale);
+
+    HandleTransformChannelCommit(sceneComponent, posEvt, TransformChannel::Position, "m_localPosition");
+    HandleTransformChannelCommit(sceneComponent, rotEvt, TransformChannel::Rotation, "m_localEulerAngles");
+    HandleTransformChannelCommit(sceneComponent, sclEvt, TransformChannel::Scale, "m_localScale");
+}
+
+void EditorWindow_Details::HandleTransformChannelBegin(SceneComponent* sceneComponent,
+    const WidgetEditEvent& evt, TransformChannel channel, const char* propName)
+{
+    if (!evt.editBegan || m_transformEditChannel != TransformChannel::None)
+        return;
+
+    DClass* dc = sceneComponent->GetClass();
+    DProperty* prop = dc ? dc->FindPropertyByName(propName) : nullptr;
+    if (!prop)
+        return;
+
+    m_transformEditChannel = channel;
+    m_transformEditTarget  = sceneComponent;
+    m_transformEditBefore  = PropertyToJson(sceneComponent, prop);
+}
+
+void EditorWindow_Details::HandleTransformChannelCommit(SceneComponent* sceneComponent,
+    const WidgetEditEvent& evt, TransformChannel channel, const char* propName)
+{
+    if (!evt.editEnded || m_transformEditChannel != channel)
+        return;
+
+    DClass* dc = sceneComponent->GetClass();
+    DProperty* prop = dc ? dc->FindPropertyByName(propName) : nullptr;
+    if (prop)
+    {
+        nlohmann::json valueAfter = PropertyToJson(sceneComponent, prop);
+        if (m_transformEditBefore != valueAfter)
+        {
+            auto [assetId, objectId] = g_editorCore->GetIdsForObject(sceneComponent);
+            auto cmd = std::make_unique<EditorCommand_SetProperty>(
+                assetId, objectId,
+                std::string(propName),
+                std::move(m_transformEditBefore),
+                std::move(valueAfter));
+            EditorCommandContext ctx{ *g_editorCore };
+            g_editorCore->GetCommandManager().Execute(std::move(cmd), ctx);
+        }
     }
 
-    if (combined.editEnded && m_transformEditing)
-    {
-        DClass* dc = sceneComponent->GetClass();
-        DProperty* ltProp = dc ? dc->FindPropertyByName("m_localTransform") : nullptr;
-        if (ltProp)
-        {
-            nlohmann::json valueAfter = PropertyToJson(sceneComponent, ltProp);
-            if (m_transformEditBefore != valueAfter)
-            {
-                auto [assetId, objectId] = g_editorCore->GetIdsForObject(sceneComponent);
-                auto cmd = std::make_unique<EditorCommand_SetProperty>(
-                    assetId, objectId,
-                    std::string("m_localTransform"),
-                    std::move(m_transformEditBefore),
-                    std::move(valueAfter));
-                EditorCommandContext ctx{ *g_editorCore };
-                g_editorCore->GetCommandManager().Execute(std::move(cmd), ctx);
-            }
-        }
-        m_transformEditing = false;
-        m_transformEditTarget = nullptr;
-        m_transformEditBefore = {};
-    }
+    m_transformEditChannel = TransformChannel::None;
+    m_transformEditTarget  = nullptr;
+    m_transformEditBefore  = {};
 }
 
 void EditorWindow_Details::DrawPropertyEditor(DObject* instance, DClass* dclass, int depth)

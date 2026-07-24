@@ -11,6 +11,7 @@
 #include "Runtime/Core/SceneComponent.h"
 #include "Runtime/Test/SerializationTestTypes.h"
 
+#include "SimpleMath.h"
 #include <DirectXMath.h>
 
 #include <cmath>
@@ -18,6 +19,7 @@
 using namespace DeltaEngine;
 using namespace DeltaEngine::Tests;
 using namespace DirectX;
+using namespace DirectX::SimpleMath;
 
 namespace
 {
@@ -152,19 +154,19 @@ TEST_F(EditorCommandTests_SetProperty, EditorCommand_SetProperty_SceneComponent_
     SceneComponent* root = go->GetRootSceneComponent();
     ASSERT_NE(root, nullptr);
 
-    DProperty* tfProp = FindPropertyOnObject(root, "m_localTransform");
-    ASSERT_NE(tfProp, nullptr);
+    DProperty* posProp = FindPropertyOnObject(root, "m_localPosition");
+    ASSERT_NE(posProp, nullptr);
 
-    nlohmann::json beforeJson = PropertyToJson(root, tfProp);
-    ASSERT_TRUE(beforeJson.is_array() && beforeJson.size() == 16);
+    nlohmann::json beforeJson = PropertyToJson(root, posProp);
+    ASSERT_TRUE(beforeJson.is_array() && beforeJson.size() == 3);
 
     nlohmann::json afterJson = beforeJson;
-    afterJson[12] = beforeJson[12].get<float>() + 10.0f;
+    afterJson[0] = beforeJson[0].get<float>() + 10.0f;
 
     const XMMATRIX worldBefore = root->GetWorldTransform();
 
     auto cmd = std::make_unique<EditorCommand_SetProperty>(
-        sceneId, root->GetObjectId(), "m_localTransform", beforeJson, afterJson);
+        sceneId, root->GetObjectId(), "m_localPosition", beforeJson, afterJson);
     ASSERT_TRUE(m_core->GetCommandManager().Execute(std::move(cmd), ctx));
 
     const XMMATRIX worldAfter = root->GetWorldTransform();
@@ -173,6 +175,64 @@ TEST_F(EditorCommandTests_SetProperty, EditorCommand_SetProperty_SceneComponent_
     ASSERT_TRUE(m_core->GetCommandManager().Undo(ctx));
     const XMMATRIX worldRestored = root->GetWorldTransform();
     EXPECT_TRUE(Float4x4ApproxEqual(worldBefore, worldRestored));
+}
+
+TEST_F(EditorCommandTests_SetProperty, EditorCommand_SetProperty_LocalEulerAngles_StaysExactAndRebuildsQuaternion)
+{
+    EditorCommandContext ctx{ *m_core };
+    const AssetId sceneId = GetActiveSceneAssetId();
+    ASSERT_TRUE(m_core->GetCommandManager().Execute(
+        std::make_unique<EditorCommand_CreateGameObject>(sceneId, "GameObject"), ctx));
+
+    GameObject* go = nullptr;
+    for (GameObject* g : m_core->GetWorld()->GetGameObjects())
+    {
+        if (g->GetName() == "New GameObject")
+        {
+            go = g;
+            break;
+        }
+    }
+    ASSERT_NE(go, nullptr);
+    ASSERT_TRUE(m_core->GetCommandManager().Execute(
+        std::make_unique<EditorCommand_CreateComponent>(sceneId, go->GetObjectId(), "Camera"), ctx));
+    SceneComponent* root = go->GetRootSceneComponent();
+    ASSERT_NE(root, nullptr);
+
+    DProperty* eulerProp = FindPropertyOnObject(root, "m_localEulerAngles");
+    ASSERT_NE(eulerProp, nullptr);
+
+    const Vector3 eulerBefore = root->GetLocalRotationEulerAngles();
+    const Quaternion quatBefore = root->GetLocalRotation();
+
+    // 370 deg is intentionally out of [-180,180]; the euler hint must not be normalized.
+    const nlohmann::json before = PropertyToJson(root, eulerProp);
+    const nlohmann::json after = nlohmann::json::array({ 0.0f, 0.0f, 370.0f });
+
+    auto cmd = std::make_unique<EditorCommand_SetProperty>(
+        sceneId, root->GetObjectId(), "m_localEulerAngles", before, after);
+    ASSERT_TRUE(m_core->GetCommandManager().Execute(std::move(cmd), ctx));
+
+    EXPECT_FLOAT_EQ(root->GetLocalRotationEulerAngles().z, 370.0f);
+
+    const XMVECTOR expectedQuat = XMQuaternionRotationRollPitchYaw(
+        0.0f, 0.0f, XMConvertToRadians(370.0f));
+    const Quaternion quatAfter = root->GetLocalRotation();
+    EXPECT_NEAR(quatAfter.x, XMVectorGetX(expectedQuat), 1e-4f);
+    EXPECT_NEAR(quatAfter.y, XMVectorGetY(expectedQuat), 1e-4f);
+    EXPECT_NEAR(quatAfter.z, XMVectorGetZ(expectedQuat), 1e-4f);
+    EXPECT_NEAR(quatAfter.w, XMVectorGetW(expectedQuat), 1e-4f);
+
+    ASSERT_TRUE(m_core->GetCommandManager().Undo(ctx));
+    const Vector3 eulerRestored = root->GetLocalRotationEulerAngles();
+    EXPECT_FLOAT_EQ(eulerRestored.x, eulerBefore.x);
+    EXPECT_FLOAT_EQ(eulerRestored.y, eulerBefore.y);
+    EXPECT_FLOAT_EQ(eulerRestored.z, eulerBefore.z);
+    const Quaternion quatRestored = root->GetLocalRotation();
+    EXPECT_NEAR(quatRestored.x, quatBefore.x, 1e-4f);
+    EXPECT_NEAR(quatRestored.y, quatBefore.y, 1e-4f);
+    EXPECT_NEAR(quatRestored.z, quatBefore.z, 1e-4f);
+    EXPECT_NEAR(quatRestored.w, quatBefore.w, 1e-4f);
 }
 
 TEST_F(EditorCommandTests_SetProperty, PropertyValueIO_ScalarVector_RoundTripsAndResizes)
