@@ -16,6 +16,7 @@
 #include <nlohmann/json.hpp>
 
 #include <functional>
+#include <map>
 #include <string>
 
 DELTA_ENGINE_NS_BEGIN
@@ -121,8 +122,10 @@ struct TransformAnimationSession
 {
     AssetId  assetId;
     ObjectId objectId;
-    /** Serialized m_localTransform (16-float JSON array) captured before any channel started. */
-    nlohmann::json snapshotJson;
+    /** Pre-session value of each participating channel's reflected property, keyed by property
+        name ("m_localPosition" / "m_localEulerAngles" / "m_localScale"). Captured when the channel
+        first joins the session; used as the SetProperty valueBefore on completion / cancel. */
+    std::map<std::string, nlohmann::json> channelSnapshots;
     int activeChannelCount = 0;
 
     bool MatchesObject(const AssetId& a, const ObjectId& o) const

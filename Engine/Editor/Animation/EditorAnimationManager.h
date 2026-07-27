@@ -30,24 +30,26 @@ public:
         std::function<void(float)> setter);
 
     // Vector3 transform channel (channel name "position" or "scale").
-    // localTransformSnapshot: serialized m_localTransform at session start; ignored if a session
-    // for this (assetId, objectId) already exists.
+    // channelPropertyBefore: serialized pre-session value of this channel's decomposed property
+    // (m_localPosition / m_localScale), recorded into the session's per-channel snapshot map.
     DELTAEDITOR_API void StartAnimationVec3(
         AssetId assetId, ObjectId objectId, std::string channelName,
         DirectX::SimpleMath::Vector3 fromValue,
         DirectX::SimpleMath::Vector3 targetValue,
         float duration,
         std::function<void(DirectX::SimpleMath::Vector3)> setter,
-        const nlohmann::json& localTransformSnapshot);
+        const nlohmann::json& channelPropertyBefore);
 
     // Quaternion transform channel (channel name "rotation").
+    // channelPropertyBefore: serialized pre-session value of m_localEulerAngles (the rotation
+    // source of truth), recorded into the session's per-channel snapshot map.
     DELTAEDITOR_API void StartAnimationQuat(
         AssetId assetId, ObjectId objectId, std::string channelName,
         DirectX::SimpleMath::Quaternion fromValue,
         DirectX::SimpleMath::Quaternion targetValue,
         float duration,
         std::function<void(DirectX::SimpleMath::Quaternion)> setter,
-        const nlohmann::json& localTransformSnapshot);
+        const nlohmann::json& channelPropertyBefore);
 
     // Silently remove a scalar animation for the given key WITHOUT reverting.
     // Called by EditorCommand_SetProperty::Execute so a direct property write wins.
@@ -55,13 +57,13 @@ public:
         const AssetId& assetId, const ObjectId& objectId, const std::string& propertyName);
 
     // Drop all Vec3/Quat channels and the session for (assetId, objectId) without reverting.
-    // Called when EditorCommand_SetProperty writes m_localTransform directly.
+    // Called when a direct SetProperty on a decomposed transform property should win.
     DELTAEDITOR_API void DropTransformAnimations(
         const AssetId& assetId, const ObjectId& objectId);
 
-    // Cancel ALL in-flight animations: revert scalar channels to their undoValue and restore
-    // transform sessions to their snapshots via SetPropertyFromJson. Returns true if anything
-    // was cancelled. Called by EditorCommandManager::Undo.
+    // Cancel ALL in-flight animations: revert scalar channels to their undoValue and restore each
+    // transform session's decomposed properties from its per-channel snapshots via
+    // SetPropertyFromJson. Returns true if anything was cancelled. Called by EditorCommandManager::Undo.
     DELTAEDITOR_API bool CancelInFlightAnimations(EditorCore& core);
 
     DELTAEDITOR_API bool HasInFlightAnimations() const;
@@ -69,7 +71,8 @@ public:
 
     // Advance all animations by deltaTime. Completed scalar animations are committed to the
     // undo stack individually; completed transform channels decrement their session's channel
-    // count and commit one m_localTransform SetProperty when the count reaches zero.
+    // count and, when it reaches zero, commit one per-channel SetProperty for each participating
+    // decomposed property (batched into a single undo entry).
     DELTAEDITOR_API void Tick(float deltaTime, EditorCore& core);
 
 private:

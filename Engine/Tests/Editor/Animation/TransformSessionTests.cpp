@@ -59,9 +59,11 @@ protected:
         return nullptr;
     }
 
-    static json SnapshotTransform(SceneComponent* sc)
+    // Serialized pre-session value of one decomposed transform property, matching what the
+    // channel start APIs now expect as their channelPropertyBefore snapshot.
+    static json SnapshotProp(SceneComponent* sc, const char* propName)
     {
-        DProperty* prop = sc->GetClass()->FindPropertyByName("m_localTransform");
+        DProperty* prop = sc->GetClass()->FindPropertyByName(propName);
         return PropertyToJson(sc, prop);
     }
 };
@@ -74,7 +76,7 @@ TEST_F(TransformSessionTests, SinglePositionChannel_CommitsOnComplete)
     SceneComponent* sc = CreatePointLight(assetId, objectId);
     ASSERT_NE(sc, nullptr);
 
-    const json snapshot = SnapshotTransform(sc);
+    const json snapshot = SnapshotProp(sc, "m_localPosition");
     const Vector3 target(5.0f, 0.0f, 0.0f);
 
     EditorAnimationManager mgr;
@@ -102,7 +104,7 @@ TEST_F(TransformSessionTests, ConcurrentChannels_CommitOnceWhenBothComplete)
     ASSERT_NE(sc, nullptr);
     m_core->GetCommandManager().Clear();  // discard CreateComponent entry
 
-    const json snapshot = SnapshotTransform(sc);
+    const json snapshot = SnapshotProp(sc, "m_localPosition");
 
     EditorAnimationManager mgr;
     // Position channel: 1 second.
@@ -111,13 +113,13 @@ TEST_F(TransformSessionTests, ConcurrentChannels_CommitOnceWhenBothComplete)
         [sc](Vector3 p) { sc->SetLocalPosition(p); },
         snapshot);
 
-    // Rotation channel: 2 seconds — starts after session already exists, snapshot ignored.
-    const json snapshotMid = SnapshotTransform(sc);  // mid-state, should not be used
+    // Rotation channel: 2 seconds — joins the existing session; records the euler before-value.
+    const json rotSnapshot = SnapshotProp(sc, "m_localEulerAngles");
     const Quaternion targetRot = Quaternion::CreateFromYawPitchRoll(0.5f, 0.0f, 0.0f);
     mgr.StartAnimationQuat(assetId, objectId, "rotation",
         sc->GetLocalRotation(), targetRot, 2.0f,
         [sc](Quaternion q) { sc->SetLocalRotation(q); },
-        snapshotMid);
+        rotSnapshot);
 
     // Tick past first channel (1.5s), but not the second (2s).
     mgr.Tick(1.5f, *m_core);
@@ -144,7 +146,7 @@ TEST_F(TransformSessionTests, SessionCommit_ValueBefore_IsSessionStartSnapshot)
 
     // Remember original position.
     const Vector3 origin = sc->GetLocalPosition();
-    const json snapshot  = SnapshotTransform(sc);
+    const json snapshot  = SnapshotProp(sc, "m_localPosition");
 
     EditorAnimationManager mgr;
     mgr.StartAnimationVec3(assetId, objectId, "position",
@@ -170,7 +172,7 @@ TEST_F(TransformSessionTests, Preemption_DoesNotDuplicateSessionCount)
     ASSERT_NE(sc, nullptr);
     m_core->GetCommandManager().Clear();  // discard CreateComponent entry
 
-    const json snapshot = SnapshotTransform(sc);
+    const json snapshot = SnapshotProp(sc, "m_localPosition");
 
     EditorAnimationManager mgr;
     mgr.StartAnimationVec3(assetId, objectId, "position",
@@ -206,7 +208,7 @@ TEST_F(TransformSessionTests, Cancel_MidSession_RestoresSnapshot_NoCommit)
     m_core->GetCommandManager().Clear();  // discard CreateComponent entry
 
     const Vector3 origin = sc->GetLocalPosition();
-    const json snapshot  = SnapshotTransform(sc);
+    const json snapshot  = SnapshotProp(sc, "m_localPosition");
 
     EditorAnimationManager mgr;
     mgr.StartAnimationVec3(assetId, objectId, "position",
@@ -235,7 +237,7 @@ TEST_F(TransformSessionTests, DropTransformAnimations_ClearsSessionWithoutRevert
     SceneComponent* sc = CreatePointLight(assetId, objectId);
     ASSERT_NE(sc, nullptr);
 
-    const json snapshot = SnapshotTransform(sc);
+    const json snapshot = SnapshotProp(sc, "m_localPosition");
 
     EditorAnimationManager mgr;
     mgr.StartAnimationVec3(assetId, objectId, "position",
@@ -260,7 +262,7 @@ TEST_F(TransformSessionTests, QuatChannel_ShortestPath_NegatedTarget)
     SceneComponent* sc = CreatePointLight(assetId, objectId);
     ASSERT_NE(sc, nullptr);
 
-    const json snapshot = SnapshotTransform(sc);
+    const json snapshot = SnapshotProp(sc, "m_localEulerAngles");
     const Quaternion from(0.0f, 0.0f, 0.0f, 1.0f);
     // Negated identity — same rotation, opposite hemisphere.
     const Quaternion target(0.0f, 0.0f, 0.0f, -1.0f);

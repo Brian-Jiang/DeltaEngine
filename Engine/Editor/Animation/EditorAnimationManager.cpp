@@ -3,6 +3,7 @@
 
 #include "Editor/EditorCore.h"
 #include "Editor/Commands/EditorCommand_SetProperty.h"
+#include "Editor/Commands/EditorCommandBatch.h"
 #include "Editor/Commands/EditorCommandContext.h"
 #include "Editor/Commands/EditorCommandManager.h"
 #include "Editor/Commands/PropertyValueIO.h"
@@ -10,9 +11,23 @@
 #include "Runtime/Reflection/DClass.h"
 
 #include <algorithm>
+#include <map>
 
 using namespace DeltaEngine;
 using namespace DirectX::SimpleMath;
+
+namespace
+{
+// Maps a transform channel name to the decomposed reflected property it commits.
+// Rotation commits the euler hint (source of truth); the quaternion is rebuilt from it.
+const char* PropertyNameForChannel(const std::string& channelName)
+{
+    if (channelName == "position") return "m_localPosition";
+    if (channelName == "scale")    return "m_localScale";
+    if (channelName == "rotation") return "m_localEulerAngles";
+    return nullptr;
+}
+} // namespace
 
 // ─── Scalar (float) — unchanged from Phase 1 ───────────────────────────────
 
@@ -63,7 +78,7 @@ void EditorAnimationManager::StartAnimationVec3(
     AssetId assetId, ObjectId objectId, std::string channelName,
     Vector3 fromValue, Vector3 targetValue, float duration,
     std::function<void(Vector3)> setter,
-    const nlohmann::json& localTransformSnapshot)
+    const nlohmann::json& channelPropertyBefore)
 {
     const auto existingIt = std::find_if(m_vec3Channels.begin(), m_vec3Channels.end(),
         [&](const auto& ch) { return ch.MatchesKey(assetId, objectId, channelName); });
@@ -80,6 +95,8 @@ void EditorAnimationManager::StartAnimationVec3(
         return;
     }
 
+    const char* propName = PropertyNameForChannel(channelName);
+
     TransformAnimationChannel_Vec3 ch;
     ch.assetId       = assetId;
     ch.objectId      = objectId;
@@ -90,17 +107,23 @@ void EditorAnimationManager::StartAnimationVec3(
     ch.m_setter      = std::move(setter);
     m_vec3Channels.push_back(std::move(ch));
 
-    if (TransformAnimationSession* s = FindSession(assetId, objectId))
-        s->activeChannelCount++;
+    TransformAnimationSession* session = FindSession(assetId, objectId);
+    if (session)
+        session->activeChannelCount++;
     else
     {
-        TransformAnimationSession session;
-        session.assetId            = assetId;
-        session.objectId           = objectId;
-        session.snapshotJson       = localTransformSnapshot;
-        session.activeChannelCount = 1;
-        m_sessions.push_back(std::move(session));
+        TransformAnimationSession created;
+        created.assetId            = assetId;
+        created.objectId           = objectId;
+        created.activeChannelCount = 1;
+        m_sessions.push_back(std::move(created));
+        session = &m_sessions.back();
     }
+
+    // Record this channel's pre-session before-value (emplace preserves the original snapshot if
+    // the channel completed and later re-joined the same session).
+    if (propName)
+        session->channelSnapshots.emplace(propName, channelPropertyBefore);
 }
 
 // ─── Quat channels ─────────────────────────────────────────────────────────
@@ -109,7 +132,7 @@ void EditorAnimationManager::StartAnimationQuat(
     AssetId assetId, ObjectId objectId, std::string channelName,
     Quaternion fromValue, Quaternion targetValue, float duration,
     std::function<void(Quaternion)> setter,
-    const nlohmann::json& localTransformSnapshot)
+    const nlohmann::json& channelPropertyBefore)
 {
     const auto existingIt = std::find_if(m_quatChannels.begin(), m_quatChannels.end(),
         [&](const auto& ch) { return ch.MatchesKey(assetId, objectId, channelName); });
@@ -125,6 +148,8 @@ void EditorAnimationManager::StartAnimationQuat(
         return;
     }
 
+    const char* propName = PropertyNameForChannel(channelName);
+
     TransformAnimationChannel_Quat ch;
     ch.assetId       = assetId;
     ch.objectId      = objectId;
@@ -135,17 +160,23 @@ void EditorAnimationManager::StartAnimationQuat(
     ch.m_setter      = std::move(setter);
     m_quatChannels.push_back(std::move(ch));
 
-    if (TransformAnimationSession* s = FindSession(assetId, objectId))
-        s->activeChannelCount++;
+    TransformAnimationSession* session = FindSession(assetId, objectId);
+    if (session)
+        session->activeChannelCount++;
     else
     {
-        TransformAnimationSession session;
-        session.assetId            = assetId;
-        session.objectId           = objectId;
-        session.snapshotJson       = localTransformSnapshot;
-        session.activeChannelCount = 1;
-        m_sessions.push_back(std::move(session));
+        TransformAnimationSession created;
+        created.assetId            = assetId;
+        created.objectId           = objectId;
+        created.activeChannelCount = 1;
+        m_sessions.push_back(std::move(created));
+        session = &m_sessions.back();
     }
+
+    // Record this channel's pre-session before-value (emplace preserves the original snapshot if
+    // the channel completed and later re-joined the same session).
+    if (propName)
+        session->channelSnapshots.emplace(propName, channelPropertyBefore);
 }
 
 // ─── Drop transforms ───────────────────────────────────────────────────────
@@ -181,13 +212,16 @@ bool EditorAnimationManager::CancelInFlightAnimations(EditorCore& core)
         inst.m_setter(inst.m_undoValue);
     m_instances.clear();
 
-    // Restore each SceneComponent to its pre-session m_localTransform.
+    // Restore each SceneComponent's decomposed transform properties from the per-channel snapshots.
     for (const auto& session : m_sessions)
     {
-        if (auto* sc = core.ResolveObject<SceneComponent>(session.assetId, session.objectId))
+        auto* sc = core.ResolveObject<SceneComponent>(session.assetId, session.objectId);
+        if (!sc)
+            continue;
+        for (const auto& [propName, before] : session.channelSnapshots)
         {
-            if (DProperty* prop = sc->GetClass()->FindPropertyByName("m_localTransform"))
-                SetPropertyFromJson(sc, prop, session.snapshotJson);
+            if (DProperty* prop = sc->GetClass()->FindPropertyByName(propName))
+                SetPropertyFromJson(sc, prop, before);
         }
     }
 
@@ -275,21 +309,31 @@ void EditorAnimationManager::NotifyChannelComplete(
     if (--it->activeChannelCount > 0)
         return;
 
-    nlohmann::json snapshot = std::move(it->snapshotJson);
+    std::map<std::string, nlohmann::json> snapshots = std::move(it->channelSnapshots);
     m_sessions.erase(it);
 
-    // All channels done — commit a single SetProperty on m_localTransform.
-    if (auto* sc = core.ResolveObject<SceneComponent>(assetId, objectId))
+    // All channels done — commit one per-channel SetProperty for each participating decomposed
+    // property, batched into a single undo entry.
+    auto* sc = core.ResolveObject<SceneComponent>(assetId, objectId);
+    if (!sc)
+        return;
+
+    auto batch = std::make_unique<EditorCommandBatch>("Animate Transform");
+    int commandCount = 0;
+    for (const auto& [propName, before] : snapshots)
     {
-        if (DProperty* prop = sc->GetClass()->FindPropertyByName("m_localTransform"))
-        {
-            EditorCommandContext ctx{core};
-            auto cmd = std::make_unique<EditorCommand_SetProperty>(
-                assetId, objectId, "m_localTransform",
-                std::move(snapshot),
-                PropertyToJson(sc, prop));
-            core.GetCommandManager().Execute(std::move(cmd), ctx);
-        }
+        DProperty* prop = sc->GetClass()->FindPropertyByName(propName);
+        if (!prop)
+            continue;
+        batch->Add(std::make_unique<EditorCommand_SetProperty>(
+            assetId, objectId, propName, before, PropertyToJson(sc, prop)));
+        ++commandCount;
+    }
+
+    if (commandCount > 0)
+    {
+        EditorCommandContext ctx{core};
+        core.GetCommandManager().Execute(std::move(batch), ctx);
     }
 }
 
