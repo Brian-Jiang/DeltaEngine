@@ -101,6 +101,79 @@
           "description": "Property value to match (JSON scalar, array, or object per reflected property type)"
         }
       }
+    },
+    "get_position": {
+      "description": "Position of a SceneComponent in local or world space",
+      "params": {
+        "object_id": {
+          "type": "string",
+          "required": true,
+          "description": "SceneComponent id, or a GameObject id to read its root SceneComponent"
+        },
+        "space": {
+          "type": "string",
+          "options": [
+            "local",
+            "world"
+          ],
+          "default": "local",
+          "required": false
+        }
+      },
+      "returns": {
+        "object_id": "string",
+        "space": "string",
+        "position": "[x,y,z]"
+      }
+    },
+    "get_rotation": {
+      "description": "Rotation of a SceneComponent in local or world space, as both quaternion and euler angles",
+      "params": {
+        "object_id": {
+          "type": "string",
+          "required": true,
+          "description": "SceneComponent id, or a GameObject id to read its root SceneComponent"
+        },
+        "space": {
+          "type": "string",
+          "options": [
+            "local",
+            "world"
+          ],
+          "default": "local",
+          "required": false
+        }
+      },
+      "returns": {
+        "object_id": "string",
+        "space": "string",
+        "quaternion": "[x,y,z,w]",
+        "euler": "[x,y,z] in degrees; local space returns the stored angles verbatim (may exceed +/-180), world space is derived from the world quaternion"
+      }
+    },
+    "get_scale": {
+      "description": "Scale of a SceneComponent in local or world space",
+      "params": {
+        "object_id": {
+          "type": "string",
+          "required": true,
+          "description": "SceneComponent id, or a GameObject id to read its root SceneComponent"
+        },
+        "space": {
+          "type": "string",
+          "options": [
+            "local",
+            "world"
+          ],
+          "default": "local",
+          "required": false
+        }
+      },
+      "returns": {
+        "object_id": "string",
+        "space": "string",
+        "scale": "[x,y,z]"
+      }
     }
   },
   "commands": {
@@ -174,10 +247,10 @@
       }
     },
     "SetPosition": {
-      "description": "Animate or immediately set a SceneComponent's position",
+      "description": "Animate or immediately set a SceneComponent's position. Writes m_localPosition; world space is converted through the parent's inverse world transform",
       "undoable": true,
       "expects_result": true,
-      "expects_result_note": "false when duration_seconds > 0 (animated); true when duration_seconds <= 0 (immediate)",
+      "expects_result_note": "Returns as soon as the tween starts when duration_seconds > 0; the undo entry is committed when the animation completes",
       "params": {
         "objectId": {
           "type": "string",
@@ -206,10 +279,10 @@
       }
     },
     "SetRotation": {
-      "description": "Animate or immediately set a SceneComponent's rotation",
+      "description": "Animate or immediately set a SceneComponent's rotation. A local-space euler value is written to m_localEulerAngles verbatim; everything else writes m_localRotation",
       "undoable": true,
       "expects_result": true,
-      "expects_result_note": "false when duration_seconds > 0 (animated); true when duration_seconds <= 0 (immediate)",
+      "expects_result_note": "Returns as soon as the tween starts when duration_seconds > 0; the undo entry is committed when the animation completes",
       "params": {
         "objectId": {
           "type": "string",
@@ -218,7 +291,7 @@
         "value": {
           "type": "array",
           "required": true,
-          "description": "[x,y,z,w] quaternion or [x,y,z] euler angles (radians)"
+          "description": "[x,y,z,w] quaternion or [x,y,z] euler angles in DEGREES"
         },
         "space": {
           "type": "string",
@@ -238,10 +311,10 @@
       }
     },
     "SetScale": {
-      "description": "Animate or immediately set a SceneComponent's local scale",
+      "description": "Animate or immediately set a SceneComponent's local scale. Local space only — passing space=\"world\" is an error",
       "undoable": true,
       "expects_result": true,
-      "expects_result_note": "false when duration_seconds > 0 (animated); true when duration_seconds <= 0 (immediate)",
+      "expects_result_note": "Returns as soon as the tween starts when duration_seconds > 0; the undo entry is committed when the animation completes",
       "params": {
         "objectId": {
           "type": "string",
@@ -251,6 +324,15 @@
           "type": "array",
           "required": true,
           "description": "[x,y,z]"
+        },
+        "space": {
+          "type": "string",
+          "options": [
+            "local"
+          ],
+          "default": "local",
+          "description": "Local only — SceneComponent has no world-scale setter, so \"world\" returns an error",
+          "required": false
         },
         "duration_seconds": {
           "type": "float",

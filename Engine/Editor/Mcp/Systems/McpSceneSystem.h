@@ -22,6 +22,9 @@ private:
     nlohmann::json QueryComponent(EditorCore&, const nlohmann::json& params);
     nlohmann::json QueryComponentsOnObject(EditorCore&, const nlohmann::json& params);
     nlohmann::json QueryFindByProperty(EditorCore&, const nlohmann::json& params);
+    nlohmann::json QueryGetPosition(EditorCore&, const nlohmann::json& params);
+    nlohmann::json QueryGetRotation(EditorCore&, const nlohmann::json& params);
+    nlohmann::json QueryGetScale(EditorCore&, const nlohmann::json& params);
 
     nlohmann::json CommandCreateGameObject(EditorCore&, const nlohmann::json& params);
     nlohmann::json CommandDeleteGameObject(EditorCore&, const nlohmann::json& params);

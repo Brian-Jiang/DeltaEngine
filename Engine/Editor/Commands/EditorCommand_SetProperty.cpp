@@ -74,8 +74,10 @@ bool EditorCommand_SetProperty::Execute(EditorCommandContext& ctx)
     if (auto* animMgr = ctx.core.GetAnimationManager())
     {
         animMgr->DropAnimation(m_assetId, m_objectId, m_propertyName);
-        // A direct write to m_localTransform also wins over all transform channels.
-        if (m_propertyName == "m_localTransform")
+        // A direct write to any decomposed transform property also wins over all transform
+        // channels — position, rotation and scale tweens all recompose the same local matrix.
+        if (m_propertyName == "m_localPosition" || m_propertyName == "m_localRotation" ||
+            m_propertyName == "m_localScale"    || m_propertyName == "m_localEulerAngles")
             animMgr->DropTransformAnimations(m_assetId, m_objectId);
     }
 

@@ -196,6 +196,12 @@ void McpSceneSystem::RegisterTools(McpRegistry& registry)
         [this](EditorCore& c, const nlohmann::json& p) { return QueryComponentsOnObject(c, p); });
     registry.RegisterQuery("scene", "find_by_property",
         [this](EditorCore& c, const nlohmann::json& p) { return QueryFindByProperty(c, p); });
+    registry.RegisterQuery("scene", "get_position",
+        [this](EditorCore& c, const nlohmann::json& p) { return QueryGetPosition(c, p); });
+    registry.RegisterQuery("scene", "get_rotation",
+        [this](EditorCore& c, const nlohmann::json& p) { return QueryGetRotation(c, p); });
+    registry.RegisterQuery("scene", "get_scale",
+        [this](EditorCore& c, const nlohmann::json& p) { return QueryGetScale(c, p); });
 
     registry.RegisterCommand("scene", "CreateGameObject",
         [this](EditorCore& c, const nlohmann::json& p) { return CommandCreateGameObject(c, p); });
@@ -697,44 +703,143 @@ static SceneComponent* ResolveSceneComponent(EditorCore& core, const std::string
     return nullptr;
 }
 
-// Serialise a local-space XMMATRIX to a 16-element JSON array.
-static nlohmann::json MatrixToJson(DirectX::XMMATRIX mat)
+namespace
 {
-    DirectX::XMFLOAT4X4 f;
-    DirectX::XMStoreFloat4x4(&f, mat);
-    nlohmann::json arr = nlohmann::json::array();
-    for (int r = 0; r < 4; ++r)
-        for (int c = 0; c < 4; ++c)
-            arr.push_back(f.m[r][c]);
-    return arr;
+using namespace DirectX;
+using namespace DirectX::SimpleMath;
+
+constexpr const char* kLocalPositionProp = "m_localPosition";
+constexpr const char* kLocalRotationProp = "m_localRotation";
+constexpr const char* kLocalScaleProp    = "m_localScale";
+constexpr const char* kLocalEulerProp    = "m_localEulerAngles";
+
+// Decomposed property an animation channel commits. Mirrors PropertyNameForChannel in
+// EditorAnimationManager.cpp — rotation commits the euler hint, the quaternion is rebuilt from it.
+const char* ChannelPropertyName(const std::string& channel)
+{
+    if (channel == "position") return kLocalPositionProp;
+    if (channel == "scale")    return kLocalScaleProp;
+    if (channel == "rotation") return kLocalEulerProp;
+    return nullptr;
 }
 
+nlohmann::json Vector3ToJson(const Vector3& v)
+{
+    return nlohmann::json::array({ v.x, v.y, v.z });
+}
+
+nlohmann::json QuaternionToJson(const Quaternion& q)
+{
+    return nlohmann::json::array({ q.x, q.y, q.z, q.w });
+}
+
+Vector3 EulerDegreesFromQuaternion(const Quaternion& q)
+{
+    const Vector3 radians = q.ToEuler();
+    return Vector3(
+        XMConvertToDegrees(radians.x),
+        XMConvertToDegrees(radians.y),
+        XMConvertToDegrees(radians.z));
+}
+
+// Matches SceneComponent::SetLocalRotation(Vector3) — degrees, roll/pitch/yaw order.
+Quaternion QuaternionFromEulerDegrees(const Vector3& degrees)
+{
+    return Quaternion(XMQuaternionRotationRollPitchYaw(
+        XMConvertToRadians(degrees.x),
+        XMConvertToRadians(degrees.y),
+        XMConvertToRadians(degrees.z)));
+}
+
+// Mirrors SceneComponent::SetWorldPosition — through the parent's full inverse world matrix.
+Vector3 WorldToLocalPosition(const SceneComponent* sc, const Vector3& worldPosition)
+{
+    const SceneComponent* parent = sc->GetParent();
+    if (!parent)
+        return worldPosition;
+
+    const XMMATRIX invParent = XMMatrixInverse(nullptr, parent->GetWorldTransform());
+    return Vector3(XMVector3TransformCoord(
+        XMVectorSet(worldPosition.x, worldPosition.y, worldPosition.z, 1.0f), invParent));
+}
+
+// Mirrors SceneComponent::SetWorldRotation.
+Quaternion WorldToLocalRotation(const SceneComponent* sc, const Quaternion& worldRotation)
+{
+    const SceneComponent* parent = sc->GetParent();
+    if (!parent)
+        return worldRotation;
+
+    const XMVECTOR parentInverse = XMQuaternionInverse((XMVECTOR) parent->GetWorldRotation());
+    return Quaternion(XMQuaternionMultiply((XMVECTOR) worldRotation, parentInverse));
+}
+
+// Rotation wire format: 4 elements = quaternion [x,y,z,w], 3 elements = euler angles in degrees.
+bool ParseRotationValue(const nlohmann::json& value, Quaternion& outRotation)
+{
+    if (value.size() == 4)
+    {
+        outRotation = Quaternion(value[0].get<float>(), value[1].get<float>(),
+                                 value[2].get<float>(), value[3].get<float>());
+        return true;
+    }
+    if (value.size() == 3)
+    {
+        outRotation = QuaternionFromEulerDegrees(
+            Vector3(value[0].get<float>(), value[1].get<float>(), value[2].get<float>()));
+        return true;
+    }
+    return false;
+}
+
+bool ParseSpace(const nlohmann::json& params, bool& outWorldSpace, nlohmann::json& outError)
+{
+    const std::string space = params.value("space", "local");
+    if (space == "local")
+    {
+        outWorldSpace = false;
+        return true;
+    }
+    if (space == "world")
+    {
+        outWorldSpace = true;
+        return true;
+    }
+    outError = MakeMcpError("'space' must be \"local\" or \"world\", got: " + space);
+    return false;
+}
+} // namespace
+
 // Starts (or, in headless mode, immediately applies + commits) a tweened transform-channel
-// animation for one of "position" / "rotation" / "scale". On completion the animation manager
-// commits a single m_localTransform SetProperty; headless applies the setter then commits now.
+// animation for one of "position" / "rotation" / "scale". The animation manager commits one
+// SetProperty per participating decomposed property once every channel of the session finishes;
+// headless has no manager, so it applies the setter and commits this channel's property now.
 static nlohmann::json StartTransformChannelAnimation(
     EditorCore& core, SceneComponent* sc,
     const AssetId& scAssetId, const ObjectId& scObjectId,
     const std::string& channel, const nlohmann::json& tval,
     bool worldSpace, float duration)
 {
-    using namespace DirectX;
     using namespace DirectX::SimpleMath;
 
-    DProperty* transformProp = sc->GetClass()->FindPropertyByName("m_localTransform");
-    if (!transformProp)
-        return MakeMcpError("m_localTransform property not found");
+    const char* channelPropName = ChannelPropertyName(channel);
+    if (!channelPropName)
+        return MakeMcpError("Unknown channel: " + channel);
 
-    const nlohmann::json snapshot = PropertyToJson(sc, transformProp);
+    DProperty* channelProp = sc->GetClass()->FindPropertyByName(channelPropName);
+    if (!channelProp)
+        return MakeMcpError(std::string(channelPropName) + " property not found");
+
+    const nlohmann::json snapshot = PropertyToJson(sc, channelProp);
     EditorAnimationManager* animMgr = core.GetAnimationManager();
-    EditorCommandContext ctx{core};
 
     auto commitHeadless = [&]()
     {
+        EditorCommandContext ctx{core};
         core.GetCommandManager().Execute(
             std::make_unique<EditorCommand_SetProperty>(
-                scAssetId, scObjectId, "m_localTransform",
-                snapshot, PropertyToJson(sc, transformProp)),
+                scAssetId, scObjectId, channelPropName,
+                snapshot, PropertyToJson(sc, channelProp)),
             ctx);
     };
 
@@ -761,12 +866,8 @@ static nlohmann::json StartTransformChannelAnimation(
     {
         const Quaternion from = worldSpace ? sc->GetWorldRotation() : sc->GetLocalRotation();
         Quaternion target;
-        if (tval.size() == 4)
-            target = Quaternion(tval[0].get<float>(), tval[1].get<float>(),
-                                tval[2].get<float>(), tval[3].get<float>());
-        else
-            target = Quaternion::CreateFromYawPitchRoll(
-                tval[1].get<float>(), tval[0].get<float>(), tval[2].get<float>());
+        if (!ParseRotationValue(tval, target))
+            return MakeMcpError("'value' must have 3 (euler degrees) or 4 (quaternion) elements");
 
         if (animMgr)
         {
@@ -800,10 +901,6 @@ static nlohmann::json StartTransformChannelAnimation(
             commitHeadless();
         }
     }
-    else
-    {
-        return MakeMcpError("Unknown channel: " + channel);
-    }
 
     return {{"ok", true}, {"commandType", "StartTransformChannelAnimation"}};
 }
@@ -812,7 +909,6 @@ static nlohmann::json StartTransformChannelAnimation(
 
 nlohmann::json McpSceneSystem::CommandSetPosition(EditorCore& core, const nlohmann::json& params)
 {
-    using namespace DirectX;
     using namespace DirectX::SimpleMath;
 
     if (!params.contains("objectId"))
@@ -824,41 +920,23 @@ nlohmann::json McpSceneSystem::CommandSetPosition(EditorCore& core, const nlohma
     if (!sc)
         return MakeMcpError("object has no SceneComponent: " + params["objectId"].get<std::string>());
 
-    const auto& v     = params["value"];
+    bool worldSpace = false;
+    nlohmann::json err;
+    if (!ParseSpace(params, worldSpace, err))
+        return err;
+
+    const auto& v = params["value"];
     const Vector3 target(v[0].get<float>(), v[1].get<float>(), v[2].get<float>());
-    const std::string space = params.value("space", "local");
-    const bool worldSpace   = (space == "world");
-    //const float duration    = params.value("duration_seconds", kDefaultAnimationDurationSeconds);
-    const float duration = kDefaultAnimationDurationSeconds;
+    const float duration = params.value("duration_seconds", kDefaultAnimationDurationSeconds);
 
     auto [scAssetId, scObjectId] = core.GetIdsForObject(sc);
 
     if (duration <= 0.0f)
     {
-        // Immediate: reconstruct local transform with new position, then enqueue SetProperty.
-        const Quaternion rot = worldSpace ? sc->GetWorldRotation() : sc->GetLocalRotation();
-        const Vector3    scl = worldSpace ? sc->GetWorldScale()    : sc->GetLocalScale();
-
-        XMMATRIX localMat;
-        if (worldSpace)
-        {
-            const XMMATRIX world =
-                XMMatrixScalingFromVector(scl) * XMMatrixRotationQuaternion(rot) * XMMatrixTranslationFromVector(target);
-            const SceneComponent* parent = sc->GetParent();
-            const XMMATRIX parentWorldInv = parent
-                ? XMMatrixInverse(nullptr, parent->GetWorldTransform())
-                : XMMatrixIdentity();
-            localMat = world * parentWorldInv;
-        }
-        else
-        {
-            localMat =
-                XMMatrixScalingFromVector(scl) * XMMatrixRotationQuaternion(rot) * XMMatrixTranslationFromVector(target);
-        }
-
-        nlohmann::json err;
+        const Vector3 localPosition = worldSpace ? WorldToLocalPosition(sc, target) : target;
         if (!ExecuteMcpCommand(core, std::make_unique<EditorCommand_SetProperty>(
-                scAssetId, scObjectId, "m_localTransform", nlohmann::json{}, MatrixToJson(localMat)), err))
+                scAssetId, scObjectId, kLocalPositionProp,
+                nlohmann::json{}, Vector3ToJson(localPosition)), err))
             return err;
         return MakeMcpOk();
     }
@@ -872,13 +950,12 @@ nlohmann::json McpSceneSystem::CommandSetPosition(EditorCore& core, const nlohma
 
 nlohmann::json McpSceneSystem::CommandSetRotation(EditorCore& core, const nlohmann::json& params)
 {
-    using namespace DirectX;
     using namespace DirectX::SimpleMath;
 
     if (!params.contains("objectId"))
         return MakeMcpError("missing required param: objectId");
     if (!params.contains("value") || !params["value"].is_array())
-        return MakeMcpError("required param 'value' must be [x,y,z,w] or [x,y,z] (euler)");
+        return MakeMcpError("required param 'value' must be [x,y,z,w] or [x,y,z] (euler degrees)");
 
     SceneComponent* sc = ResolveSceneComponent(core, params["objectId"].get<std::string>());
     if (!sc)
@@ -886,45 +963,36 @@ nlohmann::json McpSceneSystem::CommandSetRotation(EditorCore& core, const nlohma
 
     const auto& vArr = params["value"];
     Quaternion target;
-    if (vArr.size() == 4)
-        target = Quaternion(vArr[0].get<float>(), vArr[1].get<float>(), vArr[2].get<float>(), vArr[3].get<float>());
-    else if (vArr.size() == 3)
-        target = Quaternion::CreateFromYawPitchRoll(vArr[1].get<float>(), vArr[0].get<float>(), vArr[2].get<float>());
-    else
-        return MakeMcpError("'value' must have 3 or 4 elements");
+    if (!ParseRotationValue(vArr, target))
+        return MakeMcpError("'value' must have 3 (euler degrees) or 4 (quaternion) elements");
 
-    const std::string space = params.value("space", "local");
-    const bool worldSpace   = (space == "world");
-    //const float duration    = params.value("duration_seconds", kDefaultAnimationDurationSeconds);
-    const float duration = kDefaultAnimationDurationSeconds;
+    bool worldSpace = false;
+    nlohmann::json err;
+    if (!ParseSpace(params, worldSpace, err))
+        return err;
+
+    const float duration = params.value("duration_seconds", kDefaultAnimationDurationSeconds);
 
     auto [scAssetId, scObjectId] = core.GetIdsForObject(sc);
 
     if (duration <= 0.0f)
     {
-        const Vector3 pos = worldSpace ? sc->GetWorldPosition() : sc->GetLocalPosition();
-        const Vector3 scl = worldSpace ? sc->GetWorldScale()    : sc->GetLocalScale();
-
-        XMMATRIX localMat;
-        if (worldSpace)
+        // Local euler input writes the euler property verbatim so the caller's angles survive
+        // exactly (370 stays 370); PostEditChangeProperty rebuilds the quaternion from it.
+        if (!worldSpace && vArr.size() == 3)
         {
-            const XMMATRIX world =
-                XMMatrixScalingFromVector(scl) * XMMatrixRotationQuaternion(target) * XMMatrixTranslationFromVector(pos);
-            const SceneComponent* parent = sc->GetParent();
-            const XMMATRIX parentWorldInv = parent
-                ? XMMatrixInverse(nullptr, parent->GetWorldTransform())
-                : XMMatrixIdentity();
-            localMat = world * parentWorldInv;
-        }
-        else
-        {
-            localMat =
-                XMMatrixScalingFromVector(scl) * XMMatrixRotationQuaternion(target) * XMMatrixTranslationFromVector(pos);
+            const Vector3 euler(vArr[0].get<float>(), vArr[1].get<float>(), vArr[2].get<float>());
+            if (!ExecuteMcpCommand(core, std::make_unique<EditorCommand_SetProperty>(
+                    scAssetId, scObjectId, kLocalEulerProp,
+                    nlohmann::json{}, Vector3ToJson(euler)), err))
+                return err;
+            return MakeMcpOk();
         }
 
-        nlohmann::json err;
+        const Quaternion localRotation = worldSpace ? WorldToLocalRotation(sc, target) : target;
         if (!ExecuteMcpCommand(core, std::make_unique<EditorCommand_SetProperty>(
-                scAssetId, scObjectId, "m_localTransform", nlohmann::json{}, MatrixToJson(localMat)), err))
+                scAssetId, scObjectId, kLocalRotationProp,
+                nlohmann::json{}, QuaternionToJson(localRotation)), err))
             return err;
         return MakeMcpOk();
     }
@@ -937,40 +1005,128 @@ nlohmann::json McpSceneSystem::CommandSetRotation(EditorCore& core, const nlohma
 
 nlohmann::json McpSceneSystem::CommandSetScale(EditorCore& core, const nlohmann::json& params)
 {
-    using namespace DirectX;
     using namespace DirectX::SimpleMath;
 
     if (!params.contains("objectId"))
         return MakeMcpError("missing required param: objectId");
     if (!params.contains("value") || !params["value"].is_array() || params["value"].size() < 3)
         return MakeMcpError("required param 'value' must be [x,y,z]");
+    // SceneComponent exposes GetWorldScale but has no SetWorldScale — local space only.
+    if (params.value("space", "local") != "local")
+        return MakeMcpError("SetScale supports local space only");
 
     SceneComponent* sc = ResolveSceneComponent(core, params["objectId"].get<std::string>());
     if (!sc)
         return MakeMcpError("object has no SceneComponent: " + params["objectId"].get<std::string>());
 
-    const auto& v      = params["value"];
+    const auto& v = params["value"];
     const Vector3 target(v[0].get<float>(), v[1].get<float>(), v[2].get<float>());
-    //const float duration = params.value("duration_seconds", kDefaultAnimationDurationSeconds);
-    const float duration = kDefaultAnimationDurationSeconds;
+    const float duration = params.value("duration_seconds", kDefaultAnimationDurationSeconds);
 
     auto [scAssetId, scObjectId] = core.GetIdsForObject(sc);
 
     if (duration <= 0.0f)
     {
-        const Vector3    pos = sc->GetLocalPosition();
-        const Quaternion rot = sc->GetLocalRotation();
-
-        const XMMATRIX localMat =
-            XMMatrixScalingFromVector(target) * XMMatrixRotationQuaternion(rot) * XMMatrixTranslationFromVector(pos);
-
         nlohmann::json err;
         if (!ExecuteMcpCommand(core, std::make_unique<EditorCommand_SetProperty>(
-                scAssetId, scObjectId, "m_localTransform", nlohmann::json{}, MatrixToJson(localMat)), err))
+                scAssetId, scObjectId, kLocalScaleProp,
+                nlohmann::json{}, Vector3ToJson(target)), err))
             return err;
         return MakeMcpOk();
     }
 
     return StartTransformChannelAnimation(
         core, sc, scAssetId, scObjectId, "scale", params["value"], /*worldSpace*/ false, duration);
+}
+
+// ─── Queries: get_position / get_rotation / get_scale ───────────────────────
+
+// Resolves the target SceneComponent and its own object id. Callers parse 'space' themselves
+// so the schema/handler param sync check can see the read in the handler body.
+static bool ResolveTransformQuery(
+    EditorCore& core, const nlohmann::json& params,
+    SceneComponent*& outComponent, std::string& outObjectId, nlohmann::json& outError)
+{
+    if (!params.contains("object_id"))
+    {
+        outError = MakeMcpError("missing required param: object_id");
+        return false;
+    }
+
+    const std::string requestedId = params["object_id"].get<std::string>();
+    outComponent = ResolveSceneComponent(core, requestedId);
+    if (!outComponent)
+    {
+        outError = MakeMcpError("object has no SceneComponent: " + requestedId);
+        return false;
+    }
+
+    // A GameObject id resolves to its root SceneComponent — echo the component actually read.
+    auto [assetId, objectId] = core.GetIdsForObject(outComponent);
+    outObjectId = objectId.ToString();
+
+    return true;
+}
+
+nlohmann::json McpSceneSystem::QueryGetPosition(EditorCore& core, const nlohmann::json& params)
+{
+    SceneComponent* sc = nullptr;
+    bool worldSpace = false;
+    std::string objectId;
+    nlohmann::json err;
+    if (!ResolveTransformQuery(core, params, sc, objectId, err))
+        return err;
+    if (!ParseSpace(params, worldSpace, err))
+        return err;
+
+    nlohmann::json result = MakeMcpOk();
+    result["object_id"] = objectId;
+    result["space"] = worldSpace ? "world" : "local";
+    result["position"] = Vector3ToJson(
+        worldSpace ? sc->GetWorldPosition() : sc->GetLocalPosition());
+    return result;
+}
+
+nlohmann::json McpSceneSystem::QueryGetRotation(EditorCore& core, const nlohmann::json& params)
+{
+    using namespace DirectX::SimpleMath;
+
+    SceneComponent* sc = nullptr;
+    bool worldSpace = false;
+    std::string objectId;
+    nlohmann::json err;
+    if (!ResolveTransformQuery(core, params, sc, objectId, err))
+        return err;
+    if (!ParseSpace(params, worldSpace, err))
+        return err;
+
+    const Quaternion rotation = worldSpace ? sc->GetWorldRotation() : sc->GetLocalRotation();
+
+    nlohmann::json result = MakeMcpOk();
+    result["object_id"] = objectId;
+    result["space"] = worldSpace ? "world" : "local";
+    result["quaternion"] = QuaternionToJson(rotation);
+    // Local euler is the stored user-facing hint (may exceed ±180); world is derived.
+    result["euler"] = Vector3ToJson(worldSpace
+        ? EulerDegreesFromQuaternion(rotation)
+        : sc->GetLocalRotationEulerAngles());
+    return result;
+}
+
+nlohmann::json McpSceneSystem::QueryGetScale(EditorCore& core, const nlohmann::json& params)
+{
+    SceneComponent* sc = nullptr;
+    bool worldSpace = false;
+    std::string objectId;
+    nlohmann::json err;
+    if (!ResolveTransformQuery(core, params, sc, objectId, err))
+        return err;
+    if (!ParseSpace(params, worldSpace, err))
+        return err;
+
+    nlohmann::json result = MakeMcpOk();
+    result["object_id"] = objectId;
+    result["space"] = worldSpace ? "world" : "local";
+    result["scale"] = Vector3ToJson(worldSpace ? sc->GetWorldScale() : sc->GetLocalScale());
+    return result;
 }
