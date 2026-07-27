@@ -25,9 +25,11 @@
 
 #include "SimpleMath.h"
 
-#include <type_traits>
-
 #include <algorithm>
+#include <memory>
+#include <string>
+#include <type_traits>
+#include <utility>
 
 using namespace DeltaEngine;
 using namespace DirectX;
@@ -390,7 +392,68 @@ ImGuizmo::OPERATION ToolToOperation(EEditorTransformTool tool)
         return ImGuizmo::TRANSLATE;
     }
 }
+
+DProperty* FindGizmoProperty(SceneComponent* component, EEditorTransformTool tool, const char*& outName)
+{
+    outName = GizmoTransformPropertyName(tool);
+    if (!component || !outName)
+        return nullptr;
+    DClass* dc = component->GetClass();
+    return dc ? dc->FindPropertyByName(outName) : nullptr;
+}
 } // namespace
+
+const char* DeltaEngine::GizmoTransformPropertyName(EEditorTransformTool tool)
+{
+    switch (tool)
+    {
+    case EEditorTransformTool::Move:   return "m_localPosition";
+    // The euler triple is the user-facing rotation source of truth — writing it makes
+    // SceneComponent::PostEditChangeProperty rebuild the quaternion from it.
+    case EEditorTransformTool::Rotate: return "m_localEulerAngles";
+    case EEditorTransformTool::Scale:  return "m_localScale";
+    case EEditorTransformTool::Select:
+    default:
+        return nullptr;
+    }
+}
+
+nlohmann::json DeltaEngine::CaptureGizmoTransformValue(SceneComponent* component, EEditorTransformTool tool)
+{
+    const char* propName = nullptr;
+    DProperty* prop = FindGizmoProperty(component, tool, propName);
+    if (!prop)
+        return {};
+    return PropertyToJson(component, prop);
+}
+
+bool DeltaEngine::CommitGizmoTransformEdit(EditorCore& core, SceneComponent* component,
+                                           EEditorTransformTool tool, nlohmann::json valueBefore)
+{
+    const char* propName = nullptr;
+    DProperty* prop = FindGizmoProperty(component, tool, propName);
+    if (!prop)
+        return false;
+
+    nlohmann::json valueAfter = PropertyToJson(component, prop);
+    if (valueBefore == valueAfter)
+        return false;
+
+    auto [assetId, objectId] = core.GetIdsForObject(component);
+    auto cmd = std::make_unique<EditorCommand_SetProperty>(
+        assetId, objectId, std::string(propName),
+        std::move(valueBefore), std::move(valueAfter));
+    EditorCommandContext ctx{ core };
+    return core.GetCommandManager().Execute(std::move(cmd), ctx);
+}
+
+void EditorWindow_Viewport::ClearGizmoEditState()
+{
+    m_gizmoEditing    = false;
+    m_gizmoEditTarget = nullptr;
+    m_gizmoEditTool   = EEditorTransformTool::Select;
+    m_gizmoEditBefore = {};
+}
 
 void EditorWindow_Viewport::DrawGizmo(const ImVec2& imageMin, const ImVec2& imageSize, float texW, float texH)
 {
@@ -406,34 +469,20 @@ void EditorWindow_Viewport::DrawGizmo(const ImVec2& imageMin, const ImVec2& imag
     if (tool == EEditorTransformTool::Select)
     {
         // Selection tool — no gizmo. Clear any stale in-flight drag state.
-        if (m_gizmoEditing)
-        {
-            m_gizmoEditing = false;
-            m_gizmoEditTarget = nullptr;
-            m_gizmoEditBefore = {};
-        }
+        ClearGizmoEditState();
         return;
     }
 
     SceneComponent* sc = ResolveGizmoTarget(*g_editorCore);
     if (!sc)
     {
-        if (m_gizmoEditing)
-        {
-            m_gizmoEditing = false;
-            m_gizmoEditTarget = nullptr;
-            m_gizmoEditBefore = {};
-        }
+        ClearGizmoEditState();
         return;
     }
 
     // Selection churn — drop any in-flight drag for a different target.
     if (m_gizmoEditing && m_gizmoEditTarget != sc)
-    {
-        m_gizmoEditing = false;
-        m_gizmoEditTarget = nullptr;
-        m_gizmoEditBefore = {};
-    }
+        ClearGizmoEditState();
 
     const ImGuizmo::OPERATION op = ToolToOperation(tool);
     ImGuizmo::MODE mode = rm->GetMainToolbar().IsLocalSpace() ? ImGuizmo::LOCAL : ImGuizmo::WORLD;
@@ -466,13 +515,11 @@ void EditorWindow_Viewport::DrawGizmo(const ImVec2& imageMin, const ImVec2& imag
 
     const bool isUsing = ImGuizmo::IsUsing();
 
-    // Edit begin — snapshot current local transform JSON for undo.
+    // Edit begin — snapshot the decomposed property this tool will commit.
     if (isUsing && !wasUsing)
     {
-        DClass* dc = sc->GetClass();
-        DProperty* ltProp = dc ? dc->FindPropertyByName("m_localTransform") : nullptr;
-        if (ltProp)
-            m_gizmoEditBefore = PropertyToJson(sc, ltProp);
+        m_gizmoEditBefore = CaptureGizmoTransformValue(sc, tool);
+        m_gizmoEditTool = tool;
         m_gizmoEditing = true;
         m_gizmoEditTarget = sc;
     }
@@ -510,28 +557,10 @@ void EditorWindow_Viewport::DrawGizmo(const ImVec2& imageMin, const ImVec2& imag
         }
     }
 
-    // Edit end — emit an undoable SetProperty command on m_localTransform.
+    // Edit end — emit an undoable SetProperty on the decomposed property the drag touched.
     if (!isUsing && wasUsing)
     {
-        DClass* dc = sc->GetClass();
-        DProperty* ltProp = dc ? dc->FindPropertyByName("m_localTransform") : nullptr;
-        if (ltProp)
-        {
-            nlohmann::json valueAfter = PropertyToJson(sc, ltProp);
-            if (m_gizmoEditBefore != valueAfter)
-            {
-                auto [assetId, objectId] = g_editorCore->GetIdsForObject(sc);
-                auto cmd = std::make_unique<EditorCommand_SetProperty>(
-                    assetId, objectId,
-                    std::string("m_localTransform"),
-                    std::move(m_gizmoEditBefore),
-                    std::move(valueAfter));
-                EditorCommandContext ctx{ *g_editorCore };
-                g_editorCore->GetCommandManager().Execute(std::move(cmd), ctx);
-            }
-        }
-        m_gizmoEditing = false;
-        m_gizmoEditTarget = nullptr;
-        m_gizmoEditBefore = {};
+        CommitGizmoTransformEdit(*g_editorCore, sc, m_gizmoEditTool, std::move(m_gizmoEditBefore));
+        ClearGizmoEditState();
     }
 }

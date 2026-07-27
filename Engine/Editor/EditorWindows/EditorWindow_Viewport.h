@@ -5,6 +5,7 @@
 #include "EditorWindows/EditorWindow.h"
 #include "EditorWindows/EditorWindow_ViewportPresets.h"
 #include "Editor/EditorViewportCamera.h"
+#include "Panels/MainToolbar.h"
 #include "Runtime/Core/Delegates/DelegateHandle.h"
 #include "imgui.h"
 
@@ -12,7 +13,21 @@
 
 DELTA_ENGINE_NS_BEGIN
 
+class EditorCore;
 class SceneComponent;
+
+/** Decomposed SceneComponent property a gizmo drag with this tool commits; nullptr for Select. */
+DELTAEDITOR_API const char* GizmoTransformPropertyName(EEditorTransformTool tool);
+
+/** Current JSON value of the property `tool` commits; null json when unavailable. */
+DELTAEDITOR_API nlohmann::json CaptureGizmoTransformValue(SceneComponent* component, EEditorTransformTool tool);
+
+/**
+ * Commits a finished gizmo drag as one undoable SetProperty on the tool's decomposed property.
+ * Returns false when the value is unchanged or the edit cannot be resolved.
+ */
+DELTAEDITOR_API bool CommitGizmoTransformEdit(EditorCore& core, SceneComponent* component,
+                                              EEditorTransformTool tool, nlohmann::json valueBefore);
 
 class EditorWindow_Viewport : public EditorWindow
 {
@@ -43,6 +58,7 @@ private:
     void UpdateSceneRenderSize(int renderW, int renderH);
     void UpdateViewportFlyMode(bool viewportImageHovered);
     void DrawGizmo(const ImVec2& imageMin, const ImVec2& imageSize, float texW, float texH);
+    void ClearGizmoEditState();
 
     ImTextureID m_sceneTextureId = 0;
 
@@ -59,9 +75,10 @@ private:
     bool m_settingsDirty = false;
     float m_saveTimer = 0.f;
 
-    bool            m_gizmoEditing    = false;
-    SceneComponent* m_gizmoEditTarget = nullptr;
-    nlohmann::json  m_gizmoEditBefore;
+    bool                 m_gizmoEditing    = false;
+    SceneComponent*      m_gizmoEditTarget = nullptr;
+    EEditorTransformTool m_gizmoEditTool   = EEditorTransformTool::Select;
+    nlohmann::json       m_gizmoEditBefore;
 
     FDelegateHandle m_onSelectionChangedHandle;
 };
