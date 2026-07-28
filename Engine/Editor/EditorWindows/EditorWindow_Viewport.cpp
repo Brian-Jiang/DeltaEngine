@@ -1,5 +1,6 @@
 #include "Editor/EditorWindows/EditorWindow_Viewport.h"
 
+#include "Editor/Animation/EditorAnimationManager.h"
 #include "Editor/Commands/EditorCommandContext.h"
 #include "Editor/Commands/EditorCommandManager.h"
 #include "Editor/Commands/EditorCommand_SetProperty.h"
@@ -38,6 +39,15 @@ static int AllocateViewportSlot()
 {
     static int s_nextSlot = 0;
     return s_nextSlot++;
+}
+
+/// Manual camera control wins over an in-flight MCP camera tween — drop it without reverting.
+static void CancelPreviewCameraAnimation()
+{
+    if (!g_editorCore)
+        return;
+    if (EditorAnimationManager* animMgr = g_editorCore->GetAnimationManager())
+        animMgr->CancelViewportCameraAnimation();
 }
 
 EditorWindow_Viewport::EditorWindow_Viewport()
@@ -122,6 +132,7 @@ void EditorWindow_Viewport::UpdateViewportFlyMode(bool viewportImageHovered)
     if (!m_flyModeActive && viewportImageHovered && rightMouseDown)
     {
         m_flyModeActive = true;
+        CancelPreviewCameraAnimation();
         SDL_SetWindowRelativeMouseMode(window, true);
         float discardX, discardY;
         SDL_GetRelativeMouseState(&discardX, &discardY);
@@ -242,6 +253,7 @@ void EditorWindow_Viewport::Render(bool& open)
 
         if (changed)
         {
+            CancelPreviewCameraAnimation();
             m_settingsDirty = true;
             m_saveTimer = 0.f;
         }

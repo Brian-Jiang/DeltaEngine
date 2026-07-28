@@ -24,9 +24,10 @@
   },
   "commands": {
     "SetViewportCamera": {
-      "description": "Move the viewport fly camera",
+      "description": "Move the viewport fly camera. Position, rotation, and fov are tweened over duration_seconds; near/far planes are not affected.",
       "undoable": false,
       "expects_result": false,
+      "expects_result_note": "Returns as soon as the tween starts when duration_seconds > 0. The move is never undoable — the viewport camera is editor-only state.",
       "params": {
         "position": {
           "type": "array",
@@ -39,6 +40,12 @@
         "fov": {
           "type": "float",
           "required": false
+        },
+        "duration_seconds": {
+          "type": "float",
+          "default": 1.0,
+          "required": false,
+          "description": "Tween duration in seconds. Defaults to 1.0 (animated); <= 0 = immediate."
         }
       }
     }

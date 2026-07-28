@@ -200,6 +200,48 @@ void EditorAnimationManager::DropTransformAnimations(
         m_sessions.end());
 }
 
+// ─── Viewport camera (non-undoable) ────────────────────────────────────────
+
+void EditorAnimationManager::StartViewportCameraAnimation(
+    const EditorViewportCamera& from, const EditorViewportCamera& target,
+    bool animateFov, bool animatePosition, bool animateRotation,
+    float duration,
+    std::function<void(const EditorViewportCamera&)> setter)
+{
+    // Preemption — restart from the currently sampled camera so the retarget stays continuous.
+    const EditorViewportCamera start =
+        m_viewportCameraAnimation ? m_viewportCameraAnimation->GetCurrentCamera() : from;
+
+    ViewportCameraAnimation anim;
+    anim.m_base            = start;
+    anim.m_animateFov      = animateFov;
+    anim.m_animatePosition = animatePosition;
+    anim.m_animateRotation = animateRotation;
+    anim.m_duration        = duration;
+    anim.m_setter          = std::move(setter);
+
+    anim.m_fromFov   = start.fov;
+    anim.m_targetFov = target.fov;
+
+    anim.m_fromPosition   = Vector3(start.position.x, start.position.y, start.position.z);
+    anim.m_targetPosition = Vector3(target.position.x, target.position.y, target.position.z);
+
+    anim.m_fromRotation   = Quaternion(start.rotation.x, start.rotation.y, start.rotation.z, start.rotation.w);
+    anim.m_targetRotation = Quaternion(target.rotation.x, target.rotation.y, target.rotation.z, target.rotation.w);
+
+    m_viewportCameraAnimation = std::move(anim);
+}
+
+void EditorAnimationManager::CancelViewportCameraAnimation()
+{
+    m_viewportCameraAnimation.reset();
+}
+
+bool EditorAnimationManager::HasViewportCameraAnimation() const
+{
+    return m_viewportCameraAnimation.has_value();
+}
+
 // ─── Cancel ────────────────────────────────────────────────────────────────
 
 bool EditorAnimationManager::CancelInFlightAnimations(EditorCore& core)
@@ -294,6 +336,17 @@ void EditorAnimationManager::Tick(float deltaTime, EditorCore& core)
         NotifyChannelComplete(aid, oid, core);
     for (auto& [aid, oid] : completedQuat)
         NotifyChannelComplete(aid, oid, core);
+
+    // ── Viewport camera — no undo entry on completion ─────────────────────
+    // Ticked on a moved-out copy so the setter is free to touch the manager.
+    if (m_viewportCameraAnimation)
+    {
+        ViewportCameraAnimation anim = std::move(*m_viewportCameraAnimation);
+        m_viewportCameraAnimation.reset();
+        anim.Tick(deltaTime);
+        if (!anim.m_complete && !m_viewportCameraAnimation)
+            m_viewportCameraAnimation = std::move(anim);
+    }
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────

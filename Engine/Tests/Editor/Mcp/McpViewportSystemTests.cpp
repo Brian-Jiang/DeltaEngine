@@ -46,3 +46,32 @@ TEST_F(McpViewportSystemTests, CommandSetViewportCamera_ReturnsOk)
     EXPECT_NEAR(cam["position"][1].get<float>(),  5.f, 0.001f);
     EXPECT_NEAR(cam["fov"].get<float>(), 75.f, 0.001f);
 }
+
+TEST_F(McpViewportSystemTests, CommandSetViewportCamera_ZeroDurationAppliesImmediately)
+{
+    auto res = Dispatch("viewport", "SetViewportCamera",
+                        {{"position", json::array({-4.f, 8.f, 12.f})},
+                         {"fov", 33.0f},
+                         {"duration_seconds", 0.0f}});
+    EXPECT_TRUE(res["ok"].get<bool>());
+
+    auto cam = Dispatch("viewport", "camera");
+    EXPECT_NEAR(cam["position"][0].get<float>(), -4.f, 0.001f);
+    EXPECT_NEAR(cam["position"][2].get<float>(), 12.f, 0.001f);
+    EXPECT_NEAR(cam["fov"].get<float>(), 33.f, 0.001f);
+}
+
+// Headless has no EditorAnimationManager, so even the animated default must apply synchronously.
+TEST_F(McpViewportSystemTests, CommandSetViewportCamera_DefaultDurationAppliesInHeadless)
+{
+    ASSERT_EQ(m_core->GetAnimationManager(), nullptr);
+
+    auto res = Dispatch("viewport", "SetViewportCamera",
+                        {{"position", json::array({1.5f, 2.5f, 3.5f})}});
+    EXPECT_TRUE(res["ok"].get<bool>());
+
+    auto cam = Dispatch("viewport", "camera");
+    EXPECT_NEAR(cam["position"][0].get<float>(), 1.5f, 0.001f);
+    EXPECT_NEAR(cam["position"][1].get<float>(), 2.5f, 0.001f);
+    EXPECT_NEAR(cam["position"][2].get<float>(), 3.5f, 0.001f);
+}

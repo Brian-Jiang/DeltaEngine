@@ -1,10 +1,12 @@
 #include "McpViewportSystem.h"
 
+#include "Editor/Animation/EditorAnimationManager.h"
 #include "Editor/EditorCore.h"
 #include "Editor/EditorMain.h"
 #include "Editor/EditorViewportCamera.h"
 #include "Editor/EditorRenderManager.h"
 #include "Editor/EditorWindows/EditorWindow_Viewport.h"
+#include "Mcp/McpAnimationDefaults.h"
 #include "Mcp/McpProtocol.h"
 #include "Mcp/McpRegistry.h"
 #include "Runtime/Core/DWorld.h"
@@ -91,14 +93,27 @@ static void ApplySetViewportCamera(const EditorViewportCamera& cam)
     SaveViewportCameras(cams);
 }
 
-static void MergeCameraParams(EditorViewportCamera& cam, const nlohmann::json& params)
+// Which camera channels a MergeCameraParams call actually wrote.
+struct MergedCameraChannels
 {
+    bool fov      = false;
+    bool position = false;
+    bool rotation = false;
+
+    bool Any() const { return fov || position || rotation; }
+};
+
+static MergedCameraChannels MergeCameraParams(EditorViewportCamera& cam, const nlohmann::json& params)
+{
+    MergedCameraChannels merged;
+
     if (params.contains("position") && params["position"].is_array() && params["position"].size() >= 3)
     {
         const auto& a = params["position"];
         cam.position.x = a[0].get<float>();
         cam.position.y = a[1].get<float>();
         cam.position.z = a[2].get<float>();
+        merged.position = true;
     }
     if (params.contains("rotation") && params["rotation"].is_array())
     {
@@ -109,6 +124,7 @@ static void MergeCameraParams(EditorViewportCamera& cam, const nlohmann::json& p
             cam.rotation.y = a[1].get<float>();
             cam.rotation.z = a[2].get<float>();
             cam.rotation.w = a[3].get<float>();
+            merged.rotation = true;
         }
         else if (a.size() == 3)
         {
@@ -118,10 +134,16 @@ static void MergeCameraParams(EditorViewportCamera& cam, const nlohmann::json& p
             cam.rotation.y = q.y;
             cam.rotation.z = q.z;
             cam.rotation.w = q.w;
+            merged.rotation = true;
         }
     }
     if (params.contains("fov"))
+    {
         cam.fov = std::clamp(params["fov"].get<float>(), 10.f, 170.f);
+        merged.fov = true;
+    }
+
+    return merged;
 }
 
 } // namespace
@@ -247,11 +269,28 @@ nlohmann::json McpViewportSystem::QueryVisibleObjects(EditorCore& core, const nl
     };
 }
 
-nlohmann::json McpViewportSystem::CommandSetViewportCamera(EditorCore&, const nlohmann::json& params)
+nlohmann::json McpViewportSystem::CommandSetViewportCamera(EditorCore& core, const nlohmann::json& params)
 {
-    EditorViewportCamera cam;
-    GetActiveCamera(cam);
-    MergeCameraParams(cam, params);
-    ApplySetViewportCamera(cam);
+    EditorViewportCamera current;
+    GetActiveCamera(current);
+
+    EditorViewportCamera target = current;
+    const MergedCameraChannels merged = MergeCameraParams(target, params);
+
+    const float duration = params.value("duration_seconds", kDefaultAnimationDurationSeconds);
+
+    EditorAnimationManager* animMgr = core.GetAnimationManager();
+    if (duration <= 0.f || !animMgr || !merged.Any())
+    {
+        ApplySetViewportCamera(target);
+        return { {"ok", true}, {"expects_result", false} };
+    }
+
+    // The setter captures nothing — ApplySetViewportCamera re-resolves the viewport window each
+    // frame, which viewport windows being destroyed on close makes mandatory.
+    animMgr->StartViewportCameraAnimation(current, target,
+        merged.fov, merged.position, merged.rotation, duration,
+        [](const EditorViewportCamera& cam) { ApplySetViewportCamera(cam); });
+
     return { {"ok", true}, {"expects_result", false} };
 }

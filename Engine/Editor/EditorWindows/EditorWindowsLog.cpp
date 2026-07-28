@@ -2,4 +2,8 @@
 
 using namespace DeltaEngine;
 
-DEFINE_LOG_CATEGORY(DeltaEngine::LogEditorWindows)
+DELTA_ENGINE_NS_BEGIN
+
+DEFINE_LOG_CATEGORY(LogEditorWindows)
+
+DELTA_ENGINE_NS_END

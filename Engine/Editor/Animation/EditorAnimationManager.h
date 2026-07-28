@@ -6,12 +6,14 @@
 #include "Runtime/Core/UUID.h"
 #include "Editor/Animation/EditorAnimationInstance.h"
 #include "Editor/Animation/TransformAnimationTypes.h"
+#include "Editor/Animation/ViewportCameraAnimation.h"
 
 #include <DirectXMath.h>
 #include <SimpleMath.h>
 #include <nlohmann/json.hpp>
 
 #include <functional>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -66,6 +68,25 @@ public:
     // SetPropertyFromJson. Returns true if anything was cancelled. Called by EditorCommandManager::Undo.
     DELTAEDITOR_API bool CancelInFlightAnimations(EditorCore& core);
 
+    // Tween the editor preview (fly) camera. Only the requested channels animate; the others —
+    // and nearPlane/farPlane — stay frozen at their current value. Nothing is committed to the
+    // undo stack: the viewport camera is editor-only state, not a reflected DObject.
+    // Preempting an in-flight tween restarts from the currently sampled camera.
+    DELTAEDITOR_API void StartViewportCameraAnimation(
+        const EditorViewportCamera& from, const EditorViewportCamera& target,
+        bool animateFov, bool animatePosition, bool animateRotation,
+        float duration,
+        std::function<void(const EditorViewportCamera&)> setter);
+
+    // Drop the viewport camera tween WITHOUT reverting — the camera keeps the value it reached.
+    // Called when the user takes manual control of the preview camera.
+    DELTAEDITOR_API void CancelViewportCameraAnimation();
+
+    DELTAEDITOR_API bool HasViewportCameraAnimation() const;
+
+    // Note: the viewport camera tween is deliberately excluded from HasInFlightAnimations and
+    // CancelInFlightAnimations — those gate EditorCommandManager::Undo, and a non-undoable camera
+    // move must not swallow the user's Ctrl+Z.
     DELTAEDITOR_API bool HasInFlightAnimations() const;
     DELTAEDITOR_API size_t GetInstanceCount() const { return m_instances.size(); }
 
@@ -84,6 +105,7 @@ private:
     std::vector<TransformAnimationChannel_Vec3> m_vec3Channels;
     std::vector<TransformAnimationChannel_Quat> m_quatChannels;
     std::vector<TransformAnimationSession>      m_sessions;
+    std::optional<ViewportCameraAnimation>      m_viewportCameraAnimation;
 };
 
 DELTA_ENGINE_NS_END
