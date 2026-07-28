@@ -4,6 +4,8 @@
       "PowerShell(*Tools/Scripts/*.bat*)",
       "PowerShell(*Tools\\Scripts\\*.bat*)",
       "PowerShell(*Tools\\\\Scripts\\\\*.bat*)",
+      "PowerShell(Get-ChildItem:*)",
+      "PowerShell(Select-Object:*)",
       "Bash(*Tools/Scripts/*.bat*)",
       "Bash(*Tools\\Scripts\\*.bat*)",
       "Bash(*Tools\\\\Scripts\\\\*.bat*)",
@@ -15,9 +17,11 @@
       "Bash(ls:*)",
       "Bash(head:*)",
       "Bash(pwd:*)",
-      "Bash(Get-ChildItem:*)",
-      "Bash(Select-Object:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(cat:*)",
+      "Bash(where:*)",
+      "Bash(wc:*)",
+      "Bash(tr:*)"
     ]
   }
 }

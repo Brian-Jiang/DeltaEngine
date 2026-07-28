@@ -239,7 +239,16 @@ def main() -> int:
     for cpp in sorted(generated_cpps):
         lines.append(f'    "{cpp.resolve().as_posix()}"\n')
     lines.append(")\n")
-    args.manifest.write_text("".join(lines), encoding="utf-8", newline="\n")
+    # Only rewrite when the content actually changes: the manifest is in
+    # CMAKE_CONFIGURE_DEPENDS, so an unconditional write forces a CMake
+    # reconfigure on every single build.
+    content = "".join(lines)
+    try:
+        unchanged = args.manifest.read_text(encoding="utf-8", newline="") == content
+    except OSError:
+        unchanged = False
+    if not unchanged:
+        args.manifest.write_text(content, encoding="utf-8", newline="\n")
 
     elapsed = time.perf_counter() - t0
     scan_ms = (t_scan - t0) * 1000
