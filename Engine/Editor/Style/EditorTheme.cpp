@@ -8,7 +8,11 @@
 
 using namespace DeltaEngine;
 
-DEFINE_LOG_CATEGORY(DeltaEngine::LogEditorTheme)
+DELTA_ENGINE_NS_BEGIN
+
+DEFINE_LOG_CATEGORY(LogEditorTheme)
+
+DELTA_ENGINE_NS_END
 
 float EditorTheme::RowH()
 {

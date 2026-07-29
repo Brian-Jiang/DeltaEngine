@@ -9,7 +9,11 @@
 
 using namespace DeltaEngine;
 
-DEFINE_LOG_CATEGORY(DeltaEngine::LogMcpMeta);
+DELTA_ENGINE_NS_BEGIN
+
+DEFINE_LOG_CATEGORY(LogMcpMeta)
+
+DELTA_ENGINE_NS_END
 
 void McpMetaSystem::RegisterTools(McpRegistry& registry)
 {

@@ -22,7 +22,11 @@
 
 using namespace DeltaEngine;
 
-DEFINE_LOG_CATEGORY(DeltaEngine::LogEditorChrome)
+DELTA_ENGINE_NS_BEGIN
+
+DEFINE_LOG_CATEGORY(LogEditorChrome)
+
+DELTA_ENGINE_NS_END
 
 void AppHeader::Draw()
 {

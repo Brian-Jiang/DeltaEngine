@@ -1,3 +1,7 @@
 #include "Editor/EditorMainLog.h"
 
-DEFINE_LOG_CATEGORY(DeltaEngine::LogEditorMain)
+DELTA_ENGINE_NS_BEGIN
+
+DEFINE_LOG_CATEGORY(LogEditorMain)
+
+DELTA_ENGINE_NS_END

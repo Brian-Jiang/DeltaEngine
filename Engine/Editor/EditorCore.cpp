@@ -46,7 +46,11 @@
 
 using namespace DeltaEngine;
 
-DEFINE_LOG_CATEGORY(DeltaEngine::LogEditorCore)
+DELTA_ENGINE_NS_BEGIN
+
+DEFINE_LOG_CATEGORY(LogEditorCore)
+
+DELTA_ENGINE_NS_END
 
 EditorCore* DeltaEngine::g_editorCore = nullptr;
 std::unique_ptr<McpSocketServer> DeltaEngine::g_mcpServer;

@@ -8,9 +8,9 @@
 
 #include "LightComponent.generated.h"
 
-DECLARE_LOG_CATEGORY(LogLight)
-
 DELTA_ENGINE_NS_BEGIN
+
+DECLARE_LOG_CATEGORY(LogLight)
 
 class DWorld;
 struct DXGraphicsContext;

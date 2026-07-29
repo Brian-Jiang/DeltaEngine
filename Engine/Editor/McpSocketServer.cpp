@@ -10,7 +10,11 @@
 
 using namespace DeltaEngine;
 
-DEFINE_LOG_CATEGORY(DeltaEngine::LogMcpServer);
+DELTA_ENGINE_NS_BEGIN
+
+DEFINE_LOG_CATEGORY(LogMcpServer)
+
+DELTA_ENGINE_NS_END
 
 McpSocketServer::McpSocketServer(CommandHandler onCommand, QueryHandler onQuery)
     : m_onCommand(std::move(onCommand)), m_onQuery(std::move(onQuery))
