@@ -71,6 +71,7 @@ uint16_t McpSocketServer::Start(uint16_t preferredPort)
 
 void McpSocketServer::Stop()
 {
+    m_stopping = true;
     asio::post(m_ioc, [this] {
         asio::error_code ec;
         m_acceptor.close(ec);
@@ -98,10 +99,13 @@ void McpSocketServer::RunLoop()
 
 void McpSocketServer::DoAccept()
 {
+    if (m_stopping)
+        return;
+
     m_acceptor.async_accept(m_clientSock, [this](asio::error_code ec) {
         if (ec)
         {
-            if (ec != asio::error::operation_aborted)
+            if (!m_stopping && ec != asio::error::operation_aborted)
                 DLOG(LogMcpServer, ELogLevel::Warning, "MCP async_accept failed: {}", ec.message());
             return;
         }
@@ -139,6 +143,9 @@ void McpSocketServer::DoRead()
         [this](asio::error_code ec, std::size_t) {
             if (ec)
             {
+                if (m_stopping)
+                    return;
+
                 DLOG(LogMcpServer, ELogLevel::Log, "MCP client disconnected");
                 m_clientSock.close();
                 m_clientConnected = false;

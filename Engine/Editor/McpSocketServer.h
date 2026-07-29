@@ -42,6 +42,7 @@ private:
     asio::ip::tcp::socket   m_clientSock{m_ioc};
     asio::streambuf         m_readBuf;
     std::atomic<bool>       m_clientConnected{false};
+    std::atomic<bool>       m_stopping{false};
     std::thread             m_thread;
 };
 
