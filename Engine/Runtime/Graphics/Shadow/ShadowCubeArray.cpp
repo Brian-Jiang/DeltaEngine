@@ -2,6 +2,7 @@
 
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/DirectX/DirectX12Texture.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <d3dx12.h>
 

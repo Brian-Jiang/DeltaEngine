@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include <format>
 
-#include "Logging/LogChannels.h" // your existing DLOG
+#include "Runtime/Macros.h"
 
 // ─── Platform break ──────────────────────────────────────────────────────────
 #if defined(_MSC_VER)
@@ -67,6 +67,7 @@
 namespace DeltaInternal
 {
 DELTAENGINE_API bool EnsureFailed(const char *expr, const char *file, int line, const char *msg = nullptr);
+DELTAENGINE_API void CheckFailed(const char *expr, const char *file, int line, const char *msg = nullptr);
 }
 
 #define DELTA_ENSURE(expr) ((expr) || DeltaInternal::EnsureFailed(#expr, __FILE__, __LINE__))
@@ -81,7 +82,7 @@ DELTAENGINE_API bool EnsureFailed(const char *expr, const char *file, int line, 
     {                                                                                                                  \
         if (!(expr))                                                                                                   \
         {                                                                                                              \
-            DLOG(LogCore, ELogLevel::Error, "CHECK failed: {} ({}:{})", #expr, __FILE__, __LINE__);                    \
+            DeltaInternal::CheckFailed(#expr, __FILE__, __LINE__);                                                     \
             DELTA_DEBUG_BREAK();                                                                                       \
         }                                                                                                              \
     } while (false)
@@ -90,8 +91,7 @@ DELTAENGINE_API bool EnsureFailed(const char *expr, const char *file, int line, 
     {                                                                                                                  \
         if (!(expr))                                                                                                   \
         {                                                                                                              \
-            DLOG(LogCore, ELogLevel::Error, "CHECK failed: {} — {} ({}:{})", #expr, std::format(fmt, ##__VA_ARGS__),   \
-                 __FILE__, __LINE__);                                                                                  \
+            DeltaInternal::CheckFailed(#expr, __FILE__, __LINE__, std::format(fmt, ##__VA_ARGS__).c_str());            \
             DELTA_DEBUG_BREAK();                                                                                       \
         }                                                                                                              \
     } while (false)

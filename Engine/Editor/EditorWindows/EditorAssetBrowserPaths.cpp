@@ -4,6 +4,8 @@
 
 #include <system_error>
 
+using namespace DeltaEngine;
+
 DELTA_ENGINE_NS_BEGIN
 
 std::string GetAssetDisplayNameForBrowser(const std::filesystem::path& path)

@@ -1,8 +1,10 @@
 #pragma once
 
-#include "Runtime/Logging/LogCategory.h"
+#include "EngineIncludes.h"
 
 #include <filesystem>
+
+DELTA_ENGINE_NS_BEGIN
 
 class LoggingManager
 {
@@ -22,3 +24,5 @@ private:
     static std::filesystem::path s_logFilePath;
     static bool s_initialized;
 };
+
+DELTA_ENGINE_NS_END

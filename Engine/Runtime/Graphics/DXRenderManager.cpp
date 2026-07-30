@@ -45,6 +45,7 @@
 #include "Runtime/Graphics/RenderResourceReleaseService.h"
 #include "Runtime/Graphics/RenderProxy/RenderProxy.h"
 #include "Runtime/Settings/EngineSettings.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <algorithm>
 #include <filesystem>

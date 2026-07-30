@@ -8,6 +8,7 @@
 #include "Runtime/Reflection/ReflectionRegistry.h"
 #include "Runtime/Serialization/AssetArchive.h"
 #include "Runtime/Serialization/TBulkData.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <algorithm>
 

@@ -113,9 +113,7 @@ public:
             }
             catch (const std::exception& ex)
             {
-                DLOG(LogSerialization, ELogLevel::Error,
-                     "Failed to resize serialized array '{}': requested {} elements but allocation failed ({})",
-                     key, count, ex.what());
+                LoggingInternal::LogArrayResizeFailure(key.c_str(), count, ex.what());
                 EndArray();
                 return;
             }
@@ -145,9 +143,7 @@ public:
             }
             catch (const std::exception& ex)
             {
-                DLOG(LogSerialization, ELogLevel::Error,
-                     "Failed to resize nested serialized array: requested {} elements but allocation failed ({})",
-                     count, ex.what());
+                LoggingInternal::LogArrayResizeFailure(nullptr, count, ex.what());
                 EndArray();
                 return;
             }

@@ -1,12 +1,15 @@
 #include "Runtime/Core/DTexture.h"
 
 #include "Runtime/Graphics/DXUtils.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <DirectXTex.h>
 
 #include <cstring>
 #include <filesystem>
 #include <stdexcept>
+
+using namespace DeltaEngine;
 
 namespace
 {
@@ -144,7 +147,7 @@ bool DeserializeTexture(
 }
 }
 
-using namespace DeltaEngine;
+
 using namespace DirectX;
 
 DTexture::DTexture()

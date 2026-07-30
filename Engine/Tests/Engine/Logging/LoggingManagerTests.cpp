@@ -1,5 +1,3 @@
-#include "Runtime/Logging/LogCategory.h"
-#include "Runtime/Logging/LogChannels.h"
 #include "Runtime/Logging/LoggingManager.h"
 
 #include <gtest/gtest.h>
@@ -10,6 +8,14 @@
 #include <filesystem>
 #include <memory>
 #include <mutex>
+
+using namespace DeltaEngine;
+
+
+// Test-local categories: log categories are module-private, so a test executable
+// defines its own rather than logging into an engine channel.
+DEFINE_LOG_CATEGORY_STATIC(LogLoggingManagerProbe);
+DEFINE_LOG_CATEGORY_STATIC(LogLoggingManagerProbeAlt);
 
 namespace
 {
@@ -80,8 +86,8 @@ TEST_F(LoggingManagerFixture, LoggingManager_AddSink_RoutesToAllCategories)
 
     LoggingManager::AddSink(sink);
 
-    DLOG(LogCore, ELogLevel::Display, "AddSink probe");
-    DLOG(LogIO, ELogLevel::Display, "AddSink probe IO");
+    DLOG(LogLoggingManagerProbe, ELogLevel::Display, "AddSink probe");
+    DLOG(LogLoggingManagerProbeAlt, ELogLevel::Display, "AddSink probe alt");
 
     EXPECT_GE(sink->count.load(), 2);
 }
@@ -95,11 +101,11 @@ TEST_F(LoggingManagerFixture, LoggingManager_SetGlobalLevel_FiltersAllCategories
     LoggingManager::SetGlobalLevel(ELogLevel::Error);
 
     const int before = sink->count.load();
-    DLOG(LogCore, ELogLevel::Log, "should be filtered");
-    DLOG(LogIO, ELogLevel::Warning, "should be filtered");
+    DLOG(LogLoggingManagerProbe, ELogLevel::Log, "should be filtered");
+    DLOG(LogLoggingManagerProbeAlt, ELogLevel::Warning, "should be filtered");
     EXPECT_EQ(sink->count.load(), before);
 
-    DLOG(LogCore, ELogLevel::Error, "should pass");
+    DLOG(LogLoggingManagerProbe, ELogLevel::Error, "should pass");
     EXPECT_EQ(sink->count.load(), before + 1);
 
     LoggingManager::SetGlobalLevel(ELogLevel::Log);

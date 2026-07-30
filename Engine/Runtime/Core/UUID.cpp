@@ -1,4 +1,5 @@
 #include "Runtime/Core/UUID.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <algorithm>
 #include <cctype>
@@ -6,6 +7,8 @@
 #include <cstdio>
 #include <random>
 #include <string>
+
+using namespace DeltaEngine;
 
 DELTA_ENGINE_NS_BEGIN
 

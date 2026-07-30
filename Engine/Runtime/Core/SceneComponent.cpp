@@ -2,6 +2,7 @@
 
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DProperty.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <cstdint>
 #include <vector>
