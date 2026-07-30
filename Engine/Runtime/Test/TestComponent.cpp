@@ -1,4 +1,5 @@
 #include "Runtime/Test/TestComponent.h"
+#include "Runtime/Logging/LogChannels.h"
 
 using namespace DeltaEngine;
 

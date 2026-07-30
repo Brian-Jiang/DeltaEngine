@@ -3,6 +3,7 @@
 #include "Runtime/Core/DShader.h"
 #include "Runtime/Core/GC/DObjectRegistry.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
+#include "Runtime/Logging/LogChannels.h"
 
 using namespace DeltaEngine;
 

@@ -9,6 +9,7 @@
 #include "Runtime/Graphics/DirectX/RootSignature.h"
 #include "Runtime/Graphics/RenderGraph/TransientTexturePool.h"
 #include "Runtime/Graphics/ShaderCompile.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <d3d12.h>
 #include <d3dx12.h>

@@ -3,6 +3,7 @@
 #include "Graphics/DXUtils.h"
 #include "IO/IOManager.h"
 #include "Runtime/Utils/StringUtils.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <slang.h>
 #include <slang-com-ptr.h>
@@ -10,6 +11,8 @@
 #include <cstdio>
 #include <filesystem>
 #include <string>
+
+using namespace DeltaEngine;
 
 using namespace Microsoft::WRL;
 

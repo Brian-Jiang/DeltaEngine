@@ -24,7 +24,6 @@
 #include "Runtime/Reflection/DProperty.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
 #include "Runtime/Reflection/DEnumProperty.h"
-#include "Runtime/Logging/LogCategory.h"
 
 #include <array>
 #include <memory>

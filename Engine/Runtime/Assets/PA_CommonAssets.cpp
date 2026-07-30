@@ -8,6 +8,7 @@
 #include "Runtime/Core/UUID.h"
 #include "Runtime/Graphics/Structures/Vertex.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <DirectXMath.h>
 #include <DirectXTex.h>

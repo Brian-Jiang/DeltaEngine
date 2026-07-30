@@ -1,4 +1,5 @@
 #include "Runtime/Assets/NullAssetDatabase.h"
+#include "Runtime/Logging/LogChannels.h"
 
 using namespace DeltaEngine;
 

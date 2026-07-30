@@ -2,7 +2,6 @@
 
 #include "Editor/EditorCore.h"
 #include "Mcp/McpRegistry.h"
-#include "Runtime/Logging/LogCategory.h"
 #include "Runtime/Logging/LoggingManager.h"
 
 #include <spdlog/spdlog.h>
@@ -19,6 +18,7 @@
 #include <vector>
 
 using namespace DeltaEngine;
+
 
 namespace
 {

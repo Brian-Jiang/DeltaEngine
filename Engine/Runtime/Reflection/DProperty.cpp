@@ -7,6 +7,7 @@
 #include "Runtime/Reflection/ReflectionRegistry.h"
 #include "Runtime/Serialization/AssetArchive.h"
 #include "Runtime/Utils/StringUtils.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <DirectXCollision.h>
 #include <DirectXMath.h>

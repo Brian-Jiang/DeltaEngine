@@ -1,6 +1,7 @@
 #include "Runtime/Logging/LoggingManager.h"
 
 #include "Runtime/Assert/Assert.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -8,6 +9,11 @@
 #include <chrono>
 #include <format>
 #include <system_error>
+
+using namespace DeltaEngine;
+
+
+DELTA_ENGINE_NS_BEGIN
 
 std::vector<spdlog::sink_ptr> LoggingManager::s_sinks;
 std::filesystem::path LoggingManager::s_logFilePath;
@@ -126,3 +132,5 @@ void LoggingManager::SetGlobalLevel(ELogLevel level)
     for (DLogCategory* cat : DLogCategory::GetAllCategories())
         cat->SetLevel(level);
 }
+
+DELTA_ENGINE_NS_END

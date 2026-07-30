@@ -10,15 +10,18 @@
 
 
 #include "Macros.h"
-#include "Runtime/Logging/LogChannels.h"
+#include "Runtime/Logging/LogCategory.h"
+#include "Runtime/Logging/LoggingInternal.h"
 #include "Runtime/Assert/Assert.h"
+
+#include <typeinfo>
 
 DELTA_ENGINE_NS_BEGIN
 
 template <typename T>
 T* CreateDObject()
 {
-    DLOG(LogCore, ELogLevel::Error, "CreateDObject called without a specialization for type %s", typeid(T).name());
+    LoggingInternal::LogMissingCreateDObjectSpecialization(typeid(T).name());
     return nullptr;
 }
 

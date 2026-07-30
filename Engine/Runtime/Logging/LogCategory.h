@@ -7,6 +7,8 @@
 #include <string_view>
 #include <vector>
 
+DELTA_ENGINE_NS_BEGIN
+
 // ---------------------------------------------------------------------------
 // Log levels — mirrors UE5's hierarchy
 // ---------------------------------------------------------------------------
@@ -59,11 +61,19 @@ public:
 
     [[nodiscard]] spdlog::logger* GetLogger() const { return m_logger.get(); }
     [[nodiscard]] ELogLevel GetLevel() const { return m_level; }
+    [[nodiscard]] const std::string& GetName() const { return m_name; }
 
     void SetLevel(ELogLevel level);
     void ReinitializeWithSinks(const std::vector<spdlog::sink_ptr>& sinks);
 
     static std::vector<DLogCategory*>& GetAllCategories();
+
+    /**
+     * Looks a category up by name; returns nullptr if no such category is registered.
+     * Categories are module-private and never exported, so this is how one module
+     * observes or configures another module's categories.
+     */
+    static DLogCategory* FindByName(std::string_view name);
 
 private:
     std::shared_ptr<spdlog::logger> m_logger;
@@ -71,29 +81,27 @@ private:
     ELogLevel m_level;
 };
 
+DELTA_ENGINE_NS_END
+
 // ---------------------------------------------------------------------------
 // Declaration / Definition macros  (identical pattern to UE5)
+//
+// Log categories are module-private: they are never exported across a DLL
+// boundary, so a category may only be used inside the module that defines it.
+// Use DLogCategory::FindByName to observe another module's category.
 // ---------------------------------------------------------------------------
 
-// In a .h — forward-declares the category for other TUs
+// In a module-private .h — forward-declares the category for other TUs in the same module
 #define DECLARE_LOG_CATEGORY(CategoryName) \
-    extern DLogCategory CategoryName;
-
-// In a .h — forward-declares the category with an explicit DLL export macro
-#define DECLARE_LOG_CATEGORY_API(API, CategoryName) \
-    extern API DLogCategory CategoryName;
+    extern ::DeltaEngine::DLogCategory CategoryName;
 
 // In a .cpp — defines a module-wide category
 #define DEFINE_LOG_CATEGORY(CategoryName) \
-    DLogCategory CategoryName { #CategoryName, ELogLevel::Log };
-
-// In a .cpp — defines a module-wide category with an explicit DLL export macro
-#define DEFINE_LOG_CATEGORY_API(API, CategoryName) \
-    API DLogCategory CategoryName { #CategoryName, ELogLevel::Log };
+    ::DeltaEngine::DLogCategory CategoryName { #CategoryName, ::DeltaEngine::ELogLevel::Log };
 
 // In a .cpp — file-local category, no header needed
 #define DEFINE_LOG_CATEGORY_STATIC(CategoryName) \
-    static DLogCategory CategoryName { #CategoryName, ELogLevel::Log }
+    static ::DeltaEngine::DLogCategory CategoryName { #CategoryName, ::DeltaEngine::ELogLevel::Log }
 
 // ---------------------------------------------------------------------------
 // DLOG — primary logging macro
@@ -101,13 +109,13 @@ private:
 // ---------------------------------------------------------------------------
 #define DLOG(Category, Level, ...)                                                        \
     do {                                                                                  \
-        constexpr ::spdlog::level::level_enum _lvl = ::ToSpdlogLevel(Level);              \
+        constexpr ::spdlog::level::level_enum _lvl = ::DeltaEngine::ToSpdlogLevel(Level); \
         auto* _log = (Category).GetLogger();                                              \
         if (_log && _log->should_log(_lvl)) {                                             \
             _log->log(spdlog::source_loc { __FILE__, __LINE__, __func__ },                \
                 _lvl, __VA_ARGS__);                                                       \
         }                                                                                 \
-        if constexpr (Level == ::ELogLevel::Fatal)                                        \
+        if constexpr (Level == ::DeltaEngine::ELogLevel::Fatal)                           \
             std::abort();                                                                 \
     } while (false)
 

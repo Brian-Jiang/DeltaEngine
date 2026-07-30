@@ -1,6 +1,7 @@
 #include "Runtime/Settings/EngineSettings.h"
 
 #include "Runtime/IO/IOManager.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <nlohmann/json.hpp>
 

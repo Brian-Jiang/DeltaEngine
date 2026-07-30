@@ -342,19 +342,27 @@ DeltaEngine ships a full MCP bridge that lets AI agents (Claude Code, etc.) quer
 
 Structured logging built on **spdlog**, following UE5 conventions:
 
-- **`DLogCategory`** — named category with per-category `ELogLevel` (`VeryVerbose` → `Fatal`); categories register themselves globally and can be reinitialized with new sinks.
-- **`LoggingManager`** — call `Initialize(logDir)` once at startup and `Shutdown()` at exit; supports adding sinks at runtime (e.g. an in-editor console sink) and setting a global level override.
-- **`LogChannels.h/.cpp`** — predefined engine-wide log channels.
+Everything lives in the `DeltaEngine` namespace.
+
+- **`DLogCategory`** — named category with per-category `ELogLevel` (`VeryVerbose` → `Fatal`); categories register themselves into one process-wide registry (shared across DLLs) and can be reinitialized with new sinks. `FindByName(name)` looks one up without linking its symbol.
+- **`LoggingManager`** — call `Initialize(logDir)` once at startup and `Shutdown()` at exit; supports adding sinks at runtime (e.g. an in-editor console sink) and setting a global level override. Both reach every category in every module.
+- **`LogCategory.h`** — `DLOG`/`DLOG_IF`, `ELogLevel`, `DLogCategory`. Reaches every TU through `EngineIncludes.h`; never include it directly.
+- **`LogChannels.h/.cpp`** — the engine-wide channels (`LogCore`, `LogRenderer`, `LogAsset`, …). **Engine-private**: the one logging header deliberately kept out of `EngineIncludes.h`, so engine `.cpp` files include it directly and no other module can reach it.
+- **`LoggingInternal.h/.cpp`** — exported relays for log sites that live in headers (inline or template code) and would otherwise compile into another module.
+
+**Log categories are module-private and never exported.** A module may only log into categories it defines itself — the editor does not log into `LogRenderer`, and a future game module defines its own rather than using `LogCore`. Cross-module use is an `undeclared identifier` compile error. There is no `_API` macro variant.
 
 Macros:
 ```cpp
-DECLARE_LOG_CATEGORY(LogFoo)          // .h — forward-declares the category
-DEFINE_LOG_CATEGORY(LogFoo)           // .cpp — defines it with default Log level
-DEFINE_LOG_CATEGORY_STATIC(LogFoo)    // .cpp — file-local category
+DEFINE_LOG_CATEGORY_STATIC(LogFoo);   // .cpp — file-local category; the default choice
+DECLARE_LOG_CATEGORY(LogFoo)          // module-private .h — only when several .cpp in the same module share it
+DEFINE_LOG_CATEGORY(LogFoo)           // .cpp — pairs with the DECLARE above
 
 DLOG(LogFoo, ELogLevel::Warning, "Mesh {} failed to load", meshName);
 DLOG_IF(LogFoo, ELogLevel::Error, cond, "detail: {}", val);
 ```
+
+The shared-category pattern is a `*Log.h` header included only by its own module — see `Engine/Runtime/Graphics/Light/LightLog.h` and `Engine/Editor/EditorMainLog.h`.
 
 ---
 
@@ -571,5 +579,5 @@ Python is **build-time only**. The bundled `Tools/Python/python.exe` runs `Delta
 - **Adding a new reflected class:** annotate with `DCLASS()` + `DGENERATED_BODY(Name)`, add `DPROPERTY()`/`DFUNCTION()` annotations, then build (or run `DeltaCmd.bat --automatic header generate`) — the tool regenerates the `.generated.h/.cpp` pair automatically.
 - **Do not hand-edit generated files** in `Intermediate/DeltaHeaderTool/Generated/` — they are overwritten on every build.
 - **Adding a new editor command:** subclass `EditorCommand`, implement `Execute`/`Undo`/`Serialize`/`Deserialize`, add a `static constexpr std::string_view StaticTypeName()`, and declare a `CommandRegistrar<T>` static instance in the `.cpp` to auto-register with `EditorCommandRegistry`.
-- **Logging:** use `DLOG(Category, ELogLevel::X, ...)` everywhere; define a `DEFINE_LOG_CATEGORY` in the `.cpp` and `DECLARE_LOG_CATEGORY` in the `.h`.
+- **Logging:** use `DLOG(Category, ELogLevel::X, ...)` everywhere; default to `DEFINE_LOG_CATEGORY_STATIC` in the `.cpp`. Categories are module-private and never exported — never log into another module's category.
 - **Property edits in the editor** must go through `EditorCommand_SetProperty` (not direct assignment) so they are undoable.

@@ -2,6 +2,7 @@
 
 #include "Graphics/DXGraphicsContext.h"
 #include "Graphics/Structures/Light.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <DirectXMath.h>
 #include <algorithm>

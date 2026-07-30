@@ -3,6 +3,7 @@
 #include "Runtime/Assets/DPrimaryAsset.h"
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <algorithm>
 #include <format>

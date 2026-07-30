@@ -2,6 +2,7 @@
 
 #include "Runtime/Reflection/DFunction.h"
 #include "Runtime/Reflection/DProperty.h"
+#include "Runtime/Logging/LogChannels.h"
 
 using namespace DeltaEngine;
 

@@ -6,10 +6,13 @@
 #include "Runtime/Graphics/DXUtils.h"
 #include "Runtime/Graphics/ShaderCompile.h"
 #include "Runtime/IO/IOManager.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <cstddef>
 #include <cstring>
 #include <filesystem>
+
+using namespace DeltaEngine;
 
 namespace
 {
@@ -259,7 +262,7 @@ bool DeserializeInputLayout(
 }
 }
 
-using namespace DeltaEngine;
+
 using namespace Microsoft::WRL;
 
 DShader::DShader()

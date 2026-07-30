@@ -10,8 +10,6 @@
 
 DELTA_ENGINE_NS_BEGIN
 
-DECLARE_LOG_CATEGORY(LogLight)
-
 class DWorld;
 struct DXGraphicsContext;
 class RenderProxy;

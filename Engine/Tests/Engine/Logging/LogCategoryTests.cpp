@@ -1,4 +1,3 @@
-#include "Runtime/Logging/LogCategory.h"
 #include "Runtime/Logging/LogChannels.h"
 
 #include <gtest/gtest.h>
@@ -9,6 +8,8 @@
 #include <memory>
 #include <mutex>
 #include <vector>
+
+using namespace DeltaEngine;
 
 namespace
 {

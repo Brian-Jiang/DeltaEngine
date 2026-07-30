@@ -22,9 +22,12 @@
 #include "Runtime/Core/GC/GCManager.h"
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Logging/LoggingManager.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <SDL3/SDL.h>
 #include <pix3.h>
+
+using namespace DeltaEngine;
 
 namespace
 {
@@ -32,7 +35,7 @@ constexpr UINT kSceneWidth = 1280;
 constexpr UINT kSceneHeight = 720;
 }
 
-using namespace DeltaEngine;
+
 using namespace DirectX;
 
 EngineMain::EngineMain()

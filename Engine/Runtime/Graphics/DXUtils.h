@@ -1,6 +1,7 @@
 #pragma once
 
 #include "EngineIncludes.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h> // For HRESULT

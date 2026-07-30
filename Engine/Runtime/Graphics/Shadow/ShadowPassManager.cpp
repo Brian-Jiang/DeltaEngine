@@ -9,6 +9,7 @@
 #include "Runtime/Graphics/RenderProxy/RenderProxy.h"
 #include "Runtime/Graphics/Shadow/ShadowDepthPSO.h"
 #include "Runtime/Graphics/Shadow/ShadowView.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <pix3.h>
 

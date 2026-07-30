@@ -1,6 +1,5 @@
 #include "Editor/Mcp/McpCoreFixture.h"
 
-#include "Runtime/Logging/LogChannels.h"
 #include "Runtime/Logging/LoggingManager.h"
 
 #include <nlohmann/json.hpp>
@@ -11,9 +10,15 @@
 #include <thread>
 #include <vector>
 
-using json = nlohmann::json;
 using namespace DeltaEngine;
+
+using json = nlohmann::json;
+
 using namespace DeltaEngine::Tests;
+
+// Test-local category: log categories are module-private, so a test executable
+// defines its own rather than logging into an engine channel.
+DEFINE_LOG_CATEGORY_STATIC(LogMcpLogProbe);
 
 class McpLogSystemTests : public McpCoreFixture
 {
@@ -27,7 +32,7 @@ protected:
 
 TEST_F(McpLogSystemTests, FileLocation_ReturnsExistingPath)
 {
-    DLOG(LogCore, ELogLevel::Display, "force-flush-marker");
+    DLOG(LogMcpLogProbe, ELogLevel::Display, "force-flush-marker");
 
     auto res = Dispatch("log", "file_location");
     ASSERT_TRUE(res["ok"].get<bool>());
@@ -40,7 +45,7 @@ TEST_F(McpLogSystemTests, FileLocation_ReturnsExistingPath)
 TEST_F(McpLogSystemTests, Read_ReturnsRecentEntries)
 {
     const std::string marker = UniqueMarker();
-    DLOG(LogCore, ELogLevel::Warning, "{}", marker);
+    DLOG(LogMcpLogProbe, ELogLevel::Warning, "{}", marker);
 
     json params;
     params["text_search"] = marker;
@@ -65,8 +70,8 @@ TEST_F(McpLogSystemTests, Read_ReturnsRecentEntries)
 TEST_F(McpLogSystemTests, Read_FiltersBySeverity)
 {
     const std::string marker = UniqueMarker();
-    DLOG(LogCore, ELogLevel::Log, "{} info-line", marker);
-    DLOG(LogCore, ELogLevel::Error, "{} err-line", marker);
+    DLOG(LogMcpLogProbe, ELogLevel::Log, "{} info-line", marker);
+    DLOG(LogMcpLogProbe, ELogLevel::Error, "{} err-line", marker);
 
     json params;
     params["text_search"]  = marker;
@@ -94,7 +99,7 @@ TEST_F(McpLogSystemTests, Read_RespectsCountClamp)
 {
     const std::string marker = UniqueMarker();
     for (int i = 0; i < 5; ++i)
-        DLOG(LogCore, ELogLevel::Warning, "{} idx={}", marker, i);
+        DLOG(LogMcpLogProbe, ELogLevel::Warning, "{} idx={}", marker, i);
 
     json params;
     params["text_search"]  = marker;
@@ -109,11 +114,11 @@ TEST_F(McpLogSystemTests, Read_RespectsCountClamp)
 TEST_F(McpLogSystemTests, Read_FiltersByCategory)
 {
     const std::string marker = UniqueMarker();
-    DLOG(LogCore, ELogLevel::Warning, "{}", marker);
+    DLOG(LogMcpLogProbe, ELogLevel::Warning, "{}", marker);
 
     json params;
     params["text_search"]  = marker;
-    params["category"]     = "Core";
+    params["category"]     = "McpLogProbe";
     params["min_severity"] = "VeryVerbose";
     auto res = Dispatch("log", "read", params);
     ASSERT_TRUE(res["ok"].get<bool>());
@@ -121,7 +126,7 @@ TEST_F(McpLogSystemTests, Read_FiltersByCategory)
     for (const auto& e : res["entries"])
     {
         const std::string cat = e["category"].get<std::string>();
-        EXPECT_NE(cat.find("Core"), std::string::npos);
+        EXPECT_NE(cat.find("McpLogProbe"), std::string::npos);
     }
 }
 

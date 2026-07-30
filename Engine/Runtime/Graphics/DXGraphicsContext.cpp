@@ -2,6 +2,7 @@
 
 #include "Graphics/DirectX/CommandList.h"
 #include "Graphics/Structures/RootParameterType.h"
+#include "Runtime/Logging/LogChannels.h"
 
 using namespace DeltaEngine;
 

@@ -5,6 +5,7 @@
 #include "Runtime/Graphics/RenderProxy/RenderProxy.h"
 #include "Runtime/Graphics/Shadow/ShadowView.h"
 #include "Runtime/Reflection/DProperty.h"
+#include "Runtime/Logging/LogChannels.h"
 
 using namespace DeltaEngine;
 

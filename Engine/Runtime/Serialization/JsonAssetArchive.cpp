@@ -1,4 +1,5 @@
 #include "Runtime/Serialization/JsonAssetArchive.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <fstream>
 #include <system_error>

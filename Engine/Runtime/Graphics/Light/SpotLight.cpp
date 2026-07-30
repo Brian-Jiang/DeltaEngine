@@ -1,5 +1,7 @@
 #include "SpotLight.h"
 
+#include "Runtime/Graphics/Light/LightLog.h"
+
 #include "Graphics/DXGraphicsContext.h"
 #include "Graphics/RenderProxy/SpotLightRenderProxy.h"
 

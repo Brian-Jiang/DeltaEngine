@@ -1,6 +1,7 @@
 #include "Runtime/Core/DScene.h"
 
 #include "Runtime/Core/GameObject.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <algorithm>
 

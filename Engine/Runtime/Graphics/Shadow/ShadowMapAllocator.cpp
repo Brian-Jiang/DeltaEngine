@@ -1,4 +1,5 @@
 #include "Runtime/Graphics/Shadow/ShadowMapAllocator.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <algorithm>
 

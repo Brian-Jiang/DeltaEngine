@@ -1,4 +1,5 @@
 #include "Runtime/IO/IOManager.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <windows.h>
 

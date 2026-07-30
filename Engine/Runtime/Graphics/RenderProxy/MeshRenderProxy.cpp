@@ -27,6 +27,7 @@
 #include "Core/DShader.h"
 #include "Core/DTexture.h"
 #include "Runtime/Utils/StringUtils.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <format>
 

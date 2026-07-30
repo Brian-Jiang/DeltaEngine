@@ -1,17 +1,29 @@
 #include "Runtime/Logging/LogCategory.h"
 
 #include "Runtime/Assert/Assert.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 #include <algorithm>
 #include <ranges>
 
+using namespace DeltaEngine;
+
+DELTA_ENGINE_NS_BEGIN
+
 std::vector<DLogCategory*>& DLogCategory::GetAllCategories()
 {
     // Function-local static avoids SIOF with other static DLogCategory instances
     static std::vector<DLogCategory*> s_categories;
     return s_categories;
+}
+
+DLogCategory* DLogCategory::FindByName(std::string_view name)
+{
+    auto& cats = GetAllCategories();
+    const auto it = std::ranges::find_if(cats, [name](const DLogCategory* c) { return c->GetName() == name; });
+    return it != cats.end() ? *it : nullptr;
 }
 
 DLogCategory::DLogCategory(std::string_view name, ELogLevel defaultLevel)
@@ -53,3 +65,5 @@ void DLogCategory::ReinitializeWithSinks(const std::vector<spdlog::sink_ptr>& si
 
     DLOG(LogCore, ELogLevel::Verbose, "DLogCategory '{}' re-initialized with {} sinks", m_name, sinks.size());
 }
+
+DELTA_ENGINE_NS_END

@@ -2,6 +2,7 @@
 
 #include "Runtime/Core/DTexture.h"
 #include "Runtime/IO/IOManager.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
@@ -12,6 +13,8 @@
 #include <exception>
 #include <filesystem>
 #include <utility>
+
+using namespace DeltaEngine;
 
 namespace
 {
@@ -253,7 +256,6 @@ void DeserializeIndices(const DeltaEngine::TBulkData& bulk, std::vector<std::vec
 }
 }
 
-using namespace DeltaEngine;
 
 DMesh::DMesh() = default;
 

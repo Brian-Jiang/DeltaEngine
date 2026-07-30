@@ -14,6 +14,7 @@
 #include "Runtime/Serialization/ISerializationCallbackReceiver.h"
 #include "Runtime/Serialization/JsonAssetArchive.h"
 #include "Runtime/Serialization/ObjectSnapshot.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <algorithm>
 #include <unordered_map>

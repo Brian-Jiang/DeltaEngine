@@ -5,6 +5,8 @@
 
 #include <nlohmann/json.hpp>
 
+using namespace DeltaEngine;
+
 DELTA_ENGINE_NS_BEGIN
 
 DEFINE_LOG_CATEGORY(LogMcpRouter)

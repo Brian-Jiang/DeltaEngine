@@ -1,4 +1,5 @@
 #include "Runtime/Serialization/TBulkData.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <cstring>
 #include <new>
