@@ -51,6 +51,7 @@ WidgetEditEvent HorizontalToggleGroup::Draw(const char* id, const EditorTheme::T
     ImVec2 groupMax     = ImVec2(cursorScreen.x + totalW, cursorScreen.y + itemH);
 
     drawList->AddRectFilled(groupMin, groupMax, ImGui::ColorConvertFloat4ToU32(c.DRaised), rounding);
+    drawList->AddRect(groupMin, groupMax, ImGui::ColorConvertFloat4ToU32(c.BLight), rounding, 0, 1.f);
 
     bool selectionChanged = false;
     for (int i = 0; i < itemCount; ++i)
@@ -124,8 +125,6 @@ WidgetEditEvent HorizontalToggleGroup::Draw(const char* id, const EditorTheme::T
         if (i < itemCount - 1)
             ImGui::SameLine(0.f, spacing);
     }
-
-    drawList->AddRect(groupMin, groupMax, ImGui::ColorConvertFloat4ToU32(c.BLight), rounding, 0, 1.f);
 
     ImGui::EndGroup();
     ImGui::PopID();

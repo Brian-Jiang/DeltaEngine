@@ -188,7 +188,7 @@ void AppHeader::Draw(const EditorChromeContext& ctx)
 
         const float btnW = fs * 4.5f;
         const float iconW = fh;
-        const float groupW = btnW + pad * 0.5f + iconW + pad;
+        const float groupW = btnW + pad + iconW + pad;
 
         ImGui::SameLine(io.DisplaySize.x - groupW);
 

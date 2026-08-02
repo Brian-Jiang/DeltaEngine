@@ -153,7 +153,7 @@ void MainToolbar::Draw(const EditorChromeContext& ctx)
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Toggle snap");
 
-    ImGui::SameLine(0, 0);
+    ImGui::SameLine(0, pad);
     if (theme->GetMonoFont())
         ImGui::PushFont(theme->GetMonoFont());
     ImGui::PushStyleColor(ImGuiCol_Text, c.CMesh);
