@@ -9,6 +9,7 @@
 #include "Mcp/McpAnimationDefaults.h"
 #include "Mcp/McpProtocol.h"
 #include "Mcp/McpRegistry.h"
+#include "Mcp/McpRotationWire.h"
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Core/SceneComponent.h"
@@ -93,6 +94,22 @@ static void ApplySetViewportCamera(const EditorViewportCamera& cam)
     SaveViewportCameras(cams);
 }
 
+// Matches the interactive fly camera's limit in EditorWindow_Viewport::Tick.
+constexpr float kPitchLimitDegrees = 89.f;
+
+// The fly camera decomposes to yaw/pitch on every mouse move and clamps there, so a target
+// pitch past the limit would snap on the next input. Clamp it up front instead; in-range
+// rotations are returned untouched so no decompose/recompose error creeps in.
+static Quaternion ClampCameraPitch(const Quaternion& q)
+{
+    const Vector3 euler = EulerDegreesFromQuaternion(q);
+    if (std::abs(euler.x) <= kPitchLimitDegrees)
+        return q;
+
+    return QuaternionFromEulerDegrees(Vector3(
+        std::clamp(euler.x, -kPitchLimitDegrees, kPitchLimitDegrees), euler.y, euler.z));
+}
+
 // Which camera channels a MergeCameraParams call actually wrote.
 struct MergedCameraChannels
 {
@@ -115,25 +132,13 @@ static MergedCameraChannels MergeCameraParams(EditorViewportCamera& cam, const n
         cam.position.z = a[2].get<float>();
         merged.position = true;
     }
-    if (params.contains("rotation") && params["rotation"].is_array())
+    if (params.contains("rotation"))
     {
-        const auto& a = params["rotation"];
-        if (a.size() == 4)
+        Quaternion q;
+        if (ParseRotationValue(params["rotation"], q))
         {
-            cam.rotation.x = a[0].get<float>();
-            cam.rotation.y = a[1].get<float>();
-            cam.rotation.z = a[2].get<float>();
-            cam.rotation.w = a[3].get<float>();
-            merged.rotation = true;
-        }
-        else if (a.size() == 3)
-        {
-            Quaternion q = Quaternion::CreateFromYawPitchRoll(
-                a[1].get<float>(), a[0].get<float>(), a[2].get<float>());
-            cam.rotation.x = q.x;
-            cam.rotation.y = q.y;
-            cam.rotation.z = q.z;
-            cam.rotation.w = q.w;
+            q = ClampCameraPitch(q);
+            cam.rotation = { q.x, q.y, q.z, q.w };
             merged.rotation = true;
         }
     }
@@ -179,10 +184,14 @@ nlohmann::json McpViewportSystem::QueryCamera(EditorCore&, const nlohmann::json&
     rot.push_back(cam.rotation.z);
     rot.push_back(cam.rotation.w);
 
+    const Vector3 euler = EulerDegreesFromQuaternion(
+        Quaternion(cam.rotation.x, cam.rotation.y, cam.rotation.z, cam.rotation.w));
+
     return {
         {"ok", true},
         {"position", std::move(pos)},
         {"rotation", std::move(rot)},
+        {"euler", nlohmann::json::array({ euler.x, euler.y, euler.z })},
         {"fov", cam.fov},
         {"near_plane", cam.nearPlane},
         {"far_plane", cam.farPlane},

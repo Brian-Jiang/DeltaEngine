@@ -61,6 +61,51 @@ TEST_F(McpViewportSystemTests, CommandSetViewportCamera_ZeroDurationAppliesImmed
     EXPECT_NEAR(cam["fov"].get<float>(), 33.f, 0.001f);
 }
 
+// A 3-element rotation is euler DEGREES, matching scene/SetRotation.
+TEST_F(McpViewportSystemTests, CommandSetViewportCamera_EulerRotationIsDegrees)
+{
+    auto res = Dispatch("viewport", "SetViewportCamera",
+                        {{"rotation", json::array({30.f, 0.f, 0.f})},
+                         {"duration_seconds", 0.0f}});
+    EXPECT_TRUE(res["ok"].get<bool>());
+
+    auto cam = Dispatch("viewport", "camera");
+    // 30 degrees of pitch: q = (sin(15deg), 0, 0, cos(15deg))
+    EXPECT_NEAR(cam["rotation"][0].get<float>(), 0.258819f, 0.001f);
+    EXPECT_NEAR(cam["rotation"][1].get<float>(), 0.f,       0.001f);
+    EXPECT_NEAR(cam["rotation"][2].get<float>(), 0.f,       0.001f);
+    EXPECT_NEAR(cam["rotation"][3].get<float>(), 0.965926f, 0.001f);
+
+    EXPECT_NEAR(cam["euler"][0].get<float>(), 30.f, 0.01f);
+    EXPECT_NEAR(cam["euler"][1].get<float>(),  0.f, 0.01f);
+    EXPECT_NEAR(cam["euler"][2].get<float>(),  0.f, 0.01f);
+}
+
+TEST_F(McpViewportSystemTests, CommandSetViewportCamera_QuaternionRotationRoundTrips)
+{
+    auto res = Dispatch("viewport", "SetViewportCamera",
+                        {{"rotation", json::array({0.f, 0.382683f, 0.f, 0.923880f})},
+                         {"duration_seconds", 0.0f}});
+    EXPECT_TRUE(res["ok"].get<bool>());
+
+    auto cam = Dispatch("viewport", "camera");
+    EXPECT_NEAR(cam["rotation"][1].get<float>(), 0.382683f, 0.001f);
+    EXPECT_NEAR(cam["rotation"][3].get<float>(), 0.923880f, 0.001f);
+    EXPECT_NEAR(cam["euler"][1].get<float>(), 45.f, 0.01f);
+}
+
+// The fly camera clamps pitch to +/-89; an MCP-set target must not exceed it either.
+TEST_F(McpViewportSystemTests, CommandSetViewportCamera_ClampsPitchToFlyCameraLimit)
+{
+    auto res = Dispatch("viewport", "SetViewportCamera",
+                        {{"rotation", json::array({89.9f, 0.f, 0.f})},
+                         {"duration_seconds", 0.0f}});
+    EXPECT_TRUE(res["ok"].get<bool>());
+
+    auto cam = Dispatch("viewport", "camera");
+    EXPECT_NEAR(cam["euler"][0].get<float>(), 89.f, 0.01f);
+}
+
 // Headless has no EditorAnimationManager, so even the animated default must apply synchronously.
 TEST_F(McpViewportSystemTests, CommandSetViewportCamera_DefaultDurationAppliesInHeadless)
 {

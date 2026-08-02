@@ -3,7 +3,7 @@
   "description": "Editor viewport camera, rendering settings, and picking",
   "queries": {
     "camera": {
-      "description": "Current viewport camera position, rotation, and projection settings",
+      "description": "Current viewport camera position, rotation (as both quaternion and euler angles), and projection settings",
       "params": {}
     },
     "render_settings": {
@@ -31,11 +31,13 @@
       "params": {
         "position": {
           "type": "array",
-          "required": false
+          "required": false,
+          "description": "[x,y,z] world position"
         },
         "rotation": {
           "type": "array",
-          "required": false
+          "required": false,
+          "description": "[x,y,z,w] quaternion or [x,y,z] euler angles in DEGREES; pitch is clamped to +/-89 to match the fly camera"
         },
         "fov": {
           "type": "float",

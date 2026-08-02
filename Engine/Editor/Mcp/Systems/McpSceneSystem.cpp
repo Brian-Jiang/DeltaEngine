@@ -16,6 +16,7 @@
 #include "Editor/Mcp/McpAnimationDefaults.h"
 #include "Mcp/McpProtocol.h"
 #include "Mcp/McpRegistry.h"
+#include "Mcp/McpRotationWire.h"
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Core/DComponent.h"
@@ -733,24 +734,6 @@ nlohmann::json QuaternionToJson(const Quaternion& q)
     return nlohmann::json::array({ q.x, q.y, q.z, q.w });
 }
 
-Vector3 EulerDegreesFromQuaternion(const Quaternion& q)
-{
-    const Vector3 radians = q.ToEuler();
-    return Vector3(
-        XMConvertToDegrees(radians.x),
-        XMConvertToDegrees(radians.y),
-        XMConvertToDegrees(radians.z));
-}
-
-// Matches SceneComponent::SetLocalRotation(Vector3) — degrees, roll/pitch/yaw order.
-Quaternion QuaternionFromEulerDegrees(const Vector3& degrees)
-{
-    return Quaternion(XMQuaternionRotationRollPitchYaw(
-        XMConvertToRadians(degrees.x),
-        XMConvertToRadians(degrees.y),
-        XMConvertToRadians(degrees.z)));
-}
-
 // Mirrors SceneComponent::SetWorldPosition — through the parent's full inverse world matrix.
 Vector3 WorldToLocalPosition(const SceneComponent* sc, const Vector3& worldPosition)
 {
@@ -772,24 +755,6 @@ Quaternion WorldToLocalRotation(const SceneComponent* sc, const Quaternion& worl
 
     const XMVECTOR parentInverse = XMQuaternionInverse((XMVECTOR) parent->GetWorldRotation());
     return Quaternion(XMQuaternionMultiply((XMVECTOR) worldRotation, parentInverse));
-}
-
-// Rotation wire format: 4 elements = quaternion [x,y,z,w], 3 elements = euler angles in degrees.
-bool ParseRotationValue(const nlohmann::json& value, Quaternion& outRotation)
-{
-    if (value.size() == 4)
-    {
-        outRotation = Quaternion(value[0].get<float>(), value[1].get<float>(),
-                                 value[2].get<float>(), value[3].get<float>());
-        return true;
-    }
-    if (value.size() == 3)
-    {
-        outRotation = QuaternionFromEulerDegrees(
-            Vector3(value[0].get<float>(), value[1].get<float>(), value[2].get<float>()));
-        return true;
-    }
-    return false;
 }
 
 bool ParseSpace(const nlohmann::json& params, bool& outWorldSpace, nlohmann::json& outError)
