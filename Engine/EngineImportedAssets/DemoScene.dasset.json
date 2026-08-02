@@ -1,0 +1,27 @@
+{
+  "header": {
+    "assetId": "c3d7f62c-72ee-45c4-81ba-7f58ad6349e7",
+    "className": "PA_DScene",
+    "magic": "DLTA",
+    "version": 1
+  },
+  "meta": {
+    "dynamic": {
+      "desc": "",
+      "tags": []
+    },
+    "static": {}
+  },
+  "objects": [
+    {
+      "_class": "DScene",
+      "_objectId": "e6cf149b-361c-439d-96be-f22343cfb89b",
+      "m_gameObjects": [],
+      "m_name": "NewDScene",
+      "m_skybox": {
+        "assetId": "8d7b931f-d6e7-43e8-85ec-e3ab6349ed85",
+        "objectId": "5a26843e-603e-4256-8fac-d4509864161f"
+      }
+    }
+  ]
+}
