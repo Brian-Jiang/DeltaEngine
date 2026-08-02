@@ -277,14 +277,6 @@ void EditorWindow_WorldOutliner::Render(bool& open)
         const float contentY  = rowMin.y + (EditorTheme::RowH() - textLineH) * 0.5f;
         ImGui::SetCursorScreenPos(ImVec2(rowMin.x + 5.f, contentY));
 
-        ImFont* monoFont = theme->GetMonoFont();
-        if (monoFont) ImGui::PushFont(monoFont);
-        ImGui::PushStyleColor(ImGuiCol_Text, c.TGhost);
-        ImGui::Text("%d", entry->index);
-        ImGui::PopStyleColor();
-        if (monoFont) ImGui::PopFont();
-
-        ImGui::SameLine(0.f, 10.f);
         m_typeChip.Draw(c);
         ImGui::SameLine(0.f, 15.f);
 
