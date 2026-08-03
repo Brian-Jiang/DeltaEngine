@@ -68,7 +68,7 @@ private:
 
     bool m_flyModeActive = false;
     float m_rotationSensitivity = 0.15f;
-    float m_movementSpeed = 150.0f;
+    float m_movementSpeed = 500.0f;
 
     EditorViewportCamera m_previewCamera;
     int m_viewportIndex = 0;

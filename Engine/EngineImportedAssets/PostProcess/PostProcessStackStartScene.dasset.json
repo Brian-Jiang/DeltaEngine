@@ -16,7 +16,49 @@
     {
       "_class": "PostProcessStack",
       "_objectId": "fd2860e1-79b2-4297-9b1d-1750b629a362",
-      "m_passes": []
+      "m_passes": [
+        {
+          "assetId": "34dd7fb0-8c9d-432e-9c8d-e4c842f12b02",
+          "objectId": "adee7fed-6836-4dc8-b372-8defa1d61400"
+        },
+        {
+          "assetId": "34dd7fb0-8c9d-432e-9c8d-e4c842f12b02",
+          "objectId": "1c872214-65f1-4db5-b9e3-dbe03b733c92"
+        }
+      ]
+    },
+    {
+      "_class": "BloomPass",
+      "_objectId": "adee7fed-6836-4dc8-b372-8defa1d61400",
+      "m_blurIterations": 6,
+      "m_enabled": true,
+      "m_intensity": 0.8999999761581421,
+      "m_passName": "",
+      "m_shader": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "00000000-0000-0000-0000-000000000000"
+      },
+      "m_softKnee": 0.5,
+      "m_threshold": 1.0
+    },
+    {
+      "_class": "VignettePass",
+      "_objectId": "1c872214-65f1-4db5-b9e3-dbe03b733c92",
+      "m_color": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "m_enabled": true,
+      "m_intensity": 0.6000000238418579,
+      "m_passName": "",
+      "m_roundness": 0.800000011920929,
+      "m_shader": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "00000000-0000-0000-0000-000000000000"
+      },
+      "m_smoothness": 0.5
     }
   ]
 }

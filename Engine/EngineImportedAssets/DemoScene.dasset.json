@@ -158,9 +158,9 @@
         1.0
       ],
       "m_localScale": [
-        2.5,
+        4.0,
         1.0,
-        2.5
+        4.0
       ],
       "m_materialOverrides": [
         {
@@ -510,9 +510,9 @@
         0.0
       ],
       "m_localPosition": [
-        -400.0,
-        50.0,
-        -300.0
+        -450.0,
+        300.0,
+        -600.0
       ],
       "m_localRotation": [
         0.0,
@@ -553,8 +553,8 @@
         0.0
       ],
       "m_localPosition": [
-        -200.0,
-        50.0,
+        -450.0,
+        300.0,
         -300.0
       ],
       "m_localRotation": [
@@ -596,9 +596,9 @@
         0.0
       ],
       "m_localPosition": [
-        0.0,
-        50.0,
-        -300.0
+        -450.0,
+        300.0,
+        0.0
       ],
       "m_localRotation": [
         0.0,
@@ -639,9 +639,9 @@
         0.0
       ],
       "m_localPosition": [
-        200.0,
-        50.0,
-        -300.0
+        -450.0,
+        300.0,
+        300.0
       ],
       "m_localRotation": [
         0.0,
@@ -682,9 +682,9 @@
         0.0
       ],
       "m_localPosition": [
-        400.0,
-        50.0,
-        -300.0
+        -450.0,
+        300.0,
+        600.0
       ],
       "m_localRotation": [
         0.0,
@@ -725,9 +725,9 @@
         0.0
       ],
       "m_localPosition": [
-        -400.0,
-        50.0,
-        -100.0
+        -150.0,
+        300.0,
+        -600.0
       ],
       "m_localRotation": [
         0.0,
@@ -768,9 +768,9 @@
         0.0
       ],
       "m_localPosition": [
-        -200.0,
-        50.0,
-        -100.0
+        -150.0,
+        300.0,
+        -300.0
       ],
       "m_localRotation": [
         0.0,
@@ -811,9 +811,9 @@
         0.0
       ],
       "m_localPosition": [
-        0.0,
-        50.0,
-        -100.0
+        -150.0,
+        300.0,
+        0.0
       ],
       "m_localRotation": [
         0.0,
@@ -854,9 +854,9 @@
         0.0
       ],
       "m_localPosition": [
-        200.0,
-        50.0,
-        -100.0
+        -150.0,
+        300.0,
+        300.0
       ],
       "m_localRotation": [
         0.0,
@@ -897,9 +897,9 @@
         0.0
       ],
       "m_localPosition": [
-        400.0,
-        50.0,
-        -100.0
+        -150.0,
+        300.0,
+        600.0
       ],
       "m_localRotation": [
         0.0,
@@ -940,9 +940,9 @@
         0.0
       ],
       "m_localPosition": [
-        -400.0,
-        50.0,
-        100.0
+        150.0,
+        300.0,
+        -600.0
       ],
       "m_localRotation": [
         0.0,
@@ -983,9 +983,9 @@
         0.0
       ],
       "m_localPosition": [
-        -200.0,
-        50.0,
-        100.0
+        150.0,
+        300.0,
+        -300.0
       ],
       "m_localRotation": [
         0.0,
@@ -1026,9 +1026,9 @@
         0.0
       ],
       "m_localPosition": [
-        0.0,
-        50.0,
-        100.0
+        150.0,
+        300.0,
+        0.0
       ],
       "m_localRotation": [
         0.0,
@@ -1069,9 +1069,9 @@
         0.0
       ],
       "m_localPosition": [
-        200.0,
-        50.0,
-        100.0
+        150.0,
+        300.0,
+        300.0
       ],
       "m_localRotation": [
         0.0,
@@ -1112,9 +1112,9 @@
         0.0
       ],
       "m_localPosition": [
-        400.0,
-        50.0,
-        100.0
+        150.0,
+        300.0,
+        600.0
       ],
       "m_localRotation": [
         0.0,
@@ -1155,9 +1155,9 @@
         0.0
       ],
       "m_localPosition": [
-        -400.0,
-        50.0,
-        300.0
+        450.0,
+        300.0,
+        -600.0
       ],
       "m_localRotation": [
         0.0,
@@ -1198,9 +1198,9 @@
         0.0
       ],
       "m_localPosition": [
-        -200.0,
-        50.0,
-        300.0
+        450.0,
+        300.0,
+        -300.0
       ],
       "m_localRotation": [
         0.0,
@@ -1241,9 +1241,9 @@
         0.0
       ],
       "m_localPosition": [
-        0.0,
-        50.0,
-        300.0
+        450.0,
+        300.0,
+        0.0
       ],
       "m_localRotation": [
         0.0,
@@ -1284,8 +1284,8 @@
         0.0
       ],
       "m_localPosition": [
-        200.0,
-        50.0,
+        450.0,
+        300.0,
         300.0
       ],
       "m_localRotation": [
@@ -1327,9 +1327,9 @@
         0.0
       ],
       "m_localPosition": [
-        400.0,
-        50.0,
-        300.0
+        450.0,
+        300.0,
+        600.0
       ],
       "m_localRotation": [
         0.0,
@@ -1386,7 +1386,7 @@
         "assetId": "c3d7f62c-72ee-45c4-81ba-7f58ad6349e7",
         "objectId": "618dfd0d-8afd-493a-adb4-bc90b0b89cb1"
       },
-      "m_intensity": 3.0,
+      "m_intensity": 1.399999976158142,
       "m_localEulerAngles": [
         50.0,
         -30.0,
@@ -1422,7 +1422,7 @@
       "_class": "GameObject",
       "_objectId": "bf9c31c4-ff06-4e5c-a992-ccf196c45a3d",
       "m_components": [],
-      "m_name": "New GameObject",
+      "m_name": "MainCamera",
       "m_rootSceneComponent": {
         "assetId": "c3d7f62c-72ee-45c4-81ba-7f58ad6349e7",
         "objectId": "1a5e55b7-d0c8-4c6c-86a6-259241b34fba"
@@ -1469,8 +1469,8 @@
       "m_name": "New Camera",
       "m_near": 0.10000000149011612,
       "m_postProcessStack": {
-        "assetId": "00000000-0000-0000-0000-000000000000",
-        "objectId": "00000000-0000-0000-0000-000000000000"
+        "assetId": "34dd7fb0-8c9d-432e-9c8d-e4c842f12b02",
+        "objectId": "fd2860e1-79b2-4297-9b1d-1750b629a362"
       },
       "m_shadowSettings": {
         "m_maxFilterTexels": 12.0,
