@@ -504,6 +504,8 @@ nlohmann::json DeltaEngine::PropertyToJson(const DObject* obj, const DProperty* 
         }
         case EPropertyType::Enum:
             return ReadEnumUnderlyingAsInt64(prop, addr);
+        case EPropertyType::BulkData:
+            return nullptr;
         default:
             DLOG(LogEditorCommand, ELogLevel::Warning,
                  "[PropertyValueIO] PropertyToJson: unsupported scalar type '{}' (property '{}' on class '{}')",
