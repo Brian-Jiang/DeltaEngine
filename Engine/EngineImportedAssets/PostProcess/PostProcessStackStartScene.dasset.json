@@ -24,6 +24,14 @@
         {
           "assetId": "34dd7fb0-8c9d-432e-9c8d-e4c842f12b02",
           "objectId": "1c872214-65f1-4db5-b9e3-dbe03b733c92"
+        },
+        {
+          "assetId": "34dd7fb0-8c9d-432e-9c8d-e4c842f12b02",
+          "objectId": "bd0e39bf-2f71-407c-b468-727b257e30a2"
+        },
+        {
+          "assetId": "34dd7fb0-8c9d-432e-9c8d-e4c842f12b02",
+          "objectId": "c5564657-1d70-4f08-adfe-a7d570306252"
         }
       ]
     },
@@ -32,14 +40,14 @@
       "_objectId": "adee7fed-6836-4dc8-b372-8defa1d61400",
       "m_blurIterations": 6,
       "m_enabled": true,
-      "m_intensity": 0.8999999761581421,
+      "m_intensity": 1.100000023841858,
       "m_passName": "",
       "m_shader": {
         "assetId": "00000000-0000-0000-0000-000000000000",
         "objectId": "00000000-0000-0000-0000-000000000000"
       },
       "m_softKnee": 0.5,
-      "m_threshold": 1.0
+      "m_threshold": 0.75
     },
     {
       "_class": "VignettePass",
@@ -51,14 +59,55 @@
         1.0
       ],
       "m_enabled": true,
-      "m_intensity": 0.6000000238418579,
+      "m_intensity": 0.550000011920929,
       "m_passName": "",
-      "m_roundness": 0.800000011920929,
+      "m_roundness": 0.8500000238418579,
       "m_shader": {
         "assetId": "00000000-0000-0000-0000-000000000000",
         "objectId": "00000000-0000-0000-0000-000000000000"
       },
-      "m_smoothness": 0.5
+      "m_smoothness": 0.6000000238418579
+    },
+    {
+      "_class": "TonemapPass",
+      "_objectId": "bd0e39bf-2f71-407c-b468-727b257e30a2",
+      "m_enabled": true,
+      "m_exposure": 1.2999999523162842,
+      "m_passName": "",
+      "m_shader": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "00000000-0000-0000-0000-000000000000"
+      }
+    },
+    {
+      "_class": "ColorGradingPass",
+      "_objectId": "c5564657-1d70-4f08-adfe-a7d570306252",
+      "m_contrast": 1.149999976158142,
+      "m_enabled": false,
+      "m_gain": [
+        0.029999999329447746,
+        0.009999999776482582,
+        -0.019999999552965164,
+        0.0
+      ],
+      "m_gamma": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "m_lift": [
+        0.0,
+        0.014999999664723873,
+        0.019999999552965164,
+        0.0
+      ],
+      "m_passName": "",
+      "m_saturation": 0.949999988079071,
+      "m_shader": {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "objectId": "00000000-0000-0000-0000-000000000000"
+      }
     }
   ]
 }
