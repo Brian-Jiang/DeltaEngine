@@ -59,3 +59,6 @@
 #*.RTF   diff=astextplain
 Tools/Clang/libclang.dll filter=lfs diff=lfs merge=lfs -text
 Engine/ThirdParty/slang/bin/slang-llvm.dll filter=lfs diff=lfs merge=lfs -text
+
+Tools/Python/** linguist-vendored
+Tools/Clang/** linguist-vendored
