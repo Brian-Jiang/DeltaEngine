@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2026 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -192,7 +192,7 @@ static zenityArgs *create_zenity_args(SDL_FileDialogType type, SDL_DialogFileCal
             char *filter_str = convert_filter(filters[i],
                                               zenity_clean_name,
                                               "--file-filter=", " | ", "",
-                                              "*.", " *.", "");
+                                              "*.", " *.", "", true);
 
             if (!filter_str) {
                 while (i--) {

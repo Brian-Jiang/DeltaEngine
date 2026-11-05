@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2026 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -3488,6 +3488,8 @@ const char *GetGamepadTypeString(SDL_GamepadType type)
         return "Joy-Con Pair";
     case SDL_GAMEPAD_TYPE_GAMECUBE:
         return "GameCube";
+    case SDL_GAMEPAD_TYPE_STEAM:
+        return "Steam";
     default:
         return "";
     }

@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2026 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -42,6 +42,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <errno.h>
 #include <xkbcommon/xkbcommon.h>
 
 #include <wayland-util.h>
@@ -109,7 +110,9 @@
 #define SDL_WL_DATA_DEVICE_VERSION 3
 
 // wl_fixes was introduced in 1.24.0
-#if SDL_WAYLAND_CHECK_VERSION(1, 24, 0)
+#if SDL_WAYLAND_CHECK_VERSION(1, 26, 0)
+#define SDL_WL_FIXES_VERSION 2
+#elif SDL_WAYLAND_CHECK_VERSION(1, 24, 0)
 #define SDL_WL_FIXES_VERSION 1
 #endif
 
@@ -505,7 +508,11 @@ static void wayland_preferred_check_handle_global(void *data, struct wl_registry
 
 static void wayland_preferred_check_remove_global(void *data, struct wl_registry *registry, uint32_t id)
 {
-    // No need to do anything here.
+    SDL_WaylandPreferredData *d = (SDL_WaylandPreferredData *)data;
+
+    if (d->wl_fixes && wl_fixes_get_version(d->wl_fixes) >= WL_FIXES_ACK_GLOBAL_REMOVE_SINCE_VERSION) {
+        wl_fixes_ack_global_remove(d->wl_fixes, registry, id);
+    }
 }
 
 static const struct wl_registry_listener preferred_registry_listener = {
@@ -547,10 +554,11 @@ static SDL_VideoDevice *Wayland_CreateDevice(bool require_preferred_protocols)
                                                  SDL_PROP_GLOBAL_VIDEO_WAYLAND_WL_DISPLAY_POINTER, NULL);
     bool display_is_external = !!display;
 
-    // Are we trying to connect to or are currently in a Wayland session?
+    // Are we trying to connect to, or are currently in, a Wayland session?
     if (!SDL_getenv("WAYLAND_DISPLAY")) {
         const char *session = SDL_getenv("XDG_SESSION_TYPE");
         if (session && SDL_strcasecmp(session, "wayland") != 0) {
+            SDL_LogDebug(SDL_LOG_CATEGORY_VIDEO, "Wayland initialization failed: no Wayland session available");
             return NULL;
         }
     }
@@ -563,6 +571,7 @@ static SDL_VideoDevice *Wayland_CreateDevice(bool require_preferred_protocols)
         display = WAYLAND_wl_display_connect(NULL);
         if (!display) {
             SDL_WAYLAND_UnloadSymbols();
+            SDL_LogDebug(SDL_LOG_CATEGORY_VIDEO, "Failed to connect to the Wayland display server: %s", strerror(errno));
             return NULL;
         }
     }
@@ -609,7 +618,7 @@ static SDL_VideoDevice *Wayland_CreateDevice(bool require_preferred_protocols)
 
     if (!display_is_external) {
         SDL_SetPointerProperty(SDL_GetGlobalProperties(),
-                        SDL_PROP_GLOBAL_VIDEO_WAYLAND_WL_DISPLAY_POINTER, display);
+                               SDL_PROP_GLOBAL_VIDEO_WAYLAND_WL_DISPLAY_POINTER, display);
     }
 
     device->internal = data;
@@ -674,6 +683,7 @@ static SDL_VideoDevice *Wayland_CreateDevice(bool require_preferred_protocols)
     device->SyncWindow = Wayland_SyncWindow;
     device->SetWindowFocusable = Wayland_SetWindowFocusable;
     device->ReconfigureWindow = Wayland_ReconfigureWindow;
+    device->AcceptDragAndDrop = Wayland_AcceptDragAndDrop;
 
 #ifdef SDL_USE_LIBDBUS
     if (SDL_SystemTheme_Init())
@@ -996,22 +1006,27 @@ static void handle_wl_output_done(void *data, struct wl_output *output)
                 internal->scale_factor = (double)native_mode.w / (double)internal->logical_width;
             } else {
                 // ...otherwise, the 'native' pixel values are a multiple of the logical screen size.
-                internal->pixel_width = internal->logical_width * (int)internal->scale_factor;
-                internal->pixel_height = internal->logical_height * (int)internal->scale_factor;
+                internal->scale_factor = internal->integer_scale_factor;
+                internal->pixel_width = internal->logical_width * internal->integer_scale_factor;
+                internal->pixel_height = internal->logical_height * internal->integer_scale_factor;
             }
         } else {
             /* ...and the output viewport is not scaled in the global compositing
              * space, the output dimensions need to be divided by the scale factor.
+             *
+             * NOTE: This path is needed for old versions of GNOME that predate fractional scaling.
              */
-            internal->logical_width /= (int)internal->scale_factor;
-            internal->logical_height /= (int)internal->scale_factor;
+            internal->scale_factor = internal->integer_scale_factor;
+            internal->logical_width /= internal->integer_scale_factor;
+            internal->logical_height /= internal->integer_scale_factor;
         }
     } else {
         /* Calculate the points from the pixel values, if xdg-output isn't present.
          * Use the native mode pixel values since they are pre-transformed.
          */
-        internal->logical_width = native_mode.w / (int)internal->scale_factor;
-        internal->logical_height = native_mode.h / (int)internal->scale_factor;
+        internal->scale_factor = internal->integer_scale_factor;
+        internal->logical_width = native_mode.w / internal->integer_scale_factor;
+        internal->logical_height = native_mode.h / internal->integer_scale_factor;
     }
 
     // The scaled desktop mode
@@ -1100,7 +1115,7 @@ static void handle_wl_output_done(void *data, struct wl_output *output)
 static void handle_wl_output_scale(void *data, struct wl_output *output, int32_t factor)
 {
     SDL_DisplayData *internal = (SDL_DisplayData *)data;
-    internal->scale_factor = factor;
+    internal->integer_scale_factor = factor;
 }
 
 static void handle_wl_output_name(void *data, struct wl_output *wl_output, const char *name)
@@ -1156,6 +1171,7 @@ static bool Wayland_add_display(SDL_VideoData *d, uint32_t id, uint32_t version)
     data->output = output;
     data->registry_id = id;
     data->scale_factor = 1.0f;
+    data->integer_scale_factor = 1;
 
     wl_output_add_listener(output, &output_listener, data);
     SDL_WAYLAND_register_output(output);
@@ -1366,22 +1382,21 @@ static void handle_registry_remove_global(void *data, struct wl_registry *regist
             }
 
             d->output_count--;
-            return;
+            goto ack_remove;
         }
     }
 
-    struct SDL_WaylandSeat *seat, *temp;
-    wl_list_for_each_safe (seat, temp, &d->seat_list, link)
-    {
+    SDL_WaylandSeat *seat, *temp;
+    wl_list_for_each_safe (seat, temp, &d->seat_list, link) {
         if (seat->registry_id == id) {
-            if (seat->keyboard.wl_keyboard) {
-                SDL_RemoveKeyboard(seat->keyboard.sdl_id);
-            }
-            if (seat->pointer.wl_pointer) {
-                SDL_RemoveMouse(seat->pointer.sdl_id);
-            }
             Wayland_SeatDestroy(seat, false);
+            goto ack_remove;
         }
+    }
+
+ack_remove:
+    if (d->wl_fixes && wl_fixes_get_version(d->wl_fixes) >= WL_FIXES_ACK_GLOBAL_REMOVE_SINCE_VERSION) {
+        wl_fixes_ack_global_remove(d->wl_fixes, registry, id);
     }
 }
 
@@ -1394,10 +1409,6 @@ static const struct wl_registry_listener registry_listener = {
 static bool should_use_libdecor(SDL_VideoData *data, bool ignore_xdg)
 {
     if (!SDL_WAYLAND_HAVE_WAYLAND_LIBDECOR) {
-        return false;
-    }
-
-    if (!SDL_GetHintBoolean(SDL_HINT_VIDEO_WAYLAND_ALLOW_LIBDECOR, true)) {
         return false;
     }
 

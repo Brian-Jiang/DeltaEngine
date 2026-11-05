@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2026 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -107,7 +107,6 @@
 #cmakedefine HAVE_STRTOK_R 1
 #cmakedefine HAVE_ITOA 1
 #cmakedefine HAVE__LTOA 1
-#cmakedefine HAVE__UITOA 1
 #cmakedefine HAVE__ULTOA 1
 #cmakedefine HAVE_STRTOL 1
 #cmakedefine HAVE_STRTOUL 1
@@ -194,8 +193,11 @@
 #cmakedefine HAVE_GETPAGESIZE 1
 #cmakedefine HAVE_ICONV 1
 #cmakedefine SDL_USE_LIBICONV 1
+#cmakedefine HAVE_PTHREAD_CONDATTR_SETCLOCK 1
 #cmakedefine HAVE_PTHREAD_SETNAME_NP 1
 #cmakedefine HAVE_PTHREAD_SET_NAME_NP 1
+#cmakedefine HAVE_SEM_CLOCKWAIT 1
+#cmakedefine HAVE_SEM_CLOCKWAIT_NP 1
 #cmakedefine HAVE_SEM_TIMEDWAIT 1
 #cmakedefine HAVE_GETAUXVAL 1
 #cmakedefine HAVE_ELF_AUX_INFO 1
@@ -572,6 +574,8 @@
 #cmakedefine SDL_VIDEO_VITA_PIB 1
 #cmakedefine SDL_VIDEO_VITA_PVR 1
 #cmakedefine SDL_VIDEO_VITA_PVR_OGL 1
+
+#cmakedefine SDL_EMSCRIPTEN_PERSISTENT_PATH_STRING "@SDL_EMSCRIPTEN_PERSISTENT_PATH_STRING@"
 
 /* xkbcommon version info */
 #define SDL_XKBCOMMON_VERSION_MAJOR @SDL_XKBCOMMON_VERSION_MAJOR@

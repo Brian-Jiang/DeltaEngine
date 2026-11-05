@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2026 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -36,6 +36,10 @@ bool SDL_InitGameInput(IGameInput **ppGameInput)
         g_hGameInputDLL = SDL_LoadObject("gameinput.dll");
         if (!g_hGameInputDLL) {
             return false;
+        }
+
+        if (WIN_HasBrokenEZFRD64DLL()) {
+            return SDL_SetError("GameInput disabled to prevent application crashing");
         }
 
         typedef HRESULT (WINAPI *pfnGameInputCreate)(IGameInput **gameInput);

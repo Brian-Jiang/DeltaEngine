@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2026 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -32,7 +32,7 @@
 #endif
 
 #ifdef DEBUG_COCOAMOUSE
-#define DLog(fmt, ...) printf("%s: " fmt "\n", __func__, ##__VA_ARGS__)
+#define DLog(fmt, ...) printf("%s: " fmt "\n", SDL_FUNCTION, ##__VA_ARGS__)
 #else
 #define DLog(...) \
     do {          \
@@ -287,9 +287,11 @@ static bool Cocoa_ShowCursor(SDL_Cursor *cursor)
         for (; window != NULL; window = window->next) {
             SDL_CocoaWindowData *data = (__bridge SDL_CocoaWindowData *)window->internal;
             if (data) {
-                [data.nswindow performSelectorOnMainThread:@selector(invalidateCursorRectsForView:)
-                                                withObject:[data.nswindow contentView]
-                                             waitUntilDone:NO];
+                NSWindow *nsWindow = data.nswindow;
+
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [nsWindow invalidateCursorRectsForView: [nsWindow contentView]];
+                });
             }
         }
         return true;
@@ -409,9 +411,11 @@ static SDL_MouseButtonFlags Cocoa_GetGlobalMouseState(float *x, float *y)
     const NSUInteger cocoaButtons = [NSEvent pressedMouseButtons];
     const NSPoint cocoaLocation = [NSEvent mouseLocation];
     SDL_MouseButtonFlags result = 0;
+    SDL_VideoDevice *device = SDL_GetVideoDevice();
+    SDL_CocoaVideoData *videodata = (__bridge SDL_CocoaVideoData *)device->internal;
 
     *x = cocoaLocation.x;
-    *y = (CGDisplayPixelsHigh(kCGDirectMainDisplay) - cocoaLocation.y);
+    *y = (videodata.mainDisplayHeight - cocoaLocation.y);
 
     result |= (cocoaButtons & (1 << 0)) ? SDL_BUTTON_LMASK : 0;
     result |= (cocoaButtons & (1 << 1)) ? SDL_BUTTON_RMASK : 0;
@@ -521,7 +525,7 @@ void Cocoa_HandleMouseEvent(SDL_VideoDevice *_this, NSEvent *event)
     // has mouse focus, so we'll always set the focus even if we happen to miss
     // NSEventTypeMouseEntered, which apparently happens if the window is
     // created under the mouse on macOS 12.7.  But, only set the focus if
-    // the event acutally has a non-NULL window, otherwise what would happen
+    // the event actually has a non-NULL window, otherwise what would happen
     // is that after an NSEventTypeMouseEntered there would sometimes be
     // NSEventTypeMouseMoved without a window causing us to suppress subsequent
     // mouse move events.
@@ -600,8 +604,9 @@ void Cocoa_HandleMouseEvent(SDL_VideoDevice *_this, NSEvent *event)
     deltaY = [event deltaY];
 
     if (seenWarp) {
+        SDL_CocoaVideoData *videodata = (__bridge SDL_CocoaVideoData *)_this->internal;
         deltaX += (lastMoveX - data->lastWarpX);
-        deltaY += ((CGDisplayPixelsHigh(kCGDirectMainDisplay) - lastMoveY) - data->lastWarpY);
+        deltaY += ((videodata.mainDisplayHeight - lastMoveY) - data->lastWarpY);
 
         DLog("Motion was (%g, %g), offset to (%g, %g)", [event deltaX], [event deltaY], deltaX, deltaY);
     }
@@ -615,8 +620,6 @@ void Cocoa_HandleMouseWheel(SDL_Window *window, NSEvent *event)
     SDL_MouseWheelDirection direction;
     CGFloat x, y;
 
-    x = -[event scrollingDeltaX];
-    y = [event scrollingDeltaY];
     direction = SDL_MOUSEWHEEL_NORMAL;
 
     if ([event isDirectionInvertedFromDevice] == YES) {
@@ -624,8 +627,21 @@ void Cocoa_HandleMouseWheel(SDL_Window *window, NSEvent *event)
     }
 
     if ([event hasPreciseScrollingDeltas]) {
-        x *= 0.1;
-        y *= 0.1;
+        x = -[event scrollingDeltaX] * 0.1f;
+        y = [event scrollingDeltaY] * 0.1f;
+    } else {
+        x = -[event deltaX];
+        y = [event deltaY];
+        if (x > 0) {
+            x = SDL_ceil(x);
+        } else if (x < 0) {
+            x = SDL_floor(x);
+        }
+        if (y > 0) {
+            y = SDL_ceil(y);
+        } else if (y < 0) {
+            y = SDL_floor(y);
+        }
     }
 
     SDL_SendMouseWheel(Cocoa_GetEventTimestamp([event timestamp]), window, mouseID, x, y, direction);

@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2026 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -150,6 +150,7 @@ typedef struct SDL_AudioDriverImpl
 {
     void (*DetectDevices)(SDL_AudioDevice **default_playback, SDL_AudioDevice **default_recording);
     bool (*OpenDevice)(SDL_AudioDevice *device);
+    bool (*PostOpenDevice)(SDL_AudioDevice *device);  // runs after OpenDevice _without the device lock held_.
     void (*ThreadInit)(SDL_AudioDevice *device);   // Called by audio thread at start
     void (*ThreadDeinit)(SDL_AudioDevice *device); // Called by audio thread at end
     bool (*WaitDevice)(SDL_AudioDevice *device);

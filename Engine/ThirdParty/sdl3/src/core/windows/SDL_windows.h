@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2026 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -183,6 +183,9 @@ extern BOOL WIN_IsWindows7OrGreater(void);
 // Returns true if we're running on Windows 8 and newer
 extern BOOL WIN_IsWindows8OrGreater(void);
 
+// Returns true if we're running on Windows 8.1 and newer
+extern BOOL WIN_IsWindows81OrGreater(void);
+
 // Returns true if we're running on Windows 11 and newer
 extern BOOL WIN_IsWindows11OrGreater(void);
 
@@ -210,7 +213,13 @@ extern SDL_AudioFormat SDL_WaveFormatExToSDLFormat(WAVEFORMATEX *waveformat);
 extern int WIN_WideCharToMultiByte(UINT CodePage, DWORD dwFlags, LPCWCH lpWideCharStr, int cchWideChar, LPSTR lpMultiByteStr, int cbMultiByte, LPCCH lpDefaultChar, LPBOOL lpUsedDefaultChar);
 
 // parse out command lines from OS if argv is NULL, otherwise pass through unchanged. `*pallocated` must be HeapFree'd by caller if not NULL on successful return. Returns NULL on success, error string on problems.
-const char *WIN_CheckDefaultArgcArgv(int *pargc, char ***pargv, void **pallocated);
+extern const char *WIN_CheckDefaultArgcArgv(int *pargc, char ***pargv, void **pallocated);
+
+// Does all the win32 tapdancing to make GetModuleFileName work. Returns a SDL_malloc'd UTF-8 string, or NULL on failure.
+extern char *WIN_GetModulePath(HMODULE handle);
+
+// Return true if this system has a broken EZFRD64.DLL installed
+extern bool WIN_HasBrokenEZFRD64DLL(void);
 
 // Ends C function definitions when using C++
 #ifdef __cplusplus

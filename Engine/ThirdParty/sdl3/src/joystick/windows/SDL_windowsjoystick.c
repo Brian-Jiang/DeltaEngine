@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2026 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -200,7 +200,9 @@ static bool SDL_WaitForDeviceNotification(SDL_DeviceNotificationData *data, SDL_
     }
 
     SDL_UnlockMutex(mutex);
-    while (lastret > 0 && !WindowsDeviceChanged()) {
+    // Pump messages until we're told to quit. Device changes are picked up by WINDOWS_JoystickDetect(),
+    // so returning while one is pending would just spin until the next detect.
+    while (lastret > 0) {
         lastret = GetMessage(&msg, NULL, 0, 0); // WM_QUIT causes return value of 0
         if (lastret > 0) {
             TranslateMessage(&msg);
@@ -331,26 +333,21 @@ void WINDOWS_JoystickQuit(void);
 
 static bool WINDOWS_JoystickInit(void)
 {
-    if (!SDL_XINPUT_JoystickInit()) {
-        WINDOWS_JoystickQuit();
-        return false;
-    }
-
-    if (!SDL_DINPUT_JoystickInit()) {
-        WINDOWS_JoystickQuit();
-        return false;
-    }
-
     WIN_InitDeviceNotification();
+
+    SDL_XINPUT_JoystickInit();
+    SDL_DINPUT_JoystickInit();
 
 #if !defined(SDL_PLATFORM_XBOXONE) && !defined(SDL_PLATFORM_XBOXSERIES)
     s_bJoystickThread = SDL_GetHintBoolean(SDL_HINT_JOYSTICK_THREAD, true);
     if (s_bJoystickThread) {
         if (!SDL_StartJoystickThread()) {
+            WINDOWS_JoystickQuit();
             return false;
         }
     } else {
         if (!SDL_CreateDeviceNotification(&s_notification_data)) {
+            WINDOWS_JoystickQuit();
             return false;
         }
     }
@@ -360,6 +357,7 @@ static bool WINDOWS_JoystickInit(void)
     // On Xbox, force create the joystick thread for device detection (since other methods don't work
     s_bJoystickThread = true;
     if (!SDL_StartJoystickThread()) {
+        WINDOWS_JoystickQuit();
         return false;
     }
 #endif

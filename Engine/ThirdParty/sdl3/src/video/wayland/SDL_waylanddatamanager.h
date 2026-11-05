@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2026 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -20,7 +20,6 @@
 */
 
 #include "SDL_internal.h"
-#include "SDL_waylandevents_c.h"
 
 #ifndef SDL_waylanddatamanager_h_
 #define SDL_waylanddatamanager_h_
@@ -100,7 +99,6 @@ struct SDL_WaylandDataDevice
     SDL_Window *dnd_window;
 
     // Clipboard and Primary Selection
-    uint32_t selection_serial;
     SDL_WaylandDataSource *selection_source;
 };
 
@@ -109,7 +107,6 @@ struct SDL_WaylandPrimarySelectionDevice
     struct zwp_primary_selection_device_v1 *primary_selection_device;
     struct SDL_WaylandSeat *seat;
 
-    uint32_t selection_serial;
     SDL_WaylandPrimarySelectionSource *selection_source;
     SDL_WaylandPrimarySelectionOffer *selection_offer;
 };
@@ -140,7 +137,8 @@ extern void Wayland_primary_selection_source_destroy(SDL_WaylandPrimarySelection
 // Wayland Data / Primary Selection Offer - (Receiving)
 extern void *Wayland_data_offer_receive(SDL_WaylandDataOffer *offer,
                                         const char *mime_type,
-                                        size_t *length);
+                                        size_t *length,
+                                        bool extended_timeout);
 extern void *Wayland_primary_selection_offer_receive(SDL_WaylandPrimarySelectionOffer *offer,
                                                      const char *mime_type,
                                                      size_t *length);
@@ -166,10 +164,6 @@ extern bool Wayland_data_device_set_selection(SDL_WaylandDataDevice *device,
                                               size_t mime_count);
 extern bool Wayland_primary_selection_device_set_selection(SDL_WaylandPrimarySelectionDevice *device,
                                                            SDL_WaylandPrimarySelectionSource *source,
-                                                           const char **mime_types,
+                                                           const char *const *mime_types,
                                                            size_t mime_count);
-extern void Wayland_data_device_set_serial(SDL_WaylandDataDevice *device,
-                                           uint32_t serial);
-extern void Wayland_primary_selection_device_set_serial(SDL_WaylandPrimarySelectionDevice *device,
-                                                        uint32_t serial);
 #endif // SDL_waylanddatamanager_h_

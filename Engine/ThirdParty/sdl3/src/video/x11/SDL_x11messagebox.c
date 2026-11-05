@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2026 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -250,11 +250,11 @@ static bool X11_ShowMessageBoxImpl(const SDL_MessageBoxData *messageboxdata, int
 #else 
     controls.window = X11Toolkit_CreateWindowStruct(parent_window, NULL, SDL_TOOLKIT_WINDOW_MODE_X11_DIALOG, colorhints, false);
 #endif
-    controls.window->cb_data = &controls;
-    controls.window->cb_on_scale_change = X11_OnMessageBoxScaleChange;
     if (!controls.window) {
         return false;
     }
+    controls.window->cb_data = &controls;
+    controls.window->cb_on_scale_change = X11_OnMessageBoxScaleChange;
 
     /* Create controls */
     controls.buttonID = buttonID;

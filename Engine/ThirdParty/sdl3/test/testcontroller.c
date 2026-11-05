@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2026 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -286,11 +286,13 @@ void CalibrationPhase_DriftProfiling(IMUState *imustate)
 /* Sample gyro packet in order to calculate drift*/
 void SampleGyroPacketForDrift(IMUState *imustate)
 {
-    /* Get the length squared difference of the last accelerometer data vs. the new one */
+    /* Get the length squared difference of the last accelerometer data vs. the new one.
+     * The accelerometer data is in meters per second squared, but the noise thresholds are in G.
+     */
     float accelerometer_difference[3];
-    accelerometer_difference[0] = imustate->accel_data[0] - imustate->last_accel_data[0];
-    accelerometer_difference[1] = imustate->accel_data[1] - imustate->last_accel_data[1];
-    accelerometer_difference[2] = imustate->accel_data[2] - imustate->last_accel_data[2];
+    accelerometer_difference[0] = (imustate->accel_data[0] - imustate->last_accel_data[0]) / SDL_STANDARD_GRAVITY;
+    accelerometer_difference[1] = (imustate->accel_data[1] - imustate->last_accel_data[1]) / SDL_STANDARD_GRAVITY;
+    accelerometer_difference[2] = (imustate->accel_data[2] - imustate->last_accel_data[2]) / SDL_STANDARD_GRAVITY;
     SDL_memcpy(imustate->last_accel_data, imustate->accel_data, sizeof(imustate->last_accel_data));
     imustate->accelerometer_length_squared = accelerometer_difference[0] * accelerometer_difference[0] + accelerometer_difference[1] * accelerometer_difference[1] + accelerometer_difference[2] * accelerometer_difference[2];
 

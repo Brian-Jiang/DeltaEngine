@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2026 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -196,7 +196,7 @@ static wchar_t *escape_label(const char *in)
     return out;
 }
 
-static HICON load_default_icon()
+static HICON load_default_icon(void)
 {
     HINSTANCE hInstance = GetModuleHandle(NULL);
     if (!hInstance) {

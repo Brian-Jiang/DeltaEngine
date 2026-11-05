@@ -457,7 +457,7 @@ macro(CheckX11)
               #include <X11/Xproto.h>
               #include <X11/extensions/XInput2.h>
               int event_type = XI_GesturePinchBegin;
-              XITouchClassInfo *t;
+              XIGesturePinchEvent *t;
               Status XIAllowTouchEvents(Display *a,int b,unsigned int c,Window d,int f) {
                 return (Status)0;
               }
@@ -751,7 +751,9 @@ macro(CheckWayland)
             sdl_link_dependency(libdecor INCLUDES $<TARGET_PROPERTY:PkgConfig::PC_LIBDECOR,INTERFACE_INCLUDE_DIRECTORIES>)
           else()
             sdl_link_dependency(libdecor LIBS PkgConfig::PC_LIBDECOR PKG_CONFIG_PREFIX PC_LIBDECOR PKG_CONFIG_SPECS ${LibDecor_PKG_CONFIG_SPEC})
-            endif()
+          endif()
+        else()
+          message(WARNING "Unable to find the libdecor development library (required for window decorations on GNOME and Weston)")
         endif()
       endif()
 
@@ -1059,17 +1061,40 @@ macro(CheckPTHREAD)
           check_c_source_compiles("
               #include <pthread.h>
               #include <semaphore.h>
+              #include <time.h>
               int main(int argc, char **argv) {
-                  sem_timedwait(NULL, NULL);
+                  sem_clockwait(NULL, CLOCK_MONOTONIC, NULL);
                   return 0;
-              }" COMPILER_HAS_SEM_TIMEDWAIT)
-          set(HAVE_SEM_TIMEDWAIT ${COMPILER_HAS_SEM_TIMEDWAIT})
+              }" COMPILER_HAS_SEM_CLOCKWAIT)
+          set(HAVE_SEM_CLOCKWAIT ${COMPILER_HAS_SEM_CLOCKWAIT})
+          if (NOT HAVE_SEM_CLOCKWAIT)
+            check_c_source_compiles("
+                #include <pthread.h>
+                #include <semaphore.h>
+                #include <time.h>
+                int main(int argc, char **argv) {
+                    sem_clockwait_np(NULL, CLOCK_MONOTONIC, 0, NULL, NULL);
+                    return 0;
+                }" COMPILER_HAS_SEM_CLOCKWAIT_NP)
+            set(HAVE_SEM_CLOCKWAIT_NP ${COMPILER_HAS_SEM_CLOCKWAIT_NP})
+            if (NOT HAVE_SEM_CLOCKWAIT_NP)
+                check_c_source_compiles("
+                    #include <pthread.h>
+                    #include <semaphore.h>
+                    int main(int argc, char **argv) {
+                        sem_timedwait(NULL, NULL);
+                        return 0;
+                    }" COMPILER_HAS_SEM_TIMEDWAIT)
+                set(HAVE_SEM_TIMEDWAIT ${COMPILER_HAS_SEM_TIMEDWAIT})
+            endif ()
+          endif ()
         endif()
       endif()
 
       check_include_file(pthread.h HAVE_PTHREAD_H)
       check_include_file(pthread_np.h HAVE_PTHREAD_NP_H)
       if (HAVE_PTHREAD_H)
+        check_symbol_exists(pthread_condattr_setclock "pthread.h" HAVE_PTHREAD_CONDATTR_SETCLOCK)
         check_c_source_compiles("
             #include <pthread.h>
             int main(int argc, char **argv) {
@@ -1113,22 +1138,22 @@ macro(CheckUSBHID)
   cmake_push_check_state()
   check_library_exists(usbhid hid_init "" LIBUSBHID)
   if(LIBUSBHID)
-    check_include_file(usbhid.h HAVE_USBHID_H)
+    check_include_files("stdint.h;usbhid.h" HAVE_USBHID_H)
     if(HAVE_USBHID_H)
       set(USB_CFLAGS "-DHAVE_USBHID_H")
     endif()
 
-    check_include_file(libusbhid.h HAVE_LIBUSBHID_H)
+    check_include_files("stdint.h;libusbhid.h" HAVE_LIBUSBHID_H)
     if(HAVE_LIBUSBHID_H)
       string(APPEND USB_CFLAGS " -DHAVE_LIBUSBHID_H")
     endif()
     set(USB_LIBS ${USB_LIBS} usbhid)
   else()
-    check_include_file(usb.h HAVE_USB_H)
+    check_include_files("stdint.h;usb.h" HAVE_USB_H)
     if(HAVE_USB_H)
       set(USB_CFLAGS "-DHAVE_USB_H")
     endif()
-    check_include_file(libusb.h HAVE_LIBUSB_H)
+    check_include_files("stdint.h;libusb.h" HAVE_LIBUSB_H)
     if(HAVE_LIBUSB_H)
       string(APPEND USB_CFLAGS " -DHAVE_LIBUSB_H")
     endif()
@@ -1141,7 +1166,7 @@ macro(CheckUSBHID)
   string(APPEND CMAKE_REQUIRED_FLAGS " ${USB_CFLAGS}")
   list(APPEND CMAKE_REQUIRED_LIBRARIES ${USB_LIBS})
   check_c_source_compiles("
-       #include <sys/types.h>
+        #include <stdint.h>
         #if defined(HAVE_USB_H)
         #include <usb.h>
         #endif
@@ -1167,7 +1192,7 @@ macro(CheckUSBHID)
         }" HAVE_USBHID)
   if(HAVE_USBHID)
     check_c_source_compiles("
-          #include <sys/types.h>
+          #include <stdint.h>
           #if defined(HAVE_USB_H)
           #include <usb.h>
           #endif
@@ -1195,7 +1220,7 @@ macro(CheckUSBHID)
     endif()
 
     check_c_source_compiles("
-          #include <sys/types.h>
+          #include <stdint.h>
           #if defined(HAVE_USB_H)
           #include <usb.h>
           #endif
@@ -1264,18 +1289,21 @@ macro(CheckHIDAPI)
           #include <stddef.h>
           #include <libusb.h>
           int main(int argc, char **argv) {
-            libusb_close(NULL);
+            libusb_interrupt_event_handler(NULL);
             return 0;
           }" HAVE_LIBUSB_H)
         cmake_pop_check_state()
         if(HAVE_LIBUSB_H)
           set(HAVE_LIBUSB TRUE)
-          target_get_dynamic_library(dynamic_libusb LibUSB::LibUSB)
-          if(SDL_HIDAPI_LIBUSB_SHARED AND dynamic_libusb)
-            set(HAVE_HIDAPI_LIBUSB_SHARED ON)
-            set(SDL_LIBUSB_DYNAMIC "\"${dynamic_libusb}\"")
-            sdl_link_dependency(hidapi INCLUDES $<TARGET_PROPERTY:LibUSB::LibUSB,INTERFACE_INCLUDE_DIRECTORIES>)
-          else()
+          if(SDL_HIDAPI_LIBUSB_SHARED)
+            target_get_dynamic_library(dynamic_libusb LibUSB::LibUSB)
+            if(dynamic_libusb)
+              set(HAVE_HIDAPI_LIBUSB_SHARED ON)
+              set(SDL_LIBUSB_DYNAMIC "\"${dynamic_libusb}\"")
+              sdl_link_dependency(hidapi INCLUDES $<TARGET_PROPERTY:LibUSB::LibUSB,INTERFACE_INCLUDE_DIRECTORIES>)
+            endif()
+          endif()
+          if(NOT HAVE_HIDAPI_LIBUSB_SHARED)
             sdl_link_dependency(hidapi LIBS LibUSB::LibUSB PKG_CONFIG_SPECS "${LibUSB_PKG_CONFIG_SPEC}" CMAKE_MODULE LibUSB)
           endif()
         endif()

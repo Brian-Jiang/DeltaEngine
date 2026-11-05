@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2026 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -330,8 +330,11 @@ bool UIKit_IsDisplayLandscape(UIScreen *uiscreen)
 {
 #ifndef SDL_PLATFORM_TVOS
     if (uiscreen == [UIScreen mainScreen]) {
-        return UIInterfaceOrientationIsLandscape([UIApplication sharedApplication].statusBarOrientation);
-    } else
+        UIInterfaceOrientation orientation = UIKit_GetInterfaceOrientation();
+        if (orientation != UIInterfaceOrientationUnknown) {
+            return UIInterfaceOrientationIsLandscape(orientation);
+        }
+    }
 #endif // !SDL_PLATFORM_TVOS
     {
         CGSize size = uiscreen.bounds.size;
@@ -484,7 +487,13 @@ void UIKit_QuitModes(SDL_VideoDevice *_this)
 #if !defined(SDL_PLATFORM_TVOS) && !defined(SDL_PLATFORM_VISIONOS)
 void SDL_OnApplicationDidChangeStatusBarOrientation(void)
 {
-    BOOL isLandscape = UIInterfaceOrientationIsLandscape([UIApplication sharedApplication].statusBarOrientation);
+    UIInterfaceOrientation interface_orientation = UIKit_GetInterfaceOrientation();
+    if (interface_orientation == UIInterfaceOrientationUnknown) {
+        // We'll get another notification once the orientation is known
+        return;
+    }
+
+    BOOL isLandscape = UIInterfaceOrientationIsLandscape(interface_orientation);
     SDL_VideoDisplay *display = SDL_GetVideoDisplay(SDL_GetPrimaryDisplay());
 
     if (display) {
@@ -518,7 +527,7 @@ void SDL_OnApplicationDidChangeStatusBarOrientation(void)
             }
         }
 
-        switch ([UIApplication sharedApplication].statusBarOrientation) {
+        switch (interface_orientation) {
         case UIInterfaceOrientationPortrait:
             orientation = SDL_ORIENTATION_PORTRAIT;
             break;

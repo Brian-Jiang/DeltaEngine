@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2026 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -191,11 +191,6 @@
 #define SDL_VIDEO_RENDER_SW 1
 #endif
 
-/* STB image conversion */
-#if !defined(SDL_HAVE_STB) && !defined(SDL_LEAN_AND_MEAN)
-#define SDL_HAVE_STB 1
-#endif
-
 /* YUV formats
    - handling of YUV surfaces
    - blitting and conversion functions */
@@ -271,6 +266,11 @@ extern "C" {
    anything calling it without an extremely good reason. */
 extern SDL_NORETURN void SDL_ExitProcess(int exitcode);
 
+// Get just the process's binary name, no path. NULL if it doesn't make sense for a platform.
+// Can be something not a file, like a package ID on Android. Meant to be human-readable, not appended to a path, etc.
+// Calculates and caches the string on first call. String lives until SDL_Quit(). This is not a public API right now!
+extern const char *SDL_GetExeName(void);
+
 #ifdef HAVE_LIBC
 #define SDL_abort() abort()
 #else
@@ -305,6 +305,9 @@ extern SDL_NORETURN void SDL_ExitProcess(int exitcode);
 
 // Do any initialization that needs to happen before threads are started
 extern void SDL_InitMainThread(void);
+
+// Return true if this thread has initialized video
+extern bool SDL_IsVideoThread(void);
 
 /* The internal implementations of these functions have up to nanosecond precision.
    We can expose these functions as part of the API if we want to later.

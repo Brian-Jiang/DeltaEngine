@@ -1,11 +1,11 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.16...4.4)
 
 if(NOT DEFINED CMAKE_BUILD_TYPE)
   set(cmake_build_type_undefined 1)
 endif()
 
 # See docs/release_checklist.md
-project(SDL3 LANGUAGES C VERSION "3.4.0")
+project(SDL3 LANGUAGES C VERSION "3.4.20")
 
 if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
   set(SDL3_MAINPROJECT ON)
@@ -46,6 +46,7 @@ endif()
 
 include(CheckLibraryExists)
 include(CheckIncludeFile)
+include(CheckIncludeFiles)
 include(CheckLanguage)
 include(CheckSymbolExists)
 include(CheckCSourceCompiles)
@@ -367,7 +368,7 @@ dep_option(SDL_RENDER_D3D12        "Enable the Direct3D 12 render driver" ON "SD
 dep_option(SDL_RENDER_METAL        "Enable the Metal render driver" ON "SDL_RENDER;APPLE" OFF)
 dep_option(SDL_RENDER_GPU          "Enable the SDL_GPU render driver" ON "SDL_RENDER;SDL_GPU" OFF)
 dep_option(SDL_VIVANTE             "Use Vivante EGL video driver" ON "${UNIX_SYS};SDL_CPU_ARM32" OFF)
-dep_option(SDL_VULKAN              "Enable Vulkan support" ON "SDL_VIDEO;ANDROID OR APPLE OR LINUX OR FREEBSD OR WINDOWS" OFF)
+dep_option(SDL_VULKAN              "Enable Vulkan support" ON "SDL_VIDEO;ANDROID OR APPLE OR LINUX OR FREEBSD OR OPENBSD OR WINDOWS" OFF)
 dep_option(SDL_RENDER_VULKAN       "Enable the Vulkan render driver" ON "SDL_RENDER;SDL_VULKAN" OFF)
 dep_option(SDL_METAL               "Enable Metal support" ON "APPLE" OFF)
 set_option(SDL_OPENVR              "Use OpenVR video driver" OFF)
@@ -378,7 +379,7 @@ dep_option(SDL_DUMMYCAMERA         "Support the dummy camera driver" ON SDL_CAME
 option_string(SDL_BACKGROUNDING_SIGNAL "number to use for magic backgrounding signal or 'OFF'" OFF)
 option_string(SDL_FOREGROUNDING_SIGNAL "number to use for magic foregrounding signal or 'OFF'" OFF)
 dep_option(SDL_HIDAPI              "Enable the HIDAPI subsystem" ON "NOT VISIONOS" OFF)
-dep_option(SDL_HIDAPI_LIBUSB       "Use libusb for low level joystick drivers" ON SDL_HIDAPI_LIBUSB_AVAILABLE OFF)
+dep_option(SDL_HIDAPI_LIBUSB       "Use libusb for low level joystick drivers" ON "SDL_HIDAPI;SDL_HIDAPI_LIBUSB_AVAILABLE" OFF)
 dep_option(SDL_HIDAPI_LIBUSB_SHARED "Dynamically load libusb support" ON "SDL_HIDAPI_LIBUSB;SDL_DEPS_SHARED" OFF)
 dep_option(SDL_HIDAPI_JOYSTICK     "Use HIDAPI for low level joystick drivers" ON SDL_HIDAPI OFF)
 dep_option(SDL_VIRTUAL_JOYSTICK    "Enable the virtual-joystick driver" ON SDL_HIDAPI OFF)
@@ -386,6 +387,10 @@ set_option(SDL_LIBUDEV             "Enable libudev support" ON)
 set_option(SDL_ASAN                "Use AddressSanitizer to detect memory errors" OFF)
 set_option(SDL_CCACHE              "Use Ccache to speed up build" OFF)
 set_option(SDL_CLANG_TIDY          "Run clang-tidy static analysis" OFF)
+
+if(EMSCRIPTEN)
+  option_string(SDL_EMSCRIPTEN_PERSISTENT_PATH  "Path to mount Emscripten IDBFS at startup or '' to disable" "")
+endif()
 
 set(SDL_VENDOR_INFO "" CACHE STRING "Vendor name and/or version to add to SDL_REVISION")
 
@@ -658,12 +663,7 @@ if(USE_GCC OR USE_CLANG OR USE_INTELCC OR USE_QCC)
     endif()
   endif()
 
-  if(APPLE)
-    check_linker_flag(C "-Wl,-undefined,error" LINKER_SUPPORTS_WL_UNDEFINED_ERROR)
-    if(LINKER_SUPPORTS_WL_UNDEFINED_ERROR)
-      sdl_shared_link_options("-Wl,-undefined,error")
-    endif()
-  elseif(NOT OPENBSD)
+  if(NOT OPENBSD)
     cmake_push_check_state()
     check_linker_flag(C "-Wl,--no-undefined" LINKER_SUPPORTS_WL_NO_UNDEFINED)
     #FIXME: originally this if had an additional "AND NOT (USE_CLANG AND WINDOWS)"
@@ -1097,7 +1097,7 @@ if(SDL_LIBC)
   )
   if(WINDOWS)
     list(APPEND symbols_to_check
-      _copysign _fseeki64 _strrev _ui64toa _uitoa _ultoa _wcsdup
+      _copysign _fseeki64 _strrev _ui64toa _ultoa _wcsdup
     )
   else()
     list(APPEND symbols_to_check
@@ -1179,34 +1179,33 @@ if(SDL_LIBC)
     check_symbol_exists(posix_fallocate "fcntl.h" HAVE_POSIX_FALLOCATE)
     check_symbol_exists(posix_spawn_file_actions_addchdir "spawn.h" HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCHDIR)
     check_symbol_exists(posix_spawn_file_actions_addchdir_np "spawn.h" HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCHDIR_NP)
+  endif()
+  if(SDL_SYSTEM_ICONV)
+    check_c_source_compiles("
+      #define LIBICONV_PLUG 1 /* in case libiconv header is in include path */
+      #include <stddef.h>
+      #include <iconv.h>
+      int main(int argc, char **argv) {
+          return !iconv_open(NULL,NULL);
+      }" ICONV_IN_LIBC)
 
-    if(SDL_SYSTEM_ICONV)
-      check_c_source_compiles("
-        #define LIBICONV_PLUG 1 /* in case libiconv header is in include path */
-        #include <stddef.h>
-        #include <iconv.h>
-        int main(int argc, char **argv) {
-            return !iconv_open(NULL,NULL);
-        }" ICONV_IN_LIBC)
+    cmake_push_check_state()
+    list(APPEND CMAKE_REQUIRED_LIBRARIES iconv)
+    check_c_source_compiles("
+      #include <stddef.h>
+      #include <iconv.h>
+      int main(int argc, char **argv) {
+          return !iconv_open(NULL,NULL);
+      }" ICONV_IN_LIBICONV)
+    cmake_pop_check_state()
 
-      cmake_push_check_state()
-      list(APPEND CMAKE_REQUIRED_LIBRARIES iconv)
-      check_c_source_compiles("
-        #include <stddef.h>
-        #include <iconv.h>
-        int main(int argc, char **argv) {
-            return !iconv_open(NULL,NULL);
-        }" ICONV_IN_LIBICONV)
-      cmake_pop_check_state()
-
-      if(ICONV_IN_LIBC OR ICONV_IN_LIBICONV)
-        set(HAVE_ICONV 1)
-        set(HAVE_SYSTEM_ICONV TRUE)
-        if(ICONV_IN_LIBICONV AND (SDL_LIBICONV OR (NOT ICONV_IN_LIBC)))
-          sdl_link_dependency(iconv LIBS iconv)
-          set(SDL_USE_LIBICONV 1)
-          set(HAVE_LIBICONV TRUE)
-        endif()
+    if(ICONV_IN_LIBC OR ICONV_IN_LIBICONV)
+      set(HAVE_ICONV 1)
+      set(HAVE_SYSTEM_ICONV TRUE)
+      if(ICONV_IN_LIBICONV AND (SDL_LIBICONV OR (NOT ICONV_IN_LIBC)))
+        sdl_link_dependency(iconv LIBS iconv)
+        set(SDL_USE_LIBICONV 1)
+        set(HAVE_LIBICONV TRUE)
       endif()
     endif()
 
@@ -1294,22 +1293,25 @@ sdl_glob_sources(
   "${SDL3_SOURCE_DIR}/src/video/yuv2rgb/*.h"
 )
 
-# Build uclibc as a static library such that non-used symbols don't end up in the SDL3 shared library.
 file(GLOB SDL_UCLIBC_SOURCES "${SDL3_SOURCE_DIR}/src/libm/*.c")
-add_library(SDL_uclibc STATIC "${SDL_UCLIBC_SOURCES}")
-target_compile_definitions(SDL_uclibc PRIVATE USING_GENERATED_CONFIG_H)
-target_include_directories(SDL_uclibc PRIVATE "${SDL3_BINARY_DIR}/include-config-$<LOWER_CASE:$<CONFIG>>/build_config")
-target_include_directories(SDL_uclibc PRIVATE "${SDL3_SOURCE_DIR}/src")
-target_include_directories(SDL_uclibc PRIVATE "${SDL3_SOURCE_DIR}/include")
-SDL_AddCommonCompilerFlags(SDL_uclibc)
-target_compile_definitions(SDL_uclibc PRIVATE "$<$<CONFIG:Debug>:DEBUG>")
-sdl_sources(STATIC "$<TARGET_OBJECTS:SDL_uclibc>")
-set_property(TARGET SDL_uclibc PROPERTY UNITY_BUILD OFF)
 if(TARGET SDL3-shared)
+  # Build uclibc as a static library such that non-used symbols don't end up in the SDL3 shared library.
+  add_library(SDL_uclibc STATIC ${SDL_UCLIBC_SOURCES})
+  set_property(TARGET SDL_uclibc PROPERTY POSITION_INDEPENDENT_CODE TRUE)
+  target_compile_definitions(SDL_uclibc PRIVATE USING_GENERATED_CONFIG_H)
+  target_include_directories(SDL_uclibc PRIVATE "${SDL3_BINARY_DIR}/include-config-$<LOWER_CASE:$<CONFIG>>/build_config")
+  target_include_directories(SDL_uclibc PRIVATE "${SDL3_SOURCE_DIR}/src")
+  target_include_directories(SDL_uclibc PRIVATE "${SDL3_SOURCE_DIR}/include")
+  SDL_AddCommonCompilerFlags(SDL_uclibc)
+  target_compile_definitions(SDL_uclibc PRIVATE "$<$<CONFIG:Debug>:DEBUG>")
+  set_property(TARGET SDL_uclibc PROPERTY UNITY_BUILD OFF)
   target_link_libraries(SDL3-shared PRIVATE SDL_uclibc)
+  if(HAVE_GCC_FVISIBILITY)
+    set_property(TARGET SDL_uclibc PROPERTY C_VISIBILITY_PRESET "hidden")
+  endif()
 endif()
-if(HAVE_GCC_FVISIBILITY)
-  set_property(TARGET SDL_uclibc PROPERTY C_VISIBILITY_PRESET "hidden")
+if(TARGET SDL3-static)
+  target_sources(SDL3-static PRIVATE ${SDL_UCLIBC_SOURCES})
 endif()
 
 # Enable/disable various subsystems of the SDL library
@@ -1612,7 +1614,7 @@ if(ANDROID)
       get_property(sdl3_jar_location TARGET SDL3-jar PROPERTY JAR_FILE)
       set_property(TARGET SDL3__Jar PROPERTY JAR_FILE "${sdl3_jar_location}")
       set(javasourcesjar "${SDL3_BINARY_DIR}/SDL3-${SDL3_VERSION}-sources.jar")
-      string(REGEX REPLACE "${android_java_sources_root}/" "" sdl_relative_java_sources "${SDL_JAVA_SOURCES}")
+      string(REPLACE "${android_java_sources_root}/" "" sdl_relative_java_sources "${SDL_JAVA_SOURCES}")
       add_custom_command(
         OUTPUT "${javasourcesjar}"
         COMMAND ${Java_JAR_EXECUTABLE} cf "${javasourcesjar}" ${sdl_relative_java_sources}
@@ -1652,6 +1654,11 @@ elseif(EMSCRIPTEN)
   # Hide noisy warnings that intend to aid mostly during initial stages of porting a new
   # project. Uncomment at will for verbose cross-compiling -I/../ path info.
   sdl_compile_options(PRIVATE "-Wno-warn-absolute-paths")
+
+  if(NOT SDL_EMSCRIPTEN_PERSISTENT_PATH STREQUAL "")
+    set(SDL_EMSCRIPTEN_PERSISTENT_PATH_STRING "${SDL_EMSCRIPTEN_PERSISTENT_PATH}")
+    sdl_link_dependency(idbfs LIBS idbfs.js)
+  endif()
 
   sdl_glob_sources(
     "${SDL3_SOURCE_DIR}/src/main/emscripten/*.c"
@@ -1766,22 +1773,38 @@ elseif(EMSCRIPTEN)
 
 elseif(UNIX AND NOT APPLE AND NOT RISCOS AND NOT HAIKU)
 
+  set(SDL_DISABLE_DLOPEN_NOTES TRUE)
   if(SDL_DLOPEN_NOTES)
-    set(CHECK_ELF_DLNOTES_SRC [==[
-    #ifndef __ELF__
-      ELF DL notes is only supported on ELF platforms
-    #endif
-    __attribute__ ((used,aligned(4),section(".note.dlopen"))) static const struct {
-      struct { int a; int b; int c; } hdr; char name[4]; __attribute__((aligned(4))) char json[24];
-    } dlnote = { { 4, 0x407c0c0aU, 16 }, "FDO", "[\\"a\\":{\\"a\\":\\"1\\",\\"b\\":\\"2\\"}]" };
-    int main(int argc, char *argv[]) {
-      return argc + dlnote.hdr.a;
-    }
-    ]==])
-    set(SDL_DISABLE_DLOPEN_NOTES FALSE)
+    if(POLICY CMP0219)
+      set(CHECK_ELF_DLNOTES_SRC [==[
+        #ifndef __ELF__
+          ELF DL notes is only supported on ELF platforms
+        #endif
+        __attribute__ ((used,aligned(4),section(".note.dlopen"))) static const struct {
+          struct { int a; int b; int c; } hdr; char name[4]; __attribute__((aligned(4))) char json[24];
+        } dlnote = { { 4, 0x407c0c0aU, 16 }, "FDO", "[\"a\":{\"a\":\"1\",\"b\":\"2\"}]" };
+        int main(int argc, char *argv[]) {
+          return argc + dlnote.hdr.a;
+        }
+      ]==])
+    else()
+      # FIXME: drop this once minimum CMake version is >= 4.4
+      set(CHECK_ELF_DLNOTES_SRC [==[
+        #ifndef __ELF__
+          ELF DL notes is only supported on ELF platforms
+        #endif
+        __attribute__ ((used,aligned(4),section(".note.dlopen"))) static const struct {
+          struct { int a; int b; int c; } hdr; char name[4]; __attribute__((aligned(4))) char json[24];
+        } dlnote = { { 4, 0x407c0c0aU, 16 }, "FDO", "[\\"a\\":{\\"a\\":\\"1\\",\\"b\\":\\"2\\"}]" };
+        int main(int argc, char *argv[]) {
+          return argc + dlnote.hdr.a;
+        }
+      ]==])
+    endif()
     check_c_source_compiles("${CHECK_ELF_DLNOTES_SRC}" COMPILER_SUPPORTS_ELFNOTES)
-    if(NOT COMPILER_SUPPORTS_ELFNOTES)
-      set(SDL_DISABLE_DLOPEN_NOTES TRUE)
+    if(COMPILER_SUPPORTS_ELFNOTES)
+      set(SDL_DISABLE_DLOPEN_NOTES FALSE)
+      set(HAVE_DLOPEN_NOTES TRUE)
     endif()
   endif()
 
@@ -2195,11 +2218,32 @@ elseif(WINDOWS)
       string(APPEND CMAKE_REQUIRED_FLAGS " /I\"$ENV{DXSDK_DIR}\\Include\"")
     endif()
 
-    check_include_file(d3d9.h HAVE_D3D9_H)
-    check_include_file(d3d11_1.h HAVE_D3D11_H)
-    check_include_file(ddraw.h HAVE_DDRAW_H)
-    check_include_file(dsound.h HAVE_DSOUND_H)
-    check_include_file(dinput.h HAVE_DINPUT_H)
+    # d3d9.h may need windows.h, but does not include it itself.
+    check_c_source_compiles("
+      #include <windows.h>
+      #include <d3d9.h>
+      int main(int argc, char **argv) { (void)argc; (void)argv; return 0; }" HAVE_D3D9_H
+    )
+    check_c_source_compiles("
+      #include <d3d11_1.h>
+      int main(int argc, char **argv) { (void)argc; (void)argv; return 0; }" HAVE_D3D11_H
+    )
+    # ddraw.h, dsound.h, and dinput.h may need windows.h, but does not include it itself.
+    check_c_source_compiles("
+      #include <windows.h>
+      #include <ddraw.h>
+      int main(int argc, char **argv) { (void)argc; (void)argv; return 0; }" HAVE_DDRAW_H
+    )
+    check_c_source_compiles("
+      #include <windows.h>
+      #include <dsound.h>
+      int main(int argc, char **argv) { (void)argc; (void)argv; return 0; }" HAVE_DSOUND_H
+    )
+    check_c_source_compiles("
+      #include <windows.h>
+      #include <dinput.h>
+      int main(int argc, char **argv) { (void)argc; (void)argv; return 0; }" HAVE_DINPUT_H
+    )
     if(SDL_CPU_ARM32)  # !!! FIXME: this should probably check if we're !(x86 or x86-64) instead of arm.
       set(HAVE_DINPUT_H 0)
     endif()
@@ -2709,13 +2753,6 @@ elseif(APPLE)
           )
           set(SDL_VIDEO_RENDER_METAL 1)
           set(HAVE_RENDER_METAL TRUE)
-        endif()
-        if (SDL_GPU)
-          set(SDL_GPU_METAL 1)
-          sdl_glob_sources(
-            "${SDL3_SOURCE_DIR}/src/gpu/metal/*.m"
-            "${SDL3_SOURCE_DIR}/src/gpu/metal/*.h"
-          )
         endif()
       endif()
     endif()
@@ -3233,6 +3270,7 @@ elseif(PS2)
       gskit
       dmakit
       ps2_drivers
+      atomic
   )
 elseif(N3DS)
   sdl_glob_sources("${SDL3_SOURCE_DIR}/src/main/n3ds/*.c")
@@ -3527,6 +3565,14 @@ if(SDL_GPU)
       "${SDL3_SOURCE_DIR}/src/gpu/vulkan/*.h"
     )
     set(SDL_GPU_VULKAN 1)
+    set(HAVE_SDL_GPU TRUE)
+  endif()
+  if(SDL_VIDEO_METAL)
+    sdl_glob_sources(
+      "${SDL3_SOURCE_DIR}/src/gpu/metal/*.m"
+      "${SDL3_SOURCE_DIR}/src/gpu/metal/*.h"
+    )
+    set(SDL_GPU_METAL 1)
     set(HAVE_SDL_GPU TRUE)
   endif()
   if(SDL_RENDER_GPU AND HAVE_SDL_GPU)
@@ -3982,6 +4028,7 @@ if(SDL_SHARED)
       )
     endif()
   endif()
+
   target_link_libraries(SDL3-shared PRIVATE ${SDL_CMAKE_DEPENDS})
   target_include_directories(SDL3-shared
     PRIVATE
@@ -3999,6 +4046,8 @@ if(SDL_SHARED)
   set_property(TARGET SDL3-shared PROPERTY INTERFACE_SDL3_SHARED TRUE)
   set_property(TARGET SDL3-shared APPEND PROPERTY COMPATIBLE_INTERFACE_STRING "SDL_VERSION")
   set_property(TARGET SDL3-shared PROPERTY INTERFACE_SDL_VERSION "SDL${SDL3_VERSION_MAJOR}")
+  set_property(TARGET SDL3-shared APPEND PROPERTY EXPORT_PROPERTIES "SDL_FULL_VERSION")
+  set_property(TARGET SDL3-shared PROPERTY SDL_FULL_VERSION "${PROJECT_VERSION}")
   if(NOT CMAKE_VERSION VERSION_LESS "3.16")
     target_precompile_headers(SDL3-shared PRIVATE "$<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:${PROJECT_SOURCE_DIR}/src/SDL_internal.h>")
   endif()
@@ -4023,6 +4072,8 @@ if(SDL_STATIC)
   set_property(TARGET SDL3-static PROPERTY INTERFACE_SDL3_SHARED FALSE)
   set_property(TARGET SDL3-static APPEND PROPERTY COMPATIBLE_INTERFACE_STRING "SDL_VERSION")
   set_property(TARGET SDL3-static PROPERTY INTERFACE_SDL_VERSION "SDL${SDL3_VERSION_MAJOR}")
+  set_property(TARGET SDL3-static APPEND PROPERTY EXPORT_PROPERTIES "SDL_FULL_VERSION")
+  set_property(TARGET SDL3-static PROPERTY SDL_FULL_VERSION "${PROJECT_VERSION}")
   if(NOT CMAKE_VERSION VERSION_LESS "3.16")
     target_precompile_headers(SDL3-static PRIVATE "$<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:${PROJECT_SOURCE_DIR}/src/SDL_internal.h>")
   endif()

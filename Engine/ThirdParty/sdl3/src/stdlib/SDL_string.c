@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2026 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -240,7 +240,7 @@ static Uint32 StepUTF8(const char **_str, const size_t slen)
         const Uint8 str2 = str[2];
         const Uint8 str3 = str[3];
         if (((str1 & 0xC0) == 0x80) && ((str2 & 0xC0) == 0x80) && ((str3 & 0xC0) == 0x80)) {  // If trailing bytes aren't 10xxxxxx, sequence is bogus.
-            const Uint32 octet2 = ((Uint32) (str1 & 0x1F)) << 12;
+            const Uint32 octet2 = ((Uint32) (str1 & 0x3F)) << 12;
             const Uint32 octet3 = ((Uint32) (str2 & 0x3F)) << 6;
             const Uint32 octet4 = ((Uint32) (str3 & 0x3F));
             const Uint32 result = ((octet & 0x07) << 18) | octet2 | octet3 | octet4;
@@ -718,7 +718,7 @@ int SDL_memcmp(const void *s1, const void *s2, size_t len)
         ++s2p;
     }
     return 0;
-#endif // HAVE_MEMCMP
+#endif // SDL_PLATFORM_VITA
 }
 
 size_t SDL_strlen(const char *string)
@@ -1119,7 +1119,7 @@ char *SDL_strnstr(const char *haystack, const char *needle, size_t maxlen)
         --maxlen;
     }
     return NULL;
-#endif // HAVE_STRSTR
+#endif // HAVE_STRNSTR
 }
 
 char *SDL_strstr(const char *haystack, const char *needle)
@@ -1153,6 +1153,11 @@ static const char ntoa_table[] = {
 };
 #endif // ntoa() conversion table
 
+char *SDL_uitoa(unsigned int value, char *string, int radix)
+{
+    return SDL_ultoa((unsigned long)value, string, radix);
+}
+
 char *SDL_itoa(int value, char *string, int radix)
 {
 #ifdef HAVE_ITOA
@@ -1160,15 +1165,6 @@ char *SDL_itoa(int value, char *string, int radix)
 #else
     return SDL_ltoa((long)value, string, radix);
 #endif // HAVE_ITOA
-}
-
-char *SDL_uitoa(unsigned int value, char *string, int radix)
-{
-#ifdef HAVE__UITOA
-    return _uitoa(value, string, radix);
-#else
-    return SDL_ultoa((unsigned long)value, string, radix);
-#endif // HAVE__UITOA
 }
 
 char *SDL_ltoa(long value, char *string, int radix)
@@ -2358,6 +2354,10 @@ int SDL_vsnprintf(SDL_OUT_Z_CAP(maxlen) char *text, size_t maxlen, SDL_PRINTF_FO
 
 int SDL_vswprintf(SDL_OUT_Z_CAP(maxlen) wchar_t *text, size_t maxlen, const wchar_t *fmt, va_list ap)
 {
+    if (text) {
+        text[0] = 0;
+    }
+
     char *fmt_utf8 = NULL;
     if (fmt) {
         fmt_utf8 = SDL_iconv_string("UTF-8", "WCHAR_T", (const char *)fmt, (SDL_wcslen(fmt) + 1) * sizeof(wchar_t));
@@ -2479,7 +2479,7 @@ int SDL_vasprintf(char **strp, SDL_PRINTF_FORMAT_STRING const char *fmt, va_list
 char * SDL_strpbrk(const char *str, const char *breakset)
 {
 #ifdef HAVE_STRPBRK
-    return strpbrk(str, breakset);
+    return SDL_const_cast(char *, strpbrk(str, breakset));
 #else
 
     for (; *str; str++) {
