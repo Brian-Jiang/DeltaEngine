@@ -170,6 +170,8 @@ noinst_PROGRAMS = allocation/server$(EXEEXT) \
 @HAVE_BOOST_COROUTINE_TRUE@  spawn/echo_server \
 @HAVE_BOOST_COROUTINE_TRUE@  spawn/parallel_grep
 
+@HAVE_BOOST_COROUTINE_TRUE@@HAVE_BOOST_SYSTEM_TRUE@am__append_6 = -lboost_system
+@HAVE_BOOST_COROUTINE_TRUE@@HAVE_BOOST_SYSTEM_TRUE@am__append_7 = -lboost_system
 subdir = src/examples/cpp11
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -614,13 +616,15 @@ am__spawn_echo_server_SOURCES_DIST = spawn/echo_server.cpp
 @HAVE_BOOST_COROUTINE_TRUE@am_spawn_echo_server_OBJECTS =  \
 @HAVE_BOOST_COROUTINE_TRUE@	spawn/echo_server.$(OBJEXT)
 spawn_echo_server_OBJECTS = $(am_spawn_echo_server_OBJECTS)
-@HAVE_BOOST_COROUTINE_TRUE@spawn_echo_server_DEPENDENCIES = $(LDADD)
+am__DEPENDENCIES_1 =
+@HAVE_BOOST_COROUTINE_TRUE@spawn_echo_server_DEPENDENCIES = $(LDADD) \
+@HAVE_BOOST_COROUTINE_TRUE@	$(am__DEPENDENCIES_1)
 am__spawn_parallel_grep_SOURCES_DIST = spawn/parallel_grep.cpp
 @HAVE_BOOST_COROUTINE_TRUE@am_spawn_parallel_grep_OBJECTS =  \
 @HAVE_BOOST_COROUTINE_TRUE@	spawn/parallel_grep.$(OBJEXT)
 spawn_parallel_grep_OBJECTS = $(am_spawn_parallel_grep_OBJECTS)
 @HAVE_BOOST_COROUTINE_TRUE@spawn_parallel_grep_DEPENDENCIES =  \
-@HAVE_BOOST_COROUTINE_TRUE@	$(LDADD)
+@HAVE_BOOST_COROUTINE_TRUE@	$(LDADD) $(am__DEPENDENCIES_1)
 am__ssl_client_SOURCES_DIST = ssl/client.cpp
 @HAVE_OPENSSL_TRUE@am_ssl_client_OBJECTS = ssl/client.$(OBJEXT)
 ssl_client_OBJECTS = $(am_ssl_client_OBJECTS)
@@ -1344,9 +1348,15 @@ type_erasure_type_erasure_SOURCES = type_erasure/main.cpp type_erasure/stdin_lin
 @HAVE_OPENSSL_TRUE@ssl_client_SOURCES = ssl/client.cpp
 @HAVE_OPENSSL_TRUE@ssl_server_SOURCES = ssl/server.cpp
 @HAVE_BOOST_COROUTINE_TRUE@spawn_echo_server_SOURCES = spawn/echo_server.cpp
-@HAVE_BOOST_COROUTINE_TRUE@spawn_echo_server_LDADD = $(LDADD) -lboost_coroutine -lboost_context -lboost_thread -lboost_chrono -lboost_system
+@HAVE_BOOST_COROUTINE_TRUE@spawn_echo_server_LDADD = $(LDADD) \
+@HAVE_BOOST_COROUTINE_TRUE@	-lboost_coroutine -lboost_context \
+@HAVE_BOOST_COROUTINE_TRUE@	-lboost_thread -lboost_chrono \
+@HAVE_BOOST_COROUTINE_TRUE@	$(am__append_6)
 @HAVE_BOOST_COROUTINE_TRUE@spawn_parallel_grep_SOURCES = spawn/parallel_grep.cpp
-@HAVE_BOOST_COROUTINE_TRUE@spawn_parallel_grep_LDADD = $(LDADD) -lboost_coroutine -lboost_context -lboost_thread -lboost_chrono -lboost_system
+@HAVE_BOOST_COROUTINE_TRUE@spawn_parallel_grep_LDADD = $(LDADD) \
+@HAVE_BOOST_COROUTINE_TRUE@	-lboost_coroutine -lboost_context \
+@HAVE_BOOST_COROUTINE_TRUE@	-lboost_thread -lboost_chrono \
+@HAVE_BOOST_COROUTINE_TRUE@	$(am__append_7)
 EXTRA_DIST = \
 	serialization/client.cpp \
 	serialization/server.cpp \

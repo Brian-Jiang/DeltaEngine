@@ -138,6 +138,7 @@ check_PROGRAMS = unit/any_completion_executor$(EXEEXT) \
 	unit/execution/blocking_adaptation$(EXEEXT) \
 	unit/execution/context_as$(EXEEXT) \
 	unit/execution/executor$(EXEEXT) \
+	unit/execution/inline_exception_handling$(EXEEXT) \
 	unit/execution/invocable_archetype$(EXEEXT) \
 	unit/execution/mapping$(EXEEXT) \
 	unit/execution/outstanding_work$(EXEEXT) \
@@ -145,12 +146,14 @@ check_PROGRAMS = unit/any_completion_executor$(EXEEXT) \
 	unit/execution/relationship$(EXEEXT) \
 	unit/execution_context$(EXEEXT) unit/executor$(EXEEXT) \
 	unit/executor_work_guard$(EXEEXT) unit/file_base$(EXEEXT) \
+	unit/fwd_first$(EXEEXT) unit/fwd_last$(EXEEXT) \
 	unit/generic/basic_endpoint$(EXEEXT) \
 	unit/generic/datagram_protocol$(EXEEXT) \
 	unit/generic/raw_protocol$(EXEEXT) \
 	unit/generic/seq_packet_protocol$(EXEEXT) \
 	unit/generic/stream_protocol$(EXEEXT) \
 	unit/high_resolution_timer$(EXEEXT) unit/immediate$(EXEEXT) \
+	unit/inline_executor$(EXEEXT) unit/inline_or_executor$(EXEEXT) \
 	unit/io_context$(EXEEXT) unit/io_context_strand$(EXEEXT) \
 	unit/ip/address$(EXEEXT) unit/ip/address_v4$(EXEEXT) \
 	unit/ip/address_v4_iterator$(EXEEXT) \
@@ -183,22 +186,24 @@ check_PROGRAMS = unit/any_completion_executor$(EXEEXT) \
 	unit/prepend$(EXEEXT) unit/random_access_file$(EXEEXT) \
 	unit/read$(EXEEXT) unit/read_at$(EXEEXT) \
 	unit/read_until$(EXEEXT) unit/readable_pipe$(EXEEXT) \
-	unit/recycling_allocator$(EXEEXT) unit/redirect_error$(EXEEXT) \
-	unit/registered_buffer$(EXEEXT) unit/serial_port$(EXEEXT) \
-	unit/serial_port_base$(EXEEXT) unit/signal_set$(EXEEXT) \
-	unit/signal_set_base$(EXEEXT) unit/socket_base$(EXEEXT) \
-	unit/static_thread_pool$(EXEEXT) unit/steady_timer$(EXEEXT) \
-	unit/strand$(EXEEXT) unit/stream_file$(EXEEXT) \
-	unit/streambuf$(EXEEXT) unit/system_context$(EXEEXT) \
-	unit/system_executor$(EXEEXT) unit/system_timer$(EXEEXT) \
-	unit/this_coro$(EXEEXT) unit/thread$(EXEEXT) \
-	unit/thread_pool$(EXEEXT) unit/time_traits$(EXEEXT) \
-	unit/ts/buffer$(EXEEXT) unit/ts/executor$(EXEEXT) \
-	unit/ts/internet$(EXEEXT) unit/ts/io_context$(EXEEXT) \
-	unit/ts/net$(EXEEXT) unit/ts/netfwd$(EXEEXT) \
-	unit/ts/socket$(EXEEXT) unit/ts/timer$(EXEEXT) \
-	unit/use_awaitable$(EXEEXT) unit/use_future$(EXEEXT) \
-	unit/uses_executor$(EXEEXT) unit/wait_traits$(EXEEXT) \
+	unit/recycling_allocator$(EXEEXT) \
+	unit/redirect_disposition$(EXEEXT) \
+	unit/redirect_error$(EXEEXT) unit/registered_buffer$(EXEEXT) \
+	unit/serial_port$(EXEEXT) unit/serial_port_base$(EXEEXT) \
+	unit/signal_set$(EXEEXT) unit/signal_set_base$(EXEEXT) \
+	unit/socket_base$(EXEEXT) unit/static_thread_pool$(EXEEXT) \
+	unit/steady_timer$(EXEEXT) unit/strand$(EXEEXT) \
+	unit/stream_file$(EXEEXT) unit/streambuf$(EXEEXT) \
+	unit/system_context$(EXEEXT) unit/system_executor$(EXEEXT) \
+	unit/system_timer$(EXEEXT) unit/this_coro$(EXEEXT) \
+	unit/thread$(EXEEXT) unit/thread_pool$(EXEEXT) \
+	unit/time_traits$(EXEEXT) unit/ts/buffer$(EXEEXT) \
+	unit/ts/executor$(EXEEXT) unit/ts/internet$(EXEEXT) \
+	unit/ts/io_context$(EXEEXT) unit/ts/net$(EXEEXT) \
+	unit/ts/netfwd$(EXEEXT) unit/ts/socket$(EXEEXT) \
+	unit/ts/timer$(EXEEXT) unit/use_awaitable$(EXEEXT) \
+	unit/use_future$(EXEEXT) unit/uses_executor$(EXEEXT) \
+	unit/wait_traits$(EXEEXT) \
 	unit/windows/basic_object_handle$(EXEEXT) \
 	unit/windows/basic_overlapped_handle$(EXEEXT) \
 	unit/windows/basic_random_access_handle$(EXEEXT) \
@@ -298,6 +303,7 @@ TESTS = unit/any_completion_executor$(EXEEXT) \
 	unit/execution/blocking_adaptation$(EXEEXT) \
 	unit/execution/context_as$(EXEEXT) \
 	unit/execution/executor$(EXEEXT) \
+	unit/execution/inline_exception_handling$(EXEEXT) \
 	unit/execution/invocable_archetype$(EXEEXT) \
 	unit/execution/mapping$(EXEEXT) \
 	unit/execution/outstanding_work$(EXEEXT) \
@@ -305,7 +311,9 @@ TESTS = unit/any_completion_executor$(EXEEXT) \
 	unit/execution/relationship$(EXEEXT) \
 	unit/execution_context$(EXEEXT) unit/executor$(EXEEXT) \
 	unit/executor_work_guard$(EXEEXT) unit/file_base$(EXEEXT) \
+	unit/fwd_first$(EXEEXT) unit/fwd_last$(EXEEXT) \
 	unit/high_resolution_timer$(EXEEXT) unit/immediate$(EXEEXT) \
+	unit/inline_executor$(EXEEXT) unit/inline_or_executor$(EXEEXT) \
 	unit/io_context$(EXEEXT) unit/io_context_strand$(EXEEXT) \
 	unit/ip/address$(EXEEXT) unit/ip/address_v4$(EXEEXT) \
 	unit/ip/address_v4_iterator$(EXEEXT) \
@@ -338,22 +346,24 @@ TESTS = unit/any_completion_executor$(EXEEXT) \
 	unit/prepend$(EXEEXT) unit/random_access_file$(EXEEXT) \
 	unit/read$(EXEEXT) unit/read_at$(EXEEXT) \
 	unit/read_until$(EXEEXT) unit/readable_pipe$(EXEEXT) \
-	unit/recycling_allocator$(EXEEXT) unit/redirect_error$(EXEEXT) \
-	unit/registered_buffer$(EXEEXT) unit/serial_port$(EXEEXT) \
-	unit/serial_port_base$(EXEEXT) unit/signal_set$(EXEEXT) \
-	unit/signal_set_base$(EXEEXT) unit/socket_base$(EXEEXT) \
-	unit/static_thread_pool$(EXEEXT) unit/steady_timer$(EXEEXT) \
-	unit/strand$(EXEEXT) unit/stream_file$(EXEEXT) \
-	unit/streambuf$(EXEEXT) unit/system_context$(EXEEXT) \
-	unit/system_executor$(EXEEXT) unit/system_timer$(EXEEXT) \
-	unit/this_coro$(EXEEXT) unit/thread$(EXEEXT) \
-	unit/thread_pool$(EXEEXT) unit/time_traits$(EXEEXT) \
-	unit/ts/buffer$(EXEEXT) unit/ts/executor$(EXEEXT) \
-	unit/ts/internet$(EXEEXT) unit/ts/io_context$(EXEEXT) \
-	unit/ts/net$(EXEEXT) unit/ts/netfwd$(EXEEXT) \
-	unit/ts/socket$(EXEEXT) unit/ts/timer$(EXEEXT) \
-	unit/use_awaitable$(EXEEXT) unit/use_future$(EXEEXT) \
-	unit/uses_executor$(EXEEXT) unit/wait_traits$(EXEEXT) \
+	unit/recycling_allocator$(EXEEXT) \
+	unit/redirect_disposition$(EXEEXT) \
+	unit/redirect_error$(EXEEXT) unit/registered_buffer$(EXEEXT) \
+	unit/serial_port$(EXEEXT) unit/serial_port_base$(EXEEXT) \
+	unit/signal_set$(EXEEXT) unit/signal_set_base$(EXEEXT) \
+	unit/socket_base$(EXEEXT) unit/static_thread_pool$(EXEEXT) \
+	unit/steady_timer$(EXEEXT) unit/strand$(EXEEXT) \
+	unit/stream_file$(EXEEXT) unit/streambuf$(EXEEXT) \
+	unit/system_context$(EXEEXT) unit/system_executor$(EXEEXT) \
+	unit/system_timer$(EXEEXT) unit/this_coro$(EXEEXT) \
+	unit/thread$(EXEEXT) unit/thread_pool$(EXEEXT) \
+	unit/time_traits$(EXEEXT) unit/ts/buffer$(EXEEXT) \
+	unit/ts/executor$(EXEEXT) unit/ts/internet$(EXEEXT) \
+	unit/ts/io_context$(EXEEXT) unit/ts/net$(EXEEXT) \
+	unit/ts/netfwd$(EXEEXT) unit/ts/socket$(EXEEXT) \
+	unit/ts/timer$(EXEEXT) unit/use_awaitable$(EXEEXT) \
+	unit/use_future$(EXEEXT) unit/uses_executor$(EXEEXT) \
+	unit/wait_traits$(EXEEXT) \
 	unit/windows/basic_object_handle$(EXEEXT) \
 	unit/windows/basic_overlapped_handle$(EXEEXT) \
 	unit/windows/basic_random_access_handle$(EXEEXT) \
@@ -852,6 +862,13 @@ unit_execution_executor_OBJECTS =  \
 unit_execution_executor_LDADD = $(LDADD)
 @SEPARATE_COMPILATION_TRUE@unit_execution_executor_DEPENDENCIES =  \
 @SEPARATE_COMPILATION_TRUE@	libasio.a
+am_unit_execution_inline_exception_handling_OBJECTS =  \
+	unit/execution/inline_exception_handling.$(OBJEXT)
+unit_execution_inline_exception_handling_OBJECTS =  \
+	$(am_unit_execution_inline_exception_handling_OBJECTS)
+unit_execution_inline_exception_handling_LDADD = $(LDADD)
+@SEPARATE_COMPILATION_TRUE@unit_execution_inline_exception_handling_DEPENDENCIES =  \
+@SEPARATE_COMPILATION_TRUE@	libasio.a
 am_unit_execution_invocable_archetype_OBJECTS =  \
 	unit/execution/invocable_archetype.$(OBJEXT)
 unit_execution_invocable_archetype_OBJECTS =  \
@@ -1054,6 +1071,14 @@ am_unit_file_base_OBJECTS = unit/file_base.$(OBJEXT)
 unit_file_base_OBJECTS = $(am_unit_file_base_OBJECTS)
 unit_file_base_LDADD = $(LDADD)
 @SEPARATE_COMPILATION_TRUE@unit_file_base_DEPENDENCIES = libasio.a
+am_unit_fwd_first_OBJECTS = unit/fwd_first.$(OBJEXT)
+unit_fwd_first_OBJECTS = $(am_unit_fwd_first_OBJECTS)
+unit_fwd_first_LDADD = $(LDADD)
+@SEPARATE_COMPILATION_TRUE@unit_fwd_first_DEPENDENCIES = libasio.a
+am_unit_fwd_last_OBJECTS = unit/fwd_last.$(OBJEXT)
+unit_fwd_last_OBJECTS = $(am_unit_fwd_last_OBJECTS)
+unit_fwd_last_LDADD = $(LDADD)
+@SEPARATE_COMPILATION_TRUE@unit_fwd_last_DEPENDENCIES = libasio.a
 am_unit_generic_basic_endpoint_OBJECTS =  \
 	unit/generic/basic_endpoint.$(OBJEXT)
 unit_generic_basic_endpoint_OBJECTS =  \
@@ -1100,6 +1125,18 @@ am_unit_immediate_OBJECTS = unit/immediate.$(OBJEXT)
 unit_immediate_OBJECTS = $(am_unit_immediate_OBJECTS)
 unit_immediate_LDADD = $(LDADD)
 @SEPARATE_COMPILATION_TRUE@unit_immediate_DEPENDENCIES = libasio.a
+am_unit_inline_executor_OBJECTS = unit/inline_executor.$(OBJEXT)
+unit_inline_executor_OBJECTS = $(am_unit_inline_executor_OBJECTS)
+unit_inline_executor_LDADD = $(LDADD)
+@SEPARATE_COMPILATION_TRUE@unit_inline_executor_DEPENDENCIES =  \
+@SEPARATE_COMPILATION_TRUE@	libasio.a
+am_unit_inline_or_executor_OBJECTS =  \
+	unit/inline_or_executor.$(OBJEXT)
+unit_inline_or_executor_OBJECTS =  \
+	$(am_unit_inline_or_executor_OBJECTS)
+unit_inline_or_executor_LDADD = $(LDADD)
+@SEPARATE_COMPILATION_TRUE@unit_inline_or_executor_DEPENDENCIES =  \
+@SEPARATE_COMPILATION_TRUE@	libasio.a
 am_unit_io_context_OBJECTS = unit/io_context.$(OBJEXT)
 unit_io_context_OBJECTS = $(am_unit_io_context_OBJECTS)
 unit_io_context_LDADD = $(LDADD)
@@ -1352,6 +1389,13 @@ unit_recycling_allocator_OBJECTS =  \
 	$(am_unit_recycling_allocator_OBJECTS)
 unit_recycling_allocator_LDADD = $(LDADD)
 @SEPARATE_COMPILATION_TRUE@unit_recycling_allocator_DEPENDENCIES =  \
+@SEPARATE_COMPILATION_TRUE@	libasio.a
+am_unit_redirect_disposition_OBJECTS =  \
+	unit/redirect_disposition.$(OBJEXT)
+unit_redirect_disposition_OBJECTS =  \
+	$(am_unit_redirect_disposition_OBJECTS)
+unit_redirect_disposition_LDADD = $(LDADD)
+@SEPARATE_COMPILATION_TRUE@unit_redirect_disposition_DEPENDENCIES =  \
 @SEPARATE_COMPILATION_TRUE@	libasio.a
 am_unit_redirect_error_OBJECTS = unit/redirect_error.$(OBJEXT)
 unit_redirect_error_OBJECTS = $(am_unit_redirect_error_OBJECTS)
@@ -1683,9 +1727,12 @@ am__depfiles_remade = ../$(DEPDIR)/asio.Po ../$(DEPDIR)/asio_ssl.Po \
 	unit/$(DEPDIR)/disposition.Po unit/$(DEPDIR)/error.Po \
 	unit/$(DEPDIR)/execution_context.Po unit/$(DEPDIR)/executor.Po \
 	unit/$(DEPDIR)/executor_work_guard.Po \
-	unit/$(DEPDIR)/file_base.Po \
+	unit/$(DEPDIR)/file_base.Po unit/$(DEPDIR)/fwd_first.Po \
+	unit/$(DEPDIR)/fwd_last.Po \
 	unit/$(DEPDIR)/high_resolution_timer.Po \
-	unit/$(DEPDIR)/immediate.Po unit/$(DEPDIR)/io_context.Po \
+	unit/$(DEPDIR)/immediate.Po unit/$(DEPDIR)/inline_executor.Po \
+	unit/$(DEPDIR)/inline_or_executor.Po \
+	unit/$(DEPDIR)/io_context.Po \
 	unit/$(DEPDIR)/io_context_strand.Po \
 	unit/$(DEPDIR)/is_read_buffered.Po \
 	unit/$(DEPDIR)/is_write_buffered.Po \
@@ -1695,6 +1742,7 @@ am__depfiles_remade = ../$(DEPDIR)/asio.Po ../$(DEPDIR)/asio_ssl.Po \
 	unit/$(DEPDIR)/read_at.Po unit/$(DEPDIR)/read_until.Po \
 	unit/$(DEPDIR)/readable_pipe.Po \
 	unit/$(DEPDIR)/recycling_allocator.Po \
+	unit/$(DEPDIR)/redirect_disposition.Po \
 	unit/$(DEPDIR)/redirect_error.Po \
 	unit/$(DEPDIR)/registered_buffer.Po \
 	unit/$(DEPDIR)/serial_port.Po \
@@ -1717,6 +1765,7 @@ am__depfiles_remade = ../$(DEPDIR)/asio.Po ../$(DEPDIR)/asio_ssl.Po \
 	unit/execution/$(DEPDIR)/blocking_adaptation.Po \
 	unit/execution/$(DEPDIR)/context_as.Po \
 	unit/execution/$(DEPDIR)/executor.Po \
+	unit/execution/$(DEPDIR)/inline_exception_handling.Po \
 	unit/execution/$(DEPDIR)/invocable_archetype.Po \
 	unit/execution/$(DEPDIR)/mapping.Po \
 	unit/execution/$(DEPDIR)/outstanding_work.Po \
@@ -1856,6 +1905,7 @@ SOURCES = $(libasio_a_SOURCES) $(latency_tcp_client_SOURCES) \
 	$(unit_execution_blocking_adaptation_SOURCES) \
 	$(unit_execution_context_as_SOURCES) \
 	$(unit_execution_executor_SOURCES) \
+	$(unit_execution_inline_exception_handling_SOURCES) \
 	$(unit_execution_invocable_archetype_SOURCES) \
 	$(unit_execution_mapping_SOURCES) \
 	$(unit_execution_outstanding_work_SOURCES) \
@@ -1881,13 +1931,15 @@ SOURCES = $(libasio_a_SOURCES) $(latency_tcp_client_SOURCES) \
 	$(unit_experimental_coro_use_coro_SOURCES) \
 	$(unit_experimental_parallel_group_SOURCES) \
 	$(unit_experimental_promise_SOURCES) $(unit_file_base_SOURCES) \
+	$(unit_fwd_first_SOURCES) $(unit_fwd_last_SOURCES) \
 	$(unit_generic_basic_endpoint_SOURCES) \
 	$(unit_generic_datagram_protocol_SOURCES) \
 	$(unit_generic_raw_protocol_SOURCES) \
 	$(unit_generic_seq_packet_protocol_SOURCES) \
 	$(unit_generic_stream_protocol_SOURCES) \
 	$(unit_high_resolution_timer_SOURCES) \
-	$(unit_immediate_SOURCES) $(unit_io_context_SOURCES) \
+	$(unit_immediate_SOURCES) $(unit_inline_executor_SOURCES) \
+	$(unit_inline_or_executor_SOURCES) $(unit_io_context_SOURCES) \
 	$(unit_io_context_strand_SOURCES) $(unit_ip_address_SOURCES) \
 	$(unit_ip_address_v4_SOURCES) \
 	$(unit_ip_address_v4_iterator_SOURCES) \
@@ -1922,6 +1974,7 @@ SOURCES = $(libasio_a_SOURCES) $(latency_tcp_client_SOURCES) \
 	$(unit_read_SOURCES) $(unit_read_at_SOURCES) \
 	$(unit_read_until_SOURCES) $(unit_readable_pipe_SOURCES) \
 	$(unit_recycling_allocator_SOURCES) \
+	$(unit_redirect_disposition_SOURCES) \
 	$(unit_redirect_error_SOURCES) \
 	$(unit_registered_buffer_SOURCES) $(unit_serial_port_SOURCES) \
 	$(unit_serial_port_base_SOURCES) $(unit_signal_set_SOURCES) \
@@ -2009,6 +2062,7 @@ DIST_SOURCES = $(am__libasio_a_SOURCES_DIST) \
 	$(unit_execution_blocking_adaptation_SOURCES) \
 	$(unit_execution_context_as_SOURCES) \
 	$(unit_execution_executor_SOURCES) \
+	$(unit_execution_inline_exception_handling_SOURCES) \
 	$(unit_execution_invocable_archetype_SOURCES) \
 	$(unit_execution_mapping_SOURCES) \
 	$(unit_execution_outstanding_work_SOURCES) \
@@ -2034,14 +2088,16 @@ DIST_SOURCES = $(am__libasio_a_SOURCES_DIST) \
 	$(am__unit_experimental_coro_use_coro_SOURCES_DIST) \
 	$(am__unit_experimental_parallel_group_SOURCES_DIST) \
 	$(am__unit_experimental_promise_SOURCES_DIST) \
-	$(unit_file_base_SOURCES) \
+	$(unit_file_base_SOURCES) $(unit_fwd_first_SOURCES) \
+	$(unit_fwd_last_SOURCES) \
 	$(unit_generic_basic_endpoint_SOURCES) \
 	$(unit_generic_datagram_protocol_SOURCES) \
 	$(unit_generic_raw_protocol_SOURCES) \
 	$(unit_generic_seq_packet_protocol_SOURCES) \
 	$(unit_generic_stream_protocol_SOURCES) \
 	$(unit_high_resolution_timer_SOURCES) \
-	$(unit_immediate_SOURCES) $(unit_io_context_SOURCES) \
+	$(unit_immediate_SOURCES) $(unit_inline_executor_SOURCES) \
+	$(unit_inline_or_executor_SOURCES) $(unit_io_context_SOURCES) \
 	$(unit_io_context_strand_SOURCES) $(unit_ip_address_SOURCES) \
 	$(unit_ip_address_v4_SOURCES) \
 	$(unit_ip_address_v4_iterator_SOURCES) \
@@ -2076,6 +2132,7 @@ DIST_SOURCES = $(am__libasio_a_SOURCES_DIST) \
 	$(unit_read_SOURCES) $(unit_read_at_SOURCES) \
 	$(unit_read_until_SOURCES) $(unit_readable_pipe_SOURCES) \
 	$(unit_recycling_allocator_SOURCES) \
+	$(unit_redirect_disposition_SOURCES) \
 	$(unit_redirect_error_SOURCES) \
 	$(unit_registered_buffer_SOURCES) $(unit_serial_port_SOURCES) \
 	$(unit_serial_port_base_SOURCES) $(unit_signal_set_SOURCES) \
@@ -2502,7 +2559,7 @@ noinst_HEADERS = \
 	latency/high_res_clock.hpp \
 	unit/unit_test.hpp
 
-AM_CXXFLAGS = -I$(srcdir)/../../include
+AM_CXXFLAGS = -I$(srcdir)/../../include -DASIO_DISABLE_DEPRECATED_MSG
 performance_client_SOURCES = performance/client.cpp
 performance_server_SOURCES = performance/server.cpp
 @STANDALONE_FALSE@latency_tcp_client_SOURCES = latency/tcp_client.cpp
@@ -2574,6 +2631,7 @@ unit_execution_blocking_SOURCES = unit/execution/blocking.cpp
 unit_execution_blocking_adaptation_SOURCES = unit/execution/blocking_adaptation.cpp
 unit_execution_context_as_SOURCES = unit/execution/context_as.cpp
 unit_execution_executor_SOURCES = unit/execution/executor.cpp
+unit_execution_inline_exception_handling_SOURCES = unit/execution/inline_exception_handling.cpp
 unit_execution_invocable_archetype_SOURCES = unit/execution/invocable_archetype.cpp
 unit_execution_mapping_SOURCES = unit/execution/mapping.cpp
 unit_execution_outstanding_work_SOURCES = unit/execution/outstanding_work.cpp
@@ -2583,6 +2641,8 @@ unit_execution_context_SOURCES = unit/execution_context.cpp
 unit_executor_SOURCES = unit/executor.cpp
 unit_executor_work_guard_SOURCES = unit/executor_work_guard.cpp
 unit_file_base_SOURCES = unit/file_base.cpp
+unit_fwd_first_SOURCES = unit/fwd_first.cpp
+unit_fwd_last_SOURCES = unit/fwd_last.cpp
 unit_generic_basic_endpoint_SOURCES = unit/generic/basic_endpoint.cpp
 unit_generic_datagram_protocol_SOURCES = unit/generic/datagram_protocol.cpp
 unit_generic_raw_protocol_SOURCES = unit/generic/raw_protocol.cpp
@@ -2590,6 +2650,8 @@ unit_generic_seq_packet_protocol_SOURCES = unit/generic/seq_packet_protocol.cpp
 unit_generic_stream_protocol_SOURCES = unit/generic/stream_protocol.cpp
 unit_high_resolution_timer_SOURCES = unit/high_resolution_timer.cpp
 unit_immediate_SOURCES = unit/immediate.cpp
+unit_inline_executor_SOURCES = unit/inline_executor.cpp
+unit_inline_or_executor_SOURCES = unit/inline_or_executor.cpp
 unit_io_context_SOURCES = unit/io_context.cpp
 unit_io_context_strand_SOURCES = unit/io_context_strand.cpp
 unit_ip_address_SOURCES = unit/ip/address.cpp
@@ -2636,6 +2698,7 @@ unit_read_at_SOURCES = unit/read_at.cpp
 unit_read_until_SOURCES = unit/read_until.cpp
 unit_readable_pipe_SOURCES = unit/readable_pipe.cpp
 unit_recycling_allocator_SOURCES = unit/recycling_allocator.cpp
+unit_redirect_disposition_SOURCES = unit/redirect_disposition.cpp
 unit_redirect_error_SOURCES = unit/redirect_error.cpp
 unit_registered_buffer_SOURCES = unit/registered_buffer.cpp
 unit_serial_port_SOURCES = unit/serial_port.cpp
@@ -3223,6 +3286,13 @@ unit/execution/executor.$(OBJEXT): unit/execution/$(am__dirstamp) \
 unit/execution/executor$(EXEEXT): $(unit_execution_executor_OBJECTS) $(unit_execution_executor_DEPENDENCIES) $(EXTRA_unit_execution_executor_DEPENDENCIES) unit/execution/$(am__dirstamp)
 	@rm -f unit/execution/executor$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(unit_execution_executor_OBJECTS) $(unit_execution_executor_LDADD) $(LIBS)
+unit/execution/inline_exception_handling.$(OBJEXT):  \
+	unit/execution/$(am__dirstamp) \
+	unit/execution/$(DEPDIR)/$(am__dirstamp)
+
+unit/execution/inline_exception_handling$(EXEEXT): $(unit_execution_inline_exception_handling_OBJECTS) $(unit_execution_inline_exception_handling_DEPENDENCIES) $(EXTRA_unit_execution_inline_exception_handling_DEPENDENCIES) unit/execution/$(am__dirstamp)
+	@rm -f unit/execution/inline_exception_handling$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(unit_execution_inline_exception_handling_OBJECTS) $(unit_execution_inline_exception_handling_LDADD) $(LIBS)
 unit/execution/invocable_archetype.$(OBJEXT):  \
 	unit/execution/$(am__dirstamp) \
 	unit/execution/$(DEPDIR)/$(am__dirstamp)
@@ -3417,6 +3487,18 @@ unit/file_base.$(OBJEXT): unit/$(am__dirstamp) \
 unit/file_base$(EXEEXT): $(unit_file_base_OBJECTS) $(unit_file_base_DEPENDENCIES) $(EXTRA_unit_file_base_DEPENDENCIES) unit/$(am__dirstamp)
 	@rm -f unit/file_base$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(unit_file_base_OBJECTS) $(unit_file_base_LDADD) $(LIBS)
+unit/fwd_first.$(OBJEXT): unit/$(am__dirstamp) \
+	unit/$(DEPDIR)/$(am__dirstamp)
+
+unit/fwd_first$(EXEEXT): $(unit_fwd_first_OBJECTS) $(unit_fwd_first_DEPENDENCIES) $(EXTRA_unit_fwd_first_DEPENDENCIES) unit/$(am__dirstamp)
+	@rm -f unit/fwd_first$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(unit_fwd_first_OBJECTS) $(unit_fwd_first_LDADD) $(LIBS)
+unit/fwd_last.$(OBJEXT): unit/$(am__dirstamp) \
+	unit/$(DEPDIR)/$(am__dirstamp)
+
+unit/fwd_last$(EXEEXT): $(unit_fwd_last_OBJECTS) $(unit_fwd_last_DEPENDENCIES) $(EXTRA_unit_fwd_last_DEPENDENCIES) unit/$(am__dirstamp)
+	@rm -f unit/fwd_last$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(unit_fwd_last_OBJECTS) $(unit_fwd_last_LDADD) $(LIBS)
 unit/generic/$(am__dirstamp):
 	@$(MKDIR_P) unit/generic
 	@: >>unit/generic/$(am__dirstamp)
@@ -3467,6 +3549,18 @@ unit/immediate.$(OBJEXT): unit/$(am__dirstamp) \
 unit/immediate$(EXEEXT): $(unit_immediate_OBJECTS) $(unit_immediate_DEPENDENCIES) $(EXTRA_unit_immediate_DEPENDENCIES) unit/$(am__dirstamp)
 	@rm -f unit/immediate$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(unit_immediate_OBJECTS) $(unit_immediate_LDADD) $(LIBS)
+unit/inline_executor.$(OBJEXT): unit/$(am__dirstamp) \
+	unit/$(DEPDIR)/$(am__dirstamp)
+
+unit/inline_executor$(EXEEXT): $(unit_inline_executor_OBJECTS) $(unit_inline_executor_DEPENDENCIES) $(EXTRA_unit_inline_executor_DEPENDENCIES) unit/$(am__dirstamp)
+	@rm -f unit/inline_executor$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(unit_inline_executor_OBJECTS) $(unit_inline_executor_LDADD) $(LIBS)
+unit/inline_or_executor.$(OBJEXT): unit/$(am__dirstamp) \
+	unit/$(DEPDIR)/$(am__dirstamp)
+
+unit/inline_or_executor$(EXEEXT): $(unit_inline_or_executor_OBJECTS) $(unit_inline_or_executor_DEPENDENCIES) $(EXTRA_unit_inline_or_executor_DEPENDENCIES) unit/$(am__dirstamp)
+	@rm -f unit/inline_or_executor$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(unit_inline_or_executor_OBJECTS) $(unit_inline_or_executor_LDADD) $(LIBS)
 unit/io_context.$(OBJEXT): unit/$(am__dirstamp) \
 	unit/$(DEPDIR)/$(am__dirstamp)
 
@@ -3762,6 +3856,12 @@ unit/recycling_allocator.$(OBJEXT): unit/$(am__dirstamp) \
 unit/recycling_allocator$(EXEEXT): $(unit_recycling_allocator_OBJECTS) $(unit_recycling_allocator_DEPENDENCIES) $(EXTRA_unit_recycling_allocator_DEPENDENCIES) unit/$(am__dirstamp)
 	@rm -f unit/recycling_allocator$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(unit_recycling_allocator_OBJECTS) $(unit_recycling_allocator_LDADD) $(LIBS)
+unit/redirect_disposition.$(OBJEXT): unit/$(am__dirstamp) \
+	unit/$(DEPDIR)/$(am__dirstamp)
+
+unit/redirect_disposition$(EXEEXT): $(unit_redirect_disposition_OBJECTS) $(unit_redirect_disposition_DEPENDENCIES) $(EXTRA_unit_redirect_disposition_DEPENDENCIES) unit/$(am__dirstamp)
+	@rm -f unit/redirect_disposition$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(unit_redirect_disposition_OBJECTS) $(unit_redirect_disposition_LDADD) $(LIBS)
 unit/redirect_error.$(OBJEXT): unit/$(am__dirstamp) \
 	unit/$(DEPDIR)/$(am__dirstamp)
 
@@ -4179,8 +4279,12 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@unit/$(DEPDIR)/executor.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@unit/$(DEPDIR)/executor_work_guard.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@unit/$(DEPDIR)/file_base.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@unit/$(DEPDIR)/fwd_first.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@unit/$(DEPDIR)/fwd_last.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@unit/$(DEPDIR)/high_resolution_timer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@unit/$(DEPDIR)/immediate.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@unit/$(DEPDIR)/inline_executor.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@unit/$(DEPDIR)/inline_or_executor.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@unit/$(DEPDIR)/io_context.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@unit/$(DEPDIR)/io_context_strand.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@unit/$(DEPDIR)/is_read_buffered.Po@am__quote@ # am--include-marker
@@ -4195,6 +4299,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@unit/$(DEPDIR)/read_until.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@unit/$(DEPDIR)/readable_pipe.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@unit/$(DEPDIR)/recycling_allocator.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@unit/$(DEPDIR)/redirect_disposition.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@unit/$(DEPDIR)/redirect_error.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@unit/$(DEPDIR)/registered_buffer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@unit/$(DEPDIR)/serial_port.Po@am__quote@ # am--include-marker
@@ -4227,6 +4332,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@unit/execution/$(DEPDIR)/blocking_adaptation.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@unit/execution/$(DEPDIR)/context_as.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@unit/execution/$(DEPDIR)/executor.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@unit/execution/$(DEPDIR)/inline_exception_handling.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@unit/execution/$(DEPDIR)/invocable_archetype.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@unit/execution/$(DEPDIR)/mapping.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@unit/execution/$(DEPDIR)/outstanding_work.Po@am__quote@ # am--include-marker
@@ -5046,6 +5152,13 @@ unit/execution/executor.log: unit/execution/executor$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+unit/execution/inline_exception_handling.log: unit/execution/inline_exception_handling$(EXEEXT)
+	@p='unit/execution/inline_exception_handling$(EXEEXT)'; \
+	b='unit/execution/inline_exception_handling'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 unit/execution/invocable_archetype.log: unit/execution/invocable_archetype$(EXEEXT)
 	@p='unit/execution/invocable_archetype$(EXEEXT)'; \
 	b='unit/execution/invocable_archetype'; \
@@ -5109,6 +5222,20 @@ unit/file_base.log: unit/file_base$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+unit/fwd_first.log: unit/fwd_first$(EXEEXT)
+	@p='unit/fwd_first$(EXEEXT)'; \
+	b='unit/fwd_first'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+unit/fwd_last.log: unit/fwd_last$(EXEEXT)
+	@p='unit/fwd_last$(EXEEXT)'; \
+	b='unit/fwd_last'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 unit/high_resolution_timer.log: unit/high_resolution_timer$(EXEEXT)
 	@p='unit/high_resolution_timer$(EXEEXT)'; \
 	b='unit/high_resolution_timer'; \
@@ -5119,6 +5246,20 @@ unit/high_resolution_timer.log: unit/high_resolution_timer$(EXEEXT)
 unit/immediate.log: unit/immediate$(EXEEXT)
 	@p='unit/immediate$(EXEEXT)'; \
 	b='unit/immediate'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+unit/inline_executor.log: unit/inline_executor$(EXEEXT)
+	@p='unit/inline_executor$(EXEEXT)'; \
+	b='unit/inline_executor'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+unit/inline_or_executor.log: unit/inline_or_executor$(EXEEXT)
+	@p='unit/inline_or_executor$(EXEEXT)'; \
+	b='unit/inline_or_executor'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
@@ -5441,6 +5582,13 @@ unit/readable_pipe.log: unit/readable_pipe$(EXEEXT)
 unit/recycling_allocator.log: unit/recycling_allocator$(EXEEXT)
 	@p='unit/recycling_allocator$(EXEEXT)'; \
 	b='unit/recycling_allocator'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+unit/redirect_disposition.log: unit/redirect_disposition$(EXEEXT)
+	@p='unit/redirect_disposition$(EXEEXT)'; \
+	b='unit/redirect_disposition'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
@@ -6140,8 +6288,12 @@ distclean: distclean-recursive
 	-rm -f unit/$(DEPDIR)/executor.Po
 	-rm -f unit/$(DEPDIR)/executor_work_guard.Po
 	-rm -f unit/$(DEPDIR)/file_base.Po
+	-rm -f unit/$(DEPDIR)/fwd_first.Po
+	-rm -f unit/$(DEPDIR)/fwd_last.Po
 	-rm -f unit/$(DEPDIR)/high_resolution_timer.Po
 	-rm -f unit/$(DEPDIR)/immediate.Po
+	-rm -f unit/$(DEPDIR)/inline_executor.Po
+	-rm -f unit/$(DEPDIR)/inline_or_executor.Po
 	-rm -f unit/$(DEPDIR)/io_context.Po
 	-rm -f unit/$(DEPDIR)/io_context_strand.Po
 	-rm -f unit/$(DEPDIR)/is_read_buffered.Po
@@ -6156,6 +6308,7 @@ distclean: distclean-recursive
 	-rm -f unit/$(DEPDIR)/read_until.Po
 	-rm -f unit/$(DEPDIR)/readable_pipe.Po
 	-rm -f unit/$(DEPDIR)/recycling_allocator.Po
+	-rm -f unit/$(DEPDIR)/redirect_disposition.Po
 	-rm -f unit/$(DEPDIR)/redirect_error.Po
 	-rm -f unit/$(DEPDIR)/registered_buffer.Po
 	-rm -f unit/$(DEPDIR)/serial_port.Po
@@ -6188,6 +6341,7 @@ distclean: distclean-recursive
 	-rm -f unit/execution/$(DEPDIR)/blocking_adaptation.Po
 	-rm -f unit/execution/$(DEPDIR)/context_as.Po
 	-rm -f unit/execution/$(DEPDIR)/executor.Po
+	-rm -f unit/execution/$(DEPDIR)/inline_exception_handling.Po
 	-rm -f unit/execution/$(DEPDIR)/invocable_archetype.Po
 	-rm -f unit/execution/$(DEPDIR)/mapping.Po
 	-rm -f unit/execution/$(DEPDIR)/outstanding_work.Po
@@ -6388,8 +6542,12 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f unit/$(DEPDIR)/executor.Po
 	-rm -f unit/$(DEPDIR)/executor_work_guard.Po
 	-rm -f unit/$(DEPDIR)/file_base.Po
+	-rm -f unit/$(DEPDIR)/fwd_first.Po
+	-rm -f unit/$(DEPDIR)/fwd_last.Po
 	-rm -f unit/$(DEPDIR)/high_resolution_timer.Po
 	-rm -f unit/$(DEPDIR)/immediate.Po
+	-rm -f unit/$(DEPDIR)/inline_executor.Po
+	-rm -f unit/$(DEPDIR)/inline_or_executor.Po
 	-rm -f unit/$(DEPDIR)/io_context.Po
 	-rm -f unit/$(DEPDIR)/io_context_strand.Po
 	-rm -f unit/$(DEPDIR)/is_read_buffered.Po
@@ -6404,6 +6562,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f unit/$(DEPDIR)/read_until.Po
 	-rm -f unit/$(DEPDIR)/readable_pipe.Po
 	-rm -f unit/$(DEPDIR)/recycling_allocator.Po
+	-rm -f unit/$(DEPDIR)/redirect_disposition.Po
 	-rm -f unit/$(DEPDIR)/redirect_error.Po
 	-rm -f unit/$(DEPDIR)/registered_buffer.Po
 	-rm -f unit/$(DEPDIR)/serial_port.Po
@@ -6436,6 +6595,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f unit/execution/$(DEPDIR)/blocking_adaptation.Po
 	-rm -f unit/execution/$(DEPDIR)/context_as.Po
 	-rm -f unit/execution/$(DEPDIR)/executor.Po
+	-rm -f unit/execution/$(DEPDIR)/inline_exception_handling.Po
 	-rm -f unit/execution/$(DEPDIR)/invocable_archetype.Po
 	-rm -f unit/execution/$(DEPDIR)/mapping.Po
 	-rm -f unit/execution/$(DEPDIR)/outstanding_work.Po
