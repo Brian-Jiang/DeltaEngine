@@ -6,8 +6,9 @@
 // - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
 // - Introduction, links and more at the top of imgui.cpp
 
-// FIXME: Multi-viewports is not yet functional in this example. May need backend rework/coordination.
+// FIXME: Multi-viewports is not yet functional in this example: backend and render code would set to set current context.
 
+#define GL_SILENCE_DEPRECATION
 #import <Cocoa/Cocoa.h>
 #import <OpenGL/gl.h>
 #import <OpenGL/glu.h>
@@ -34,7 +35,7 @@
 
 #ifndef DEBUG
     GLint swapInterval = 1;
-    [[self openGLContext] setValues:&swapInterval forParameter:NSOpenGLCPSwapInterval];
+    [[self openGLContext] setValues:&swapInterval forParameter:NSOpenGLContextParameterSwapInterval];
     if (swapInterval == 0)
         NSLog(@"Error: Cannot set swap interval.");
 #endif
@@ -53,11 +54,14 @@
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
 
     // Setup Dear ImGui style
+    ImGuiStyle& style = ImGui::GetStyle();
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsLight();
+    //style.FontSizeBase = 16.0f;           // Default to 13.0f when unspecified, which allows crisp legacy font for non-4K screens.
+    style.FrameRounding = 3.0f;
+    style.GrabRounding = 3.0f;
 
     // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
-    ImGuiStyle& style = ImGui::GetStyle();
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
     {
         style.WindowRounding = 0.0f;
@@ -69,14 +73,15 @@
     ImGui_ImplOpenGL2_Init();
 
     // Load Fonts
-    // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
-    // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
-    // - If the file cannot be loaded, the function will return a nullptr. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
-    // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype for higher quality font rendering.
-    // - Read 'docs/FONTS.md' for more instructions and details. If you like the default font but want it to scale better, consider using the 'ProggyVector' from the same author!
+    // - If fonts are not explicitly loaded, Dear ImGui will select an embedded font: either AddFontDefaultVector() or AddFontDefaultBitmap().
+    //   This selection is based on (style.FontSizeBase * style.FontScaleMain * style.FontScaleDpi) reaching a threshold.
+    // - You can load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
+    // - If a file cannot be loaded, AddFont functions will return a nullptr. Please handle those errors in your code (e.g. use an assertion, display an error and quit).
+    // - Read 'docs/FONTS.md' for more instructions and details.
+    // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use FreeType for higher quality font rendering.
     // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
-    //style.FontSizeBase = 20.0f;
-    //io.Fonts->AddFontDefault();
+    //io.Fonts->AddFontDefaultVector();
+    //io.Fonts->AddFontDefaultBitmap();
     //io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf");
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf");
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf");
@@ -140,8 +145,8 @@
     ImDrawData* draw_data = ImGui::GetDrawData();
 
     [[self openGLContext] makeCurrentContext];
-    GLsizei width  = (GLsizei)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
-    GLsizei height = (GLsizei)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
+    GLsizei width  = (GLsizei)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x + 0.5f);
+    GLsizei height = (GLsizei)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y + 0.5f);
     glViewport(0, 0, width, height);
     glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -188,7 +193,7 @@
 -(NSWindow*)window
 {
     if (_window != nil)
-        return (_window);
+        return _window;
 
     NSRect viewRect = NSMakeRect(100.0, 100.0, 100.0 + 1280.0, 100 + 800.0);
 
@@ -198,7 +203,7 @@
     [_window setOpaque:YES];
     [_window makeKeyAndOrderFront:NSApp];
 
-    return (_window);
+    return _window;
 }
 
 -(void)setupMenu

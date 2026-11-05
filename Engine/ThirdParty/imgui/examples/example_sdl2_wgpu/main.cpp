@@ -18,9 +18,6 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/html5.h>
-#if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
-#include <emscripten/html5_webgpu.h>
-#endif
 #include "../libs/emscripten/emscripten_mainloop_stub.h"
 #endif
 
@@ -56,7 +53,9 @@ int main(int, char**)
 
     // Create window with graphics context
     float main_scale = ImGui_ImplSDL2_GetContentScaleForDisplay(0);
-    SDL_WindowFlags window_flags = SDL_WINDOW_RESIZABLE;
+    wgpu_surface_width = (int)(wgpu_surface_width * main_scale);
+    wgpu_surface_height = (int)(wgpu_surface_height * main_scale);
+    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL2+WebGPU example", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, wgpu_surface_width, wgpu_surface_height, window_flags);
     if (window == nullptr)
     {
@@ -75,13 +74,16 @@ int main(int, char**)
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
     // Setup Dear ImGui style
+    ImGuiStyle& style = ImGui::GetStyle();
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsLight();
+    //style.FontSizeBase = 16.0f;           // Default to 13.0f when unspecified, which allows crisp legacy font for non-4K screens.
+    style.FrameRounding = 3.0f;
+    style.GrabRounding = 3.0f;
 
     // Setup scaling
-    ImGuiStyle& style = ImGui::GetStyle();
     style.ScaleAllSizes(main_scale);        // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
-    style.FontScaleDpi = main_scale;        // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
+    style.FontScaleDpi = main_scale;        // Set initial font scale. (in docking branch: using io.ConfigDpiScaleFonts=true automatically overrides this for every window depending on the current monitor)
 
     // Setup Platform/Renderer backends
     ImGui_ImplSDL2_InitForOther(window);
@@ -93,15 +95,16 @@ int main(int, char**)
     ImGui_ImplWGPU_Init(&init_info);
 
     // Load Fonts
-    // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
-    // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
-    // - If the file cannot be loaded, the function will return a nullptr. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
-    // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype for higher quality font rendering.
-    // - Read 'docs/FONTS.md' for more instructions and details. If you like the default font but want it to scale better, consider using the 'ProggyVector' from the same author!
+    // - If fonts are not explicitly loaded, Dear ImGui will select an embedded font: either AddFontDefaultVector() or AddFontDefaultBitmap().
+    //   This selection is based on (style.FontSizeBase * style.FontScaleMain * style.FontScaleDpi) reaching a threshold.
+    // - You can load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
+    // - If a file cannot be loaded, AddFont functions will return a nullptr. Please handle those errors in your code (e.g. use an assertion, display an error and quit).
+    // - Read 'docs/FONTS.md' for more instructions and details.
+    // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use FreeType for higher quality font rendering.
     // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
     // - Our Emscripten build process allows embedding fonts to be accessible at runtime from the "fonts/" folder. See Makefile.emscripten for details.
-    //style.FontSizeBase = 20.0f;
-    //io.Fonts->AddFontDefault();
+    //io.Fonts->AddFontDefaultVector();
+    //io.Fonts->AddFontDefaultBitmap();
 #ifndef IMGUI_DISABLE_FILE_FUNCTIONS
     //io.Fonts->AddFontFromFileTTF("fonts/segoeui.ttf");
     //io.Fonts->AddFontFromFileTTF("fonts/DroidSans.ttf");
@@ -144,7 +147,7 @@ int main(int, char**)
 
         // React to changes in screen size
         int width, height;
-        SDL_GetWindowSize(window, &width, &height);
+        SDL_GetWindowSizeInPixels(window, &width, &height);
         if (width != wgpu_surface_width || height != wgpu_surface_height)
             ResizeSurface(width, height);
 
@@ -275,6 +278,16 @@ int main(int, char**)
     return 0;
 }
 
+static WGPUTextureFormat SelectSurfaceFormat(const WGPUSurfaceCapabilities& capabilities)
+{
+    const WGPUTextureFormat preferredFormats[] = { WGPUTextureFormat_BGRA8Unorm, WGPUTextureFormat_RGBA8Unorm, WGPUTextureFormat_BGRA8UnormSrgb, WGPUTextureFormat_RGBA8UnormSrgb };
+    for (WGPUTextureFormat preferredFormat : preferredFormats)
+        for (size_t n = 0; n < capabilities.formatCount; n++)
+            if (capabilities.formats[n] == preferredFormat)
+                return preferredFormat;
+    return capabilities.formatCount > 0 ? capabilities.formats[0] : WGPUTextureFormat_Undefined;
+}
+
 #if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
 static WGPUAdapter RequestAdapter(wgpu::Instance& instance)
 {
@@ -325,69 +338,68 @@ static WGPUDevice RequestDevice(wgpu::Instance& instance, wgpu::Adapter& adapter
     IM_ASSERT(acquired_device != nullptr && waitStatusDevice == wgpu::WaitStatus::Success && "Error on Device request");
     return acquired_device.MoveToCHandle();
 }
-#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
-#ifdef __EMSCRIPTEN__
-// Adapter and device initialization via JS
-EM_ASYNC_JS( void, getAdapterAndDeviceViaJS, (),
-{
-    if (!navigator.gpu)
-        throw Error("WebGPU not supported.");
-    const adapter = await navigator.gpu.requestAdapter();
-    const device = await adapter.requestDevice();
-    Module.preinitializedWebGPUDevice = device;
-} );
-#else // __EMSCRIPTEN__
+#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGVK)
 static void handle_request_adapter(WGPURequestAdapterStatus status, WGPUAdapter adapter, WGPUStringView message, void* userdata1, void* userdata2)
 {
-    if (status == WGPURequestAdapterStatus_Success)
-    {
-        WGPUAdapter* extAdapter = (WGPUAdapter*)userdata1;
-        *extAdapter = adapter;
-    }
-    else
+    IM_UNUSED(userdata2);
+    if (status != WGPURequestAdapterStatus_Success)
     {
         printf("Request_adapter status=%#.8x message=%.*s\n", status, (int)message.length, message.data);
+        return;
     }
+    WGPUAdapter* extAdapter = (WGPUAdapter*)userdata1;
+    *extAdapter = adapter;
 }
 
 static void handle_request_device(WGPURequestDeviceStatus status, WGPUDevice device, WGPUStringView message, void* userdata1, void* userdata2)
 {
-    if (status == WGPURequestDeviceStatus_Success)
-    {
-        WGPUDevice* extDevice = (WGPUDevice*)userdata1;
-        *extDevice = device;
-    }
-    else
+    IM_UNUSED(userdata2);
+    if (status != WGPURequestDeviceStatus_Success)
     {
         printf("Request_device status=%#.8x message=%.*s\n", status, (int)message.length, message.data);
+        return;
     }
+    WGPUDevice* extDevice = (WGPUDevice*)userdata1;
+    *extDevice = device;
 }
 
 static WGPUAdapter RequestAdapter(WGPUInstance& instance)
 {
     WGPURequestAdapterOptions adapter_options = {};
 
-    WGPUAdapter local_adapter;
+    WGPUAdapter local_adapter = nullptr;
     WGPURequestAdapterCallbackInfo adapterCallbackInfo = {};
+    adapterCallbackInfo.mode = WGPUCallbackMode_WaitAnyOnly;
     adapterCallbackInfo.callback = handle_request_adapter;
     adapterCallbackInfo.userdata1 = &local_adapter;
 
-    wgpuInstanceRequestAdapter(instance, &adapter_options, adapterCallbackInfo);
+    WGPUFuture future = wgpuInstanceRequestAdapter(instance, &adapter_options, adapterCallbackInfo);
+#if !defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+    WGPUFutureWaitInfo waitInfo = { future, false };
+    wgpuInstanceWaitAny(instance, 1, &waitInfo, ~0ull);
+#endif
     IM_ASSERT(local_adapter && "Error on Adapter request");
     return local_adapter;
 }
 
-static WGPUDevice RequestDevice(WGPUAdapter& adapter)
+static WGPUDevice RequestDevice(WGPUInstance& instance, WGPUAdapter& adapter)
 {
-    WGPUDevice local_device;
+    WGPUDevice local_device = nullptr;
     WGPURequestDeviceCallbackInfo deviceCallbackInfo = {};
+    deviceCallbackInfo.mode = WGPUCallbackMode_WaitAnyOnly;
     deviceCallbackInfo.callback = handle_request_device;
     deviceCallbackInfo.userdata1 = &local_device;
-    wgpuAdapterRequestDevice(adapter, nullptr, deviceCallbackInfo);
+
+    WGPUFuture future = wgpuAdapterRequestDevice(adapter, nullptr, deviceCallbackInfo);
+#if !defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+    WGPUFutureWaitInfo waitInfo = { future, false };
+    wgpuInstanceWaitAny(instance, 1, &waitInfo, ~0ull);
+#else
+    IM_UNUSED(instance);
+#endif
     IM_ASSERT(local_device && "Error on Device request");
     return local_device;
 }
-#endif // __EMSCRIPTEN__
 #endif // IMGUI_IMPL_WEBGPU_BACKEND_WGPU
 
 static bool InitWGPU(SDL_Window* window)
@@ -427,39 +439,27 @@ static bool InitWGPU(SDL_Window* window)
 
     WGPUSurfaceCapabilities surface_capabilities = {};
     wgpuSurfaceGetCapabilities(wgpu_surface, adapter.Get(), &surface_capabilities);
-
-    preferred_fmt = surface_capabilities.formats[0];
+    preferred_fmt = SelectSurfaceFormat(surface_capabilities);
 
     // WGPU backend: Adapter and Device acquisition, Surface creation
-#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
-    wgpu_instance = wgpuCreateInstance(nullptr);
+#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) ||  defined(IMGUI_IMPL_WEBGPU_BACKEND_WGVK)
+    WGPUInstanceDescriptor instanceDesc = {};
+    WGPUInstanceFeatureName timedWaitAny = WGPUInstanceFeatureName_TimedWaitAny;
+    instanceDesc.requiredFeatureCount = 1;
+    instanceDesc.requiredFeatures = &timedWaitAny;
+    wgpu_instance = wgpuCreateInstance(&instanceDesc);
 
-#ifdef __EMSCRIPTEN__
-    getAdapterAndDeviceViaJS();
-
-    wgpu_device = emscripten_webgpu_get_device();
-    assert(wgpu_device != nullptr && "Error creating the Device");
-
-    WGPUSurfaceDescriptorFromCanvasHTMLSelector html_surface_desc = {};
-    html_surface_desc.chain.sType = WGPUSType_SurfaceDescriptorFromCanvasHTMLSelector;
-    html_surface_desc.selector = "#canvas";
-
-    WGPUSurfaceDescriptor surface_desc = {};
-    surface_desc.nextInChain = &html_surface_desc.chain;
-
-    // Create the surface.
-    wgpu_surface = wgpuInstanceCreateSurface(wgpu_instance, &surface_desc);
-    preferred_fmt = wgpuSurfaceGetPreferredFormat(wgpu_surface, {} /* adapter */);
-#else // __EMSCRIPTEN__
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
     wgpuSetLogCallback(
-        [](WGPULogLevel level, WGPUStringView msg, void* userdata) { fprintf(stderr, "%s: %.*s\n", ImGui_ImplWGPU_GetLogLevelName(level), (int)msg.length, msg.data); }, nullptr
+        [](WGPULogLevel level, WGPUStringView msg, void*) { fprintf(stderr, "%s: %.*s\n", ImGui_ImplWGPU_GetLogLevelName(level), (int)msg.length, msg.data); }, nullptr
     );
     wgpuSetLogLevel(WGPULogLevel_Warn);
+#endif
 
     WGPUAdapter adapter = RequestAdapter(wgpu_instance);
     ImGui_ImplWGPU_DebugPrintAdapterInfo(adapter);
     
-    wgpu_device = RequestDevice(adapter);
+    wgpu_device = RequestDevice(wgpu_instance, adapter);
 
     // Create the surface.
     wgpu_surface = CreateWGPUSurface(wgpu_instance, window);
@@ -468,9 +468,7 @@ static bool InitWGPU(SDL_Window* window)
 
     WGPUSurfaceCapabilities surface_capabilities = {};
     wgpuSurfaceGetCapabilities(wgpu_surface, adapter, &surface_capabilities);
-
-    preferred_fmt = surface_capabilities.formats[0];
-#endif // __EMSCRIPTEN__
+    preferred_fmt = SelectSurfaceFormat(surface_capabilities);
 #endif // IMGUI_IMPL_WEBGPU_BACKEND_WGPU
 
     wgpu_surface_configuration.presentMode = WGPUPresentMode_Fifo;
@@ -535,7 +533,7 @@ WGPUSurface CreateWGPUSurface(const WGPUInstance& instance, SDL_Window* window)
     }
 #else
 #error "Unsupported WebGPU native platform!"
-#endif
     return nullptr;
+#endif
 }
 #endif // #ifndef __EMSCRIPTEN__
