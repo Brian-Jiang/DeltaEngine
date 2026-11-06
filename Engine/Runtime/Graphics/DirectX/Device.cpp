@@ -275,6 +275,7 @@ Device::Device(std::shared_ptr<Adapter> adapter)
     auto dxgiAdapter = m_Adapter->GetDXGIAdapter();
 
     ThrowIfFailed(D3D12CreateDevice(dxgiAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_d3d12Device)));
+    ThrowIfFailed(m_d3d12Device.As(&m_d3d12Device16));
 
     // Enable debug messages (only works if the debug layer has already been enabled).
     ComPtr<ID3D12InfoQueue> pInfoQueue;
@@ -328,7 +329,7 @@ Device::Device(std::shared_ptr<Adapter> adapter)
     {
         D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData;
         featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
-        if (FAILED(m_d3d12Device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData,
+        if (FAILED(CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData,
             sizeof(D3D12_FEATURE_DATA_ROOT_SIGNATURE))))
         {
             featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
@@ -339,6 +340,13 @@ Device::Device(std::shared_ptr<Adapter> adapter)
 }
 
 DeltaEngine::Device::~Device() {}
+
+HRESULT Device::CheckFeatureSupport(D3D12_FEATURE feature, void* featureSupportData,
+    UINT featureSupportDataSize) const
+{
+    return m_d3d12Device16->CheckFeatureSupport1(feature, featureSupportData, featureSupportDataSize,
+        D3D12_SDK_VERSION);
+}
 
 CommandQueue& Device::GetCommandQueue(D3D12_COMMAND_LIST_TYPE type)
 {
@@ -625,7 +633,7 @@ DXGI_SAMPLE_DESC Device::GetMultisampleQualityLevels(DXGI_FORMAT format, UINT nu
     qualityLevels.NumQualityLevels = 0;
 
     while (
-        qualityLevels.SampleCount <= numSamples && SUCCEEDED(m_d3d12Device->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &qualityLevels, sizeof(D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS))) && qualityLevels.NumQualityLevels > 0)
+        qualityLevels.SampleCount <= numSamples && SUCCEEDED(CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &qualityLevels, sizeof(D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS))) && qualityLevels.NumQualityLevels > 0)
     {
         // That works...
         sampleDesc.Count = qualityLevels.SampleCount;

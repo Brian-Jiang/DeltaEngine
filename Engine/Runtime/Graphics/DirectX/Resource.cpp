@@ -56,10 +56,8 @@ bool Resource::CheckFormatSupport(D3D12_FORMAT_SUPPORT2 formatSupport) const {
 }
 
 void Resource::CheckFeatureSupport() {
-    auto d3d12Device = m_Device.GetD3D12Device();
-
     auto desc = m_d3d12Resource->GetDesc();
     m_FormatSupport.Format = desc.Format;
-    ThrowIfFailed(d3d12Device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &m_FormatSupport,
+    ThrowIfFailed(m_Device.CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &m_FormatSupport,
         sizeof(D3D12_FEATURE_DATA_FORMAT_SUPPORT)));
 }

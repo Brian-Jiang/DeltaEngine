@@ -222,6 +222,10 @@ public:
         return m_d3d12Device;
     }
 
+    /** Queries feature support via CheckFeatureSupport1, clamped to D3D12_SDK_VERSION. */
+    DELTAENGINE_API HRESULT CheckFeatureSupport(D3D12_FEATURE feature, void* featureSupportData,
+        UINT featureSupportDataSize) const;
+
     inline D3D_ROOT_SIGNATURE_VERSION GetHighestRootSignatureVersion() const
     {
         return m_HighestRootSignatureVersion;
@@ -246,6 +250,7 @@ public:
     
 private:
     Microsoft::WRL::ComPtr<ID3D12Device2> m_d3d12Device;
+    Microsoft::WRL::ComPtr<ID3D12Device16> m_d3d12Device16;
 
     // The adapter that was used to create the device:
     std::shared_ptr<Adapter> m_Adapter;
