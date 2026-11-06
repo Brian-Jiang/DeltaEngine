@@ -4,23 +4,54 @@
 
 #define DELTA_ENGINE_NS_BEGIN namespace DeltaEngine {
 #define DELTA_ENGINE_NS_END }
-#define DCLASS(__VA_ARGS__)
+#define DELTAENGINE_API
+#define DELTAEDITOR_API
+#define DCLASS(...)
+#define DSTRUCT(...)
+#define DENUM(...)
+#define DPROPERTY(...)
+#define DFUNCTION(...)
 #define DGENERATED_BODY(ClassName) \
     friend class DeltaEngine::Reflection::Private::ReflectionRegister_##ClassName; \
-        \
-    public: \
-        DClass* GetClass() const override \
-        { \
-            return GetReflectionRegistry().FindClassByName(#ClassName); \
-        }
-#define DFUNCTION(__VA_ARGS__)
-#define DPROPERTY(__VA_ARGS__)
-#define DELTAENGINE_API(...)
-#define DSTRUCT(__VA_ARGS__)
-#define DELTAEDITOR_API(...)
-#define DGENERATED_BODY_STRUCT(StructName)
+public: \
+    DClass* GetClass() const override \
+    { \
+        return GetReflectionRegistry().FindClassByName(#ClassName); \
+    }
+#define DGENERATED_BODY_STRUCT(StructName) \
+    friend class DeltaEngine::Reflection::Private::ReflectionRegister_##StructName;
 
-#define DECLARE_LOG_CATEGORY(CategoryName) \
-extern DELTAENGINE_API DLogCategory CategoryName;
-#define DLOG(Category, Level, __VA_ARGS__) do { constexpr ::spdlog::level::level_enum _lvl = ::ToSpdlogLevel(Level); auto* _log = (Category).GetLogger(); if (_log && _log->should_log(_lvl)) { _log->log(spdlog::source_loc { __FILE__, __LINE__, __func__ }, _lvl, __VA_ARGS__); } if constexpr (Level == ::ELogLevel::Fatal) std::abort(); } while (false)
-#define DEFINE_LOG_CATEGORY(CategoryName) DLogCategory CategoryName { #CategoryName, ELogLevel::Log }
+#define DECLARE_DYNAMIC_DELEGATE(DelegateName) \
+    class DelegateName : public DeltaEngine::FDynamicDelegate \
+    { \
+    public: \
+        void Execute() const; \
+    };
+#define DECLARE_DYNAMIC_DELEGATE_OneParam(DelegateName, Param1Type, Param1Name) \
+    class DelegateName : public DeltaEngine::FDynamicDelegate \
+    { \
+    public: \
+        void Execute(Param1Type Param1Name) const; \
+    };
+#define DECLARE_DYNAMIC_DELEGATE_TwoParams(DelegateName, Param1Type, Param1Name, Param2Type, Param2Name) \
+    class DelegateName : public DeltaEngine::FDynamicDelegate \
+    { \
+    public: \
+        void Execute(Param1Type Param1Name, Param2Type Param2Name) const; \
+    };
+#define DECLARE_DYNAMIC_MULTICAST_DELEGATE(DelegateName) \
+    class DelegateName : public DeltaEngine::FDynamicMulticastDelegate \
+    { \
+    };
+#define DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(DelegateName, Param1Type, Param1Name) \
+    class DelegateName : public DeltaEngine::FDynamicMulticastDelegate \
+    { \
+    public: \
+        void Broadcast(Param1Type Param1Name) const; \
+    };
+#define DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(DelegateName, Param1Type, Param1Name, Param2Type, Param2Name) \
+    class DelegateName : public DeltaEngine::FDynamicMulticastDelegate \
+    { \
+    public: \
+        void Broadcast(Param1Type Param1Name, Param2Type Param2Name) const; \
+    };

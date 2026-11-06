@@ -6,6 +6,32 @@ end_of_line = crlf
 insert_final_newline = true
 trim_trailing_whitespace = true
 
-[*.{cpp,h,hpp,cs}]
+[*.{c,cc,cpp,cxx,h,hpp,inl,ixx,slang,hlsl,hlsli,cs}]
 indent_style = space
 indent_size = 4
+
+[*.py]
+indent_style = space
+indent_size = 4
+
+[{CMakeLists.txt,*.cmake}]
+indent_style = space
+indent_size = 4
+
+[*.{json,yml,yaml}]
+indent_style = space
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.sh]
+end_of_line = lf
+
+[Engine/ThirdParty/**]
+charset = unset
+end_of_line = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+indent_style = unset
+indent_size = unset

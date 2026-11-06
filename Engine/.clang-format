@@ -8,6 +8,16 @@ AllowShortFunctionsOnASingleLine: Inline
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
 SpaceBeforeParens: ControlStatements
-Cpp11BracedListStyle: true
+Cpp11BracedListStyle: Block
+BreakTemplateDeclarations: Yes
+AlignAfterOpenBracket: false
 SortIncludes: false
 LineEnding: CRLF
+Standard: Latest
+AccessModifierOffset: -4
+PointerAlignment: Left
+DerivePointerAlignment: false
+StatementMacros: [DGENERATED_BODY, DGENERATED_BODY_STRUCT, DCLASS, DSTRUCT, DENUM, DPROPERTY, DFUNCTION]
+AttributeMacros: [DELTAENGINE_API, DELTAEDITOR_API]
+InsertNewlineAtEOF: true
+MaxEmptyLinesToKeep: 1
