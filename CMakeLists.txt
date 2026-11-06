@@ -1,7 +1,7 @@
 ﻿# CMakeList.txt : CMake project for DeltaEngine, include source and define
 # project specific logic here.
 #
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.25)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

@@ -9,7 +9,7 @@ set(SDL_DISABLE_INSTALL ON)
 set(SDL_DISABLE_INSTALL_DOCS ON)
 set(SDL_INSTALL_TESTS OFF)
 
-add_subdirectory(SDL3 EXCLUDE_FROM_ALL)
+add_subdirectory(SDL3 EXCLUDE_FROM_ALL SYSTEM)
 
 set_target_properties(SDL3-shared PROPERTIES FOLDER ${third_party_folder})
 

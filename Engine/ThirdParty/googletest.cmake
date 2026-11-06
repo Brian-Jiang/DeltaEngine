@@ -2,7 +2,7 @@ message(STATUS "====== Delta Engine ====== Configuring Google Test ======")
 
 set(INSTALL_GTEST OFF)
 
-add_subdirectory(googletest)
+add_subdirectory(googletest SYSTEM)
 
 foreach(target gtest gtest_main gmock gmock_main)
     if(TARGET ${target})

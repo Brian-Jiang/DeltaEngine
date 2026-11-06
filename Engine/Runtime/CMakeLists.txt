@@ -1,7 +1,5 @@
 set(TARGET_NAME DeltaEngine)
 
-include("${CMAKE_SOURCE_DIR}/Engine/CMake/DeltaThirdPartyMSVC.cmake")
-
 file(GLOB_RECURSE HEADER_FILES "*.h")
 file(GLOB_RECURSE SOURCE_FILES "*.cpp")
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${HEADER_FILES} ${SOURCE_FILES})
@@ -24,8 +22,6 @@ add_dependencies(${TARGET_NAME} CopyPixBin)
 
 target_compile_options(${TARGET_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->")
 target_compile_options(${TARGET_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/WX->")
-
-delta_apply_third_party_msvc_external_includes(${TARGET_NAME})
 
 target_link_libraries(${TARGET_NAME} PUBLIC ThirdParty::SDL3)
 target_link_libraries(${TARGET_NAME} PUBLIC ThirdParty::imgui)

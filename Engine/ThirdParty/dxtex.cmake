@@ -6,7 +6,7 @@ set(BUILD_SAMPLE OFF)
 set(BUILD_DX11 OFF)
 set(BUILD_TESTING OFF)
 
-add_subdirectory(DirectXTex ${CMAKE_BINARY_DIR}/bin/CMake/DirectXTex)
+add_subdirectory(DirectXTex ${CMAKE_BINARY_DIR}/bin/CMake/DirectXTex SYSTEM)
 
 set_target_properties(DirectXTex PROPERTIES FOLDER ${third_party_folder})
 

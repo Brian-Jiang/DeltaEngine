@@ -9,7 +9,7 @@ SET(ASSIMP_BUILD_ASSIMP_VIEW OFF)
 # SET(ASSIMP_BUILD_USD_IMPORTER ON)
 set(ASSIMP_WARNINGS_AS_ERRORS OFF)
 
-add_subdirectory(assimp)
+add_subdirectory(assimp SYSTEM)
 
 set_target_properties(assimp PROPERTIES FOLDER ${third_party_folder})
 
