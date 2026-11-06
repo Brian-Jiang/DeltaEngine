@@ -4,7 +4,7 @@
     "bulkDataMap": {
       "0": {
         "file": "DefaultShader_Bulk0.bin",
-        "size": 16216
+        "size": 72188
       },
       "1": {
         "file": "DefaultShader_Bulk1.bin",
@@ -34,7 +34,7 @@
       },
       "m_serializedShaderBlobs": {
         "_bulk": 0,
-        "size": 16216
+        "size": 72188
       },
       "m_sourcePath": "Shaders/StandardObject.slang",
       "m_vertexShaderEntryPoint": "VSMain",

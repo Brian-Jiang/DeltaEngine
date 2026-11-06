@@ -4,7 +4,7 @@
     "bulkDataMap": {
       "0": {
         "file": "SkyboxShader_Bulk0.bin",
-        "size": 9640
+        "size": 22340
       },
       "1": {
         "file": "SkyboxShader_Bulk1.bin",
@@ -34,7 +34,7 @@
       },
       "m_serializedShaderBlobs": {
         "_bulk": 0,
-        "size": 9640
+        "size": 22340
       },
       "m_sourcePath": "Shaders/Skybox.slang",
       "m_vertexShaderEntryPoint": "VSMain",

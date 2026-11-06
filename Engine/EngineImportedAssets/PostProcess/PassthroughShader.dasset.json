@@ -4,7 +4,7 @@
     "bulkDataMap": {
       "0": {
         "file": "PassthroughShader_Bulk0.bin",
-        "size": 6996
+        "size": 15396
       },
       "1": {
         "file": "PassthroughShader_Bulk1.bin",
@@ -34,7 +34,7 @@
       },
       "m_serializedShaderBlobs": {
         "_bulk": 0,
-        "size": 6996
+        "size": 15396
       },
       "m_sourcePath": "Shaders/PostProcess_Passthrough.slang",
       "m_vertexShaderEntryPoint": "VSMain",
