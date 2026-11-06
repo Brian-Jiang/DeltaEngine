@@ -54,7 +54,6 @@ HEADER_TOOL_INCLUDE_DIRS: tuple[str, ...] = (
     "Engine",
     "Engine/Runtime",
     "Engine/ThirdParty/DirectXTK12/Inc",
-    "Engine/ThirdParty/DirectX-Headers/include/directx",
 )
 
 

@@ -31,7 +31,6 @@ target_link_libraries(${TARGET_NAME} PUBLIC ThirdParty::SDL3)
 target_link_libraries(${TARGET_NAME} PUBLIC ThirdParty::imgui)
 target_link_libraries(${TARGET_NAME} PUBLIC ThirdParty::assimp)
 target_link_libraries(${TARGET_NAME} PUBLIC ThirdParty::dx12agility)
-target_link_libraries(${TARGET_NAME} PUBLIC ThirdParty::dxheaders)
 target_link_libraries(${TARGET_NAME} PUBLIC ThirdParty::DirectXTK12)
 target_link_libraries(${TARGET_NAME} PUBLIC ThirdParty::DirectXTex)
 target_link_libraries(${TARGET_NAME} PUBLIC ThirdParty::nlohmann_json)
@@ -62,7 +61,6 @@ set(HEADER_TOOL_ARGS
     --include-dir "${CMAKE_SOURCE_DIR}/Engine"
     --include-dir "${CMAKE_CURRENT_SOURCE_DIR}"
     --include-dir "${CMAKE_SOURCE_DIR}/Engine/ThirdParty/DirectXTK12/Inc"
-    --include-dir "${CMAKE_SOURCE_DIR}/Engine/ThirdParty/DirectX-Headers/include/directx"
 )
 
 file(MAKE_DIRECTORY "${GENERATED_DIR}")
