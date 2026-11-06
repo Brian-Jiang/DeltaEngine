@@ -40,7 +40,7 @@ The system-value semantics are translated to the following Metal attributes:
 | `SV_GroupID`                | `[[threadgroup_position_in_grid]]`                   |
 | `SV_GroupThreadID`          | `[[thread_position_in_threadgroup]]`                 |
 | `SV_GroupIndex`             | Calculated from `SV_GroupThreadID` and group extents |
-| `SV_InstanceID`             | `[[instance_id]]`                                    |
+| `SV_InstanceID`             | `[[instance_id]] - [[base_instance]]`                |
 | `SV_IsFrontFace`            | `[[front_facing]]`                                   |
 | `SV_PointSize`              | `[[point_size]]`                                     |
 | `SV_PointCoord`             | `[[point_coord]]`                                    |
@@ -55,6 +55,10 @@ The system-value semantics are translated to the following Metal attributes:
 | `SV_VulkanInstanceID`       | `[[instance_id]]`                                    |
 | `SV_VulkanSamplePosition`   | `(Not supported)`                                    |
 | `SV_VulkanVertexID`         | `[[vertex_id]]`                                      |
+
+_Note_ that `SV_InstanceID` counts from zero within a draw call, as in D3D, while Metal's
+`[[instance_id]]` includes the base instance, so the two are not the same value. Use
+`SV_VulkanInstanceID` for direct access to `[[instance_id]]`.
 
 Custom semantics are mapped to user attributes:
 
@@ -269,6 +273,38 @@ tex[coord] = float2(1,2);  // Automatically expanded to float4(1,2,0,0)
 ## Conservative Rasterization
 
 Since Metal doesn't support conservative rasterization, SV_InnerCoverage is always false.
+
+## SubpassInput
+
+Slang supports `SubpassInput` and `SubpassInputMS` on Metal, lowered to Metal's framebuffer fetch. The `[[vk::input_attachment_index(N)]]` attribute maps to Metal's `[[color(N)]]` fragment input, allowing a fragment shader to read the current value in the render target within the same render pass.
+
+```slang
+[[vk::input_attachment_index(0)]] SubpassInput<float4> color;
+[[vk::input_attachment_index(1)]] SubpassInput<float4> prevBloom;
+
+[shader("fragment")]
+float4 main() : SV_Target
+{
+    return color.SubpassLoad() + prevBloom.SubpassLoad();
+}
+```
+
+This generates a Metal fragment function with `[[color(N)]]` parameters. The `SV_Target` return value is wrapped in a Slang-generated output struct:
+
+```cpp
+struct pixelOutput { float4 output [[color(0)]]; };
+
+[[fragment]] pixelOutput main(float4 color [[color(0)]], float4 prevBloom [[color(1)]]);
+```
+
+Note that `[[vk::input_attachment_index(N)]]` always maps to `[[color(N)]]` regardless of what the attachment semantically holds — Metal framebuffer fetch reads from color attachments only, not from `[[depth]]`/`[[stencil]]` attachments.
+
+### Restrictions
+
+- **Fragment stage only.** `SubpassInput` can only be used in fragment entry points.
+- **Direct entry-point parameters only.** `SubpassInput` cannot be placed inside a `ParameterBlock`. It must be a global-scope declaration directly referenced by the entry point.
+- **No cross-function references.** `SubpassInput` must be referenced only from the fragment entry point or from helper functions that are inlined into it. Mark any helper that calls `SubpassLoad` with `[ForceInline]` to guarantee inlining; `[noinline]` helpers will fail with error E56108.
+- **`SubpassInputMS` per-sample limitation.** Metal does not support per-sample reads. When using `SubpassInputMS`, the sample index passed to `SubpassLoad` is ignored and the resolved value is returned. The compiler emits warning E56107 at each call site where a sample index is provided.
 
 ## Address Space Assignment
 

@@ -207,6 +207,12 @@ By default, a `uniform` parameter defined in the parameter list of an entrypoint
 All `uniform` parameters defined in global scope are grouped together and placed in a default constant buffer. You can make a global uniform parameter laid out as a push constant by using the `[vk::push_constant]` attribute
 on the uniform parameter. All push constants follow the std430 layout by default.
 
+Vulkan allows an entry point to statically use at most one push-constant block.
+The compiler reports error 39033 when an entry point uses more than one, for example when a compute or rasterization entry point reads both a global `[vk::push_constant]` parameter and its own `uniform` parameters.
+The check applies to SPIR-V and to GLSL output, including `-emit-spirv-via-glsl`.
+A block counts as used when the entry point, or a function it calls, refers to it in code that Slang's own dead-code elimination keeps. A read inside a branch that a constant condition removes does not count, but a read in a function called with an argument that makes the read unreachable still counts. With `-g`, an entry point's `uniform` parameters count even when the code never reads them, because Slang loads their values so that a debugger can show them.
+For GLSL output with `-preserve-params`, a module with two or more push-constant blocks omits the blocks that no code uses, because glslang counts every declared block; a module with a single push-constant block keeps it.
+
 ## Specialization Constants
 
 You can specify a global constant to translate into a SPIR-V specialization constant with the `[SpecializationConstant]` attribute.
@@ -234,23 +240,25 @@ layout(constant_id = 1) const int MyConst = 1;
 
 DXC supports a few attributes and command-line arguments for targeting SPIR-V. Similar to DXC, Slang supports a few of the attributes as follows:
 
-### [[vk::binding(binding: int, set: int = 0)]]
+### [[vk]]
 
 Similar to `binding` layout qualifier in Vulkan. It specifies the uniform buffer binding point, and the descriptor set for Vulkan.
 
-### [[vk::location(X)]]
+This attribute may be placed on a global shader parameter or on an entry-point parameter. When placed on an entry-point resource parameter, the requested `binding` and `set` are honored on Khronos targets (SPIR-V and GLSL) and on WGSL; parameters without an explicit binding are allocated automatically into the default set, and an overlapping explicit binding is diagnosed just as for global parameters. On targets that do not support this (for example D3D/HLSL), the attribute on an entry-point parameter is ignored with a warning.
+
+### [[vk]]
 
 Same as `location` layout qualifier in Vulkan. For vertex shader inputs, it specifies the number of the vertex attribute from which input values are taken. For inputs of all other shader types, the location specifies a vector number that can be used to match against outputs from a previous shader stage.
 
-### [[vk::index(Y)]]
+### [[vk]]
 
 Same as `index` layout qualifier in Vulkan. It is valid only when used with [[location(X)]]. For fragment shader outputs, the location and index specify the color output number and index receiving the values of the output. For outputs of all other shader stages, the location specifies a vector number that can be used to match against inputs in a subsequent shader stage.
 
-### [[vk::input_attachment_index(i)]]
+### [[vk]]
 
 Same as `input_attachment_index` layout qualifier in Vulkan. It selects which subpass input is being read from. It is valid only when used on subpassInput type uniform variables.
 
-### [[vk::push_constant]]
+### [[vk]]
 
 Same as `push_constant` layout qualifier in Vulkan. It is applicable only to a uniform block and it will be copied to a special memory location where the GPU may have more direct access.
 
@@ -420,7 +428,7 @@ It cannot be used with -emit-spirv-directly
 ### -g
 
 Include debug information in the generated code, where possible.
-When targeting SPIR-V, this option emits [SPIR-V NonSemantic Shader DebugInfo Instructions](https://github.com/KhronosGroup/SPIRV-Registry/blob/main/nonsemantic/NonSemantic.Shader.DebugInfo.100.asciidoc).
+When targeting SPIR-V, this option emits [SPIR-V NonSemantic Shader DebugInfo Instructions](https://github.com/KhronosGroup/SPIRV-Registry/blob/main/nonsemantic/NonSemantic.Shader.DebugInfo.asciidoc).
 
 ### -O<optimization-level>
 

@@ -56,6 +56,10 @@ The system-value semantics are translated to the following WGSL code.
 | SV_VulkanSamplePosition | *Not supported* |
 | SV_VulkanVertexID | `@builtin(vertex_index)` |
 
+_Note_ that `@builtin(instance_index)` counts from `firstInstance`, so `SV_InstanceID` includes the
+base instance on WGSL, unlike on D3D, SPIR-V and Metal. WGSL has no base-instance builtin to
+subtract, and `SV_StartInstanceLocation` is not supported.
+
 
 Supported HLSL features when targeting WGSL
 -------------------------------------------
@@ -95,6 +99,7 @@ ConstantBuffer, (RW/RasterizerOrdered)StructuredBuffer, (RW/RasterizerOrdered)By
 ConstantBuffer translates to the `uniform` address space with `read` access mode in WGSL.
 ByteAddressBuffer and RWByteAddressBuffer translate to `array<u32>` in the `storage` address space, with the `read` and `read_write` access modes in WGSL, respectively.
 StructuredBuffer and RWStructuredBuffer with struct type T translate to `array<T>` in the `storage` address space, with the `read` and `read_write` access modes in WGSL, respectively.
+AppendStructuredBuffer with element type T translates to two bindings in the `storage` address space, an `array<T>` that holds the elements and an `array<atomic<i32>>` that holds the append counter. The Append method updates this counter with the WGSL `atomicAdd` built-in.
 
 Interlocked operations
 ----------------------
@@ -157,6 +162,9 @@ WGSL requires explicit address space qualifiers. Slang automatically assigns app
 | RW/Structured Buffers | `storage`           |
 | Group Shared          | `workgroup`         |
 | Parameter Blocks      | `uniform`           |
+
+Module-scope `static const` globals are emitted as a WGSL `const` (a compile-time value), including arrays.
+WGSL allows a concrete array value to be indexed by a runtime value (for example `positions[vertexID]`), and a `const` is not a variable, so a constant table does not count against WGSL's 8192-byte minimum-supported limit on private variables (WebKit enforces that limit).
 
 
 Matrix type translation
