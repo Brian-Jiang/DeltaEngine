@@ -230,6 +230,7 @@ private:
 
     std::optional<ActiveRenderCamera> m_pendingActiveRenderCamera;
     TemporalCameraState m_temporalCameraState;
+    uint64_t m_frameIndex = 0;
 
     IBLBaker m_iblBaker;
     ShadowPassManager m_shadowPass;

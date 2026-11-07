@@ -21,6 +21,7 @@ public ConstantBuffer<Camera> CameraCB : register(b0);
 public struct Object
 {
     public float4x4 worldMatrix;
+    public float4x4 prevWorldMatrix;
     public float4 color;
     public uint useInstanceMatrix;
 };

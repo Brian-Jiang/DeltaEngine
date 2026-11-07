@@ -559,6 +559,7 @@ void DXRenderManager::PrepareFrame()
     auto ctx = GetGraphicsContext();
     ctx->activeRenderCamera = m_pendingActiveRenderCamera;
     m_pendingActiveRenderCamera.reset();
+    ctx->frameIndex = ++m_frameIndex;
 
     m_temporalCameraState.BeginFrame(m_width, m_height);
     ctx->temporalJitterEnabled = m_temporalCameraState.enabled;

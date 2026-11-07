@@ -19,6 +19,7 @@
 #include "Graphics/MaterialConstants.h"
 #include "Graphics/Structures/RootParameterType.h"
 #include "Graphics/Structures/GBufferRootParameterType.h"
+#include "Graphics/Structures/ObjectConstants.h"
 #include "Graphics/Structures/Vertex.h"
 #include "Graphics/Shadow/ShadowDepthPSO.h"
 #include "Graphics/Shadow/ShadowView.h"
@@ -105,11 +106,32 @@ void DeltaEngine::MeshRenderProxy::SetMesh(DMesh* mesh)
     m_pipelineStateObjects.clear();
     m_gbufferPipelineStateObjects.clear();
     m_meshDirty = true;
+    RequestTemporalHistoryReset();
 }
 
-void DeltaEngine::MeshRenderProxy::UpdateWorldTransform(DirectX::XMMATRIX worldMatrix)
+void DeltaEngine::MeshRenderProxy::UpdateWorldTransform(DirectX::XMMATRIX worldMatrix, bool teleport)
 {
     m_worldMatrix = worldMatrix;
+    if (teleport)
+        RequestTemporalHistoryReset();
+}
+
+void MeshRenderProxy::RequestTemporalHistoryReset()
+{
+    m_temporalResetRequested = true;
+}
+
+void MeshRenderProxy::AdvanceTemporalFrame(uint64_t frameIndex, bool historyReset)
+{
+    if (frameIndex == m_temporalFrameIndex)
+        return;
+
+    const bool contiguous = m_temporalFrameIndex != kNoTemporalFrame && frameIndex == m_temporalFrameIndex + 1;
+    m_prevWorldMatrix = (historyReset || m_temporalResetRequested || !contiguous) ? m_worldMatrix
+                                                                                  : m_lastFrameWorldMatrix;
+    m_lastFrameWorldMatrix = m_worldMatrix;
+    m_temporalFrameIndex = frameIndex;
+    m_temporalResetRequested = false;
 }
 
 void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext> renderContext)
@@ -325,18 +347,13 @@ void MeshRenderProxy::EnsureDrawResourcesReady(std::shared_ptr<DXGraphicsContext
     }
 }
 
-void MeshRenderProxy::BindObjectConstantBuffer(std::shared_ptr<DXGraphicsContext> renderContext) const
+void MeshRenderProxy::BindObjectConstantBuffer(std::shared_ptr<DXGraphicsContext> renderContext)
 {
-    struct ObjectData
-    {
-        DirectX::XMMATRIX worldMatrix;
-        DirectX::XMFLOAT4 color;
-        uint32_t useInstanceMatrix;
-    } obj;
+    AdvanceTemporalFrame(renderContext->frameIndex, renderContext->temporalHistoryReset);
 
+    ObjectCB obj {};
     obj.worldMatrix = XMMatrixTranspose(m_worldMatrix);
-    obj.color = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-    obj.useInstanceMatrix = 0;
+    obj.prevWorldMatrix = XMMatrixTranspose(m_prevWorldMatrix);
 
     const bool gbufferPass = renderContext->activePass == ScenePassType::GBuffer;
     const uint32_t objectCbSlot = gbufferPass

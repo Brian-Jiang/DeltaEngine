@@ -70,6 +70,9 @@ struct DXGraphicsContext
     DirectX::XMFLOAT2 temporalJitter{ 0.f, 0.f };
     DirectX::XMMATRIX prevUnjitteredViewProjection = DirectX::XMMatrixIdentity();
 
+    /** Monotonic frame counter published by DXRenderManager::PrepareFrame. */
+    uint64_t frameIndex = 0;
+
     /// Global shadow quality multiplier sourced from ShadowPassManager settings.
     float shadowQualityScalar = 1.0f;
 

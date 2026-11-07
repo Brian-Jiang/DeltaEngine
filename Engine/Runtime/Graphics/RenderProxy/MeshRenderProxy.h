@@ -7,6 +7,8 @@
 
 #include <d3d12.h>
 #include <DirectXMath.h>
+
+#include <cstdint>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -33,7 +35,16 @@ public:
     DELTAENGINE_API void SetMesh(DMesh* mesh);
 
     /// Updates the world transform used for the next draw submission.
-    DELTAENGINE_API void UpdateWorldTransform(DirectX::XMMATRIX worldMatrix);
+    /** teleport discards the previous-frame matrix so no motion is reported for this move. */
+    DELTAENGINE_API void UpdateWorldTransform(DirectX::XMMATRIX worldMatrix, bool teleport = false);
+
+    /** Next frame's previous world matrix will equal the current one. */
+    DELTAENGINE_API void RequestTemporalHistoryReset();
+
+    /** Commits last frame's world matrix as previous; no-op if already advanced for frameIndex. */
+    DELTAENGINE_API void AdvanceTemporalFrame(uint64_t frameIndex, bool historyReset);
+
+    DELTAENGINE_API DirectX::XMMATRIX GetPrevWorldMatrix() const { return m_prevWorldMatrix; }
 
     /// Builds pipeline state objects and uploads textures for the current mesh.
     DELTAENGINE_API void Initialize(std::shared_ptr<DXGraphicsContext> renderContext) override;
@@ -82,7 +93,7 @@ private:
     static uint32_t ComputeMaterialPsoKey(const DMaterial* material);
 
     void EnsureDrawResourcesReady(std::shared_ptr<DXGraphicsContext> renderContext);
-    void BindObjectConstantBuffer(std::shared_ptr<DXGraphicsContext> renderContext) const;
+    void BindObjectConstantBuffer(std::shared_ptr<DXGraphicsContext> renderContext);
     void DrawSubmeshInternal(std::shared_ptr<DXGraphicsContext> renderContext, size_t submeshIndex);
     DMaterial* GetEffectiveMaterial(int submeshIndex) const;
 
@@ -95,6 +106,11 @@ private:
     std::unordered_map<uint32_t, std::unordered_map<uint32_t, std::shared_ptr<DirectX12Texture>>> m_textures;
     D3D12_PRIMITIVE_TOPOLOGY m_PrimitiveTopology;
     DirectX::XMMATRIX m_worldMatrix;
+    DirectX::XMMATRIX m_prevWorldMatrix = DirectX::XMMatrixIdentity();
+    DirectX::XMMATRIX m_lastFrameWorldMatrix = DirectX::XMMatrixIdentity();
+    static constexpr uint64_t kNoTemporalFrame = UINT64_MAX;
+    uint64_t m_temporalFrameIndex = kNoTemporalFrame;
+    bool m_temporalResetRequested = true;
 
     // todo: use a pso manager to manage PSOs and avoid creating a PSO for each mesh render proxy.
     // maybe similar to srp batcher, we can have a pso batcher that batches mesh render proxies with the same settings and creates a PSO for each batch.
