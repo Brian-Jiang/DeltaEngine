@@ -14,7 +14,6 @@
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Core/SceneComponent.h"
 #include "Runtime/IO/IOManager.h"
-#include "Runtime/Logging/LogCategory.h"
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DProperty.h"
 #include "Runtime/Reflection/DVectorProperty.h"

@@ -1,6 +1,7 @@
 #include "Runtime/Core/GC/DObjectRegistry.h"
 
 #include "Runtime/Core/DObject.h"
+#include "Runtime/Logging/LogChannels.h"
 
 using namespace DeltaEngine;
 

@@ -6,6 +6,7 @@
 #include "Runtime/Graphics/RenderProxy/SkyboxRenderProxy.h"
 #include "Runtime/Graphics/RenderResourceReleaseService.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <filesystem>
 #include <memory>

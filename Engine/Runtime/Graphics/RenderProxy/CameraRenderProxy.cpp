@@ -3,6 +3,7 @@
 #include "Graphics/Structures/Camera.h"
 #include "Graphics/DXGraphicsContext.h"
 #include "Graphics/DirectX/CommandList.h"
+#include "Runtime/Logging/LogChannels.h"
 
 using namespace DeltaEngine;
 using namespace DirectX;

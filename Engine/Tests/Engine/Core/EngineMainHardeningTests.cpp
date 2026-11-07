@@ -1,8 +1,6 @@
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/UUID.h"
 #include "Runtime/EngineMain.h"
-#include "Runtime/Logging/LogCategory.h"
-#include "Runtime/Logging/LogChannels.h"
 
 #include <gtest/gtest.h>
 #include <spdlog/sinks/base_sink.h>
@@ -41,17 +39,24 @@ class EngineMainFixture : public ::testing::Test
 protected:
     void SetUp() override
     {
+        // Looked up by name: LogEngine belongs to DeltaEngine and is not exported.
+        m_category = DLogCategory::FindByName("LogEngine");
+        ASSERT_NE(m_category, nullptr);
+
         m_sink = std::make_shared<CapturingSink>();
-        LogEngine.GetLogger()->sinks().push_back(m_sink);
-        LogEngine.SetLevel(ELogLevel::Verbose);
+        m_category->GetLogger()->sinks().push_back(m_sink);
+        m_category->SetLevel(ELogLevel::Verbose);
     }
 
     void TearDown() override
     {
-        auto& sinks = LogEngine.GetLogger()->sinks();
+        if (!m_category)
+            return;
+        auto& sinks = m_category->GetLogger()->sinks();
         std::erase_if(sinks, [this](const auto& s) { return s.get() == m_sink.get(); });
     }
 
+    DLogCategory* m_category = nullptr;
     std::shared_ptr<CapturingSink> m_sink;
 };
 

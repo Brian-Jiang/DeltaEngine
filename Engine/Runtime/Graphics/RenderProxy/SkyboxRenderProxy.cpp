@@ -17,6 +17,7 @@
 #include "Core/DMaterial.h"
 #include "Core/DShader.h"
 #include "Core/DTexture.h"
+#include "Runtime/Logging/LogChannels.h"
 
 using namespace DeltaEngine;
 

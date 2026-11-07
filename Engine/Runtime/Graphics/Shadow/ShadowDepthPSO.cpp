@@ -5,6 +5,7 @@
 #include "Runtime/Graphics/DirectX/PipelineStateObject.h"
 #include "Runtime/Graphics/DirectX/RootSignature.h"
 #include "Runtime/Graphics/Structures/Vertex.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <d3dx12.h>
 

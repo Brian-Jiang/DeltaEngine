@@ -6,6 +6,7 @@
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Serialization/ISerializationCallbackReceiver.h"
 #include "Runtime/Serialization/JsonAssetArchive.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <queue>
 

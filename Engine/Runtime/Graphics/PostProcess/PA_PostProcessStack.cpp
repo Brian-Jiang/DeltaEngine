@@ -5,6 +5,7 @@
 #include "Runtime/Graphics/PostProcess/PostProcessStack.h"
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <algorithm>
 

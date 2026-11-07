@@ -7,6 +7,7 @@
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DEnum.h"
 #include "Runtime/Reflection/DStruct.h"
+#include "Runtime/Logging/LogChannels.h"
 
 using namespace DeltaEngine;
 

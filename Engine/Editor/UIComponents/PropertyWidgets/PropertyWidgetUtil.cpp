@@ -6,6 +6,8 @@
 
 #include "imgui.h"
 
+using namespace DeltaEngine;
+
 DELTA_ENGINE_NS_BEGIN
 
 float BeginPropertyRow(const char* label, const EditorTheme::ThemeColors& c)

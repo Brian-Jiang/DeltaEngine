@@ -4,6 +4,7 @@
 #include "Graphics/RenderProxy/CameraRenderProxy.h"
 #include "Graphics/Shadow/ShadowView.h"
 #include "Graphics/Structures/Light.h"
+#include "Runtime/Logging/LogChannels.h"
 
 #include <DirectXMath.h>
 #include <algorithm>
