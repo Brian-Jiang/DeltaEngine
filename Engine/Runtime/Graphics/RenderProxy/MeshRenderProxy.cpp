@@ -175,13 +175,10 @@ void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext>
         CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_DESC SampleDesc;
     } pipelineStateStream;
 
-    DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
     DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT;
     DXGI_SAMPLE_DESC sampleDesc = renderContext->renderManager->GetRenderTarget()->GetSampleDesc();
 
-    D3D12_RT_FORMAT_ARRAY rtvFormats = {};
-    rtvFormats.NumRenderTargets = 1;
-    rtvFormats.RTFormats[0] = backBufferFormat;
+    const D3D12_RT_FORMAT_ARRAY rtvFormats = DXRenderManager::GetSceneRTVFormats();
 
     m_textures.clear();
     m_pipelineStateObjects.clear();
@@ -246,6 +243,8 @@ void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext>
         }
 
         CD3DX12_BLEND_DESC blendDesc = material->GetBlendState();
+        const CD3DX12_BLEND_DESC forwardBlendDesc(
+            MakeForwardBlendDesc(blendDesc, SubmeshContributesToTransparentPass(material)));
         CD3DX12_DEPTH_STENCIL_DESC depthStencilState = material->GetDepthStencilState();
 
         CD3DX12_SHADER_BYTECODE vertexShaderBytecode { const_cast<void*>(vertexShader->getBufferPointer()), vertexShader->getBufferSize() };
@@ -260,7 +259,7 @@ void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext>
         pipelineStateStream.VS = vertexShaderBytecode;
         pipelineStateStream.PS = pixelShaderBytecode;
         pipelineStateStream.RasterizerState = rasterizerState;
-        pipelineStateStream.BlendState = blendDesc;
+        pipelineStateStream.BlendState = forwardBlendDesc;
         pipelineStateStream.DepthStencilState = depthStencilState;
         pipelineStateStream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
         pipelineStateStream.DSVFormat = depthBufferFormat;
@@ -286,6 +285,7 @@ void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext>
             pipelineStateStream.VS = gbufferVsBytecode;
             pipelineStateStream.PS = gbufferPsBytecode;
             pipelineStateStream.RTVFormats = gbufferRtvFormats;
+            pipelineStateStream.BlendState = blendDesc;
             pipelineStateStream.SampleDesc = gbufferSampleDesc;
 
             m_gbufferPipelineStateObjects.push_back(device->CreatePipelineStateObject(pipelineStateStream));
@@ -590,6 +590,16 @@ bool MeshRenderProxy::SubmeshContributesToOpaquePass(const DMaterial* material)
 bool MeshRenderProxy::SubmeshContributesToTransparentPass(const DMaterial* material)
 {
     return material && HasAny(material->GetFlags(), MaterialFlags::AlphaBlend);
+}
+
+D3D12_BLEND_DESC MeshRenderProxy::MakeForwardBlendDesc(const D3D12_BLEND_DESC& materialBlend, bool transparent)
+{
+    D3D12_BLEND_DESC blend = materialBlend;
+    blend.IndependentBlendEnable = TRUE;
+    blend.RenderTarget[1] = CD3DX12_BLEND_DESC(D3D12_DEFAULT).RenderTarget[0];
+    if (transparent)
+        blend.RenderTarget[1].RenderTargetWriteMask = 0;
+    return blend;
 }
 
 bool MeshRenderProxy::SubmeshContributesToShadowMap(const DMaterial* material)

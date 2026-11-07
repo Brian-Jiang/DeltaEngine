@@ -21,9 +21,11 @@ SceneRenderGraphPass::SceneRenderGraphPass(RenderGraphTextureHandle color,
     D3D12_RECT scissorRect,
     DescriptorStageCallback stageDescriptors,
     std::shared_ptr<DXGraphicsContext> graphicsContext,
-    SceneDrawCallback drawCallback)
+    SceneDrawCallback drawCallback,
+    RenderGraphTextureHandle velocity)
     : m_color(color)
     , m_depth(depth)
+    , m_velocity(velocity)
     , m_colorClear(colorClear)
     , m_depthClear(depthClear)
     , m_renderTarget(renderTarget)
@@ -45,6 +47,8 @@ void SceneRenderGraphPass::Setup(RenderGraphBuilder& builder)
 {
     builder.Write(m_color, D3D12_RESOURCE_STATE_RENDER_TARGET, m_colorClear);
     builder.Write(m_depth, D3D12_RESOURCE_STATE_DEPTH_WRITE, m_depthClear);
+    if (m_velocity.IsValid())
+        builder.Write(m_velocity, D3D12_RESOURCE_STATE_RENDER_TARGET, RenderGraphClearValue::Color4(0.0f, 0.0f, 0.0f, 0.0f));
 }
 
 void SceneRenderGraphPass::Execute(const RenderGraphContext& context) const

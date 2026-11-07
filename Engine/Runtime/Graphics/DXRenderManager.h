@@ -69,6 +69,9 @@ struct FrameGraphBindings
     D3D12_CPU_DESCRIPTOR_HANDLE SrvFor(RenderGraphTextureHandle handle) const;
 };
 
+/** UV-space motion vector format (current UV - previous UV). */
+inline constexpr DXGI_FORMAT kMotionVectorFormat = DXGI_FORMAT_R16G16_FLOAT;
+
 struct FrameGraphResources
 {
     RenderGraphTextureHandle sceneColor;
@@ -84,6 +87,11 @@ struct FrameGraphResources
     RenderGraphTextureHandle gbufferNormal;
     RenderGraphTextureHandle gbufferMaterial;
     RenderGraphTextureHandle gbufferEmissive;
+    RenderGraphTextureHandle gbufferVelocity;
+    /// Scene-sample-count motion target written by scene/GBuffer/skybox passes.
+    RenderGraphTextureHandle velocity;
+    /// Single-sample motion vectors for consumers (resolved when MSAA).
+    RenderGraphTextureHandle motionVectors;
 };
 
 /// Renders the scene to an offscreen render target. Does not own swap chain or window.
@@ -142,6 +150,8 @@ public:
     DELTAENGINE_API ISlangBlob* GetGBufferVertexShaderBlob() const;
     DELTAENGINE_API ISlangBlob* GetGBufferPixelShaderBlob() const;
     DELTAENGINE_API D3D12_RT_FORMAT_ARRAY GetGBufferRTVFormats() const;
+    /** Forward scene targets: color (RT0) + motion vectors (RT1). */
+    DELTAENGINE_API static D3D12_RT_FORMAT_ARRAY GetSceneRTVFormats();
     DELTAENGINE_API bool EnsureDeferredLightingPipeline();
     DELTAENGINE_API std::shared_ptr<RootSignature> GetDeferredLightingRootSignature() const
     {
@@ -160,6 +170,9 @@ public:
     {
         return m_hasPostProcessedOutput ? m_finalPostProcessTexture : nullptr;
     }
+
+    /** Single-sample UV-space motion (current - previous) from the last built frame graph; null before the first frame. */
+    DELTAENGINE_API std::shared_ptr<DirectX12Texture> GetMotionVectorTexture() const { return m_motionVectorTexture; }
 
     /// Enqueues a render proxy for deferred GPU release after the last submitted frame fence.
     DELTAENGINE_API RenderResourceReleaseToken DeferRenderProxyRelease(std::shared_ptr<RenderProxy> proxy);
@@ -186,6 +199,7 @@ private:
         RenderGraphTextureUsage depthAndShader);
     void AddShadowPasses(RenderGraphTextureUsage depthAndShader);
     void CreateGBufferTextures(RenderGraphTextureUsage gbufferUsage);
+    void AddMotionVectorResolve();
     void InitGBufferPipeline();
     bool InitDeferredLightingPipeline();
     void FinalizeNoPostProcessOutput();
@@ -217,6 +231,7 @@ private:
     D3D12_CPU_DESCRIPTOR_HANDLE m_finalPostProcessSRV{};
     bool m_hasPostProcessedOutput = false;
     std::shared_ptr<DirectX12Texture> m_finalPostProcessTexture;
+    std::shared_ptr<DirectX12Texture> m_motionVectorTexture;
 
     std::shared_ptr<DXGraphicsContext> m_currentContext;
 

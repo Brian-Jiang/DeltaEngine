@@ -321,3 +321,28 @@ TEST(MeshRenderProxyTests, MeshRenderProxy_GatherDrawCallsWithNullMesh_IsNoop)
     // Assert
     SUCCEED();
 }
+
+TEST(MeshRenderProxyTests, MakeForwardBlendDesc_Opaque_WritesMotionTarget)
+{
+    const CD3DX12_BLEND_DESC materialBlend(D3D12_DEFAULT);
+
+    const D3D12_BLEND_DESC blend = MeshRenderProxy::MakeForwardBlendDesc(materialBlend, false);
+
+    EXPECT_TRUE(blend.IndependentBlendEnable);
+    EXPECT_FALSE(blend.RenderTarget[1].BlendEnable);
+    EXPECT_EQ(blend.RenderTarget[1].RenderTargetWriteMask, D3D12_COLOR_WRITE_ENABLE_ALL);
+}
+
+TEST(MeshRenderProxyTests, MakeForwardBlendDesc_Transparent_MasksMotionAndKeepsColorBlend)
+{
+    DMaterial material;
+    material.SetRenderMode(ERenderMode::Transparent);
+    const CD3DX12_BLEND_DESC materialBlend = material.GetBlendState();
+
+    const D3D12_BLEND_DESC blend = MeshRenderProxy::MakeForwardBlendDesc(materialBlend, true);
+
+    EXPECT_TRUE(blend.IndependentBlendEnable);
+    EXPECT_TRUE(blend.RenderTarget[0].BlendEnable);
+    EXPECT_EQ(blend.RenderTarget[0].SrcBlend, D3D12_BLEND_SRC_ALPHA);
+    EXPECT_EQ(blend.RenderTarget[1].RenderTargetWriteMask, 0);
+}

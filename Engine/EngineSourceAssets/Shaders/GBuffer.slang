@@ -1,4 +1,5 @@
 import StandardConstantStructs;
+import MotionVectors;
 import PBRInputs;
 
 struct GBufferOutput
@@ -7,6 +8,7 @@ struct GBufferOutput
     float4 normal : SV_Target1;
     float4 material : SV_Target2;
     float3 emissive : SV_Target3;
+    float2 velocity : SV_Target4;
 };
 
 [shader("vertex")]
@@ -28,6 +30,8 @@ PBRPSInput VSMain(PBRVSInput input)
     result.normalWS    = worldNormal;
     result.tangentWS   = float4(worldTangent, 1.0);
     result.uv          = input.uv;
+    result.curClip     = CurrentUnjitteredClip(worldPosition);
+    result.prevClip    = PrevObjectClip(position);
 
     return result;
 }
@@ -96,5 +100,6 @@ GBufferOutput PSMain(PBRPSInput input, bool isFrontFace : SV_IsFrontFace)
     output.normal = float4(N, 0.0);
     output.material = float4(metallic, roughness, asfloat(flags & 0xFFFFu), asfloat((flags >> 16) & 0xFFFFu));
     output.emissive = emissive;
+    output.velocity = ComputeMotionUV(input.curClip, input.prevClip);
     return output;
 }

@@ -1,6 +1,7 @@
 import StandardInputs;
 import StandardLighting;
 import StandardConstantStructs;
+import MotionVectors;
 
 [shader("vertex")]
 StandardPSInput VSMain(StandardVSInput input)
@@ -19,12 +20,14 @@ StandardPSInput VSMain(StandardVSInput input)
     result.color = input.color * ObjectCB.color;
     result.normal = worldNormal;
     result.uv = input.uv;
+    result.curClip = CurrentUnjitteredClip(worldPosition);
+    result.prevClip = PrevObjectClip(position);
 
     return result;
 }
 
 [shader("fragment")]
-float4 PSMain(StandardPSInput input) : SV_TARGET
+ForwardOutput PSMain(StandardPSInput input)
 {
     float4 textureColor = g_matTextures[0].Sample(g_sampler, input.uv);
     float4 objectColor = input.color * textureColor;
@@ -59,5 +62,5 @@ float4 PSMain(StandardPSInput input) : SV_TARGET
     }
 
     float4 color = (totalResult.Ambient + totalResult.Diffuse) * objectColor + totalResult.Specular;
-    return saturate(color);
+    return MakeForwardOutput(saturate(color), input.curClip, input.prevClip);
 }

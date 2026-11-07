@@ -38,7 +38,15 @@ static const float3 kCubeVerts[36] =
 struct VSOut
 {
     float3 texCoord : TEXCOORD;
+    float4 curClip : TEXCOORD1;
+    float4 prevClip : TEXCOORD2;
     float4 position : SV_POSITION;
+};
+
+struct PSOut
+{
+    float4 color : SV_Target0;
+    float2 motion : SV_Target1;
 };
 
 [shader("vertex")]
@@ -52,11 +60,17 @@ VSOut VSMain(uint vid : SV_VertexID)
     VSOut o;
     o.position = clipPos.xyww;
     o.texCoord = localPos;
+    // w = 0 drops translation: sky motion comes from camera rotation only.
+    o.curClip = mul(ProjectionMatrixUnjittered, viewDir);
+    o.prevClip = mul(PrevViewProjectionMatrix, float4(localPos, 0.0f));
     return o;
 }
 
 [shader("fragment")]
-float4 PSMain(VSOut input) : SV_TARGET
+PSOut PSMain(VSOut input)
 {
-    return g_skybox.Sample(g_sampler, input.texCoord);
+    PSOut o;
+    o.color = g_skybox.Sample(g_sampler, input.texCoord);
+    o.motion = (input.curClip.xy / input.curClip.w - input.prevClip.xy / input.prevClip.w) * float2(0.5, -0.5);
+    return o;
 }

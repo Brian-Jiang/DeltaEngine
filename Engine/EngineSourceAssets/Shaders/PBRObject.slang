@@ -1,4 +1,5 @@
 import StandardConstantStructs;
+import MotionVectors;
 import PBRInputs;
 import PBRLighting;
 
@@ -21,12 +22,14 @@ PBRPSInput VSMain(PBRVSInput input)
     result.normalWS    = worldNormal;
     result.tangentWS   = float4(worldTangent, 1.0);
     result.uv          = input.uv;
+    result.curClip     = CurrentUnjitteredClip(worldPosition);
+    result.prevClip    = PrevObjectClip(position);
 
     return result;
 }
 
 [shader("fragment")]
-float4 PSMain(PBRPSInput input, bool isFrontFace : SV_IsFrontFace) : SV_TARGET
+ForwardOutput PSMain(PBRPSInput input, bool isFrontFace : SV_IsFrontFace)
 {
     uint flags = MaterialCB.flags;
 
@@ -122,5 +125,5 @@ float4 PSMain(PBRPSInput input, bool isFrontFace : SV_IsFrontFace) : SV_TARGET
     float3 ambient = (diffuseIBL + specularIBL) * ao;
     float3 color   = ambient + Lo + emissive;
 
-    return float4(color, alpha);
+    return MakeForwardOutput(float4(color, alpha), input.curClip, input.prevClip);
 }

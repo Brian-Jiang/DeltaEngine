@@ -280,11 +280,21 @@ ISlangBlob* DXRenderManager::GetGBufferPixelShaderBlob() const
 D3D12_RT_FORMAT_ARRAY DXRenderManager::GetGBufferRTVFormats() const
 {
     D3D12_RT_FORMAT_ARRAY formats {};
-    formats.NumRenderTargets = 4;
+    formats.NumRenderTargets = 5;
     formats.RTFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
     formats.RTFormats[1] = DXGI_FORMAT_R16G16B16A16_FLOAT;
     formats.RTFormats[2] = DXGI_FORMAT_R8G8B8A8_UNORM;
     formats.RTFormats[3] = DXGI_FORMAT_R11G11B10_FLOAT;
+    formats.RTFormats[4] = kMotionVectorFormat;
+    return formats;
+}
+
+D3D12_RT_FORMAT_ARRAY DXRenderManager::GetSceneRTVFormats()
+{
+    D3D12_RT_FORMAT_ARRAY formats {};
+    formats.NumRenderTargets = 2;
+    formats.RTFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT;
+    formats.RTFormats[1] = kMotionVectorFormat;
     return formats;
 }
 
@@ -445,7 +455,14 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
     // Check the best multisample quality level that can be used for the given back buffer format.
     DXGI_SAMPLE_DESC sampleDesc{};
     if (m_renderPath == RenderPath::Forward)
+    {
+        // Color and motion share one PSO sample desc, so pick one valid for both formats.
         sampleDesc = m_device->GetMultisampleQualityLevels(backBufferFormat);
+        const DXGI_SAMPLE_DESC motionDesc = m_device->GetMultisampleQualityLevels(kMotionVectorFormat, sampleDesc.Count);
+        if (motionDesc.Count < sampleDesc.Count)
+            sampleDesc = m_device->GetMultisampleQualityLevels(backBufferFormat, motionDesc.Count);
+        sampleDesc.Quality = (std::min)(sampleDesc.Quality, motionDesc.Quality);
+    }
     else
         sampleDesc = { 1, 0 };
 
@@ -480,7 +497,17 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
     auto depthTexture = m_device->CreateTexture(depthDesc, &depthClearValue);
     depthTexture->SetName("Depth Render Target");
 
+    auto motionDesc = CD3DX12_RESOURCE_DESC::Tex2D(kMotionVectorFormat, m_width, m_height, 1, 1, sampleDesc.Count,
+        sampleDesc.Quality, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+
+    D3D12_CLEAR_VALUE motionClearValue {};
+    motionClearValue.Format = kMotionVectorFormat;
+
+    auto motionTexture = m_device->CreateTexture(motionDesc, &motionClearValue);
+    motionTexture->SetName("Motion Vector Render Target");
+
     m_renderTarget->AttachTexture(AttachmentPoint::Color0, colorTexture);
+    m_renderTarget->AttachTexture(AttachmentPoint::Color1, motionTexture);
     m_renderTarget->AttachTexture(AttachmentPoint::DepthStencil, depthTexture);
 
     CreatePingPongTargets(m_width, m_height);
@@ -630,7 +657,47 @@ bool DXRenderManager::ImportSceneTargets(RenderGraphTextureUsage colorAndShader,
     }
     m_frameBindings.Register(m_frameResources.sceneDepth, depthTexture->GetDepthStencilView(), depthSrv);
 
+    m_motionVectorTexture.reset();
+    auto motionTexture = m_renderTarget->GetTexture(AttachmentPoint::Color1);
+    if (motionTexture)
+    {
+        m_frameResources.velocity = m_frameGraph.ImportTexture("SceneVelocity", motionTexture, colorAndShader);
+        m_frameBindings.Register(m_frameResources.velocity,
+            motionTexture->GetRenderTargetView(), motionTexture->GetShaderResourceView());
+    }
+
     return true;
+}
+
+void DXRenderManager::AddMotionVectorResolve()
+{
+    if (!m_frameResources.velocity.IsValid())
+        return;
+
+    auto motionTexture = m_frameGraph.GetImportedTexture(m_frameResources.velocity).texture;
+    if (!motionTexture)
+        return;
+
+    const auto motionDesc = motionTexture->GetD3D12ResourceDesc();
+    if (motionDesc.SampleDesc.Count == 1)
+    {
+        m_frameResources.motionVectors = m_frameResources.velocity;
+        m_motionVectorTexture = motionTexture;
+        return;
+    }
+
+    const auto resolvedDesc = CD3DX12_RESOURCE_DESC::Tex2D(motionDesc.Format, motionDesc.Width,
+        static_cast<UINT>(motionDesc.Height), 1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE);
+    m_frameResources.motionVectors = m_frameGraph.CreateTexture("ResolvedVelocity", resolvedDesc,
+        RenderGraphTextureUsage::ShaderResource);
+    auto resolvedTexture = m_frameGraph.GetImportedTexture(m_frameResources.motionVectors).texture;
+    if (!resolvedTexture)
+        return;
+
+    m_frameBindings.Register(m_frameResources.motionVectors, {}, resolvedTexture->GetShaderResourceView());
+    m_frameGraph.AddPass(std::make_unique<MsaaResolveGraphPass>(
+        m_frameResources.velocity, m_frameResources.motionVectors, motionTexture, resolvedTexture));
+    m_motionVectorTexture = resolvedTexture;
 }
 
 void DXRenderManager::AddShadowPasses(RenderGraphTextureUsage depthAndShader)
@@ -686,6 +753,8 @@ void DXRenderManager::CreateGBufferTextures(RenderGraphTextureUsage gbufferUsage
         makeDesc(DXGI_FORMAT_R8G8B8A8_UNORM));
     m_frameResources.gbufferEmissive = registerTexture("GBufferEmissive",
         makeDesc(DXGI_FORMAT_R11G11B10_FLOAT));
+    // Persistent scene motion target, so skybox/transparent passes binding m_renderTarget see the same texture.
+    m_frameResources.gbufferVelocity = m_frameResources.velocity;
 }
 
 void DXRenderManager::AddShadowSceneSkyboxPasses(const SceneDrawCallback& opaqueDrawCallback,
@@ -707,20 +776,22 @@ void DXRenderManager::AddShadowSceneSkyboxPasses(const SceneDrawCallback& opaque
         RenderGraphClearValue::Color4(clearColor[0], clearColor[1], clearColor[2], clearColor[3]),
         RenderGraphClearValue::DepthStencil(1.0f),
         m_renderTarget.get(), m_rootSignature, m_viewport, m_scissorRect,
-        stageDescriptors, ctx, opaqueDrawCallback));
+        stageDescriptors, ctx, opaqueDrawCallback, m_frameResources.velocity));
 
     if (m_currentWorld && m_currentWorld->GetSkybox())
     {
         m_frameGraph.AddPass(std::make_unique<SkyboxRenderGraphPass>(
             m_frameResources.sceneColor, m_frameResources.sceneDepth,
             m_renderTarget.get(), m_rootSignature, m_viewport, m_scissorRect,
-            stageDescriptors, m_currentWorld, ctx));
+            stageDescriptors, m_currentWorld, ctx, m_frameResources.velocity));
     }
 
     m_frameGraph.AddPass(std::make_unique<TransparentRenderGraphPass>(
         m_frameResources.sceneColor, m_frameResources.sceneDepth,
         m_renderTarget.get(), m_rootSignature, m_viewport, m_scissorRect,
-        stageDescriptors, ctx, transparentDrawCallback));
+        stageDescriptors, ctx, transparentDrawCallback, m_frameResources.velocity));
+
+    AddMotionVectorResolve();
 }
 
 void DXRenderManager::FinalizeNoPostProcessOutput()
@@ -849,7 +920,9 @@ void DXRenderManager::BuildDeferredFrameGraph(const SceneDrawCallback& opaqueDra
         m_viewport,
         m_scissorRect,
         ctx,
-        opaqueDrawCallback));
+        opaqueDrawCallback,
+        m_frameResources.gbufferVelocity,
+        m_frameBindings.RtvFor(m_frameResources.gbufferVelocity)));
 
     m_frameGraph.AddPass(std::make_unique<DeferredLightingGraphPass>(
         m_frameResources.gbufferAlbedo,
@@ -881,13 +954,15 @@ void DXRenderManager::BuildDeferredFrameGraph(const SceneDrawCallback& opaqueDra
         m_frameGraph.AddPass(std::make_unique<SkyboxRenderGraphPass>(
             m_frameResources.sceneColor, m_frameResources.sceneDepth,
             m_renderTarget.get(), m_rootSignature, m_viewport, m_scissorRect,
-            stageDescriptors, m_currentWorld, ctx));
+            stageDescriptors, m_currentWorld, ctx, m_frameResources.velocity));
     }
 
     m_frameGraph.AddPass(std::make_unique<TransparentRenderGraphPass>(
         m_frameResources.sceneColor, m_frameResources.sceneDepth,
         m_renderTarget.get(), m_rootSignature, m_viewport, m_scissorRect,
-        stageDescriptors, ctx, transparentDrawCallback));
+        stageDescriptors, ctx, transparentDrawCallback, m_frameResources.velocity));
+
+    AddMotionVectorResolve();
 
     if (!stack || stack->GetPassCount() == 0)
     {

@@ -93,13 +93,10 @@ void SkyboxRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext> renderCont
     CD3DX12_SHADER_BYTECODE vsBytecode{ const_cast<void*>(vs->getBufferPointer()), vs->getBufferSize() };
     CD3DX12_SHADER_BYTECODE psBytecode{ const_cast<void*>(ps->getBufferPointer()), ps->getBufferSize() };
 
-    DXGI_FORMAT backBufFmt  = DXGI_FORMAT_R16G16B16A16_FLOAT;
     DXGI_FORMAT depthFmt    = DXGI_FORMAT_D32_FLOAT;
     DXGI_SAMPLE_DESC sample = renderContext->renderManager->GetRenderTarget()->GetSampleDesc();
 
-    D3D12_RT_FORMAT_ARRAY rtvFormats = {};
-    rtvFormats.NumRenderTargets = 1;
-    rtvFormats.RTFormats[0]     = backBufFmt;
+    const D3D12_RT_FORMAT_ARRAY rtvFormats = DXRenderManager::GetSceneRTVFormats();
 
     // No InputLayout: omitted field zero-initializes to NumElements=0, valid for SV_VertexID shaders.
     struct PipelineStateStream

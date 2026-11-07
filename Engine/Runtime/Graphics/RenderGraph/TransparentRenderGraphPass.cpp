@@ -19,9 +19,11 @@ TransparentRenderGraphPass::TransparentRenderGraphPass(RenderGraphTextureHandle 
     D3D12_RECT scissorRect,
     DescriptorStageCallback stageDescriptors,
     std::shared_ptr<DXGraphicsContext> graphicsContext,
-    SceneDrawCallback drawCallback)
+    SceneDrawCallback drawCallback,
+    RenderGraphTextureHandle velocity)
     : m_color(color)
     , m_depth(depth)
+    , m_velocity(velocity)
     , m_renderTarget(renderTarget)
     , m_rootSignature(std::move(rootSignature))
     , m_viewport(viewport)
@@ -41,6 +43,8 @@ void TransparentRenderGraphPass::Setup(RenderGraphBuilder& builder)
 {
     builder.Write(m_color, D3D12_RESOURCE_STATE_RENDER_TARGET);
     builder.Write(m_depth, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+    if (m_velocity.IsValid())
+        builder.Write(m_velocity, D3D12_RESOURCE_STATE_RENDER_TARGET);
 }
 
 void TransparentRenderGraphPass::Execute(const RenderGraphContext& context) const

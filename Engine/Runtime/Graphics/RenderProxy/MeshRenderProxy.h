@@ -69,6 +69,9 @@ public:
     DELTAENGINE_API static bool SubmeshContributesToOpaquePass(const DMaterial* material);
     DELTAENGINE_API static bool SubmeshContributesToTransparentPass(const DMaterial* material);
 
+    /** Material blend on RT0; RT1 (motion) writes opaquely, or is masked off for transparent materials. */
+    DELTAENGINE_API static D3D12_BLEND_DESC MakeForwardBlendDesc(const D3D12_BLEND_DESC& materialBlend, bool transparent);
+
     DELTAENGINE_API static DMaterial* ResolveSubmeshMaterial(const DMesh* mesh, int submeshIndex,
         const std::vector<DMaterial*>& materialOverrides);
 

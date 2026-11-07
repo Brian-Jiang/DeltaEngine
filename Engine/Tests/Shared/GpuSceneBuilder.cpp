@@ -2,8 +2,10 @@
 
 #include "Runtime/Assets/PA_CommonAssets.h"
 #include "Runtime/Core/Camera.h"
+#include "Runtime/Core/DScene.h"
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/GameObject.h"
+#include "Runtime/Core/Skybox.h"
 #include "Runtime/Graphics/DXRenderManager.h"
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/Light/DirectionalLight.h"
@@ -87,6 +89,28 @@ Camera* GpuSceneBuilder::AddCamera(const float aspectRatio)
     camera->SetLocalPosition(0.0f, 0.0f, -8.0f);
     camera->UpdateParameters(XM_PIDIV4, aspectRatio, 0.1f, 100.0f);
     return camera;
+}
+
+bool GpuSceneBuilder::AddDefaultSkybox()
+{
+    if (!m_world)
+        return false;
+
+    const std::filesystem::path assetPath = std::filesystem::weakly_canonical(
+        IOManager::GetEngineImportedAssetFullPath("Skybox/DefaultSkybox"));
+    const AssetId id = m_assetDatabase.FindAssetIdByPath(assetPath);
+    if (id.IsNull())
+        return false;
+
+    PA_Skybox* skyboxAsset = m_assetDatabase.LoadAsset<PA_Skybox>(id);
+    Skybox* skybox = skyboxAsset ? skyboxAsset->GetSkybox() : nullptr;
+    if (!skybox)
+        return false;
+
+    if (m_scene)
+        m_scene->SetSkybox(skybox);
+    m_world->SetSkybox(skybox);
+    return true;
 }
 
 DirectionalLight* GpuSceneBuilder::AddDirectionalLightWithShadows()

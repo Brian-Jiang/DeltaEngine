@@ -24,16 +24,20 @@ GBufferRenderGraphPass::GBufferRenderGraphPass(RenderGraphTextureHandle albedo,
     CD3DX12_VIEWPORT viewport,
     D3D12_RECT scissorRect,
     std::shared_ptr<DXGraphicsContext> graphicsContext,
-    SceneDrawCallback drawCallback)
+    SceneDrawCallback drawCallback,
+    RenderGraphTextureHandle velocity,
+    D3D12_CPU_DESCRIPTOR_HANDLE velocityRtv)
     : m_albedo(albedo)
     , m_normal(normal)
     , m_material(material)
     , m_emissive(emissive)
     , m_depth(depth)
+    , m_velocity(velocity)
     , m_albedoRtv(albedoRtv)
     , m_normalRtv(normalRtv)
     , m_materialRtv(materialRtv)
     , m_emissiveRtv(emissiveRtv)
+    , m_velocityRtv(velocityRtv)
     , m_depthDsv(depthDsv)
     , m_rootSignature(std::move(rootSignature))
     , m_viewport(viewport)
@@ -56,6 +60,8 @@ void GBufferRenderGraphPass::Setup(RenderGraphBuilder& builder)
     builder.Write(m_material, D3D12_RESOURCE_STATE_RENDER_TARGET, blackClear);
     builder.Write(m_emissive, D3D12_RESOURCE_STATE_RENDER_TARGET, blackClear);
     builder.Write(m_depth, D3D12_RESOURCE_STATE_DEPTH_WRITE, RenderGraphClearValue::DepthStencil(1.0f));
+    if (m_velocity.IsValid())
+        builder.Write(m_velocity, D3D12_RESOURCE_STATE_RENDER_TARGET, blackClear);
 }
 
 void GBufferRenderGraphPass::Execute(const RenderGraphContext& context) const
@@ -67,10 +73,11 @@ void GBufferRenderGraphPass::Execute(const RenderGraphContext& context) const
     commandList.SetViewport(m_viewport);
     commandList.SetScissorRect(m_scissorRect);
 
-    D3D12_CPU_DESCRIPTOR_HANDLE rtvs[4] = {
-        m_albedoRtv, m_normalRtv, m_materialRtv, m_emissiveRtv
+    D3D12_CPU_DESCRIPTOR_HANDLE rtvs[5] = {
+        m_albedoRtv, m_normalRtv, m_materialRtv, m_emissiveRtv, m_velocityRtv
     };
-    commandList.GetD3D12CommandList()->OMSetRenderTargets(4, rtvs, FALSE, &m_depthDsv);
+    const UINT rtvCount = m_velocityRtv.ptr != 0 ? 5u : 4u;
+    commandList.GetD3D12CommandList()->OMSetRenderTargets(rtvCount, rtvs, FALSE, &m_depthDsv);
 
     if (m_rootSignature)
         commandList.SetGraphicsRootSignature(m_rootSignature);

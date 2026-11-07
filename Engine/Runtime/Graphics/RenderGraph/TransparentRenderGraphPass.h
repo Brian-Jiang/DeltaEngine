@@ -34,7 +34,8 @@ public:
         D3D12_RECT scissorRect,
         DescriptorStageCallback stageDescriptors,
         std::shared_ptr<DXGraphicsContext> graphicsContext,
-        SceneDrawCallback drawCallback);
+        SceneDrawCallback drawCallback,
+        RenderGraphTextureHandle velocity = {});
 
     const char* GetName() const override;
     void Setup(RenderGraphBuilder& builder) override;
@@ -43,6 +44,7 @@ public:
 private:
     RenderGraphTextureHandle m_color;
     RenderGraphTextureHandle m_depth;
+    RenderGraphTextureHandle m_velocity;
     RenderTarget* m_renderTarget = nullptr;
     std::shared_ptr<RootSignature> m_rootSignature;
     CD3DX12_VIEWPORT m_viewport{};

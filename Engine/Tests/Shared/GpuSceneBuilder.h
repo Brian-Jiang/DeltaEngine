@@ -26,6 +26,7 @@ public:
 
     MeshRenderer* AddSphereMesh(const char* name = "Sphere", float x = 0.0f, float y = 0.0f, float z = 0.0f);
     Camera* AddCamera(float aspectRatio = 1.0f);
+    bool AddDefaultSkybox();
     DirectionalLight* AddDirectionalLightWithShadows();
     PointLight* AddPointLightWithShadows();
     SpotLight* AddSpotLightWithShadows();
