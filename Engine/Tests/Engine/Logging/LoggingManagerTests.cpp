@@ -111,6 +111,36 @@ TEST_F(LoggingManagerFixture, LoggingManager_SetGlobalLevel_FiltersAllCategories
     LoggingManager::SetGlobalLevel(ELogLevel::Log);
 }
 
+TEST_F(LoggingManagerFixture, LoggingManager_CategoryCreatedAfterInitialize_GetsSharedSinksAndGlobalLevel)
+{
+    LoggingManager::Initialize(UniqueTempLogDir());
+    auto sink = std::make_shared<CountingSink>();
+    LoggingManager::AddSink(sink);
+    LoggingManager::SetGlobalLevel(ELogLevel::Warning);
+
+    DLogCategory late("LoggingManagerTests_LateCategory", ELogLevel::Log);
+    EXPECT_EQ(late.GetLevel(), ELogLevel::Warning);
+
+    const int before = sink->count.load();
+    DLOG(late, ELogLevel::Log, "below global level");
+    EXPECT_EQ(sink->count.load(), before);
+
+    DLOG(late, ELogLevel::Warning, "reaches shared sink");
+    EXPECT_EQ(sink->count.load(), before + 1);
+}
+
+TEST_F(LoggingManagerFixture, LoggingManager_Shutdown_ClearsGlobalLevelForLaterCategories)
+{
+    LoggingManager::Initialize(UniqueTempLogDir());
+    LoggingManager::SetGlobalLevel(ELogLevel::Error);
+    LoggingManager::Shutdown();
+    LoggingManager::Initialize(UniqueTempLogDir());
+
+    DLogCategory late("LoggingManagerTests_AfterShutdown", ELogLevel::Log);
+
+    EXPECT_EQ(late.GetLevel(), ELogLevel::Log);
+}
+
 TEST_F(LoggingManagerFixture, LoggingManager_Shutdown_ResetsInitializedFlag)
 {
     LoggingManager::Initialize(UniqueTempLogDir());

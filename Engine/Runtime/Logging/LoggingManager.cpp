@@ -15,6 +15,7 @@ using namespace DeltaEngine;
 
 DELTA_ENGINE_NS_BEGIN
 
+std::optional<ELogLevel> LoggingManager::s_globalLevel;
 std::vector<spdlog::sink_ptr> LoggingManager::s_sinks;
 std::filesystem::path LoggingManager::s_logFilePath;
 bool LoggingManager::s_initialized = false;
@@ -109,10 +110,31 @@ void LoggingManager::Shutdown()
         return;
 
     DLOG(LogCore, ELogLevel::Display, "LoggingManager shutting down");
+    FlushAll();
     spdlog::shutdown();
     s_sinks.clear();
     s_logFilePath.clear();
+    s_globalLevel.reset();
     s_initialized = false;
+}
+
+void LoggingManager::FlushAll()
+{
+    for (DLogCategory* cat : DLogCategory::GetAllCategories())
+    {
+        if (spdlog::logger* logger = cat->GetLogger())
+            logger->flush();
+    }
+}
+
+void LoggingManager::AttachLateCategory(DLogCategory& category)
+{
+    if (!s_initialized)
+        return;
+
+    category.ReinitializeWithSinks(s_sinks);
+    if (s_globalLevel)
+        category.SetLevel(*s_globalLevel);
 }
 
 void LoggingManager::AddSink(spdlog::sink_ptr sink)
@@ -129,6 +151,7 @@ void LoggingManager::AddSink(spdlog::sink_ptr sink)
 
 void LoggingManager::SetGlobalLevel(ELogLevel level)
 {
+    s_globalLevel = level;
     for (DLogCategory* cat : DLogCategory::GetAllCategories())
         cat->SetLevel(level);
 }

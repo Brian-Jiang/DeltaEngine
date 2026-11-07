@@ -1,4 +1,4 @@
-#include "Runtime/Logging/LogChannels.h"
+#include "EngineIncludes.h"
 
 #include <gtest/gtest.h>
 #include <spdlog/sinks/base_sink.h>
@@ -71,6 +71,30 @@ TEST(DLogCategory, DLogCategory_ReinitializeWithSinks_RoutesToNewSinks)
     DLOG(cat, ELogLevel::Log, "second");
     EXPECT_EQ(first->count.load(), 1);
     EXPECT_EQ(second->count.load(), 1);
+}
+
+TEST(DLogCategory, DLogCategory_DuplicateName_DoesNotThrowAndBothCategoriesLog)
+{
+    DLogCategory first("DLogCategoryTests_Duplicate", ELogLevel::Log);
+    std::unique_ptr<DLogCategory> second;
+    ASSERT_NO_THROW(second = std::make_unique<DLogCategory>("DLogCategoryTests_Duplicate", ELogLevel::Log));
+
+    EXPECT_EQ(DLogCategory::FindByName("DLogCategoryTests_Duplicate"), &first);
+
+    auto firstSink = std::make_shared<CountingSink>();
+    auto secondSink = std::make_shared<CountingSink>();
+    first.ReinitializeWithSinks({ firstSink });
+    second->ReinitializeWithSinks({ secondSink });
+
+    DLOG(first, ELogLevel::Log, "first");
+    DLOG(*second, ELogLevel::Log, "second");
+    EXPECT_EQ(firstSink->count.load(), 1);
+    EXPECT_EQ(secondSink->count.load(), 1);
+
+    second.reset();
+    DLOG(first, ELogLevel::Log, "first after duplicate destroyed");
+    EXPECT_EQ(firstSink->count.load(), 2);
+    EXPECT_EQ(DLogCategory::FindByName("DLogCategoryTests_Duplicate"), &first);
 }
 
 TEST(DLogCategory, DLogCategory_DestructorRemovesFromGlobalList)

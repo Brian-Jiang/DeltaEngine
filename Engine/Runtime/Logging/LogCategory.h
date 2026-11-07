@@ -74,6 +74,7 @@ public:
      * observes or configures another module's categories.
      */
     static DLogCategory* FindByName(std::string_view name);
+    // If a name is (erroneously) defined twice, the first-registered category is returned.
 
 private:
     std::shared_ptr<spdlog::logger> m_logger;

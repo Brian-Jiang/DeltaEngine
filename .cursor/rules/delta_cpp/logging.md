@@ -68,4 +68,6 @@ if (DLogCategory* cat = DLogCategory::FindByName("LogEngine"))
     cat->SetLevel(ELogLevel::Verbose);
 ```
 
-`LoggingManager::AddSink` and `SetGlobalLevel` already reach every registered category in every module.
+`LoggingManager::AddSink` and `SetGlobalLevel` already reach every registered category in every module, including categories created after `LoggingManager::Initialize` (e.g. in a DLL loaded later).
+
+Category names must be unique across all modules. A duplicate logs an error at construction, and `FindByName` returns the first-registered one.

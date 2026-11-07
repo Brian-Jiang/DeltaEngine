@@ -244,7 +244,7 @@ nlohmann::json McpLogSystem::QueryRead(EditorCore&, const nlohmann::json& params
             sinceLimit = std::chrono::seconds{secs};
     }
 
-    spdlog::apply_all([](std::shared_ptr<spdlog::logger> logger) { logger->flush(); });
+    LoggingManager::FlushAll();
 
     std::ifstream in(path, std::ios::binary);
     if (!in.is_open())

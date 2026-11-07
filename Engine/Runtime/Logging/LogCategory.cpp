@@ -2,6 +2,7 @@
 
 #include "Runtime/Assert/Assert.h"
 #include "Runtime/Logging/LogChannels.h"
+#include "Runtime/Logging/LoggingManager.h"
 
 #include <spdlog/sinks/stdout_color_sinks.h>
 
@@ -31,20 +32,22 @@ DLogCategory::DLogCategory(std::string_view name, ELogLevel defaultLevel)
     , m_level(defaultLevel)
 {
     DELTA_ENSURE_MSG(!m_name.empty(), "DLogCategory constructed with empty name");
+    DLOG_IF(LogCore, ELogLevel::Error, FindByName(m_name) != nullptr,
+        "Log category '{}' is defined more than once; category names must be unique across all modules", m_name);
 
+    // Categories are tracked in GetAllCategories(), not spdlog's registry, which throws on duplicate names.
     auto fallback = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
     m_logger = std::make_shared<spdlog::logger>(m_name, std::move(fallback));
     m_logger->set_level(ToSpdlogLevel(m_level));
-    spdlog::register_logger(m_logger);
 
     GetAllCategories().push_back(this);
+    LoggingManager::AttachLateCategory(*this);
 }
 
 DLogCategory::~DLogCategory()
 {
     auto& cats = GetAllCategories();
     std::erase(cats, this);
-    spdlog::drop(m_name);
 }
 
 void DLogCategory::SetLevel(ELogLevel level)
@@ -58,10 +61,8 @@ void DLogCategory::ReinitializeWithSinks(const std::vector<spdlog::sink_ptr>& si
 {
     DELTA_ENSURE_MSG(!sinks.empty(), "DLogCategory::ReinitializeWithSinks called with empty sink list ({})", m_name);
 
-    spdlog::drop(m_name);
     m_logger = std::make_shared<spdlog::logger>(m_name, sinks.begin(), sinks.end());
     m_logger->set_level(ToSpdlogLevel(m_level));
-    spdlog::register_logger(m_logger);
 
     DLOG(LogCore, ELogLevel::Verbose, "DLogCategory '{}' re-initialized with {} sinks", m_name, sinks.size());
 }
