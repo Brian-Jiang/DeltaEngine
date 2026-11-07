@@ -80,6 +80,17 @@ DXRenderManager::DXRenderManager(std::shared_ptr<Device> device, std::shared_ptr
         });
     m_frameGraph.SetTransientPool(&m_transientPool);
 
+    m_temporalHistory.SetTextureFactory(
+        [this](const D3D12_RESOURCE_DESC& desc, const std::string& name)
+        {
+            D3D12_CLEAR_VALUE clear{};
+            clear.Format = desc.Format;
+            auto texture = m_device->CreateTexture(desc, &clear);
+            if (texture)
+                texture->SetName(name);
+            return texture;
+        });
+
     DLOG(LogRenderer, ELogLevel::Log, "DXRenderManager initialized (renderPath={})",
         RenderPathToString(m_renderPath));
 
@@ -511,6 +522,7 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
     m_renderTarget->AttachTexture(AttachmentPoint::DepthStencil, depthTexture);
 
     CreatePingPongTargets(m_width, m_height);
+    m_temporalHistory.Resize(m_width, m_height);
 
     CommandQueue& directCommandQueue = m_device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
     auto commandList = directCommandQueue.GetCommandList();
@@ -666,7 +678,25 @@ bool DXRenderManager::ImportSceneTargets(RenderGraphTextureUsage colorAndShader,
             motionTexture->GetRenderTargetView(), motionTexture->GetShaderResourceView());
     }
 
+    ImportTemporalHistory();
     return true;
+}
+
+void DXRenderManager::ImportTemporalHistory()
+{
+    if (!m_temporalCameraState.enabled)
+        return;
+
+    m_frameResources.temporalHistory = m_temporalHistory.Import(m_frameGraph);
+    if (!m_frameResources.temporalHistory.read.IsValid())
+        return;
+
+    const auto& readTexture = m_temporalHistory.GetReadTexture();
+    const auto& writeTexture = m_temporalHistory.GetWriteTexture();
+    m_frameBindings.Register(m_frameResources.temporalHistory.read,
+        readTexture->GetRenderTargetView(), readTexture->GetShaderResourceView());
+    m_frameBindings.Register(m_frameResources.temporalHistory.write,
+        writeTexture->GetRenderTargetView(), writeTexture->GetShaderResourceView());
 }
 
 void DXRenderManager::AddMotionVectorResolve()
@@ -1166,6 +1196,10 @@ void DXRenderManager::RenderFrame()
     auto ctx = m_currentContext ? m_currentContext : GetGraphicsContext();
     PostProcessStack* stack = ctx->camera ? ctx->camera->GetPostProcessStack() : nullptr;
 
+    if (!m_temporalCameraState.enabled || m_temporalCameraState.historyResetThisFrame)
+        m_temporalHistory.Invalidate();
+    m_historyWrittenThisFrame = false;
+
     m_frameGraph.Reset();
     BuildFrameGraph(m_pendingSceneDrawCallback, m_pendingTransparentDrawCallback, stack);
     m_frameGraph.Compile();
@@ -1179,6 +1213,7 @@ void DXRenderManager::RenderFrame()
     m_releaseQueue.SetLastSubmittedFence(m_lastSubmittedFence);
     m_device->SetFrameFenceValue(m_lastSubmittedFence);
     m_transientPool.RetireFrame(m_lastSubmittedFence);
+    m_temporalHistory.EndFrame(m_historyWrittenThisFrame);
     m_currentCommandList = nullptr;
     m_currentContext.reset();
 }
@@ -1203,6 +1238,7 @@ void DXRenderManager::Resize(UINT width, UINT height)
     m_viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, static_cast<float>(m_width), static_cast<float>(m_height));
     m_renderTarget->Resize(m_width, m_height);
     CreatePingPongTargets(m_width, m_height);
+    m_temporalHistory.Resize(m_width, m_height);
     m_finalPostProcessSRV = {};
     m_finalPostProcessTexture.reset();
     m_frameGraphDirty = true;
@@ -1247,6 +1283,7 @@ void DXRenderManager::OnDestroy()
     m_pendingTransparentDrawCallback = nullptr;
 
     m_transientPool.Clear();
+    m_temporalHistory.Clear();
     for (PostProcessPass* pass : m_trackedPasses)
     {
         if (pass)

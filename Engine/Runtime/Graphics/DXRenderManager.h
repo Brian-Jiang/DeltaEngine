@@ -28,6 +28,7 @@
 #include "Runtime/Graphics/RenderGraph/TransientTexturePool.h"
 #include "Runtime/Graphics/RenderResourceReleaseQueue.h"
 #include "Runtime/Graphics/RenderPath.h"
+#include "Runtime/Graphics/TemporalHistory.h"
 #include "Runtime/Settings/ShadowAtlasSettings.h"
 #include "Runtime/Graphics/Shadow/ShadowPassManager.h"
 
@@ -92,6 +93,8 @@ struct FrameGraphResources
     RenderGraphTextureHandle velocity;
     /// Single-sample motion vectors for consumers (resolved when MSAA).
     RenderGraphTextureHandle motionVectors;
+    /// Persistent TAA history; only imported while temporal is enabled.
+    TemporalHistoryHandles temporalHistory;
 };
 
 /// Renders the scene to an offscreen render target. Does not own swap chain or window.
@@ -132,6 +135,7 @@ public:
     /** Toggling discards temporal history and restarts the jitter sequence. */
     DELTAENGINE_API void SetTemporalEnabled(bool enabled) { m_temporalCameraState.SetEnabled(enabled); }
     DELTAENGINE_API bool IsTemporalEnabled() const { return m_temporalCameraState.enabled; }
+    DELTAENGINE_API const TemporalHistory& GetTemporalHistory() const { return m_temporalHistory; }
 
 	DELTAENGINE_API void Resize(UINT width, UINT height);
     DELTAENGINE_API void OnDestroy();
@@ -200,6 +204,7 @@ private:
     void AddShadowPasses(RenderGraphTextureUsage depthAndShader);
     void CreateGBufferTextures(RenderGraphTextureUsage gbufferUsage);
     void AddMotionVectorResolve();
+    void ImportTemporalHistory();
     void InitGBufferPipeline();
     bool InitDeferredLightingPipeline();
     void FinalizeNoPostProcessOutput();
@@ -245,6 +250,8 @@ private:
 
     std::optional<ActiveRenderCamera> m_pendingActiveRenderCamera;
     TemporalCameraState m_temporalCameraState;
+    TemporalHistory m_temporalHistory;
+    bool m_historyWrittenThisFrame = false;
     uint64_t m_frameIndex = 0;
 
     IBLBaker m_iblBaker;

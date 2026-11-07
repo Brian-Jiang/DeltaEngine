@@ -11,6 +11,8 @@ set(DELTA_ENGINE_TEST_SOURCES
     Graphics/DXGraphicsContextHardeningTests.cpp
     Graphics/GraphicsStructureTests.cpp
     Graphics/TemporalCameraStateTests.cpp
+    Graphics/TemporalHistoryTests.cpp
+    Graphics/TemporalHistoryRenderGraphCompileTests.cpp
     Graphics/IBLBakerHardeningTests.cpp
     Graphics/LightComponentHardeningTests.cpp
     Graphics/LightProxyHardeningTests.cpp
