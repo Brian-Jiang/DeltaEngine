@@ -75,7 +75,7 @@ TEST(TemporalCameraStateTests, HistoryReset_PrevEqualsCurrentUnjitteredVP)
 
     CameraCB cb{};
     cb.position = XMVectorSet(0, 0, -5, 1);
-    state.FillCameraCB(cb, view, proj);
+    state.FillCameraCB(cb, view, proj, TemporalCameraSource::SceneCamera);
 
     const XMMATRIX expectedPrev = XMMatrixMultiply(view, proj);
     const XMMATRIX boundPrev = XMMatrixTranspose(cb.prevViewProjectionMatrix);
@@ -95,13 +95,13 @@ TEST(TemporalCameraStateTests, SecondFrame_PrevIsPreviousUnjitteredVP)
 
     state.BeginFrame(64, 64);
     CameraCB cb0{};
-    state.FillCameraCB(cb0, view0, proj);
+    state.FillCameraCB(cb0, view0, proj, TemporalCameraSource::SceneCamera);
 
     const XMMATRIX view1 = XMMatrixLookToLH(
         XMVectorSet(1, 0, -5, 1), XMVectorSet(0, 0, 1, 0), XMVectorSet(0, 1, 0, 0));
     state.BeginFrame(64, 64);
     CameraCB cb1{};
-    state.FillCameraCB(cb1, view1, proj);
+    state.FillCameraCB(cb1, view1, proj, TemporalCameraSource::SceneCamera);
 
     const XMMATRIX boundPrev = XMMatrixTranspose(cb1.prevViewProjectionMatrix);
     EXPECT_TRUE(MatrixNearEqual(boundPrev, vp0));
@@ -118,10 +118,159 @@ TEST(TemporalCameraStateTests, Disabled_ZeroJitterAndUnchangedProjection)
     const XMMATRIX view = XMMatrixIdentity();
     const XMMATRIX proj = XMMatrixPerspectiveFovLH(XM_PIDIV4, 1.f, 0.1f, 100.f);
     CameraCB cb{};
-    state.FillCameraCB(cb, view, proj);
+    state.FillCameraCB(cb, view, proj, TemporalCameraSource::SceneCamera);
 
     EXPECT_FLOAT_EQ(cb.jitter.x, 0.f);
     EXPECT_FLOAT_EQ(cb.jitter.y, 0.f);
     EXPECT_TRUE(MatrixNearEqual(XMMatrixTranspose(cb.projectionMatrix), proj));
     EXPECT_TRUE(MatrixNearEqual(XMMatrixTranspose(cb.projectionMatrixUnjittered), proj));
+}
+
+namespace
+{
+constexpr uint32_t kSize = 64;
+
+XMMATRIX TestProjection()
+{
+    return XMMatrixPerspectiveFovLH(XM_PIDIV4, 1.f, 0.1f, 100.f);
+}
+
+XMMATRIX ViewAt(float x, float yawRadians = 0.f)
+{
+    const XMVECTOR forward = XMVectorSet(std::sin(yawRadians), 0, std::cos(yawRadians), 0);
+    return XMMatrixLookToLH(XMVectorSet(x, 0, -5, 1), forward, XMVectorSet(0, 1, 0, 0));
+}
+
+CameraCB RunFrame(TemporalCameraState& state, FXMMATRIX view, TemporalCameraSource source)
+{
+    state.BeginFrame(kSize, kSize);
+    CameraCB cb{};
+    state.FillCameraCB(cb, view, TestProjection(), source);
+    return cb;
+}
+
+void ExpectHistoryDiscarded(const TemporalCameraState& state, const CameraCB& cb, FXMMATRIX view)
+{
+    EXPECT_TRUE(state.historyResetThisFrame);
+    EXPECT_EQ(state.haltonIndex, 0u);
+    EXPECT_TRUE(MatrixNearEqual(XMMatrixTranspose(cb.prevViewProjectionMatrix),
+        XMMatrixMultiply(view, TestProjection())));
+}
+} // namespace
+
+TEST(TemporalCameraStateTests, SetEnabled_On_RequestsResetAndRestartsHalton)
+{
+    TemporalCameraState state;
+    RunFrame(state, ViewAt(0), TemporalCameraSource::SceneCamera);
+    state.haltonIndex = 5;
+
+    state.SetEnabled(true);
+
+    EXPECT_TRUE(state.enabled);
+    EXPECT_TRUE(state.historyReset);
+    EXPECT_EQ(state.haltonIndex, 0u);
+    state.BeginFrame(kSize, kSize);
+    const XMFLOAT2 expected = HaltonJitterNdc(0, kSize, kSize);
+    EXPECT_FLOAT_EQ(state.currentJitter.x, expected.x);
+    EXPECT_FLOAT_EQ(state.currentJitter.y, expected.y);
+}
+
+TEST(TemporalCameraStateTests, SetEnabled_Off_RequestsReset)
+{
+    TemporalCameraState state;
+    state.SetEnabled(true);
+    RunFrame(state, ViewAt(0), TemporalCameraSource::SceneCamera);
+    RunFrame(state, ViewAt(0), TemporalCameraSource::SceneCamera);
+    ASSERT_FALSE(state.historyReset);
+
+    state.SetEnabled(false);
+
+    EXPECT_FALSE(state.enabled);
+    EXPECT_TRUE(state.historyReset);
+    EXPECT_EQ(state.haltonIndex, 0u);
+}
+
+TEST(TemporalCameraStateTests, SetEnabled_SameValue_NoReset)
+{
+    TemporalCameraState state;
+    state.SetEnabled(true);
+    RunFrame(state, ViewAt(0), TemporalCameraSource::SceneCamera);
+    ASSERT_FALSE(state.historyReset);
+    const uint32_t index = state.haltonIndex;
+
+    state.SetEnabled(true);
+
+    EXPECT_FALSE(state.historyReset);
+    EXPECT_EQ(state.haltonIndex, index);
+}
+
+TEST(TemporalCameraStateTests, RequestHistoryReset_RestartsHaltonAtSampleZero)
+{
+    TemporalCameraState state;
+    state.SetEnabled(true);
+    for (int i = 0; i < 3; ++i)
+        RunFrame(state, ViewAt(0), TemporalCameraSource::SceneCamera);
+    ASSERT_EQ(state.haltonIndex, 3u);
+
+    state.RequestHistoryReset();
+    const CameraCB cb = RunFrame(state, ViewAt(0), TemporalCameraSource::SceneCamera);
+
+    const XMFLOAT2 expected = HaltonJitterNdc(0, kSize, kSize);
+    EXPECT_FLOAT_EQ(cb.jitter.x, expected.x);
+    EXPECT_FLOAT_EQ(cb.jitter.y, expected.y);
+    EXPECT_TRUE(state.historyResetThisFrame);
+}
+
+TEST(TemporalCameraStateTests, SourceSwitch_ActiveToScene_ResetsHistory)
+{
+    TemporalCameraState state;
+    state.SetEnabled(true);
+    RunFrame(state, ViewAt(0), TemporalCameraSource::ActiveRenderCamera);
+    RunFrame(state, ViewAt(0), TemporalCameraSource::ActiveRenderCamera);
+    ASSERT_FALSE(state.historyResetThisFrame);
+
+    const XMMATRIX view = ViewAt(0.5f);
+    const CameraCB cb = RunFrame(state, view, TemporalCameraSource::SceneCamera);
+
+    ExpectHistoryDiscarded(state, cb, view);
+    EXPECT_EQ(state.prevSource, TemporalCameraSource::SceneCamera);
+    EXPECT_FALSE(state.historyReset);
+}
+
+TEST(TemporalCameraStateTests, SameSource_SmallMove_KeepsHistory)
+{
+    TemporalCameraState state;
+    state.SetEnabled(true);
+    RunFrame(state, ViewAt(0), TemporalCameraSource::SceneCamera);
+
+    const CameraCB cb = RunFrame(state, ViewAt(1.f, XMConvertToRadians(10.f)), TemporalCameraSource::SceneCamera);
+
+    EXPECT_FALSE(state.historyResetThisFrame);
+    EXPECT_EQ(state.haltonIndex, 2u);
+    EXPECT_TRUE(MatrixNearEqual(XMMatrixTranspose(cb.prevViewProjectionMatrix),
+        XMMatrixMultiply(ViewAt(0), TestProjection())));
+}
+
+TEST(TemporalCameraStateTests, CameraJump_BeyondDistance_ResetsHistory)
+{
+    TemporalCameraState state;
+    state.SetEnabled(true);
+    RunFrame(state, ViewAt(0), TemporalCameraSource::SceneCamera);
+
+    const XMMATRIX view = ViewAt(state.cutDistanceThreshold + 1.f);
+    const CameraCB cb = RunFrame(state, view, TemporalCameraSource::SceneCamera);
+
+    ExpectHistoryDiscarded(state, cb, view);
+}
+
+TEST(TemporalCameraStateTests, CameraJump_BeyondAngle_ResetsHistory)
+{
+    TemporalCameraState state;
+    state.SetEnabled(true);
+    RunFrame(state, ViewAt(0), TemporalCameraSource::SceneCamera);
+
+    const XMMATRIX view = ViewAt(0, state.cutAngleThresholdRadians + XMConvertToRadians(5.f));
+    const CameraCB cb = RunFrame(state, view, TemporalCameraSource::SceneCamera);
+
+    ExpectHistoryDiscarded(state, cb, view);
 }

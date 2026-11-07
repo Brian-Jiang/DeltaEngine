@@ -48,6 +48,7 @@ EditorRenderManager::EditorRenderManager(HWND hwnd, UINT width, UINT height, con
     m_sceneRenderer = std::make_shared<DXRenderManager>(
         m_device, m_offscreenRenderTarget, width, height,
         settings.graphics.renderPath, settings.graphics.shadowAtlas);
+    m_sceneRenderer->SetTemporalEnabled(settings.graphics.temporalAA);
 
     m_imGuiSrvAllocator.Create(*m_device, m_device->CreateShaderVisibleSrvHeap(64));
 

@@ -492,6 +492,7 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
     DefaultTextures::Initialize(*m_device, *commandList);
 
     m_currentWorld = &world;
+    m_temporalCameraState.RequestHistoryReset();
 
     auto context = GetGraphicsContext();
     world.InitRenderers(context);
@@ -573,7 +574,9 @@ void DXRenderManager::PrepareFrame()
         // Incoming ARC builders write centered projection into projectionMatrix.
         const DirectX::XMMATRIX unjitteredProj = DirectX::XMMatrixTranspose(arc.cb.projectionMatrix);
         // Commits manager history; ctx prev/historyReset stay as this frame's bind values for the proxy.
-        m_temporalCameraState.FillCameraCB(arc.cb, unjitteredView, unjitteredProj);
+        m_temporalCameraState.FillCameraCB(arc.cb, unjitteredView, unjitteredProj,
+            TemporalCameraSource::ActiveRenderCamera);
+        ctx->temporalHistoryReset = m_temporalCameraState.historyResetThisFrame;
     }
 
     if (m_currentWorld)

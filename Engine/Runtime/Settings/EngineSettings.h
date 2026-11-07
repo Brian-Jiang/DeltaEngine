@@ -17,6 +17,8 @@ struct GraphicsSettings
 {
     RenderPath renderPath = RenderPath::Deferred;
     bool vsync = false;
+    /** Enables temporal camera jitter + history at startup. */
+    bool temporalAA = false;
     ShadowAtlasSettings shadowAtlas;
 };
 

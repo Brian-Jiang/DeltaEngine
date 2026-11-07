@@ -85,20 +85,22 @@ void CameraRenderProxy::PreGatherDrawCalls(std::shared_ptr<DXGraphicsContext> re
     CameraCB cameraData = {};
     cameraData.position = m_worldMatrix.r[3];
 
-    const XMMATRIX currentUnjitteredVP = XMMatrixMultiply(m_viewMatrix, m_projectionMatrix);
-    const XMFLOAT2 jitter = renderContext->temporalJitterEnabled ? renderContext->temporalJitter
-                                                                 : XMFLOAT2{ 0.f, 0.f };
-    const XMMATRIX prevForFrame = renderContext->temporalHistoryReset
-        ? currentUnjitteredVP
-        : renderContext->prevUnjitteredViewProjection;
-
-    PopulateCameraCBWithTemporal(cameraData, m_viewMatrix, m_projectionMatrix, jitter, prevForFrame);
-
     // When ActiveRenderCamera already committed history in PrepareFrame, skip a second commit.
     if (!renderContext->activeRenderCamera.has_value() && renderContext->renderManager)
     {
-        renderContext->renderManager->GetTemporalCameraState().CommitUnjitteredViewProjection(
-            currentUnjitteredVP);
+        TemporalCameraState& temporal = renderContext->renderManager->GetTemporalCameraState();
+        temporal.FillCameraCB(cameraData, m_viewMatrix, m_projectionMatrix, TemporalCameraSource::SceneCamera);
+        renderContext->temporalHistoryReset = temporal.historyResetThisFrame;
+    }
+    else
+    {
+        const XMMATRIX currentUnjitteredVP = XMMatrixMultiply(m_viewMatrix, m_projectionMatrix);
+        const XMFLOAT2 jitter = renderContext->temporalJitterEnabled ? renderContext->temporalJitter
+                                                                     : XMFLOAT2{ 0.f, 0.f };
+        const XMMATRIX prevForFrame = renderContext->temporalHistoryReset
+            ? currentUnjitteredVP
+            : renderContext->prevUnjitteredViewProjection;
+        PopulateCameraCBWithTemporal(cameraData, m_viewMatrix, m_projectionMatrix, jitter, prevForFrame);
     }
 
     renderContext->commandList->SetGraphicsDynamicConstantBuffer(0, cameraData);

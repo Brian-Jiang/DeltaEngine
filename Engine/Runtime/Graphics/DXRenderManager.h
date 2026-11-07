@@ -121,6 +121,9 @@ public:
     DELTAENGINE_API TemporalCameraState& GetTemporalCameraState() { return m_temporalCameraState; }
     DELTAENGINE_API const TemporalCameraState& GetTemporalCameraState() const { return m_temporalCameraState; }
     DELTAENGINE_API void RequestTemporalHistoryReset() { m_temporalCameraState.RequestHistoryReset(); }
+    /** Toggling discards temporal history and restarts the jitter sequence. */
+    DELTAENGINE_API void SetTemporalEnabled(bool enabled) { m_temporalCameraState.SetEnabled(enabled); }
+    DELTAENGINE_API bool IsTemporalEnabled() const { return m_temporalCameraState.enabled; }
 
 	DELTAENGINE_API void Resize(UINT width, UINT height);
     DELTAENGINE_API void OnDestroy();

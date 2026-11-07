@@ -27,6 +27,16 @@ DELTAENGINE_API void PopulateCameraCBWithTemporal(CameraCB& cb,
     DirectX::XMFLOAT2 jitterNdc,
     DirectX::FXMMATRIX prevUnjitteredViewProjection);
 
+/// Which camera fed the stored temporal history.
+enum class TemporalCameraSource : uint8_t
+{
+    None,
+    /** Per-frame override camera (editor preview / tests). */
+    ActiveRenderCamera,
+    /** In-scene Camera component. */
+    SceneCamera,
+};
+
 /// Per-manager temporal camera jitter state (Halton, prev unjittered VP, history reset).
 struct TemporalCameraState
 {
@@ -36,7 +46,27 @@ struct TemporalCameraState
     DirectX::XMMATRIX prevUnjitteredViewProjection = DirectX::XMMatrixIdentity();
     bool historyReset = true;
 
-    void RequestHistoryReset() { historyReset = true; }
+    /** Reset value actually used by the most recent FillCameraCB (survives the commit). */
+    bool historyResetThisFrame = true;
+
+    TemporalCameraSource prevSource = TemporalCameraSource::None;
+    DirectX::XMFLOAT3 prevCameraPosition{ 0.f, 0.f, 0.f };
+    DirectX::XMFLOAT3 prevCameraForward{ 0.f, 0.f, 1.f };
+
+    /** Camera translation per frame (world units) beyond which history is discarded. */
+    float cutDistanceThreshold = 10.0f;
+    /** Camera rotation per frame (radians) beyond which history is discarded. */
+    float cutAngleThresholdRadians = DirectX::XMConvertToRadians(45.0f);
+
+    /** Discards history and restarts the Halton sequence. */
+    void RequestHistoryReset()
+    {
+        historyReset = true;
+        haltonIndex = 0;
+    }
+
+    /** Requests a history reset when the value changes. */
+    DELTAENGINE_API void SetEnabled(bool value);
 
     /// Advances Halton jitter for this frame from render-target size.
     DELTAENGINE_API void BeginFrame(uint32_t width, uint32_t height);
@@ -45,15 +75,21 @@ struct TemporalCameraState
     DELTAENGINE_API DirectX::XMMATRIX ResolvePrevUnjitteredViewProjection(
         DirectX::FXMMATRIX currentUnjitteredViewProjection) const;
 
-    /// Stores current unjittered VP for the next frame and clears historyReset.
+    /// Stores current unjittered VP and camera pose for the next frame and clears historyReset.
     DELTAENGINE_API void CommitUnjitteredViewProjection(
-        DirectX::FXMMATRIX currentUnjitteredViewProjection);
+        DirectX::FXMMATRIX currentUnjitteredViewProjection,
+        DirectX::CXMMATRIX unjitteredView,
+        TemporalCameraSource source);
 
-    /// Writes jittered CameraCB and commits prev-unjittered-VP history.
+    /// Resets history on camera source switch or cut, writes jittered CameraCB, and commits history.
     /// Preserves cb.position.
     DELTAENGINE_API void FillCameraCB(CameraCB& cb,
         DirectX::FXMMATRIX unjitteredView,
-        DirectX::FXMMATRIX unjitteredProjection);
+        DirectX::CXMMATRIX unjitteredProjection,
+        TemporalCameraSource source);
+
+private:
+    bool DetectCut(DirectX::FXMMATRIX unjitteredView, TemporalCameraSource source) const;
 };
 
 DELTA_ENGINE_NS_END

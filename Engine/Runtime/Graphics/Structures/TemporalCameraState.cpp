@@ -1,5 +1,7 @@
 #include "Graphics/Structures/TemporalCameraState.h"
 
+#include <cmath>
+
 using namespace DeltaEngine;
 using namespace DirectX;
 
@@ -56,6 +58,42 @@ void DeltaEngine::PopulateCameraCBWithTemporal(CameraCB& cb,
     PopulateInvViewProjection(cb);
 }
 
+namespace
+{
+void ExtractCameraPose(FXMMATRIX unjitteredView, XMFLOAT3& outPosition, XMFLOAT3& outForward)
+{
+    const XMMATRIX cameraWorld = XMMatrixInverse(nullptr, unjitteredView);
+    XMStoreFloat3(&outPosition, cameraWorld.r[3]);
+    XMStoreFloat3(&outForward, XMVector3Normalize(cameraWorld.r[2]));
+}
+} // namespace
+
+void TemporalCameraState::SetEnabled(bool value)
+{
+    if (enabled == value)
+        return;
+    enabled = value;
+    RequestHistoryReset();
+}
+
+bool TemporalCameraState::DetectCut(FXMMATRIX unjitteredView, TemporalCameraSource source) const
+{
+    if (prevSource == TemporalCameraSource::None)
+        return false;
+    if (source != prevSource)
+        return true;
+
+    XMFLOAT3 position, forward;
+    ExtractCameraPose(unjitteredView, position, forward);
+
+    const XMVECTOR delta = XMVectorSubtract(XMLoadFloat3(&position), XMLoadFloat3(&prevCameraPosition));
+    if (XMVectorGetX(XMVector3Length(delta)) > cutDistanceThreshold)
+        return true;
+
+    const float cosAngle = XMVectorGetX(XMVector3Dot(XMLoadFloat3(&forward), XMLoadFloat3(&prevCameraForward)));
+    return cosAngle < std::cos(cutAngleThresholdRadians);
+}
+
 void TemporalCameraState::BeginFrame(uint32_t width, uint32_t height)
 {
     if (!enabled || width == 0 || height == 0)
@@ -77,16 +115,25 @@ DirectX::XMMATRIX TemporalCameraState::ResolvePrevUnjitteredViewProjection(
 }
 
 void TemporalCameraState::CommitUnjitteredViewProjection(
-    DirectX::FXMMATRIX currentUnjitteredViewProjection)
+    DirectX::FXMMATRIX currentUnjitteredViewProjection,
+    DirectX::CXMMATRIX unjitteredView,
+    TemporalCameraSource source)
 {
     prevUnjitteredViewProjection = currentUnjitteredViewProjection;
+    ExtractCameraPose(unjitteredView, prevCameraPosition, prevCameraForward);
+    prevSource = source;
     historyReset = false;
 }
 
 void TemporalCameraState::FillCameraCB(CameraCB& cb,
     DirectX::FXMMATRIX unjitteredView,
-    DirectX::FXMMATRIX unjitteredProjection)
+    DirectX::CXMMATRIX unjitteredProjection,
+    TemporalCameraSource source)
 {
+    if (!historyReset && DetectCut(unjitteredView, source))
+        RequestHistoryReset();
+    historyResetThisFrame = historyReset;
+
     const XMVECTOR position = cb.position;
     const XMMATRIX currentUnjitteredVP = XMMatrixMultiply(unjitteredView, unjitteredProjection);
     const XMMATRIX prevForFrame = ResolvePrevUnjitteredViewProjection(currentUnjitteredVP);
@@ -95,5 +142,5 @@ void TemporalCameraState::FillCameraCB(CameraCB& cb,
     PopulateCameraCBWithTemporal(cb, unjitteredView, unjitteredProjection, jitter, prevForFrame);
     cb.position = position;
 
-    CommitUnjitteredViewProjection(currentUnjitteredVP);
+    CommitUnjitteredViewProjection(currentUnjitteredVP, unjitteredView, source);
 }
