@@ -7,9 +7,6 @@
 #include "Runtime/Core/DMesh.h"
 #include "Runtime/Graphics/Renderer/MeshRenderer.h"
 #include "Runtime/Graphics/Structures/TemporalCameraState.h"
-#include "Runtime/Graphics/Structures/Vertex.h"
-#include "Runtime/Reflection/DClass.h"
-#include "Runtime/Reflection/DProperty.h"
 
 #include <DirectXMath.h>
 #include <gtest/gtest.h>
@@ -93,51 +90,6 @@ void ExpectMotionNear(const GpuReadbackPixel& actual, const XMFLOAT2 expected, c
     EXPECT_NEAR(actual.g, expected.y, tolerance) << where;
 }
 
-DMesh* GetRendererMesh(MeshRenderer* renderer)
-{
-    DClass* cls = renderer ? renderer->GetClass() : nullptr;
-    DProperty* meshProp = cls ? cls->FindPropertyByName("m_mesh") : nullptr;
-    void* value = meshProp ? meshProp->GetValue(renderer) : nullptr;
-    return value ? *static_cast<DMesh**>(value) : nullptr;
-}
-
-float MeshBoundingRadius(MeshRenderer* renderer)
-{
-    DMesh* mesh = GetRendererMesh(renderer);
-    if (!mesh)
-        return 0.0f;
-
-    float radius = 0.0f;
-    for (const auto& submesh : mesh->GetVertices())
-    {
-        for (const Vertex& vertex : submesh)
-        {
-            const XMVECTOR p = XMLoadFloat3(&vertex.position);
-            radius = (std::max)(radius, XMVectorGetX(XMVector3Length(p)));
-        }
-    }
-    const XMMATRIX world = renderer->GetWorldTransform();
-    return radius * XMVectorGetX(XMVector3Length(world.r[0]));
-}
-
-/** Opaque sphere at world radius 1 (the shared source mesh has radius 100 and a Transparent material). */
-MeshRenderer* AddUnitSphere(GpuSceneBuilder& builder, const char* name, const float x = 0.0f, const float y = 0.0f,
-    const float z = 0.0f)
-{
-    MeshRenderer* sphere = builder.AddSphereMesh(name, x, y, z);
-    const float meshRadius = MeshBoundingRadius(sphere);
-    if (!sphere || meshRadius <= 0.0f)
-        return nullptr;
-    DMesh* mesh = GetRendererMesh(sphere);
-    DMaterial* material = mesh ? mesh->GetMaterial(0) : nullptr;
-    if (!material)
-        return nullptr;
-    material->SetRenderMode(ERenderMode::Opaque);
-    const float scale = 1.0f / meshRadius;
-    sphere->SetLocalScale(scale, scale, scale);
-    return sphere;
-}
-
 std::pair<uint32_t, uint32_t> UvToPixel(const XMFLOAT2 uv, const GpuReadbackImage& image)
 {
     const auto clampToImage = [](const float value, const uint32_t size)
@@ -200,7 +152,7 @@ TEST_P(GpuMotionVectorTests, StaticThenRotatedThenTranslatedCamera_MotionMatches
 
     GpuSceneBuilder builder(GetEngine(), GetAssetDatabase());
     ASSERT_NO_FATAL_FAILURE(BuildScene(builder, withSkybox));
-    MeshRenderer* sphere = AddUnitSphere(builder, "Sphere");
+    MeshRenderer* sphere = builder.AddOpaqueUnitSphere("Sphere");
     ASSERT_NE(sphere, nullptr);
     const float radius = MeshBoundingRadius(sphere);
     ASSERT_GT(radius, 0.0f);
@@ -264,8 +216,8 @@ TEST_P(GpuMotionVectorTests, OneObjectMoved_OnlyItsPixelsHaveMotion)
 
     GpuSceneBuilder builder(GetEngine(), GetAssetDatabase());
     ASSERT_NO_FATAL_FAILURE(BuildScene(builder, false));
-    MeshRenderer* staticSphere = AddUnitSphere(builder, "StaticSphere", -kOffsetX, 0.0f, 0.0f);
-    MeshRenderer* movingSphere = AddUnitSphere(builder, "MovingSphere", kOffsetX, 0.0f, 0.0f);
+    MeshRenderer* staticSphere = builder.AddOpaqueUnitSphere("StaticSphere", -kOffsetX, 0.0f, 0.0f);
+    MeshRenderer* movingSphere = builder.AddOpaqueUnitSphere("MovingSphere", kOffsetX, 0.0f, 0.0f);
     ASSERT_NE(staticSphere, nullptr);
     ASSERT_NE(movingSphere, nullptr);
     const float radius = MeshBoundingRadius(movingSphere);
@@ -313,7 +265,7 @@ TEST_P(GpuMotionVectorTests, TransparentObjectMoved_WritesNoMotion)
 {
     GpuSceneBuilder builder(GetEngine(), GetAssetDatabase());
     ASSERT_NO_FATAL_FAILURE(BuildScene(builder, false));
-    MeshRenderer* sphere = AddUnitSphere(builder, "GlassSphere");
+    MeshRenderer* sphere = builder.AddOpaqueUnitSphere("GlassSphere");
     ASSERT_NE(sphere, nullptr);
     DMesh* mesh = GetRendererMesh(sphere);
     ASSERT_NE(mesh, nullptr);

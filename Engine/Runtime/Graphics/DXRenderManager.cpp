@@ -30,6 +30,7 @@
 #include "Runtime/Graphics/RenderGraph/TransparentRenderGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/GBufferRenderGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/DeferredLightingGraphPass.h"
+#include "Runtime/Graphics/RenderGraph/TemporalResolveGraphPass.h"
 #include "Runtime/Graphics/ShaderCompile.h"
 #include "Runtime/Graphics/Structures/GBufferRootParameterType.h"
 #include "Runtime/Graphics/Structures/DeferredLightingRootParameterType.h"
@@ -53,6 +54,12 @@
 using namespace Microsoft::WRL;
 using namespace DeltaEngine;
 using namespace DirectX;
+
+namespace
+{
+/** Weight of the current frame in the TAA exponential moving average. */
+constexpr float kTemporalBlendFactor = 0.1f;
+}
 
 DXRenderManager::DXRenderManager(std::shared_ptr<Device> device, std::shared_ptr<RenderTarget> renderTarget, UINT width, UINT height,
     RenderPath renderPath, const ShadowAtlasSettings& shadowAtlas)
@@ -465,7 +472,8 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
 
     // Check the best multisample quality level that can be used for the given back buffer format.
     DXGI_SAMPLE_DESC sampleDesc{};
-    if (m_renderPath == RenderPath::Forward)
+    // TAA replaces MSAA: forward targets are single-sample while temporal is on.
+    if (m_renderPath == RenderPath::Forward && !m_temporalCameraState.enabled)
     {
         // Color and motion share one PSO sample desc, so pick one valid for both formats.
         sampleDesc = m_device->GetMultisampleQualityLevels(backBufferFormat);
@@ -478,9 +486,9 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
         sampleDesc = { 1, 0 };
 
     // Typeless depth gets both a D32_FLOAT DSV and an R32_FLOAT SRV (needed by the deferred
-    // graph to sample scene depth); CreateViews only supports typeless depth for non-MSAA.
+    // graph and TAA to sample scene depth); CreateViews only supports typeless depth for non-MSAA.
     DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT;
-    if (m_renderPath == RenderPath::Deferred && sampleDesc.Count == 1)
+    if (sampleDesc.Count == 1)
         depthBufferFormat = DXGI_FORMAT_R32_TYPELESS;
 
     // Create an off-screen render target with a single color buffer and a depth buffer.
@@ -539,6 +547,18 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
     directCommandQueue.ExecuteCommandList(m_currentCommandList);
     m_currentCommandList = nullptr;
     m_currentContext.reset();
+}
+
+void DXRenderManager::SetTemporalEnabled(bool enabled)
+{
+    const bool changed = m_temporalCameraState.enabled != enabled;
+    m_temporalCameraState.SetEnabled(enabled);
+    if (!changed || m_renderPath != RenderPath::Forward || !m_currentWorld)
+        return;
+
+    // Scene target sample count and the PSOs baked against it depend on the temporal state.
+    m_device->Flush();
+    InitWorldRenderers(*m_currentWorld);
 }
 
 void DXRenderManager::SetPendingActiveRenderCamera(std::optional<ActiveRenderCamera> camera)
@@ -824,13 +844,56 @@ void DXRenderManager::AddShadowSceneSkyboxPasses(const SceneDrawCallback& opaque
     AddMotionVectorResolve();
 }
 
-void DXRenderManager::FinalizeNoPostProcessOutput()
+RenderGraphTextureHandle DXRenderManager::AddTemporalResolve(RenderGraphTextureHandle colorInput)
 {
-    m_frameGraph.AddPass(std::make_unique<PostProcessFinalizeGraphPass>(m_frameResources.sceneColor));
-    m_frameResources.finalOutput = m_frameResources.sceneColor;
-    m_finalPostProcessSRV = m_frameBindings.SrvFor(m_frameResources.sceneColor);
-    m_hasPostProcessedOutput = false;
-    m_finalPostProcessTexture.reset();
+    const TemporalHistoryHandles& history = m_frameResources.temporalHistory;
+    if (!m_temporalCameraState.enabled || !history.read.IsValid() || !history.write.IsValid()
+        || !m_frameResources.motionVectors.IsValid())
+        return colorInput;
+
+    const auto colorTexture = m_frameGraph.GetImportedTexture(colorInput).texture;
+    if (!colorTexture || colorTexture->GetD3D12ResourceDesc().SampleDesc.Count != 1)
+        return colorInput;
+
+    TemporalResolveGraphPass::Inputs inputs;
+    inputs.color = colorInput;
+    inputs.historyRead = history.read;
+    inputs.historyWrite = history.write;
+    inputs.motionVectors = m_frameResources.motionVectors;
+    inputs.depth = m_frameResources.sceneDepth;
+    inputs.colorSrv = m_frameBindings.SrvFor(colorInput);
+    inputs.historySrv = m_frameBindings.SrvFor(history.read);
+    inputs.motionSrv = m_frameBindings.SrvFor(m_frameResources.motionVectors);
+    inputs.depthSrv = m_frameBindings.SrvFor(m_frameResources.sceneDepth);
+    inputs.historyRtv = m_frameBindings.RtvFor(history.write);
+    if (inputs.colorSrv.ptr == 0 || inputs.historySrv.ptr == 0 || inputs.motionSrv.ptr == 0
+        || inputs.depthSrv.ptr == 0 || inputs.historyRtv.ptr == 0)
+        return colorInput;
+
+    if (!m_temporalResolve.Ensure(*m_device))
+        return colorInput;
+
+    const XMFLOAT2 jitter = m_temporalCameraState.currentJitter;
+    TemporalResolveConstants constants;
+    constants.jitterUv = { jitter.x * 0.5f, -jitter.y * 0.5f };
+    constants.texelSize = { 1.0f / static_cast<float>(m_width), 1.0f / static_cast<float>(m_height) };
+    constants.blendFactor = kTemporalBlendFactor;
+    constants.historyValid = m_temporalHistory.IsValid() ? 1u : 0u;
+
+    m_frameGraph.AddPass(std::make_unique<TemporalResolveGraphPass>(
+        inputs, constants, m_viewport, m_scissorRect, &m_temporalResolve));
+    m_historyWrittenThisFrame = true;
+    return history.write;
+}
+
+void DXRenderManager::FinalizeNoPostProcessOutput(RenderGraphTextureHandle output)
+{
+    m_frameGraph.AddPass(std::make_unique<PostProcessFinalizeGraphPass>(output));
+    m_frameResources.finalOutput = output;
+    m_finalPostProcessSRV = m_frameBindings.SrvFor(output);
+    // Anything other than the scene render target is surfaced like post-processed output.
+    m_hasPostProcessedOutput = output != m_frameResources.sceneColor;
+    m_finalPostProcessTexture = m_hasPostProcessedOutput ? m_frameGraph.GetImportedTexture(output).texture : nullptr;
 }
 
 void DXRenderManager::AppendPostProcessChain(PostProcessStack* stack, RenderGraphTextureHandle postInputHandle,
@@ -877,24 +940,29 @@ void DXRenderManager::BuildForwardFrameGraph(const SceneDrawCallback& opaqueDraw
     const RenderGraphTextureUsage depthAndShader =
         RenderGraphTextureUsage::DepthAttachment | RenderGraphTextureUsage::ShaderResource;
 
+    // TAA reads scene depth; the non-temporal path keeps depth attachment-only.
+    const RenderGraphTextureUsage sceneDepthUsage =
+        m_temporalCameraState.enabled ? depthAndShader : RenderGraphTextureUsage::DepthAttachment;
+
     std::shared_ptr<DirectX12Texture> colorTexture;
     std::shared_ptr<DirectX12Texture> depthTexture;
-    if (!ImportSceneTargets(colorAndShader, RenderGraphTextureUsage::DepthAttachment, colorTexture, depthTexture))
+    if (!ImportSceneTargets(colorAndShader, sceneDepthUsage, colorTexture, depthTexture))
         return;
 
     const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
     AddShadowSceneSkyboxPasses(opaqueDrawCallback, transparentDrawCallback, clearColor, depthAndShader);
 
+    const RenderGraphTextureHandle sceneOutput = AddTemporalResolve(m_frameResources.sceneColor);
     if (!stack || stack->GetPassCount() == 0)
     {
-        FinalizeNoPostProcessOutput();
+        FinalizeNoPostProcessOutput(sceneOutput);
         return;
     }
 
-    RenderGraphTextureHandle postInputHandle = m_frameResources.sceneColor;
+    RenderGraphTextureHandle postInputHandle = sceneOutput;
 
     const auto sceneDesc = colorTexture->GetD3D12ResourceDesc();
-    const bool useResolvedScene = sceneDesc.SampleDesc.Count > 1;
+    const bool useResolvedScene = sceneOutput == m_frameResources.sceneColor && sceneDesc.SampleDesc.Count > 1;
     if (useResolvedScene)
     {
         const auto resolvedDesc = CD3DX12_RESOURCE_DESC::Tex2D(
@@ -994,13 +1062,14 @@ void DXRenderManager::BuildDeferredFrameGraph(const SceneDrawCallback& opaqueDra
 
     AddMotionVectorResolve();
 
+    const RenderGraphTextureHandle sceneOutput = AddTemporalResolve(m_frameResources.sceneColor);
     if (!stack || stack->GetPassCount() == 0)
     {
-        FinalizeNoPostProcessOutput();
+        FinalizeNoPostProcessOutput(sceneOutput);
         return;
     }
 
-    AppendPostProcessChain(stack, m_frameResources.sceneColor, colorAndShader);
+    AppendPostProcessChain(stack, sceneOutput, colorAndShader);
 }
 
 void DXRenderManager::ExecuteBootstrapSceneFallback(DXGraphicsContext& ctx,
@@ -1284,6 +1353,7 @@ void DXRenderManager::OnDestroy()
 
     m_transientPool.Clear();
     m_temporalHistory.Clear();
+    m_temporalResolve.Shutdown();
     for (PostProcessPass* pass : m_trackedPasses)
     {
         if (pass)

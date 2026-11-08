@@ -68,6 +68,7 @@ TEST_F(GpuTemporalResetTests, Resize_RecreatesHistoryTexturesAndSetsReset)
     EXPECT_FALSE(history.IsValid());
     EXPECT_TRUE(renderManager.GetTemporalCameraState().historyReset);
 
+    // The reset frame copies the current frame into history, so the next frame can use it.
     RenderSceneFrame();
-    EXPECT_FALSE(history.IsValid());
+    EXPECT_TRUE(history.IsValid());
 }

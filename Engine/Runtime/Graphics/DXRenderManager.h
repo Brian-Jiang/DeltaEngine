@@ -29,6 +29,7 @@
 #include "Runtime/Graphics/RenderResourceReleaseQueue.h"
 #include "Runtime/Graphics/RenderPath.h"
 #include "Runtime/Graphics/TemporalHistory.h"
+#include "Runtime/Graphics/TemporalResolvePipeline.h"
 #include "Runtime/Settings/ShadowAtlasSettings.h"
 #include "Runtime/Graphics/Shadow/ShadowPassManager.h"
 
@@ -132,10 +133,13 @@ public:
     DELTAENGINE_API TemporalCameraState& GetTemporalCameraState() { return m_temporalCameraState; }
     DELTAENGINE_API const TemporalCameraState& GetTemporalCameraState() const { return m_temporalCameraState; }
     DELTAENGINE_API void RequestTemporalHistoryReset() { m_temporalCameraState.RequestHistoryReset(); }
-    /** Toggling discards temporal history and restarts the jitter sequence. */
-    DELTAENGINE_API void SetTemporalEnabled(bool enabled) { m_temporalCameraState.SetEnabled(enabled); }
+    /** Toggling discards history and restarts jitter; on the forward path it also rebuilds scene targets
+     *  (no MSAA while temporal is on). Do not call between PrepareFrame and RenderFrame. **/
+    DELTAENGINE_API void SetTemporalEnabled(bool enabled);
     DELTAENGINE_API bool IsTemporalEnabled() const { return m_temporalCameraState.enabled; }
     DELTAENGINE_API const TemporalHistory& GetTemporalHistory() const { return m_temporalHistory; }
+    /** Graph built for the last rendered frame. */
+    DELTAENGINE_API const RenderGraph& GetFrameGraph() const { return m_frameGraph; }
 
 	DELTAENGINE_API void Resize(UINT width, UINT height);
     DELTAENGINE_API void OnDestroy();
@@ -205,9 +209,10 @@ private:
     void CreateGBufferTextures(RenderGraphTextureUsage gbufferUsage);
     void AddMotionVectorResolve();
     void ImportTemporalHistory();
+    RenderGraphTextureHandle AddTemporalResolve(RenderGraphTextureHandle colorInput);
     void InitGBufferPipeline();
     bool InitDeferredLightingPipeline();
-    void FinalizeNoPostProcessOutput();
+    void FinalizeNoPostProcessOutput(RenderGraphTextureHandle output);
     void AppendPostProcessChain(PostProcessStack* stack, RenderGraphTextureHandle postInputHandle,
         RenderGraphTextureUsage colorAndShader);
     void ExecuteFrameGraph(DXGraphicsContext& ctx, const SceneDrawCallback& drawCallback);
@@ -251,6 +256,7 @@ private:
     std::optional<ActiveRenderCamera> m_pendingActiveRenderCamera;
     TemporalCameraState m_temporalCameraState;
     TemporalHistory m_temporalHistory;
+    TemporalResolvePipeline m_temporalResolve;
     bool m_historyWrittenThisFrame = false;
     uint64_t m_frameIndex = 0;
 
