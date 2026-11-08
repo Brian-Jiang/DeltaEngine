@@ -203,11 +203,31 @@ Frame rendering is structured as a `RenderGraph` of `RenderGraphPass` instances.
 | `SkyboxRenderGraphPass` | Skybox draw after scene |
 | `PostProcessRenderGraphPass` | Runs `PostProcessStack` passes |
 | `PostProcessFinalizeGraphPass` | Final blit to swap-chain target |
-| `MsaaResolveGraphPass` | MSAA resolve step |
+| `MsaaResolveGraphPass` | MSAA resolve step (also resolves the motion-vector target when MSAA is on) |
+| `TemporalResolveGraphPass` | TAA resolve (`TAA.slang`): reprojects history along motion vectors, neighbourhood-clamps it, blends with the current frame (`blendFactor` 0.1) into the history write texture; runs after transparents, before the post-process stack |
+| `TemporalSharpenGraphPass` | Contrast-clamped unsharp mask on the TAA output (`TAASharpen.slang`); only added when sharpness > 0 |
 
 **Adding a new pass:** subclass `RenderGraphPass`, declare reads/writes in `Setup()`, record commands in `Execute()`. Do not manually insert resource barriers — the graph handles them.
 
 **Deferred rendering shaders:** `GBuffer.slang` (G-Buffer fill) and `DeferredLighting.slang` (lighting resolve) are the deferred shader pair, alongside the existing PBR and Standard sets.
+
+### Temporal Anti-Aliasing (`Engine/Runtime/Graphics/`)
+
+Frame order: jittered scene draw (writes color + motion) → motion-vector MSAA resolve → `TemporalResolveGraphPass` → optional `TemporalSharpenGraphPass` → post-process stack / finalize. All TAA state is owned by `DXRenderManager`.
+
+| Type | Role |
+|---|---|
+| `TemporalCameraState` (`Structures/TemporalCameraState.h`) | Camera half: Halton(2,3) 8-sample jitter (`BeginFrame`), previous unjittered view·projection, cut detection (translation > 10 units or rotation > 45° per frame, or camera source switch), `RequestHistoryReset()`. `FillCameraCB` writes the jittered `CameraCB` and commits history; `historyResetThisFrame` reports the reset actually used. |
+| `MeshRenderProxy` per-object motion | Keeps `m_prevWorldMatrix`, fed to `ObjectCB::prevWorldMatrix`; `AdvanceTemporalFrame(frameIndex, reset)` commits once per frame; `UpdateWorldTransform(m, teleport=true)` or `RequestTemporalHistoryReset()` suppresses motion for that move. |
+| Motion-vector target | `kMotionVectorFormat` = `R16G16_FLOAT`, UV-space (current UV − previous UV). Written as RT1 by scene / GBuffer / skybox passes (`velocity` at scene sample count; `gbufferVelocity` on deferred); transparent materials mask RT1 off. `motionVectors` is the single-sample result; `GetMotionVectorTexture()` exposes it. |
+| `TemporalHistory` (`TemporalHistory.h`) | Two persistent `R16G16B16A16_FLOAT` textures outside the transient pool; read/write roles swap in `EndFrame(historyWritten)`. Imported into the graph only while TAA is on. `Resize` recreates them; `Invalidate()` discards history. |
+| `TemporalResolvePipeline` | Persistent root signature + PSOs for `TAA.slang` / `TAASharpen.slang`; lazy `Ensure` / `EnsureSharpen`, failures not retried until `Shutdown`. Root constants: `TemporalResolveConstants` (jitterUv, texelSize, blendFactor, historyValid), `TemporalSharpenConstants`. |
+
+**`CameraCB` temporal fields** (`Structures/Camera.h`, mirrored in `StandardConstantStructs.slang`): `projectionMatrix` is jittered while TAA is on; added `projectionMatrixUnjittered`, `prevViewProjectionMatrix` (previous unjittered VP; equals current VP on reset), `jitter` (NDC), and `mipBias` (`kNativeTemporalMipBias` = −0.5 under TAA, else 0).
+
+**History reset:** history is invalidated on toggle, resize, camera cut / source switch, explicit `RequestTemporalHistoryReset()` (editor: immediate `SetViewportCamera`, preview FOV/near/far edits), and any frame that did not write history.
+
+**Toggle:** `DXRenderManager::SetTemporalEnabled(bool)` (not between `PrepareFrame` and `RenderFrame`; on forward rebuilds scene targets, MSAA is forced off) and `SetTemporalSharpness(0..1)`. Startup defaults come from `EngineSettings.graphics.temporalAA` / `temporalSharpness` (`Settings/EngineSettings.json`). In the editor, `EditorRenderSettings` (toolbar TAA dropdown, MCP `SetTemporalAA`) is applied each frame by `EditorRenderManager::ApplyEditorRenderSettings()`.
 
 ### Rendering Components (`Engine/Runtime/Graphics/Renderer/`)
 
