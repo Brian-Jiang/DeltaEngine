@@ -2,6 +2,7 @@
 
 #include "EditorIncludes.h"
 
+#include "Editor/EditorRenderSettings.h"
 #include "Runtime/Core/DObject.h"
 #include "Runtime/Core/UUID.h"
 
@@ -84,6 +85,8 @@ public:
 
     DELTAEDITOR_API McpRegistry* GetMcpRegistry() { return m_mcpRegistry.get(); }
     DELTAEDITOR_API EditorAnimationManager* GetAnimationManager() { return m_animationManager.get(); }
+    EditorRenderSettings& GetRenderSettings() { return m_renderSettings; }
+    const EditorRenderSettings& GetRenderSettings() const { return m_renderSettings; }
 
 private:
     std::unique_ptr<EditorAssetDatabase> m_assetDatabase;
@@ -106,6 +109,7 @@ private:
     std::unique_ptr<EditorAnimationManager> m_animationManager;
     bool m_headless = false;
     std::filesystem::path m_assetRoot;
+    EditorRenderSettings m_renderSettings;
 };
 
 DELTA_ENGINE_NS_END

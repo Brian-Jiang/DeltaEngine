@@ -16,5 +16,7 @@ public struct PBRPSInput
     public float4 tangentWS  : TANGENT;
     public float2 uv         : TEXCOORD;
     public float3 positionWS : TEXCOORD1;
+    public float4 curClip    : TEXCOORD2;
+    public float4 prevClip   : TEXCOORD3;
     public float4 position   : SV_POSITION;
 };

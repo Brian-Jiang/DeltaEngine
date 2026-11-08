@@ -20,6 +20,10 @@
           "required": false
         }
       }
+    },
+    "temporal_aa": {
+      "description": "TAA state: enabled and sharpness as requested by the editor; with a live renderer also active, msaa_requested, scene_sample_count and mip_bias",
+      "params": {}
     }
   },
   "commands": {
@@ -47,7 +51,24 @@
           "type": "float",
           "default": 1.0,
           "required": false,
-          "description": "Tween duration in seconds. Defaults to 1.0 (animated); <= 0 = immediate."
+          "description": "Tween duration in seconds. Defaults to 1.0 (animated); <= 0 = immediate. An immediate move discards TAA history."
+        }
+      }
+    },
+    "SetTemporalAA": {
+      "description": "Enable or disable temporal anti-aliasing for the editor viewport. MSAA is turned off while TAA is on.",
+      "undoable": false,
+      "expects_result": false,
+      "expects_result_note": "Applied by the renderer at the start of the next frame. Editor-only state; not undoable.",
+      "params": {
+        "enabled": {
+          "type": "bool",
+          "required": true
+        },
+        "sharpness": {
+          "type": "float",
+          "required": false,
+          "description": "Post-resolve sharpen strength, clamped to [0, 1]; 0 disables it. Left unchanged when omitted."
         }
       }
     }

@@ -10,6 +10,9 @@ set(DELTA_ENGINE_TEST_SOURCES
     Graphics/DefaultTexturesHardeningTests.cpp
     Graphics/DXGraphicsContextHardeningTests.cpp
     Graphics/GraphicsStructureTests.cpp
+    Graphics/TemporalCameraStateTests.cpp
+    Graphics/TemporalHistoryTests.cpp
+    Graphics/TemporalHistoryRenderGraphCompileTests.cpp
     Graphics/IBLBakerHardeningTests.cpp
     Graphics/LightComponentHardeningTests.cpp
     Graphics/LightProxyHardeningTests.cpp
@@ -36,6 +39,9 @@ set(DELTA_ENGINE_TEST_SOURCES
     Graphics/Gpu/GpuMeshAndShadowTests.cpp
     Graphics/Gpu/GpuPostProcessTests.cpp
     Graphics/Gpu/GpuTransparentRenderTests.cpp
+    Graphics/Gpu/GpuTemporalResetTests.cpp
+    Graphics/Gpu/GpuMotionVectorTests.cpp
+    Graphics/Gpu/GpuTemporalResolveTests.cpp
     Graphics/GBufferRenderGraphCompileTests.cpp
     Graphics/RenderPathGraphCompileTests.cpp
     Graphics/RenderGraphCompileTests.cpp

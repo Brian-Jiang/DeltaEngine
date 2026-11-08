@@ -203,11 +203,31 @@ Frame rendering is structured as a `RenderGraph` of `RenderGraphPass` instances.
 | `SkyboxRenderGraphPass` | Skybox draw after scene |
 | `PostProcessRenderGraphPass` | Runs `PostProcessStack` passes |
 | `PostProcessFinalizeGraphPass` | Final blit to swap-chain target |
-| `MsaaResolveGraphPass` | MSAA resolve step |
+| `MsaaResolveGraphPass` | MSAA resolve step (also resolves the motion-vector target when MSAA is on) |
+| `TemporalResolveGraphPass` | TAA resolve (`TAA.slang`): reprojects history along motion vectors, neighbourhood-clamps it, blends with the current frame (`blendFactor` 0.1) into the history write texture; runs after transparents, before the post-process stack |
+| `TemporalSharpenGraphPass` | Contrast-clamped unsharp mask on the TAA output (`TAASharpen.slang`); only added when sharpness > 0 |
 
 **Adding a new pass:** subclass `RenderGraphPass`, declare reads/writes in `Setup()`, record commands in `Execute()`. Do not manually insert resource barriers — the graph handles them.
 
 **Deferred rendering shaders:** `GBuffer.slang` (G-Buffer fill) and `DeferredLighting.slang` (lighting resolve) are the deferred shader pair, alongside the existing PBR and Standard sets.
+
+### Temporal Anti-Aliasing (`Engine/Runtime/Graphics/`)
+
+Frame order: jittered scene draw (writes color + motion) → motion-vector MSAA resolve → `TemporalResolveGraphPass` → optional `TemporalSharpenGraphPass` → post-process stack / finalize. All TAA state is owned by `DXRenderManager`.
+
+| Type | Role |
+|---|---|
+| `TemporalCameraState` (`Structures/TemporalCameraState.h`) | Camera half: Halton(2,3) 8-sample jitter (`BeginFrame`), previous unjittered view·projection, cut detection (translation > 10 units or rotation > 45° per frame, or camera source switch), `RequestHistoryReset()`. `FillCameraCB` writes the jittered `CameraCB` and commits history; `historyResetThisFrame` reports the reset actually used. |
+| `MeshRenderProxy` per-object motion | Keeps `m_prevWorldMatrix`, fed to `ObjectCB::prevWorldMatrix`; `AdvanceTemporalFrame(frameIndex, reset)` commits once per frame; `UpdateWorldTransform(m, teleport=true)` or `RequestTemporalHistoryReset()` suppresses motion for that move. |
+| Motion-vector target | `kMotionVectorFormat` = `R16G16_FLOAT`, UV-space (current UV − previous UV). Written as RT1 by scene / GBuffer / skybox passes (`velocity` at scene sample count; `gbufferVelocity` on deferred); transparent materials mask RT1 off. `motionVectors` is the single-sample result; `GetMotionVectorTexture()` exposes it. |
+| `TemporalHistory` (`TemporalHistory.h`) | Two persistent `R16G16B16A16_FLOAT` textures outside the transient pool; read/write roles swap in `EndFrame(historyWritten)`. Imported into the graph only while TAA is on. `Resize` recreates them; `Invalidate()` discards history. |
+| `TemporalResolvePipeline` | Persistent root signature + PSOs for `TAA.slang` / `TAASharpen.slang`; lazy `Ensure` / `EnsureSharpen`, failures not retried until `Shutdown`. Root constants: `TemporalResolveConstants` (jitterUv, texelSize, blendFactor, historyValid), `TemporalSharpenConstants`. |
+
+**`CameraCB` temporal fields** (`Structures/Camera.h`, mirrored in `StandardConstantStructs.slang`): `projectionMatrix` is jittered while TAA is on; added `projectionMatrixUnjittered`, `prevViewProjectionMatrix` (previous unjittered VP; equals current VP on reset), `jitter` (NDC), and `mipBias` (`kNativeTemporalMipBias` = −0.5 under TAA, else 0).
+
+**History reset:** history is invalidated on toggle, resize, camera cut / source switch, explicit `RequestTemporalHistoryReset()` (editor: immediate `SetViewportCamera`, preview FOV/near/far edits), and any frame that did not write history.
+
+**Toggle:** `DXRenderManager::SetTemporalEnabled(bool)` (not between `PrepareFrame` and `RenderFrame`; on forward rebuilds scene targets, MSAA is forced off) and `SetTemporalSharpness(0..1)`. Startup defaults come from `EngineSettings.graphics.temporalAA` / `temporalSharpness` (`Settings/EngineSettings.json`). In the editor, `EditorRenderSettings` (toolbar TAA dropdown, MCP `SetTemporalAA`) is applied each frame by `EditorRenderManager::ApplyEditorRenderSettings()`.
 
 ### Rendering Components (`Engine/Runtime/Graphics/Renderer/`)
 
@@ -322,6 +342,7 @@ DeltaEngine ships a full MCP bridge that lets AI agents (Claude Code, etc.) quer
 - **Systems** (`Engine/Editor/Mcp/Systems/`): `McpSceneSystem`, `McpAssetsSystem`, `McpReflectionSystem`, `McpSelectionSystem`, `McpUndoSystem`, `McpViewportSystem`, `McpProjectSystem`, `McpMetaSystem`, `McpCommonSystem`, `McpLightsSystem`.
 - **Transform commands** in `McpSceneSystem` are per-channel: `SetPosition`, `SetRotation`, `SetScale`. Each writes the matching decomposed `SceneComponent` property (`m_localPosition` / `m_localRotation` or `m_localEulerAngles` / `m_localScale`) through `EditorCommand_SetProperty`. Each accepts an optional `duration_seconds` for tweened animation, defaulting to `kDefaultAnimationDurationSeconds` (1.0); `duration_seconds <= 0` applies immediately. There is no bulk `SetTransform` command. `SetPosition` / `SetRotation` take `space` (`local`/`world`); `SetScale` is local-only. `SetRotation` accepts a 4-element quaternion or a 3-element euler triple **in degrees** — a local-space euler is written to `m_localEulerAngles` verbatim so the caller's angles survive round-tripping.
 - **Transform queries** `get_position` / `get_rotation` / `get_scale` read one channel with a `space` (`local`/`world`) option; `get_rotation` returns both `quaternion` and `euler` (degrees). The generic `component` query still returns all four decomposed properties.
+- **TAA control** — `viewport.temporal_aa` query and `SetTemporalAA {enabled, sharpness?}` command write `EditorRenderSettings` (owned by `EditorCore`, also driven by the toolbar's TAA dropdown); `EditorRenderManager` applies it to `DXRenderManager` before `PrepareFrame`. MSAA is off while TAA is on, material textures sample with `CameraCB.mipBias` (−0.5 under TAA), and a `TemporalSharpen` pass follows `TemporalResolve` when sharpness > 0. An immediate `SetViewportCamera` or a preview FOV/near/far edit discards TAA history.
 - **Light intensity animation** in `McpLightsSystem` uses `SetIntensity` with the same `duration_seconds` pattern. Easing is fixed at `CubicEaseOut` (`TransformAnimationTypes.h`) — there is no `easing` parameter.
 - **`EditorAnimationManager`** (`Engine/Editor/Animation/`) is owned by `EditorCore` and ticked between `EngineMain::Tick()` and `RenderFrame()`. It manages in-flight tween instances (`EditorAnimationInstance`) and per-object transform sessions (`TransformAnimationSession`). When every channel of a transform session finishes it commits one `EditorCommand_SetProperty` per participating decomposed property, batched into a single `"Animate Transform"` undo entry; scalar channels (intensity / other floats) commit individually. Not created in headless mode; `StartTransformChannelAnimation` then applies the target value and commits that channel's property immediately instead.
 

@@ -7,7 +7,7 @@
       "params": {}
     },
     "settings": {
-      "description": "Loaded engine settings from Settings/EngineSettings.json (version, graphics.renderPath, vsync, shadowAtlas)",
+      "description": "Loaded engine settings from Settings/EngineSettings.json (version, graphics.renderPath, vsync, temporalAA, shadowAtlas)",
       "params": {}
     },
     "open_scenes": {

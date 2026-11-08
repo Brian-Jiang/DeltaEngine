@@ -27,6 +27,7 @@ bool SettingsEqual(const EngineSettings& a, const EngineSettings& b)
     return a.version == b.version
         && a.graphics.renderPath == b.graphics.renderPath
         && a.graphics.vsync == b.graphics.vsync
+        && a.graphics.temporalAA == b.graphics.temporalAA
         && a.graphics.shadowAtlas.atlasSize == b.graphics.shadowAtlas.atlasSize
         && a.graphics.shadowAtlas.directionalTileSize == b.graphics.shadowAtlas.directionalTileSize
         && a.graphics.shadowAtlas.spotTileSize == b.graphics.shadowAtlas.spotTileSize
@@ -40,7 +41,8 @@ TEST(EngineSettingsTests, SaveAndLoad_RoundTrip_PreservesAllFields)
     const auto root = MakeTempRoot();
     const auto path = root / "EngineSettings.json";
 
-    const EngineSettings in = GetDefaultEngineSettings();
+    EngineSettings in = GetDefaultEngineSettings();
+    in.graphics.temporalAA = true;
 
     SaveEngineSettingsToPath(in, path);
     ASSERT_TRUE(std::filesystem::exists(path));

@@ -29,6 +29,9 @@ void WriteGraphicsSettings(nlohmann::json& root, const GraphicsSettings& setting
     nlohmann::json graphics;
     graphics["renderPath"] = std::string(RenderPathToString(settings.renderPath));
     graphics["vsync"] = settings.vsync;
+    graphics["temporalAA"] = settings.temporalAA;
+    graphics["msaa"] = settings.msaa;
+    graphics["temporalSharpness"] = settings.temporalSharpness;
     WriteShadowAtlasSettings(graphics, settings.shadowAtlas);
     root["graphics"] = std::move(graphics);
 }
@@ -61,6 +64,12 @@ void MergeGraphicsSettings(const nlohmann::json& root, GraphicsSettings& setting
         settings.renderPath = RenderPathFromString(graphics["renderPath"].get<std::string>());
     if (graphics.contains("vsync") && graphics["vsync"].is_boolean())
         settings.vsync = graphics["vsync"].get<bool>();
+    if (graphics.contains("temporalAA") && graphics["temporalAA"].is_boolean())
+        settings.temporalAA = graphics["temporalAA"].get<bool>();
+    if (graphics.contains("msaa") && graphics["msaa"].is_boolean())
+        settings.msaa = graphics["msaa"].get<bool>();
+    if (graphics.contains("temporalSharpness") && graphics["temporalSharpness"].is_number())
+        settings.temporalSharpness = graphics["temporalSharpness"].get<float>();
     MergeShadowAtlasSettings(graphics, settings.shadowAtlas);
 }
 }

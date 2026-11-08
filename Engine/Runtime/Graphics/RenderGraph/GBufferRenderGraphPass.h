@@ -34,7 +34,9 @@ public:
         CD3DX12_VIEWPORT viewport,
         D3D12_RECT scissorRect,
         std::shared_ptr<DXGraphicsContext> graphicsContext,
-        SceneDrawCallback drawCallback);
+        SceneDrawCallback drawCallback,
+        RenderGraphTextureHandle velocity = {},
+        D3D12_CPU_DESCRIPTOR_HANDLE velocityRtv = {});
 
     const char* GetName() const override;
     void Setup(RenderGraphBuilder& builder) override;
@@ -46,10 +48,12 @@ private:
     RenderGraphTextureHandle m_material;
     RenderGraphTextureHandle m_emissive;
     RenderGraphTextureHandle m_depth;
+    RenderGraphTextureHandle m_velocity;
     D3D12_CPU_DESCRIPTOR_HANDLE m_albedoRtv{};
     D3D12_CPU_DESCRIPTOR_HANDLE m_normalRtv{};
     D3D12_CPU_DESCRIPTOR_HANDLE m_materialRtv{};
     D3D12_CPU_DESCRIPTOR_HANDLE m_emissiveRtv{};
+    D3D12_CPU_DESCRIPTOR_HANDLE m_velocityRtv{};
     D3D12_CPU_DESCRIPTOR_HANDLE m_depthDsv{};
     std::shared_ptr<RootSignature> m_rootSignature;
     CD3DX12_VIEWPORT m_viewport{};

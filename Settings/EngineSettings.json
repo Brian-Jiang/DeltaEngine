@@ -3,6 +3,7 @@
   "graphics": {
     "renderPath": "Deferred",
     "vsync": false,
+    "temporalAA": true,
     "shadowAtlas": {
       "atlasSize": 4096,
       "directionalTileSize": 2048,

@@ -25,53 +25,48 @@ float HalfToFloat(const uint16_t value)
     return DirectX::PackedVector::XMConvertHalfToFloat(value);
 }
 
-bool DecodeCenterPixel(const uint8_t* mappedData,
-    const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& footprint,
-    GpuReadbackPixel& outPixel)
+bool IsDecodableFormat(const DXGI_FORMAT format)
 {
-    const uint32_t width = footprint.Footprint.Width;
-    const uint32_t height = footprint.Footprint.Height;
-    if (width == 0 || height == 0)
-        return false;
+    return format == DXGI_FORMAT_R16G16B16A16_FLOAT || format == DXGI_FORMAT_R16G16_FLOAT
+        || format == DXGI_FORMAT_R8G8B8A8_UNORM || format == DXGI_FORMAT_B8G8R8A8_UNORM;
+}
 
-    const uint32_t centerX = width / 2u;
-    const uint32_t centerY = height / 2u;
-    const uint32_t rowPitch = footprint.Footprint.RowPitch;
-    const DXGI_FORMAT format = footprint.Footprint.Format;
-
+GpuReadbackPixel DecodePixel(const uint8_t* row, const DXGI_FORMAT format, const uint32_t x)
+{
+    GpuReadbackPixel pixel{};
     if (format == DXGI_FORMAT_R16G16B16A16_FLOAT)
     {
-        const auto* row = reinterpret_cast<const uint16_t*>(mappedData + static_cast<size_t>(centerY) * rowPitch);
-        const uint32_t pixelIndex = centerX * 4u;
-        outPixel.r = HalfToFloat(row[pixelIndex + 0]);
-        outPixel.g = HalfToFloat(row[pixelIndex + 1]);
-        outPixel.b = HalfToFloat(row[pixelIndex + 2]);
-        outPixel.a = HalfToFloat(row[pixelIndex + 3]);
-        return true;
+        const auto* texel = reinterpret_cast<const uint16_t*>(row) + static_cast<size_t>(x) * 4u;
+        pixel.r = HalfToFloat(texel[0]);
+        pixel.g = HalfToFloat(texel[1]);
+        pixel.b = HalfToFloat(texel[2]);
+        pixel.a = HalfToFloat(texel[3]);
     }
-
-    if (format == DXGI_FORMAT_R8G8B8A8_UNORM || format == DXGI_FORMAT_B8G8R8A8_UNORM)
+    else if (format == DXGI_FORMAT_R16G16_FLOAT)
+    {
+        const auto* texel = reinterpret_cast<const uint16_t*>(row) + static_cast<size_t>(x) * 2u;
+        pixel.r = HalfToFloat(texel[0]);
+        pixel.g = HalfToFloat(texel[1]);
+    }
+    else
     {
         const float scale = 1.0f / 255.0f;
-        const auto* row = mappedData + static_cast<size_t>(centerY) * rowPitch;
-        const uint32_t pixelIndex = centerX * 4u;
-        outPixel.r = static_cast<float>(row[pixelIndex + 0]) * scale;
-        outPixel.g = static_cast<float>(row[pixelIndex + 1]) * scale;
-        outPixel.b = static_cast<float>(row[pixelIndex + 2]) * scale;
-        outPixel.a = static_cast<float>(row[pixelIndex + 3]) * scale;
-        return true;
+        const uint8_t* texel = row + static_cast<size_t>(x) * 4u;
+        pixel.r = static_cast<float>(texel[0]) * scale;
+        pixel.g = static_cast<float>(texel[1]) * scale;
+        pixel.b = static_cast<float>(texel[2]) * scale;
+        pixel.a = static_cast<float>(texel[3]) * scale;
     }
-
-    return false;
+    return pixel;
 }
 } // namespace
 
-bool ReadTextureCenterPixel(Device& device,
+bool ReadTexturePixels(Device& device,
     CommandQueue& queue,
     const std::shared_ptr<DirectX12Texture>& texture,
-    GpuReadbackPixel& outPixel)
+    GpuReadbackImage& outImage)
 {
-    outPixel = {};
+    outImage = {};
 
     if (!texture)
         return false;
@@ -81,7 +76,8 @@ bool ReadTextureCenterPixel(Device& device,
         return false;
 
     const D3D12_RESOURCE_DESC sourceDesc = sourceResource->GetDesc();
-    if (sourceDesc.Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE2D)
+    if (sourceDesc.Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE2D || sourceDesc.SampleDesc.Count != 1
+        || !IsDecodableFormat(sourceDesc.Format))
         return false;
 
     ID3D12Device* d3d12Device = device.GetD3D12Device().Get();
@@ -140,9 +136,35 @@ bool ReadTextureCenterPixel(Device& device,
     if (FAILED(readbackResource->Map(0, &readRange, reinterpret_cast<void**>(&mappedData))) || !mappedData)
         return false;
 
-    const bool decoded = DecodeCenterPixel(mappedData, footprint, outPixel);
+    const uint32_t width = footprint.Footprint.Width;
+    const uint32_t height = footprint.Footprint.Height;
+    outImage.width = width;
+    outImage.height = height;
+    outImage.pixels.resize(static_cast<size_t>(width) * height);
+    for (uint32_t y = 0; y < height; ++y)
+    {
+        const uint8_t* row = mappedData + static_cast<size_t>(y) * footprint.Footprint.RowPitch;
+        for (uint32_t x = 0; x < width; ++x)
+            outImage.pixels[static_cast<size_t>(y) * width + x] = DecodePixel(row, footprint.Footprint.Format, x);
+    }
+
     readbackResource->Unmap(0, nullptr);
-    return decoded;
+    return width > 0 && height > 0;
+}
+
+bool ReadTextureCenterPixel(Device& device,
+    CommandQueue& queue,
+    const std::shared_ptr<DirectX12Texture>& texture,
+    GpuReadbackPixel& outPixel)
+{
+    outPixel = {};
+
+    GpuReadbackImage image;
+    if (!ReadTexturePixels(device, queue, texture, image))
+        return false;
+
+    outPixel = image.At(image.width / 2u, image.height / 2u);
+    return true;
 }
 
 bool TextureHasNonClearContent(Device& device,

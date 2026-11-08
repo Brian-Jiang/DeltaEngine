@@ -19,6 +19,7 @@
 #include "Graphics/MaterialConstants.h"
 #include "Graphics/Structures/RootParameterType.h"
 #include "Graphics/Structures/GBufferRootParameterType.h"
+#include "Graphics/Structures/ObjectConstants.h"
 #include "Graphics/Structures/Vertex.h"
 #include "Graphics/Shadow/ShadowDepthPSO.h"
 #include "Graphics/Shadow/ShadowView.h"
@@ -105,11 +106,32 @@ void DeltaEngine::MeshRenderProxy::SetMesh(DMesh* mesh)
     m_pipelineStateObjects.clear();
     m_gbufferPipelineStateObjects.clear();
     m_meshDirty = true;
+    RequestTemporalHistoryReset();
 }
 
-void DeltaEngine::MeshRenderProxy::UpdateWorldTransform(DirectX::XMMATRIX worldMatrix)
+void DeltaEngine::MeshRenderProxy::UpdateWorldTransform(DirectX::XMMATRIX worldMatrix, bool teleport)
 {
     m_worldMatrix = worldMatrix;
+    if (teleport)
+        RequestTemporalHistoryReset();
+}
+
+void MeshRenderProxy::RequestTemporalHistoryReset()
+{
+    m_temporalResetRequested = true;
+}
+
+void MeshRenderProxy::AdvanceTemporalFrame(uint64_t frameIndex, bool historyReset)
+{
+    if (frameIndex == m_temporalFrameIndex)
+        return;
+
+    const bool contiguous = m_temporalFrameIndex != kNoTemporalFrame && frameIndex == m_temporalFrameIndex + 1;
+    m_prevWorldMatrix = (historyReset || m_temporalResetRequested || !contiguous) ? m_worldMatrix
+                                                                                  : m_lastFrameWorldMatrix;
+    m_lastFrameWorldMatrix = m_worldMatrix;
+    m_temporalFrameIndex = frameIndex;
+    m_temporalResetRequested = false;
 }
 
 void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext> renderContext)
@@ -153,13 +175,10 @@ void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext>
         CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_DESC SampleDesc;
     } pipelineStateStream;
 
-    DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
     DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT;
     DXGI_SAMPLE_DESC sampleDesc = renderContext->renderManager->GetRenderTarget()->GetSampleDesc();
 
-    D3D12_RT_FORMAT_ARRAY rtvFormats = {};
-    rtvFormats.NumRenderTargets = 1;
-    rtvFormats.RTFormats[0] = backBufferFormat;
+    const D3D12_RT_FORMAT_ARRAY rtvFormats = DXRenderManager::GetSceneRTVFormats();
 
     m_textures.clear();
     m_pipelineStateObjects.clear();
@@ -224,6 +243,8 @@ void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext>
         }
 
         CD3DX12_BLEND_DESC blendDesc = material->GetBlendState();
+        const CD3DX12_BLEND_DESC forwardBlendDesc(
+            MakeForwardBlendDesc(blendDesc, SubmeshContributesToTransparentPass(material)));
         CD3DX12_DEPTH_STENCIL_DESC depthStencilState = material->GetDepthStencilState();
 
         CD3DX12_SHADER_BYTECODE vertexShaderBytecode { const_cast<void*>(vertexShader->getBufferPointer()), vertexShader->getBufferSize() };
@@ -238,7 +259,7 @@ void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext>
         pipelineStateStream.VS = vertexShaderBytecode;
         pipelineStateStream.PS = pixelShaderBytecode;
         pipelineStateStream.RasterizerState = rasterizerState;
-        pipelineStateStream.BlendState = blendDesc;
+        pipelineStateStream.BlendState = forwardBlendDesc;
         pipelineStateStream.DepthStencilState = depthStencilState;
         pipelineStateStream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
         pipelineStateStream.DSVFormat = depthBufferFormat;
@@ -264,6 +285,7 @@ void DeltaEngine::MeshRenderProxy::Initialize(std::shared_ptr<DXGraphicsContext>
             pipelineStateStream.VS = gbufferVsBytecode;
             pipelineStateStream.PS = gbufferPsBytecode;
             pipelineStateStream.RTVFormats = gbufferRtvFormats;
+            pipelineStateStream.BlendState = blendDesc;
             pipelineStateStream.SampleDesc = gbufferSampleDesc;
 
             m_gbufferPipelineStateObjects.push_back(device->CreatePipelineStateObject(pipelineStateStream));
@@ -325,18 +347,13 @@ void MeshRenderProxy::EnsureDrawResourcesReady(std::shared_ptr<DXGraphicsContext
     }
 }
 
-void MeshRenderProxy::BindObjectConstantBuffer(std::shared_ptr<DXGraphicsContext> renderContext) const
+void MeshRenderProxy::BindObjectConstantBuffer(std::shared_ptr<DXGraphicsContext> renderContext)
 {
-    struct ObjectData
-    {
-        DirectX::XMMATRIX worldMatrix;
-        DirectX::XMFLOAT4 color;
-        uint32_t useInstanceMatrix;
-    } obj;
+    AdvanceTemporalFrame(renderContext->frameIndex, renderContext->temporalHistoryReset);
 
+    ObjectCB obj {};
     obj.worldMatrix = XMMatrixTranspose(m_worldMatrix);
-    obj.color = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-    obj.useInstanceMatrix = 0;
+    obj.prevWorldMatrix = XMMatrixTranspose(m_prevWorldMatrix);
 
     const bool gbufferPass = renderContext->activePass == ScenePassType::GBuffer;
     const uint32_t objectCbSlot = gbufferPass
@@ -573,6 +590,16 @@ bool MeshRenderProxy::SubmeshContributesToOpaquePass(const DMaterial* material)
 bool MeshRenderProxy::SubmeshContributesToTransparentPass(const DMaterial* material)
 {
     return material && HasAny(material->GetFlags(), MaterialFlags::AlphaBlend);
+}
+
+D3D12_BLEND_DESC MeshRenderProxy::MakeForwardBlendDesc(const D3D12_BLEND_DESC& materialBlend, bool transparent)
+{
+    D3D12_BLEND_DESC blend = materialBlend;
+    blend.IndependentBlendEnable = TRUE;
+    blend.RenderTarget[1] = CD3DX12_BLEND_DESC(D3D12_DEFAULT).RenderTarget[0];
+    if (transparent)
+        blend.RenderTarget[1].RenderTargetWriteMask = 0;
+    return blend;
 }
 
 bool MeshRenderProxy::SubmeshContributesToShadowMap(const DMaterial* material)

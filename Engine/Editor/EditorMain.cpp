@@ -107,6 +107,8 @@ EditorMain::EditorMain()
 
     m_editorCore = std::make_unique<EditorCore>();
     m_editorCore->Initialize(*m_engine);
+    m_editorCore->GetRenderSettings().SetTemporalAAEnabled(engineSettings.graphics.temporalAA);
+    m_editorCore->GetRenderSettings().SetTemporalSharpness(engineSettings.graphics.temporalSharpness);
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();

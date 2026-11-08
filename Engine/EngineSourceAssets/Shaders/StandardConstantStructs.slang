@@ -9,6 +9,11 @@ public struct Camera
     public float4x4 projectionMatrix;
     public float4x4 invViewProjectionMatrix;
     public float4 position;
+    public float4x4 projectionMatrixUnjittered;
+    public float4x4 prevViewProjectionMatrix;
+    public float2 jitter;
+    public float mipBias;
+    public float cameraPad;
 };
 
 public ConstantBuffer<Camera> CameraCB : register(b0);
@@ -17,6 +22,7 @@ public ConstantBuffer<Camera> CameraCB : register(b0);
 public struct Object
 {
     public float4x4 worldMatrix;
+    public float4x4 prevWorldMatrix;
     public float4 color;
     public uint useInstanceMatrix;
 };

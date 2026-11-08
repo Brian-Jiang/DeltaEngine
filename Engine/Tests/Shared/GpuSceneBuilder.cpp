@@ -2,8 +2,12 @@
 
 #include "Runtime/Assets/PA_CommonAssets.h"
 #include "Runtime/Core/Camera.h"
+#include "Runtime/Core/DMaterial.h"
+#include "Runtime/Core/DMesh.h"
+#include "Runtime/Core/DScene.h"
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/GameObject.h"
+#include "Runtime/Core/Skybox.h"
 #include "Runtime/Graphics/DXRenderManager.h"
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/Light/DirectionalLight.h"
@@ -16,11 +20,13 @@
 #include "Runtime/Graphics/PostProcess/TonemapPass.h"
 #include "Runtime/Graphics/PostProcess/VignettePass.h"
 #include "Runtime/Graphics/Renderer/MeshRenderer.h"
+#include "Runtime/Graphics/Structures/Vertex.h"
 #include "Runtime/IO/IOManager.h"
 #include "Runtime/Reflection/DClass.h"
 #include "Runtime/Reflection/DProperty.h"
 #include "Runtime/Reflection/ReflectionRegistry.h"
 
+#include <algorithm>
 #include <filesystem>
 
 using namespace DirectX;
@@ -71,6 +77,49 @@ MeshRenderer* GpuSceneBuilder::AddSphereMesh(const char* name, const float x, co
     return meshRenderer;
 }
 
+DMesh* GetRendererMesh(MeshRenderer* renderer)
+{
+    DClass* cls = renderer ? renderer->GetClass() : nullptr;
+    DProperty* meshProp = cls ? cls->FindPropertyByName("m_mesh") : nullptr;
+    void* value = meshProp ? meshProp->GetValue(renderer) : nullptr;
+    return value ? *static_cast<DMesh**>(value) : nullptr;
+}
+
+float MeshBoundingRadius(MeshRenderer* renderer)
+{
+    DMesh* mesh = GetRendererMesh(renderer);
+    if (!mesh)
+        return 0.0f;
+
+    float radius = 0.0f;
+    for (const auto& submesh : mesh->GetVertices())
+    {
+        for (const Vertex& vertex : submesh)
+        {
+            const XMVECTOR p = XMLoadFloat3(&vertex.position);
+            radius = (std::max)(radius, XMVectorGetX(XMVector3Length(p)));
+        }
+    }
+    const XMMATRIX world = renderer->GetWorldTransform();
+    return radius * XMVectorGetX(XMVector3Length(world.r[0]));
+}
+
+MeshRenderer* GpuSceneBuilder::AddOpaqueUnitSphere(const char* name, const float x, const float y, const float z)
+{
+    MeshRenderer* sphere = AddSphereMesh(name, x, y, z);
+    const float meshRadius = MeshBoundingRadius(sphere);
+    if (!sphere || meshRadius <= 0.0f)
+        return nullptr;
+    DMesh* mesh = GetRendererMesh(sphere);
+    DMaterial* material = mesh ? mesh->GetMaterial(0) : nullptr;
+    if (!material)
+        return nullptr;
+    material->SetRenderMode(ERenderMode::Opaque);
+    const float scale = 1.0f / meshRadius;
+    sphere->SetLocalScale(scale, scale, scale);
+    return sphere;
+}
+
 Camera* GpuSceneBuilder::AddCamera(const float aspectRatio)
 {
     if (!m_world)
@@ -87,6 +136,28 @@ Camera* GpuSceneBuilder::AddCamera(const float aspectRatio)
     camera->SetLocalPosition(0.0f, 0.0f, -8.0f);
     camera->UpdateParameters(XM_PIDIV4, aspectRatio, 0.1f, 100.0f);
     return camera;
+}
+
+bool GpuSceneBuilder::AddDefaultSkybox()
+{
+    if (!m_world)
+        return false;
+
+    const std::filesystem::path assetPath = std::filesystem::weakly_canonical(
+        IOManager::GetEngineImportedAssetFullPath("Skybox/DefaultSkybox"));
+    const AssetId id = m_assetDatabase.FindAssetIdByPath(assetPath);
+    if (id.IsNull())
+        return false;
+
+    PA_Skybox* skyboxAsset = m_assetDatabase.LoadAsset<PA_Skybox>(id);
+    Skybox* skybox = skyboxAsset ? skyboxAsset->GetSkybox() : nullptr;
+    if (!skybox)
+        return false;
+
+    if (m_scene)
+        m_scene->SetSkybox(skybox);
+    m_world->SetSkybox(skybox);
+    return true;
 }
 
 DirectionalLight* GpuSceneBuilder::AddDirectionalLightWithShadows()

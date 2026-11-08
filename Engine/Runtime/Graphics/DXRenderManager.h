@@ -17,6 +17,7 @@
 #include "DirectX/DescriptorAllocator.h"
 #include "Structures/Light.h"
 #include "Structures/Camera.h"
+#include "Structures/TemporalCameraState.h"
 #include "Runtime/Graphics/DXGraphicsContext.h"
 #include "Runtime/Graphics/DirectX/Device.h"
 #include "Runtime/Graphics/DirectX/DirectX12Texture.h"
@@ -27,6 +28,8 @@
 #include "Runtime/Graphics/RenderGraph/TransientTexturePool.h"
 #include "Runtime/Graphics/RenderResourceReleaseQueue.h"
 #include "Runtime/Graphics/RenderPath.h"
+#include "Runtime/Graphics/TemporalHistory.h"
+#include "Runtime/Graphics/TemporalResolvePipeline.h"
 #include "Runtime/Settings/ShadowAtlasSettings.h"
 #include "Runtime/Graphics/Shadow/ShadowPassManager.h"
 
@@ -68,6 +71,9 @@ struct FrameGraphBindings
     D3D12_CPU_DESCRIPTOR_HANDLE SrvFor(RenderGraphTextureHandle handle) const;
 };
 
+/** UV-space motion vector format (current UV - previous UV). */
+inline constexpr DXGI_FORMAT kMotionVectorFormat = DXGI_FORMAT_R16G16_FLOAT;
+
 struct FrameGraphResources
 {
     RenderGraphTextureHandle sceneColor;
@@ -83,6 +89,13 @@ struct FrameGraphResources
     RenderGraphTextureHandle gbufferNormal;
     RenderGraphTextureHandle gbufferMaterial;
     RenderGraphTextureHandle gbufferEmissive;
+    RenderGraphTextureHandle gbufferVelocity;
+    /// Scene-sample-count motion target written by scene/GBuffer/skybox passes.
+    RenderGraphTextureHandle velocity;
+    /// Single-sample motion vectors for consumers (resolved when MSAA).
+    RenderGraphTextureHandle motionVectors;
+    /// Persistent TAA history; only imported while temporal is enabled.
+    TemporalHistoryHandles temporalHistory;
 };
 
 /// Renders the scene to an offscreen render target. Does not own swap chain or window.
@@ -117,6 +130,23 @@ public:
 
     DELTAENGINE_API void SetPendingActiveRenderCamera(std::optional<ActiveRenderCamera> camera);
 
+    DELTAENGINE_API TemporalCameraState& GetTemporalCameraState() { return m_temporalCameraState; }
+    DELTAENGINE_API const TemporalCameraState& GetTemporalCameraState() const { return m_temporalCameraState; }
+    DELTAENGINE_API void RequestTemporalHistoryReset() { m_temporalCameraState.RequestHistoryReset(); }
+    /** Toggling discards history and restarts jitter; on the forward path it also rebuilds scene targets
+     *  (no MSAA while temporal is on). Do not call between PrepareFrame and RenderFrame. **/
+    DELTAENGINE_API void SetTemporalEnabled(bool enabled);
+    DELTAENGINE_API bool IsTemporalEnabled() const { return m_temporalCameraState.enabled; }
+    /** Requests forward-path MSAA; TAA overrides it while enabled. Do not call between PrepareFrame and RenderFrame. **/
+    DELTAENGINE_API void SetMsaaEnabled(bool enabled);
+    DELTAENGINE_API bool IsMsaaEnabled() const { return m_msaaRequested; }
+    /** Clamped to [0, 1]; 0 skips the post-resolve sharpen pass. **/
+    DELTAENGINE_API void SetTemporalSharpness(float sharpness);
+    DELTAENGINE_API float GetTemporalSharpness() const { return m_temporalSharpness; }
+    DELTAENGINE_API const TemporalHistory& GetTemporalHistory() const { return m_temporalHistory; }
+    /** Graph built for the last rendered frame. */
+    DELTAENGINE_API const RenderGraph& GetFrameGraph() const { return m_frameGraph; }
+
 	DELTAENGINE_API void Resize(UINT width, UINT height);
     DELTAENGINE_API void OnDestroy();
 
@@ -134,6 +164,8 @@ public:
     DELTAENGINE_API ISlangBlob* GetGBufferVertexShaderBlob() const;
     DELTAENGINE_API ISlangBlob* GetGBufferPixelShaderBlob() const;
     DELTAENGINE_API D3D12_RT_FORMAT_ARRAY GetGBufferRTVFormats() const;
+    /** Forward scene targets: color (RT0) + motion vectors (RT1). */
+    DELTAENGINE_API static D3D12_RT_FORMAT_ARRAY GetSceneRTVFormats();
     DELTAENGINE_API bool EnsureDeferredLightingPipeline();
     DELTAENGINE_API std::shared_ptr<RootSignature> GetDeferredLightingRootSignature() const
     {
@@ -152,6 +184,9 @@ public:
     {
         return m_hasPostProcessedOutput ? m_finalPostProcessTexture : nullptr;
     }
+
+    /** Single-sample UV-space motion (current - previous) from the last built frame graph; null before the first frame. */
+    DELTAENGINE_API std::shared_ptr<DirectX12Texture> GetMotionVectorTexture() const { return m_motionVectorTexture; }
 
     /// Enqueues a render proxy for deferred GPU release after the last submitted frame fence.
     DELTAENGINE_API RenderResourceReleaseToken DeferRenderProxyRelease(std::shared_ptr<RenderProxy> proxy);
@@ -178,9 +213,15 @@ private:
         RenderGraphTextureUsage depthAndShader);
     void AddShadowPasses(RenderGraphTextureUsage depthAndShader);
     void CreateGBufferTextures(RenderGraphTextureUsage gbufferUsage);
+    void AddMotionVectorResolve();
+    void ImportTemporalHistory();
+    RenderGraphTextureHandle AddTemporalResolve(RenderGraphTextureHandle colorInput);
+    RenderGraphTextureHandle AddTemporalSharpen(RenderGraphTextureHandle resolvedColor);
+    bool UsesMsaa() const;
+    void RebuildIfMsaaChanged(bool usedMsaa);
     void InitGBufferPipeline();
     bool InitDeferredLightingPipeline();
-    void FinalizeNoPostProcessOutput();
+    void FinalizeNoPostProcessOutput(RenderGraphTextureHandle output);
     void AppendPostProcessChain(PostProcessStack* stack, RenderGraphTextureHandle postInputHandle,
         RenderGraphTextureUsage colorAndShader);
     void ExecuteFrameGraph(DXGraphicsContext& ctx, const SceneDrawCallback& drawCallback);
@@ -209,6 +250,7 @@ private:
     D3D12_CPU_DESCRIPTOR_HANDLE m_finalPostProcessSRV{};
     bool m_hasPostProcessedOutput = false;
     std::shared_ptr<DirectX12Texture> m_finalPostProcessTexture;
+    std::shared_ptr<DirectX12Texture> m_motionVectorTexture;
 
     std::shared_ptr<DXGraphicsContext> m_currentContext;
 
@@ -221,6 +263,13 @@ private:
     SceneDrawCallback m_pendingTransparentDrawCallback;
 
     std::optional<ActiveRenderCamera> m_pendingActiveRenderCamera;
+    TemporalCameraState m_temporalCameraState;
+    TemporalHistory m_temporalHistory;
+    TemporalResolvePipeline m_temporalResolve;
+    bool m_historyWrittenThisFrame = false;
+    bool m_msaaRequested = true;
+    float m_temporalSharpness = 0.0f;
+    uint64_t m_frameIndex = 0;
 
     IBLBaker m_iblBaker;
     ShadowPassManager m_shadowPass;

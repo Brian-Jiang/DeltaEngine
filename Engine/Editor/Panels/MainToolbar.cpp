@@ -15,6 +15,7 @@ const char* kCoordSpaceItems[] = { "World", "Local" };
 const char* kPivotItems[]      = { "Pivot", "Center" };
 const char* kProjItems[]       = { "Perspective", "Orthographic" };
 const char* kShadingItems[]    = { "Lit", "Unlit", "Wireframe" };
+const char* kTemporalAAItems[] = { "TAA Off", "TAA On" };
 
 void DrawVerticalDivider(const EditorTheme::ThemeColors& c, float height = 0.f)
 {
@@ -173,7 +174,17 @@ void MainToolbar::Draw(const EditorChromeContext& ctx)
 
     ImGui::SetNextItemWidth(fs * 6.5f);
     DrawTbDropdown("##shading", c, kShadingItems, 3, m_shadingMode);
-    ImGui::SameLine(0, pad);
+    ImGui::SameLine(0, pad * 0.5f);
+
+    if (ctx.core)
+    {
+        EditorRenderSettings& renderSettings = ctx.core->GetRenderSettings();
+        int temporalAA = renderSettings.IsTemporalAAEnabled() ? 1 : 0;
+        ImGui::SetNextItemWidth(fs * 6.5f);
+        DrawTbDropdown("##taa", c, kTemporalAAItems, 2, temporalAA);
+        renderSettings.SetTemporalAAEnabled(temporalAA == 1);
+        ImGui::SameLine(0, pad);
+    }
     DrawVerticalDivider(c);
 
     static const HorizontalToggleGroup::Item playItems[] = {
