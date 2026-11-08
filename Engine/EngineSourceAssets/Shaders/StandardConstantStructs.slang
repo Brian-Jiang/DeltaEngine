@@ -12,7 +12,8 @@ public struct Camera
     public float4x4 projectionMatrixUnjittered;
     public float4x4 prevViewProjectionMatrix;
     public float2 jitter;
-    public float2 jitterPad;
+    public float mipBias;
+    public float cameraPad;
 };
 
 public ConstantBuffer<Camera> CameraCB : register(b0);

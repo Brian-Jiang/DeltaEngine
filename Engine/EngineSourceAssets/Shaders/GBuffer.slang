@@ -42,13 +42,13 @@ GBufferOutput PSMain(PBRPSInput input, bool isFrontFace : SV_IsFrontFace)
     uint flags = MaterialCB.flags;
 
     float4 albedoSample = MatHasFlag(flags, MAT_HAS_ALBEDO)
-        ? g_matTextures[0].Sample(g_matSampler, input.uv)
+        ? g_matTextures[0].SampleBias(g_matSampler, input.uv, CameraCB.mipBias)
         : float4(1, 1, 1, 1);
     float3 baseColor = albedoSample.rgb * MaterialCB.baseColor.rgb * input.color.rgb;
     float  alpha     = albedoSample.a   * MaterialCB.baseColor.a   * input.color.a;
 
     if (MatHasFlag(flags, MAT_HAS_ALPHA_MASK))
-        alpha *= g_matTextures[5].Sample(g_matSampler, input.uv).r;
+        alpha *= g_matTextures[5].SampleBias(g_matSampler, input.uv, CameraCB.mipBias).r;
 
     if (MatHasFlag(flags, MAT_ALPHA_TEST))
     {
@@ -60,7 +60,7 @@ GBufferOutput PSMain(PBRPSInput input, bool isFrontFace : SV_IsFrontFace)
     float metallic;
     if (MatHasFlag(flags, MAT_HAS_METALLIC_ROUGHNESS))
     {
-        float2 mrSample = g_matTextures[2].Sample(g_matSampler, input.uv).gb;
+        float2 mrSample = g_matTextures[2].SampleBias(g_matSampler, input.uv, CameraCB.mipBias).gb;
         roughness = mrSample.x * MaterialCB.roughness;
         metallic  = mrSample.y * MaterialCB.metallic;
     }
@@ -76,7 +76,7 @@ GBufferOutput PSMain(PBRPSInput input, bool isFrontFace : SV_IsFrontFace)
         float3 T = normalize(input.tangentWS.xyz);
         float3 B = cross(N, T) * input.tangentWS.w;
         float3x3 TBN = float3x3(T, B, N);
-        float3 nMap  = g_matTextures[1].Sample(g_matSampler, input.uv).xyz * 2.0 - 1.0;
+        float3 nMap  = g_matTextures[1].SampleBias(g_matSampler, input.uv, CameraCB.mipBias).xyz * 2.0 - 1.0;
         N = normalize(mul(nMap, TBN));
     }
 
@@ -84,13 +84,13 @@ GBufferOutput PSMain(PBRPSInput input, bool isFrontFace : SV_IsFrontFace)
         N = -N;
 
     float ao = MatHasFlag(flags, MAT_HAS_OCCLUSION)
-        ? g_matTextures[3].Sample(g_matSampler, input.uv).r
+        ? g_matTextures[3].SampleBias(g_matSampler, input.uv, CameraCB.mipBias).r
         : 1.0;
 
     float3 emissive = float3(0, 0, 0);
     if (MatHasFlag(flags, MAT_HAS_EMISSIVE))
     {
-        emissive = g_matTextures[4].Sample(g_matSampler, input.uv).rgb
+        emissive = g_matTextures[4].SampleBias(g_matSampler, input.uv, CameraCB.mipBias).rgb
                  * MaterialCB.emissiveColor.rgb
                  * MaterialCB.emissiveIntensity;
     }

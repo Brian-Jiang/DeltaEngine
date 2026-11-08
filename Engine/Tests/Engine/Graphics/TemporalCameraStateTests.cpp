@@ -274,3 +274,28 @@ TEST(TemporalCameraStateTests, CameraJump_BeyondAngle_ResetsHistory)
 
     ExpectHistoryDiscarded(state, cb, view);
 }
+
+TEST(TemporalCameraStateTests, TemporalTextureMipBias_NativeAndUpscaled)
+{
+    EXPECT_FLOAT_EQ(TemporalTextureMipBias(1.f), kNativeTemporalMipBias);
+    EXPECT_FLOAT_EQ(TemporalTextureMipBias(2.f), -1.f);
+}
+
+TEST(TemporalCameraStateTests, FillCameraCB_WritesMipBiasOnlyWhenEnabled)
+{
+    const XMMATRIX view = XMMatrixIdentity();
+    const XMMATRIX proj = XMMatrixPerspectiveFovLH(XM_PIDIV4, 1.f, 0.1f, 100.f);
+
+    TemporalCameraState enabledState;
+    enabledState.enabled = true;
+    enabledState.BeginFrame(64, 64);
+    CameraCB enabledCb{};
+    enabledState.FillCameraCB(enabledCb, view, proj, TemporalCameraSource::SceneCamera);
+    EXPECT_FLOAT_EQ(enabledCb.mipBias, kNativeTemporalMipBias);
+
+    TemporalCameraState disabledState;
+    disabledState.BeginFrame(64, 64);
+    CameraCB disabledCb{};
+    disabledState.FillCameraCB(disabledCb, view, proj, TemporalCameraSource::SceneCamera);
+    EXPECT_FLOAT_EQ(disabledCb.mipBias, 0.f);
+}

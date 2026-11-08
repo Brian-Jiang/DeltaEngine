@@ -288,6 +288,66 @@ TEST_P(GpuTemporalResolveTests, TemporalOff_OutputByteIdenticalAfterToggle)
     EXPECT_GPU_VALIDATION_CLEAN(GetDevice()->GetD3D12Device().Get());
 }
 
+TEST_P(GpuTemporalResolveTests, MsaaAndTemporalRequested_OnlyTemporalResolveRuns)
+{
+    GpuSceneBuilder builder(GetEngine(), GetAssetDatabase());
+    ASSERT_NO_FATAL_FAILURE(BuildScene(builder));
+    PostProcessStack* stack = builder.CreatePassthroughTonemapStack();
+    ASSERT_NE(stack, nullptr);
+    builder.AttachPostProcessStack(m_camera, stack);
+    builder.InitGpuResources();
+
+    DXRenderManager& renderManager = GetRenderManager();
+    renderManager.SetMsaaEnabled(true);
+    const UINT msaaSampleCount = GetRenderTarget()->GetSampleDesc().Count;
+
+    renderManager.SetTemporalEnabled(true);
+    EXPECT_TRUE(renderManager.IsMsaaEnabled());
+    EXPECT_EQ(GetRenderTarget()->GetSampleDesc().Count, 1u);
+    RenderSceneFrames(kWarmupFrames);
+
+    const RenderGraph& graph = renderManager.GetFrameGraph();
+    EXPECT_TRUE(FindCompiledPass(graph, "TemporalResolve").has_value());
+    EXPECT_FALSE(FindCompiledPass(graph, "MsaaResolve").has_value());
+
+    renderManager.SetTemporalEnabled(false);
+    EXPECT_EQ(GetRenderTarget()->GetSampleDesc().Count, msaaSampleCount);
+    RenderSceneFrame();
+    EXPECT_FALSE(FrameHasTemporalResolve());
+    EXPECT_EQ(FindCompiledPass(renderManager.GetFrameGraph(), "MsaaResolve").has_value(), msaaSampleCount > 1u);
+    EXPECT_GPU_VALIDATION_CLEAN(GetDevice()->GetD3D12Device().Get());
+}
+
+TEST_P(GpuTemporalResolveTests, Sharpness_AddsSharpenPassBetweenResolveAndPost)
+{
+    GpuSceneBuilder builder(GetEngine(), GetAssetDatabase());
+    ASSERT_NO_FATAL_FAILURE(BuildScene(builder));
+    PostProcessStack* stack = builder.CreatePassthroughTonemapStack();
+    ASSERT_NE(stack, nullptr);
+    ASSERT_GT(stack->GetPassCount(), 0);
+    builder.AttachPostProcessStack(m_camera, stack);
+    builder.InitGpuResources();
+
+    DXRenderManager& renderManager = GetRenderManager();
+    renderManager.SetTemporalEnabled(true);
+    RenderSceneFrames(kWarmupFrames);
+    EXPECT_FALSE(FindCompiledPass(renderManager.GetFrameGraph(), "TemporalSharpen").has_value());
+
+    renderManager.SetTemporalSharpness(1.0f);
+    RenderSceneFrame();
+
+    const RenderGraph& graph = renderManager.GetFrameGraph();
+    const std::optional<size_t> resolve = FindCompiledPass(graph, "TemporalResolve");
+    const std::optional<size_t> sharpen = FindCompiledPass(graph, "TemporalSharpen");
+    const std::string& firstPostName = stack->GetPass(0)->m_passName;
+    const std::optional<size_t> firstPost =
+        FindCompiledPass(graph, firstPostName.empty() ? std::string("PostProcess") : firstPostName);
+    ASSERT_TRUE(resolve && sharpen && firstPost);
+    EXPECT_LT(*resolve, *sharpen);
+    EXPECT_LT(*sharpen, *firstPost);
+    EXPECT_GPU_VALIDATION_CLEAN(GetDevice()->GetD3D12Device().Get());
+}
+
 INSTANTIATE_TEST_SUITE_P(RenderPaths, GpuTemporalResolveTests,
     ::testing::Values(RenderPath::Forward, RenderPath::Deferred),
     [](const ::testing::TestParamInfo<RenderPath>& info)

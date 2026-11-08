@@ -77,6 +77,8 @@ public:
     MainToolbar& GetMainToolbar() { return *m_toolbar; }
 
 private:
+    void ApplyEditorRenderSettings();
+
     /// Updates the viewport texture that ImGui samples from.
     void PrepareViewportSceneTexture(CommandList& commandList);
 

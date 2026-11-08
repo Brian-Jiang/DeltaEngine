@@ -31,6 +31,7 @@
 #include "Runtime/Graphics/RenderGraph/GBufferRenderGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/DeferredLightingGraphPass.h"
 #include "Runtime/Graphics/RenderGraph/TemporalResolveGraphPass.h"
+#include "Runtime/Graphics/RenderGraph/TemporalSharpenGraphPass.h"
 #include "Runtime/Graphics/ShaderCompile.h"
 #include "Runtime/Graphics/Structures/GBufferRootParameterType.h"
 #include "Runtime/Graphics/Structures/DeferredLightingRootParameterType.h"
@@ -473,7 +474,7 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
     // Check the best multisample quality level that can be used for the given back buffer format.
     DXGI_SAMPLE_DESC sampleDesc{};
     // TAA replaces MSAA: forward targets are single-sample while temporal is on.
-    if (m_renderPath == RenderPath::Forward && !m_temporalCameraState.enabled)
+    if (UsesMsaa())
     {
         // Color and motion share one PSO sample desc, so pick one valid for both formats.
         sampleDesc = m_device->GetMultisampleQualityLevels(backBufferFormat);
@@ -549,16 +550,38 @@ void DXRenderManager::InitWorldRenderers(DWorld& world)
     m_currentContext.reset();
 }
 
-void DXRenderManager::SetTemporalEnabled(bool enabled)
+bool DXRenderManager::UsesMsaa() const
 {
-    const bool changed = m_temporalCameraState.enabled != enabled;
-    m_temporalCameraState.SetEnabled(enabled);
-    if (!changed || m_renderPath != RenderPath::Forward || !m_currentWorld)
+    return m_renderPath == RenderPath::Forward && m_msaaRequested && !m_temporalCameraState.enabled;
+}
+
+void DXRenderManager::RebuildIfMsaaChanged(bool usedMsaa)
+{
+    if (usedMsaa == UsesMsaa() || !m_currentWorld)
         return;
 
-    // Scene target sample count and the PSOs baked against it depend on the temporal state.
+    // Scene target sample count and the PSOs baked against it depend on the MSAA state.
     m_device->Flush();
     InitWorldRenderers(*m_currentWorld);
+}
+
+void DXRenderManager::SetTemporalEnabled(bool enabled)
+{
+    const bool usedMsaa = UsesMsaa();
+    m_temporalCameraState.SetEnabled(enabled);
+    RebuildIfMsaaChanged(usedMsaa);
+}
+
+void DXRenderManager::SetMsaaEnabled(bool enabled)
+{
+    const bool usedMsaa = UsesMsaa();
+    m_msaaRequested = enabled;
+    RebuildIfMsaaChanged(usedMsaa);
+}
+
+void DXRenderManager::SetTemporalSharpness(float sharpness)
+{
+    m_temporalSharpness = std::clamp(sharpness, 0.0f, 1.0f);
 }
 
 void DXRenderManager::SetPendingActiveRenderCamera(std::optional<ActiveRenderCamera> camera)
@@ -886,6 +909,38 @@ RenderGraphTextureHandle DXRenderManager::AddTemporalResolve(RenderGraphTextureH
     return history.write;
 }
 
+RenderGraphTextureHandle DXRenderManager::AddTemporalSharpen(RenderGraphTextureHandle resolvedColor)
+{
+    if (m_temporalSharpness <= 0.0f || resolvedColor != m_frameResources.temporalHistory.write
+        || !m_historyWrittenThisFrame || !m_temporalResolve.EnsureSharpen(*m_device))
+        return resolvedColor;
+
+    const auto desc = CD3DX12_RESOURCE_DESC::Tex2D(kTemporalHistoryFormat, m_width, m_height,
+        1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+    const RenderGraphTextureHandle output = m_frameGraph.CreateTexture("TemporalSharpened", desc,
+        RenderGraphTextureUsage::ColorAttachment | RenderGraphTextureUsage::ShaderResource);
+    auto outputTexture = m_frameGraph.GetImportedTexture(output).texture;
+    if (!outputTexture)
+        return resolvedColor;
+    m_frameBindings.Register(output, outputTexture->GetRenderTargetView(), outputTexture->GetShaderResourceView());
+
+    TemporalSharpenGraphPass::Inputs inputs;
+    inputs.input = resolvedColor;
+    inputs.output = output;
+    inputs.inputSrv = m_frameBindings.SrvFor(resolvedColor);
+    inputs.outputRtv = m_frameBindings.RtvFor(output);
+    if (inputs.inputSrv.ptr == 0 || inputs.outputRtv.ptr == 0)
+        return resolvedColor;
+
+    TemporalSharpenConstants constants;
+    constants.texelSize = { 1.0f / static_cast<float>(m_width), 1.0f / static_cast<float>(m_height) };
+    constants.sharpness = m_temporalSharpness;
+
+    m_frameGraph.AddPass(std::make_unique<TemporalSharpenGraphPass>(
+        inputs, constants, m_viewport, m_scissorRect, &m_temporalResolve));
+    return output;
+}
+
 void DXRenderManager::FinalizeNoPostProcessOutput(RenderGraphTextureHandle output)
 {
     m_frameGraph.AddPass(std::make_unique<PostProcessFinalizeGraphPass>(output));
@@ -952,7 +1007,7 @@ void DXRenderManager::BuildForwardFrameGraph(const SceneDrawCallback& opaqueDraw
     const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
     AddShadowSceneSkyboxPasses(opaqueDrawCallback, transparentDrawCallback, clearColor, depthAndShader);
 
-    const RenderGraphTextureHandle sceneOutput = AddTemporalResolve(m_frameResources.sceneColor);
+    const RenderGraphTextureHandle sceneOutput = AddTemporalSharpen(AddTemporalResolve(m_frameResources.sceneColor));
     if (!stack || stack->GetPassCount() == 0)
     {
         FinalizeNoPostProcessOutput(sceneOutput);
@@ -1062,7 +1117,7 @@ void DXRenderManager::BuildDeferredFrameGraph(const SceneDrawCallback& opaqueDra
 
     AddMotionVectorResolve();
 
-    const RenderGraphTextureHandle sceneOutput = AddTemporalResolve(m_frameResources.sceneColor);
+    const RenderGraphTextureHandle sceneOutput = AddTemporalSharpen(AddTemporalResolve(m_frameResources.sceneColor));
     if (!stack || stack->GetPassCount() == 0)
     {
         FinalizeNoPostProcessOutput(sceneOutput);

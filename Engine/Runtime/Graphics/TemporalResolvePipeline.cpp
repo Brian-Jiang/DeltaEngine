@@ -10,6 +10,7 @@
 #include <d3d12.h>
 #include <d3dx12.h>
 
+#include <algorithm>
 #include <filesystem>
 
 using namespace DeltaEngine;
@@ -17,7 +18,54 @@ using namespace DeltaEngine;
 namespace
 {
 constexpr const char* kTaaShaderPath = "Shaders/TAA.slang";
+constexpr const char* kSharpenShaderPath = "Shaders/TAASharpen.slang";
 constexpr UINT kTaaTextureCount = 4;
+constexpr UINT kRootConstantCount =
+    static_cast<UINT>((std::max)(sizeof(TemporalResolveConstants), sizeof(TemporalSharpenConstants)) / sizeof(uint32_t));
+
+std::shared_ptr<PipelineStateObject> CreateFullscreenPso(Device& device, const RootSignature& rootSignature,
+    ISlangBlob* vsBlob, ISlangBlob* psBlob)
+{
+    struct PipelineStateStream
+    {
+        CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
+        CD3DX12_PIPELINE_STATE_STREAM_VS VS;
+        CD3DX12_PIPELINE_STATE_STREAM_PS PS;
+        CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER RasterizerState;
+        CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC BlendState;
+        CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL DepthStencilState;
+        CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT InputLayout;
+        CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY PrimitiveTopologyType;
+        CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT DSVFormat;
+        CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS RTVFormats;
+        CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_DESC SampleDesc;
+    } pss{};
+
+    CD3DX12_RASTERIZER_DESC rasterizerState(D3D12_DEFAULT);
+    rasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+
+    CD3DX12_DEPTH_STENCIL_DESC depthStencilState(D3D12_DEFAULT);
+    depthStencilState.DepthEnable = FALSE;
+    depthStencilState.StencilEnable = FALSE;
+
+    D3D12_RT_FORMAT_ARRAY rtvFormats{};
+    rtvFormats.NumRenderTargets = 1;
+    rtvFormats.RTFormats[0] = kTemporalHistoryFormat;
+
+    pss.pRootSignature = rootSignature.GetD3D12RootSignature().Get();
+    pss.VS = D3D12_SHADER_BYTECODE{ vsBlob->getBufferPointer(), vsBlob->getBufferSize() };
+    pss.PS = D3D12_SHADER_BYTECODE{ psBlob->getBufferPointer(), psBlob->getBufferSize() };
+    pss.RasterizerState = rasterizerState;
+    pss.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+    pss.DepthStencilState = depthStencilState;
+    pss.InputLayout = { nullptr, 0 };
+    pss.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    pss.DSVFormat = DXGI_FORMAT_UNKNOWN;
+    pss.RTVFormats = rtvFormats;
+    pss.SampleDesc = DXGI_SAMPLE_DESC{ 1, 0 };
+
+    return device.CreatePipelineStateObject(pss);
+}
 }
 
 bool TemporalResolvePipeline::Ensure(Device& device)
@@ -45,7 +93,7 @@ bool TemporalResolvePipeline::Ensure(Device& device)
     rootParams[static_cast<UINT>(TemporalResolveRootParameter::Textures)].InitAsDescriptorTable(
         1, &textureRange, D3D12_SHADER_VISIBILITY_PIXEL);
     rootParams[static_cast<UINT>(TemporalResolveRootParameter::Constants)].InitAsConstants(
-        sizeof(TemporalResolveConstants) / sizeof(uint32_t), 0, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+        kRootConstantCount, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL);
 
     CD3DX12_STATIC_SAMPLER_DESC samplers[2]{};
     samplers[0] = CD3DX12_STATIC_SAMPLER_DESC(0, D3D12_FILTER_MIN_MAG_MIP_LINEAR,
@@ -72,45 +120,7 @@ bool TemporalResolvePipeline::Ensure(Device& device)
     }
     rootSignature->GetD3D12RootSignature()->SetName(L"RootSignature TemporalResolve");
 
-    struct PipelineStateStream
-    {
-        CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
-        CD3DX12_PIPELINE_STATE_STREAM_VS VS;
-        CD3DX12_PIPELINE_STATE_STREAM_PS PS;
-        CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER RasterizerState;
-        CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC BlendState;
-        CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL DepthStencilState;
-        CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT InputLayout;
-        CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY PrimitiveTopologyType;
-        CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT DSVFormat;
-        CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS RTVFormats;
-        CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_DESC SampleDesc;
-    } pss{};
-
-    CD3DX12_RASTERIZER_DESC rasterizerState(D3D12_DEFAULT);
-    rasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-
-    CD3DX12_DEPTH_STENCIL_DESC depthStencilState(D3D12_DEFAULT);
-    depthStencilState.DepthEnable = FALSE;
-    depthStencilState.StencilEnable = FALSE;
-
-    D3D12_RT_FORMAT_ARRAY rtvFormats{};
-    rtvFormats.NumRenderTargets = 1;
-    rtvFormats.RTFormats[0] = kTemporalHistoryFormat;
-
-    pss.pRootSignature = rootSignature->GetD3D12RootSignature().Get();
-    pss.VS = D3D12_SHADER_BYTECODE{ vsBlob->getBufferPointer(), vsBlob->getBufferSize() };
-    pss.PS = D3D12_SHADER_BYTECODE{ psBlob->getBufferPointer(), psBlob->getBufferSize() };
-    pss.RasterizerState = rasterizerState;
-    pss.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-    pss.DepthStencilState = depthStencilState;
-    pss.InputLayout = { nullptr, 0 };
-    pss.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-    pss.DSVFormat = DXGI_FORMAT_UNKNOWN;
-    pss.RTVFormats = rtvFormats;
-    pss.SampleDesc = DXGI_SAMPLE_DESC{ 1, 0 };
-
-    auto pso = device.CreatePipelineStateObject(pss);
+    auto pso = CreateFullscreenPso(device, *rootSignature, vsBlob, psBlob);
     if (!pso)
     {
         DLOG(LogRenderer, ELogLevel::Error, "TemporalResolvePipeline: CreatePipelineStateObject failed");
@@ -124,8 +134,41 @@ bool TemporalResolvePipeline::Ensure(Device& device)
     return true;
 }
 
+bool TemporalResolvePipeline::EnsureSharpen(Device& device)
+{
+    if (m_sharpenPso)
+        return true;
+    if (m_sharpenFailed || !m_rootSignature)
+        return false;
+    m_sharpenFailed = true;
+
+    Slang::ComPtr<ISlangBlob> vsBlob =
+        CompileSlangStage(std::filesystem::path(kSharpenShaderPath), "VSMain", "vs_6_6", "TAA Sharpen VS");
+    Slang::ComPtr<ISlangBlob> psBlob =
+        CompileSlangStage(std::filesystem::path(kSharpenShaderPath), "PSMain", "ps_6_6", "TAA Sharpen PS");
+    if (!vsBlob || !psBlob)
+    {
+        DLOG(LogRenderer, ELogLevel::Error, "TemporalResolvePipeline: failed to compile {}", kSharpenShaderPath);
+        return false;
+    }
+
+    auto pso = CreateFullscreenPso(device, *m_rootSignature, vsBlob, psBlob);
+    if (!pso)
+    {
+        DLOG(LogRenderer, ELogLevel::Error, "TemporalResolvePipeline: sharpen CreatePipelineStateObject failed");
+        return false;
+    }
+    pso->GetD3D12PipelineState()->SetName(L"PSO TemporalSharpen");
+
+    m_sharpenPso = std::move(pso);
+    m_sharpenFailed = false;
+    return true;
+}
+
 void TemporalResolvePipeline::Shutdown()
 {
+    m_sharpenPso.reset();
+    m_sharpenFailed = false;
     m_pso.reset();
     m_rootSignature.reset();
     m_failed = false;

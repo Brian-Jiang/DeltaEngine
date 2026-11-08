@@ -29,7 +29,9 @@ struct alignas(16) CameraCB
 
     /// Sub-pixel NDC jitter applied to projection this frame (x, y).
     DirectX::XMFLOAT2 jitter{};
-    DirectX::XMFLOAT2 jitterPad{};
+    /// Texture LOD bias for material sampling (negative while TAA is on).
+    float mipBias = 0.f;
+    float cameraPad = 0.f;
 };
 
 /// Computes and stores invViewProjectionMatrix from the transposed view/projection in cb.

@@ -35,6 +35,7 @@ set(DELTA_EDITOR_TEST_SOURCES
     Assets/Importer/AssetImporterTests.cpp
     Core/EditorCoreTests.cpp
     EditorViewportCameraTests.cpp
+    State/EditorRenderSettingsTests.cpp
     State/EditorSelectionStateTests.cpp
     Serialization/RoundTrip/SingleAssetRoundTripTests.cpp
     Serialization/RoundTrip/TypedPrimaryAssetRoundTripTests.cpp

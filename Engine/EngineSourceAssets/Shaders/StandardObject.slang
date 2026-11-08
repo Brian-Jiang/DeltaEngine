@@ -29,7 +29,7 @@ StandardPSInput VSMain(StandardVSInput input)
 [shader("fragment")]
 ForwardOutput PSMain(StandardPSInput input)
 {
-    float4 textureColor = g_matTextures[0].Sample(g_sampler, input.uv);
+    float4 textureColor = g_matTextures[0].SampleBias(g_sampler, input.uv, CameraCB.mipBias);
     float4 objectColor = input.color * textureColor;
 
     float3 V = normalize(CameraCB.position.xyz - input.worldPosition);

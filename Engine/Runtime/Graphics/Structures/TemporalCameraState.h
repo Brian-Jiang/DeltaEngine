@@ -19,6 +19,12 @@ DELTAENGINE_API DirectX::XMFLOAT2 HaltonJitterNdc(uint32_t sampleIndex, uint32_t
 DELTAENGINE_API DirectX::XMMATRIX ApplyProjectionJitter(DirectX::FXMMATRIX unjitteredProjection,
     DirectX::XMFLOAT2 jitterNdc);
 
+/// Material texture mip bias at native resolution while TAA is on.
+inline constexpr float kNativeTemporalMipBias = -0.5f;
+
+/// -log2(upscaleFactor) when upscaling, otherwise kNativeTemporalMipBias.
+DELTAENGINE_API float TemporalTextureMipBias(float upscaleFactor);
+
 /// Fills CameraCB temporal fields from unjittered view/proj and frame jitter/prev (no state mutation).
 /// Does not write cb.position.
 DELTAENGINE_API void PopulateCameraCBWithTemporal(CameraCB& cb,

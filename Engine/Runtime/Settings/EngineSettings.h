@@ -19,6 +19,10 @@ struct GraphicsSettings
     bool vsync = false;
     /** Enables temporal camera jitter + history at startup. */
     bool temporalAA = false;
+    /** Forward-path MSAA; ignored while temporalAA is on. */
+    bool msaa = true;
+    /** TAA sharpen strength in [0, 1]; 0 skips the pass. */
+    float temporalSharpness = 0.0f;
     ShadowAtlasSettings shadowAtlas;
 };
 

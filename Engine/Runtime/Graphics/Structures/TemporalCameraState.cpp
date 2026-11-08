@@ -33,6 +33,13 @@ DirectX::XMFLOAT2 DeltaEngine::HaltonJitterNdc(uint32_t sampleIndex, uint32_t wi
     return { jx, jy };
 }
 
+float DeltaEngine::TemporalTextureMipBias(float upscaleFactor)
+{
+    if (upscaleFactor > 1.f)
+        return -std::log2(upscaleFactor);
+    return kNativeTemporalMipBias;
+}
+
 DirectX::XMMATRIX DeltaEngine::ApplyProjectionJitter(DirectX::FXMMATRIX unjitteredProjection,
     DirectX::XMFLOAT2 jitterNdc)
 {
@@ -54,7 +61,8 @@ void DeltaEngine::PopulateCameraCBWithTemporal(CameraCB& cb,
     cb.projectionMatrixUnjittered = XMMatrixTranspose(unjitteredProjection);
     cb.prevViewProjectionMatrix = XMMatrixTranspose(prevUnjitteredViewProjection);
     cb.jitter = jitterNdc;
-    cb.jitterPad = { 0.f, 0.f };
+    cb.mipBias = 0.f;
+    cb.cameraPad = 0.f;
     PopulateInvViewProjection(cb);
 }
 
@@ -141,6 +149,7 @@ void TemporalCameraState::FillCameraCB(CameraCB& cb,
 
     PopulateCameraCBWithTemporal(cb, unjitteredView, unjitteredProjection, jitter, prevForFrame);
     cb.position = position;
+    cb.mipBias = enabled ? TemporalTextureMipBias(1.f) : 0.f;
 
     CommitUnjitteredViewProjection(currentUnjitteredVP, unjitteredView, source);
 }

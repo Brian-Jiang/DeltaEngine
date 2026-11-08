@@ -20,6 +20,8 @@ private:
     nlohmann::json QueryRenderSettings(EditorCore&, const nlohmann::json& params);
     nlohmann::json QueryVisibleObjects(EditorCore&, const nlohmann::json& params);
     nlohmann::json CommandSetViewportCamera(EditorCore&, const nlohmann::json& params);
+    nlohmann::json QueryTemporalAA(EditorCore&, const nlohmann::json& params);
+    nlohmann::json CommandSetTemporalAA(EditorCore&, const nlohmann::json& params);
 };
 
 DELTA_ENGINE_NS_END

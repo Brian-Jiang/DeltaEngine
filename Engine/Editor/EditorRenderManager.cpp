@@ -4,6 +4,7 @@
 #include <Windows.h>
 #include <d3dx12.h>
 
+#include "Editor/EditorCore.h"
 #include "Editor/EditorMain.h"
 #include "Panels/AppHeader.h"
 #include "Panels/MainToolbar.h"
@@ -48,7 +49,9 @@ EditorRenderManager::EditorRenderManager(HWND hwnd, UINT width, UINT height, con
     m_sceneRenderer = std::make_shared<DXRenderManager>(
         m_device, m_offscreenRenderTarget, width, height,
         settings.graphics.renderPath, settings.graphics.shadowAtlas);
+    m_sceneRenderer->SetMsaaEnabled(settings.graphics.msaa);
     m_sceneRenderer->SetTemporalEnabled(settings.graphics.temporalAA);
+    m_sceneRenderer->SetTemporalSharpness(settings.graphics.temporalSharpness);
 
     m_imGuiSrvAllocator.Create(*m_device, m_device->CreateShaderVisibleSrvHeap(64));
 
@@ -149,6 +152,19 @@ void EditorRenderManager::PrepareViewportSceneTexture(CommandList& commandList)
     }
 }
 
+void EditorRenderManager::ApplyEditorRenderSettings()
+{
+    if (!g_editorCore)
+        return;
+
+    EditorRenderSettings& settings = g_editorCore->GetRenderSettings();
+    if (m_sceneRenderer->IsTemporalEnabled() != settings.IsTemporalAAEnabled())
+        m_sceneRenderer->SetTemporalEnabled(settings.IsTemporalAAEnabled());
+    m_sceneRenderer->SetTemporalSharpness(settings.GetTemporalSharpness());
+    if (settings.ConsumeTemporalHistoryResetRequest())
+        m_sceneRenderer->RequestTemporalHistoryReset();
+}
+
 void EditorRenderManager::RenderFrame(EngineMain* engine)
 {
     ImGui_ImplDX12_NewFrame();
@@ -185,6 +201,7 @@ void EditorRenderManager::RenderFrame(EngineMain* engine)
 
     m_statusBar->Draw();
 
+    ApplyEditorRenderSettings();
     m_sceneRenderer->SetPendingActiveRenderCamera(m_activeRenderCamera);
     m_sceneRenderer->PrepareFrame();
     m_sceneRenderer->RenderScene(

@@ -26,6 +26,7 @@ NO_DEFAULT_EXCEPTIONS = frozenset({
     "log.json/queries/read/params/since_seconds",
     "scene.json/commands/DuplicateGameObject/params/offset_position",
     "scene.json/queries/hierarchy/params/root_object_id",
+    "viewport.json/commands/SetTemporalAA/params/sharpness",
     "viewport.json/commands/SetViewportCamera/params/fov",
     "viewport.json/commands/SetViewportCamera/params/position",
     "viewport.json/commands/SetViewportCamera/params/rotation",

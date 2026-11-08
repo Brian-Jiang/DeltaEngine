@@ -13,6 +13,9 @@
 #include "Runtime/Core/DWorld.h"
 #include "Runtime/Core/GameObject.h"
 #include "Runtime/Core/SceneComponent.h"
+#include "Runtime/Graphics/DXRenderManager.h"
+#include "Runtime/Graphics/DirectX/RenderTarget.h"
+#include "Runtime/Graphics/Structures/TemporalCameraState.h"
 
 #include <DirectXCollision.h>
 #include <DirectXMath.h>
@@ -163,6 +166,10 @@ void McpViewportSystem::RegisterTools(McpRegistry& registry)
         [this](EditorCore& c, const nlohmann::json& p) { return QueryVisibleObjects(c, p); });
     registry.RegisterCommand("viewport", "SetViewportCamera",
         [this](EditorCore& c, const nlohmann::json& p) { return CommandSetViewportCamera(c, p); });
+    registry.RegisterQuery("viewport", "temporal_aa",
+        [this](EditorCore& c, const nlohmann::json& p) { return QueryTemporalAA(c, p); });
+    registry.RegisterCommand("viewport", "SetTemporalAA",
+        [this](EditorCore& c, const nlohmann::json& p) { return CommandSetTemporalAA(c, p); });
 }
 
 nlohmann::json McpViewportSystem::QueryCamera(EditorCore&, const nlohmann::json&)
@@ -292,6 +299,7 @@ nlohmann::json McpViewportSystem::CommandSetViewportCamera(EditorCore& core, con
     if (duration <= 0.f || !animMgr || !merged.Any())
     {
         ApplySetViewportCamera(target);
+        core.GetRenderSettings().RequestTemporalHistoryReset();
         return { {"ok", true}, {"expects_result", false} };
     }
 
@@ -300,6 +308,43 @@ nlohmann::json McpViewportSystem::CommandSetViewportCamera(EditorCore& core, con
     animMgr->StartViewportCameraAnimation(current, target,
         merged.fov, merged.position, merged.rotation, duration,
         [](const EditorViewportCamera& cam) { ApplySetViewportCamera(cam); });
+
+    return { {"ok", true}, {"expects_result", false} };
+}
+
+nlohmann::json McpViewportSystem::QueryTemporalAA(EditorCore& core, const nlohmann::json&)
+{
+    const EditorRenderSettings& settings = core.GetRenderSettings();
+    nlohmann::json j = {
+        {"ok", true},
+        {"enabled", settings.IsTemporalAAEnabled()},
+        {"sharpness", settings.GetTemporalSharpness()},
+    };
+
+    EditorRenderManager* rm = g_editor ? g_editor->GetRenderManager() : nullptr;
+    const auto sceneRenderer = rm ? rm->GetSceneRenderer() : nullptr;
+    if (!sceneRenderer)
+        return j;
+
+    j["active"] = sceneRenderer->IsTemporalEnabled();
+    j["msaa_requested"] = sceneRenderer->IsMsaaEnabled();
+    if (const auto renderTarget = sceneRenderer->GetRenderTarget())
+        j["scene_sample_count"] = renderTarget->GetSampleDesc().Count;
+    j["mip_bias"] = sceneRenderer->IsTemporalEnabled() ? TemporalTextureMipBias(1.f) : 0.f;
+    return j;
+}
+
+nlohmann::json McpViewportSystem::CommandSetTemporalAA(EditorCore& core, const nlohmann::json& params)
+{
+    if (!params.contains("enabled") || !params["enabled"].is_boolean())
+        return MakeError("'enabled' (bool) is required");
+    if (params.contains("sharpness") && !params["sharpness"].is_number())
+        return MakeError("'sharpness' must be a number");
+
+    EditorRenderSettings& settings = core.GetRenderSettings();
+    settings.SetTemporalAAEnabled(params["enabled"].get<bool>());
+    if (params.contains("sharpness"))
+        settings.SetTemporalSharpness(params["sharpness"].get<float>());
 
     return { {"ok", true}, {"expects_result", false} };
 }

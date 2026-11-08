@@ -120,3 +120,50 @@ TEST_F(McpViewportSystemTests, CommandSetViewportCamera_DefaultDurationAppliesIn
     EXPECT_NEAR(cam["position"][1].get<float>(), 2.5f, 0.001f);
     EXPECT_NEAR(cam["position"][2].get<float>(), 3.5f, 0.001f);
 }
+
+TEST_F(McpViewportSystemTests, QueryTemporalAA_DefaultsOff)
+{
+    auto res = Dispatch("viewport", "temporal_aa");
+    EXPECT_TRUE(res["ok"].get<bool>());
+    EXPECT_FALSE(res["enabled"].get<bool>());
+    EXPECT_FLOAT_EQ(res["sharpness"].get<float>(), 0.f);
+}
+
+TEST_F(McpViewportSystemTests, CommandSetTemporalAA_RoundTripsThroughQuery)
+{
+    auto res = Dispatch("viewport", "SetTemporalAA", {{"enabled", true}, {"sharpness", 0.4f}});
+    EXPECT_TRUE(res["ok"].get<bool>());
+    EXPECT_TRUE(m_core->GetRenderSettings().IsTemporalAAEnabled());
+
+    auto state = Dispatch("viewport", "temporal_aa");
+    EXPECT_TRUE(state["enabled"].get<bool>());
+    EXPECT_NEAR(state["sharpness"].get<float>(), 0.4f, 1e-5f);
+
+    Dispatch("viewport", "SetTemporalAA", {{"enabled", false}});
+    state = Dispatch("viewport", "temporal_aa");
+    EXPECT_FALSE(state["enabled"].get<bool>());
+    EXPECT_NEAR(state["sharpness"].get<float>(), 0.4f, 1e-5f);
+}
+
+TEST_F(McpViewportSystemTests, CommandSetTemporalAA_ClampsSharpness)
+{
+    Dispatch("viewport", "SetTemporalAA", {{"enabled", true}, {"sharpness", 3.0f}});
+    EXPECT_FLOAT_EQ(m_core->GetRenderSettings().GetTemporalSharpness(), 1.f);
+}
+
+TEST_F(McpViewportSystemTests, CommandSetTemporalAA_MissingEnabled_ReturnsError)
+{
+    auto res = Dispatch("viewport", "SetTemporalAA", {{"sharpness", 0.5f}});
+    EXPECT_FALSE(res["ok"].get<bool>());
+    EXPECT_FLOAT_EQ(m_core->GetRenderSettings().GetTemporalSharpness(), 0.f);
+}
+
+TEST_F(McpViewportSystemTests, CommandSetViewportCamera_Immediate_RequestsTemporalHistoryReset)
+{
+    m_core->GetRenderSettings().ConsumeTemporalHistoryResetRequest();
+
+    Dispatch("viewport", "SetViewportCamera",
+             {{"position", json::array({4.f, 0.f, 0.f})}, {"duration_seconds", 0.0f}});
+
+    EXPECT_TRUE(m_core->GetRenderSettings().IsTemporalHistoryResetPending());
+}

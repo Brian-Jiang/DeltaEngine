@@ -137,6 +137,12 @@ public:
      *  (no MSAA while temporal is on). Do not call between PrepareFrame and RenderFrame. **/
     DELTAENGINE_API void SetTemporalEnabled(bool enabled);
     DELTAENGINE_API bool IsTemporalEnabled() const { return m_temporalCameraState.enabled; }
+    /** Requests forward-path MSAA; TAA overrides it while enabled. Do not call between PrepareFrame and RenderFrame. **/
+    DELTAENGINE_API void SetMsaaEnabled(bool enabled);
+    DELTAENGINE_API bool IsMsaaEnabled() const { return m_msaaRequested; }
+    /** Clamped to [0, 1]; 0 skips the post-resolve sharpen pass. **/
+    DELTAENGINE_API void SetTemporalSharpness(float sharpness);
+    DELTAENGINE_API float GetTemporalSharpness() const { return m_temporalSharpness; }
     DELTAENGINE_API const TemporalHistory& GetTemporalHistory() const { return m_temporalHistory; }
     /** Graph built for the last rendered frame. */
     DELTAENGINE_API const RenderGraph& GetFrameGraph() const { return m_frameGraph; }
@@ -210,6 +216,9 @@ private:
     void AddMotionVectorResolve();
     void ImportTemporalHistory();
     RenderGraphTextureHandle AddTemporalResolve(RenderGraphTextureHandle colorInput);
+    RenderGraphTextureHandle AddTemporalSharpen(RenderGraphTextureHandle resolvedColor);
+    bool UsesMsaa() const;
+    void RebuildIfMsaaChanged(bool usedMsaa);
     void InitGBufferPipeline();
     bool InitDeferredLightingPipeline();
     void FinalizeNoPostProcessOutput(RenderGraphTextureHandle output);
@@ -258,6 +267,8 @@ private:
     TemporalHistory m_temporalHistory;
     TemporalResolvePipeline m_temporalResolve;
     bool m_historyWrittenThisFrame = false;
+    bool m_msaaRequested = true;
+    float m_temporalSharpness = 0.0f;
     uint64_t m_frameIndex = 0;
 
     IBLBaker m_iblBaker;

@@ -254,6 +254,8 @@ void EditorWindow_Viewport::Render(bool& open)
         if (changed)
         {
             CancelPreviewCameraAnimation();
+            if (g_editorCore)
+                g_editorCore->GetRenderSettings().RequestTemporalHistoryReset();
             m_settingsDirty = true;
             m_saveTimer = 0.f;
         }
